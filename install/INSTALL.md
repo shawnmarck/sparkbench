@@ -32,7 +32,7 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 | `17-inference-api.sh` | Inference control API + nginx route |
 | `18-inference-api-watch.sh` | Restart API when inference scripts change |
 | `19-inference-api-restart.sh` | Restart inference API only (agent-friendly) |
-| `20-spark-cli.sh` | **Unified `spark` CLI** — removes legacy `/usr/local/bin/spark-*` |
+| `20-spark-cli.sh` | **Unified `spark` CLI** — binary, completions, zsh `?` help; removes legacy `spark-*` bins. See `docs/reference/spark-cli.md` |
 
 ## Inference engines
 

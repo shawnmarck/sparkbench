@@ -186,6 +186,8 @@ Deferred until desk setup is stable.
 
 ## Quick reference
 
+CLI guide (humans + agents): [`reference/spark-cli.md`](reference/spark-cli.md)
+
 | Service | URL | Command |
 |---------|-----|---------|
 | Portal | http://sparky/ | nginx |

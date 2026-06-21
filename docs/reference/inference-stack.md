@@ -97,6 +97,8 @@ Registry index: `/opt/spark/data/inference-profiles.yaml` (generated or hand-cur
 
 ## CLI (wraps today’s scripts)
 
+Full reference (humans + agents + HTTP): **`docs/reference/spark-cli.md`**.
+
 ```bash
 spark inference status              # active profile, GPU, port, uptime
 spark inference list                # recipes + tier + engine
@@ -104,6 +106,8 @@ spark inference up <profile>        # switch (evict current if needed)
 spark inference down
 spark inference logs <profile>
 ```
+
+**Agents:** prefer `spark inference help` and `spark inference list` for discovery; or `GET /api/inference/status` when shell is unavailable.
 
 Implementation: profile-driven dispatch over existing engine scripts (`scripts/spark-eugr`, `scripts/spark-llama`) — not a new engine.
 

@@ -26,3 +26,5 @@ These names were previously on `PATH` as separate binaries. They remain as **imp
 | `spark-hf-login` | `spark hf login` |
 
 Shims in this folder (optional, not on PATH) print a deprecation hint and forward to `spark`.
+
+**Docs:** `docs/reference/spark-cli.md` — humans (Tab, `?` help) and coding agents (non-interactive patterns, HTTP APIs).

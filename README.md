@@ -11,7 +11,8 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
 | | |
 |---|---|
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phases, status, what's next |
-| [AGENT.md](AGENT.md) | Repo layout, rules, commands |
+| [AGENT.md](AGENT.md) | Repo layout, rules, agent quick-start |
+| [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | **spark CLI** — humans, coding agents, HTTP APIs |
 | [install/INSTALL.md](install/INSTALL.md) | Install script index |
 
 ## Docs
@@ -23,4 +24,5 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
 | [docs/runbooks/smoke-vllm-eugr.md](docs/runbooks/smoke-vllm-eugr.md) | eugr vLLM smoke test |
 | [docs/runbooks/smoke-llamacpp.md](docs/runbooks/smoke-llamacpp.md) | llama.cpp smoke test |
 | [docs/reference/inference-stack.md](docs/reference/inference-stack.md) | Phase 5 inference control plane |
+| [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | Unified `spark` command reference |
 | [docs/examples/](docs/examples/) | YAML templates |

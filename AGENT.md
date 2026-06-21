@@ -15,7 +15,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 ├── portal/               Static UI (nginx :80)
 │   ├── assets/           sparky-theme.js, oobe-nebula.js, nebula-tune.js
 │   └── themes/           theme-b.css, theme-ui.css
-├── scripts/              CLIs + APIs (spark-*)
+├── scripts/              spark CLI + implementation scripts
 ├── install/              Idempotent sudo install scripts (see install/INSTALL.md)
 ├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml
 ├── recipes/              Inference profile recipes (Phase 5)
@@ -74,13 +74,21 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 5. **Model paths** — local `/models`, NAS `/mnt/model-shelf/models`.
 6. **Bake-off UIs removed** — no Rookery / vLLM Studio; Phase 5 is `spark inference` + `recipes/`.
 
-## Common commands
+## `spark` CLI (humans + agents)
 
-Single CLI: **`spark`** (`install/20-spark-cli.sh`). Legacy `spark-*` names are not on PATH — see `scripts/legacy/README.md`.
+**Canonical reference:** `docs/reference/spark-cli.md`
+
+Single command on PATH: **`spark`** (`install/20-spark-cli.sh`). Legacy `spark-*` bins removed — see `scripts/legacy/README.md`.
+
+| Who | How to discover | How to run |
+|-----|-----------------|------------|
+| **Human** (zsh on sparky) | `spark ?`, `spark inf help`, Tab completion | Interactive shell |
+| **Coding agent** | `spark --help`, `spark inference help`, `spark inference list` | Non-interactive; prefer `help` over `?` |
+| **No shell** | HTTP APIs | `http://sparky/api/inference/status`, `/api/gpu`, `/api/shelf/status` |
 
 ```bash
 spark status
-spark inference list       # enabled profiles
+spark inference list       # enabled profiles — agents: run before spark inference up
 spark inference status     # active profile + engine health
 spark inference up <id>    # switch profile (evicts current)
 spark inference bench      # measure tok/s on active profile
@@ -90,9 +98,11 @@ spark models verify set <lab/slug> works
 spark shelf pull <lab/slug>
 spark engine eugr status   # low-level vLLM (direct)
 spark engine llama status  # low-level llama.cpp (direct)
-spark gpu                  # one-shot metrics JSON
+spark gpu                  # metrics JSON (same schema as /api/gpu)
 curl http://sparky/api/inference/status   # JSON for portal/gateway
 ```
+
+**Agents:** use `/usr/local/bin/spark` if `PATH` is minimal; check exit codes; one GPU engine at a time. Do not rely on Tab or unquoted `?`.
 
 ## Install (typical order)
 

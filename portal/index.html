@@ -10,10 +10,11 @@
     html, body { height: 100%; margin: 0; }
     body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden; }
     .topnav { height: var(--nav-h); flex-shrink: 0; display: flex; align-items: center; gap: 1rem; padding: 0 1rem; border-bottom: 1px solid var(--border); background: #12151c; }
-    .brand { font-weight: 700; font-size: 1rem; color: var(--accent); white-space: nowrap; }
+    .brand { font-weight: 700; font-size: 1rem; color: var(--accent); white-space: nowrap; text-decoration: none; cursor: pointer; }
+    .brand:hover { color: #8fd400; }
     .brand small { color: var(--muted); font-weight: 500; font-size: .72rem; margin-left: .45rem; }
     .nav { display: flex; flex-wrap: wrap; gap: .25rem; flex: 1; }
-    .nav-btn { appearance: none; border: 1px solid transparent; background: transparent; color: #c5cdd8; font: inherit; font-size: .82rem; padding: .4rem .7rem; border-radius: 8px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+    .nav-btn { display: inline-block; appearance: none; border: 1px solid transparent; background: transparent; color: #c5cdd8; font: inherit; font-size: .82rem; padding: .4rem .7rem; border-radius: 8px; cursor: pointer; text-decoration: none; transition: color .15s, border-color .15s, background .15s; }
     .nav-btn:hover { color: var(--text); border-color: var(--border); background: var(--card); }
     .nav-btn.active { color: var(--accent); border-color: #3a4a2a; background: #1a2210; }
     .nav-btn .ext { opacity: .45; font-size: .7rem; margin-left: .2rem; }
@@ -71,12 +72,12 @@
 </head>
 <body>
   <header class="topnav">
-    <div class="brand">Sparky<small>home lab</small></div>
+    <a href="/" class="brand" id="brand-home">Sparky<small>home lab</small></a>
     <nav class="nav" id="nav">
-      <button type="button" class="nav-btn active" data-view="system">System</button>
-      <button type="button" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</button>
-      <button type="button" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</button>
-      <button type="button" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</button>
+      <a href="/" class="nav-btn active" data-view="system">System</a>
+      <a href="/models.html" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</a>
+      <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
+      <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
     </nav>
     <div class="nav-meta">
       <span class="live" id="live"><i></i>live</span>
@@ -209,9 +210,18 @@
       }
 
       function renderInference(inf) {
-        const cls = inf.up ? 'pill up' : 'pill down';
-        const label = inf.up ? ('vLLM · ' + (inf.model || 'ready')) : 'vLLM offline';
-        $('inference-status').innerHTML = '<span class="' + cls + '"><span class="pill-dot"></span>' + label + '</span>';
+        const engines = (inf && inf.engines) || [];
+        if (!engines.length) {
+          const cls = inf && inf.up ? 'pill up' : 'pill down';
+          const label = inf && inf.up ? ('Inference · ' + (inf.model || 'ready')) : 'Inference offline';
+          $('inference-status').innerHTML = '<span class="' + cls + '"><span class="pill-dot"></span>' + label + '</span>';
+          return;
+        }
+        $('inference-status').innerHTML = engines.map((e) => {
+          const cls = e.up ? 'pill up' : 'pill down';
+          const label = e.up ? (e.label + ' · ' + (e.model || 'ready')) : (e.label + ' offline');
+          return '<span class="' + cls + '"><span class="pill-dot"></span>' + label + '</span>';
+        }).join('');
       }
 
       function renderContainers(list) {
@@ -307,9 +317,13 @@
         if (frame.getAttribute('src') !== src) frame.src = src;
       }
 
-      nav.addEventListener('click', (e) => {
-        const btn = e.target.closest('.nav-btn');
-        if (!btn) return;
+      function navModifierClick(e) {
+        return e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1;
+      }
+
+      function handleNavClick(btn, e) {
+        if (navModifierClick(e)) return;
+        e.preventDefault();
         if (btn.dataset.view === 'system') {
           showSystem(btn);
           history.replaceState(null, '', '#system');
@@ -320,6 +334,25 @@
           const slug = (btn.textContent || 'view').trim().toLowerCase();
           history.replaceState(null, '', '#' + slug);
         }
+      }
+
+      nav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nav-btn');
+        if (!btn) return;
+        handleNavClick(btn, e);
+      });
+
+      nav.addEventListener('auxclick', (e) => {
+        const btn = e.target.closest('.nav-btn');
+        if (!btn || e.button !== 1) return;
+        if (!navModifierClick(e)) e.preventDefault();
+      });
+
+      $('brand-home').addEventListener('click', (e) => {
+        if (navModifierClick(e)) return;
+        e.preventDefault();
+        showSystem(nav.querySelector('[data-view="system"]'));
+        history.replaceState(null, '', '#system');
       });
 
       const hash = location.hash.replace('#', '');

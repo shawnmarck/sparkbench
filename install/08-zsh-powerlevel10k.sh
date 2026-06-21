@@ -68,6 +68,9 @@ if [[ -n "$KITTY_INSTALLATION_DIR" ]]; then
   source "${KITTY_INSTALLATION_DIR}/shell-integration/zsh/kitty.zsh"
 fi
 
+# User-local binaries (gh, etc.)
+export PATH="$HOME/.local/bin:$PATH"
+
 # Grok CLI
 export PATH="$HOME/.grok/bin:$PATH"
 [[ -r "$HOME/.grok/completions/zsh/_grok" ]] && fpath=("$HOME/.grok/completions/zsh" $fpath)

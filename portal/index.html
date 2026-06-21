@@ -33,9 +33,14 @@
     .frame-bar a:hover { text-decoration: underline; }
     iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
-    .card h2 { margin: 0 0 .35rem; font-size: 1.05rem; color: var(--accent); }
-    .card p { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
+    .card-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .45rem .75rem; margin-bottom: .15rem; }
+    .card h2 { margin: 0; font-size: 1.05rem; color: var(--accent); }
+    .card-head-meta { display: inline-flex; align-items: center; gap: .35rem; font-size: .82rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .card-head-meta .sep { opacity: .45; }
+    .uptime-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: .75; }
+    .load-line { margin: 0 0 .65rem; font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: .5rem; }
+    .metric-grid + .metric-grid { margin-top: 1.25rem; }
     @media (max-width: 720px) { .metric-grid { grid-template-columns: 1fr 1fr; } .nav-btn { padding: .35rem .5rem; } }
     @media (max-width: 480px) { .metric-grid { grid-template-columns: 1fr; } .brand small { display: none; } }
     .metric h3 { margin: 0 0 .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
@@ -46,11 +51,8 @@
     .spark { height: 28px; margin-top: .45rem; opacity: .9; }
     .spark svg { width: 100%; height: 100%; display: block; }
     .metric-sub { margin-top: .4rem; font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; }
-    .sys-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 1.25rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); font-family: ui-monospace, monospace; font-size: .78rem; color: #c5cdd8; }
-    .sys-meta-item { display: inline-flex; align-items: center; gap: .45rem; min-width: 6.5rem; }
-    .sys-icon { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); opacity: .85; }
-    .temp-warn { color: var(--warn); }
-    .temp-hot { color: #f08a5d; }
+    .metric-value.temp-warn { color: var(--warn); }
+    .metric-value.temp-hot { color: #f08a5d; }
     .section-title { margin: 1rem 0 .5rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
     .disk-grid { display: grid; gap: .65rem; }
     .disk-row { display: grid; grid-template-columns: 5.5rem 1fr 4.5rem; gap: .6rem; align-items: center; font-size: .8rem; font-family: ui-monospace, monospace; }
@@ -85,8 +87,16 @@
     <div class="dashboard" id="dashboard">
       <div class="dashboard-inner">
         <div class="card" id="system-card">
-          <h2>System</h2>
-          <p id="sys-sub">—</p>
+          <div class="card-head">
+            <h2>System</h2>
+            <div class="card-head-meta">
+              <span id="gpu-name">—</span>
+              <span class="sep">·</span>
+              <svg class="uptime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span id="uptime-text">—</span>
+            </div>
+          </div>
+          <p class="load-line" id="load-line">—</p>
 
           <div class="metric-grid">
             <div class="metric">
@@ -111,31 +121,25 @@
             </div>
           </div>
 
-          <div class="sys-meta">
-            <span class="sys-meta-item" id="uptime">
-              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-              <span class="sys-meta-text">—</span>
-            </span>
-            <span class="sys-meta-item" id="load">
-              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14l4-6 4 3 4-7 4 5"/></svg>
-              <span class="sys-meta-text">—</span>
-            </span>
-            <span class="sys-meta-item" id="gpu-temp">
-              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="4" width="10" height="14" rx="1.5"/><path d="M9 8h6M9 11h6"/><path d="M12 18v2"/></svg>
-              <span class="sys-meta-text">—</span>
-            </span>
-            <span class="sys-meta-item" id="cpu-temp">
-              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V5.5a2 2 0 0 0-4 0v9.26a4 4 0 1 0 4 0z"/></svg>
-              <span class="sys-meta-text">—</span>
-            </span>
-            <span class="sys-meta-item" id="power">
-              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              <span class="sys-meta-text">—</span>
-            </span>
-            <span class="sys-meta-item" id="cores">
-              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
-              <span class="sys-meta-text">—</span>
-            </span>
+          <div class="metric-grid">
+            <div class="metric">
+              <h3>GPU temp</h3>
+              <div class="metric-value" id="gpu-temp-val"><span id="gpu-temp">—</span><span>°C</span></div>
+              <div class="metric-bar"><i id="gpu-temp-bar"></i></div>
+              <div class="spark" id="gpu-temp-spark"></div>
+            </div>
+            <div class="metric">
+              <h3>CPU temp</h3>
+              <div class="metric-value" id="cpu-temp-val"><span id="cpu-temp">—</span><span>°C</span></div>
+              <div class="metric-bar"><i id="cpu-temp-bar"></i></div>
+              <div class="spark" id="cpu-temp-spark"></div>
+            </div>
+            <div class="metric">
+              <h3>Power</h3>
+              <div class="metric-value"><span id="power-val">—</span><span>W</span></div>
+              <div class="metric-bar"><i id="power-bar"></i></div>
+              <div class="spark" id="power-spark"></div>
+            </div>
           </div>
 
           <div class="section-title">Storage</div>
@@ -170,10 +174,10 @@
       const fmtGb = (mb) => (mb / 1024).toFixed(1);
       const setBar = (el, pct) => { el.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
       const tempClass = (c) => !c && c !== 0 ? '' : c >= 85 ? 'temp-hot' : c >= 70 ? 'temp-warn' : '';
-      const setMeta = (id, text, cls) => {
-        const el = $(id);
-        el.querySelector('.sys-meta-text').textContent = text;
-        el.className = 'sys-meta-item ' + (cls || '');
+      const setTempValue = (wrapId, valId, c) => {
+        const wrap = $(wrapId);
+        wrap.className = 'metric-value ' + tempClass(c);
+        $(valId).textContent = c != null ? Math.round(c) : '—';
       };
 
       function sparkline(el, values, color) {
@@ -231,7 +235,9 @@
           const d = await res.json();
           const hist = d.history || {};
 
-          $('sys-sub').textContent = d.gpu_name + ' · unified memory · sparklines = last ~60s';
+          $('gpu-name').textContent = d.gpu_name;
+          $('uptime-text').textContent = d.uptime_human;
+          $('load-line').textContent = 'load ' + d.load_1 + ' · ' + d.load_5 + ' · ' + d.load_15;
           $('cpu-util').textContent = d.cpu_util_pct.toFixed(1);
           $('gpu-util').textContent = d.gpu_util_pct.toFixed(1);
           $('mem-util').textContent = d.memory_used_pct.toFixed(1);
@@ -245,12 +251,22 @@
           sparkline($('gpu-spark'), hist.gpu_util_pct, '#6eb5ff');
           sparkline($('mem-spark'), hist.memory_used_pct, '#c5a3ff');
 
-          setMeta('uptime', d.uptime_human);
-          setMeta('load', 'load ' + d.load_1 + ' · ' + d.load_5 + ' · ' + d.load_15);
-          setMeta('gpu-temp', 'GPU ' + Math.round(d.gpu_temp_c) + '°C', tempClass(d.gpu_temp_c));
-          setMeta('cpu-temp', 'CPU ' + Math.round(d.cpu_temp_c) + '°C', tempClass(d.cpu_temp_c));
-          setMeta('power', d.gpu_power_w != null ? d.gpu_power_w + ' W' : 'power n/a');
-          setMeta('cores', d.cpu_cores + ' cores');
+          setTempValue('gpu-temp-val', 'gpu-temp', d.gpu_temp_c);
+          setTempValue('cpu-temp-val', 'cpu-temp', d.cpu_temp_c);
+          setBar($('gpu-temp-bar'), d.gpu_temp_c != null ? Math.min(100, d.gpu_temp_c) : 0);
+          setBar($('cpu-temp-bar'), d.cpu_temp_c != null ? Math.min(100, d.cpu_temp_c) : 0);
+          sparkline($('gpu-temp-spark'), hist.gpu_temp_c, '#f08a5d');
+          sparkline($('cpu-temp-spark'), hist.cpu_temp_c, '#e8b84a');
+
+          if (d.gpu_power_w != null) {
+            $('power-val').textContent = d.gpu_power_w;
+            const powerMax = Math.max(300, ...(hist.gpu_power_w || []), d.gpu_power_w);
+            setBar($('power-bar'), (d.gpu_power_w / powerMax) * 100);
+          } else {
+            $('power-val').textContent = '—';
+            setBar($('power-bar'), 0);
+          }
+          sparkline($('power-spark'), hist.gpu_power_w, '#6bc46d');
 
           renderDisks(d.disks || []);
           renderInference(d.inference || {});

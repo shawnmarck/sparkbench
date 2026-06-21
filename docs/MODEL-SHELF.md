@@ -79,6 +79,20 @@ ln -s /models /home/techno/models   # example shim
 
 Avoid reorganizing for stack defaults; keep one canonical tree.
 
+
+## Background push (rate-limited)
+
+Large backups can run in the background without saturating the LAN:
+
+```bash
+# ~200 Mbps cap, low CPU/IO priority, logs to /opt/spark/logs/shelf-push-latest.log
+spark-shelf-push --all --background --bwlimit 200
+
+spark-shelf-push --status    # running? tail of log
+```
+
+`--bwlimit` is megabits/sec (rsync KiB/s under the hood). Omit for unlimited.
+
 ## Commands
 
 | Command | Purpose |

@@ -1,4 +1,6 @@
-# Inference smoke test (Phase 3)
+# Inference smoke test (Phase 3a — vLLM)
+
+**Status: PASSING** (2026-06-21)
 
 Temporary stack to validate vLLM on GB10 before the vLLM Studio vs Rookery bake-off.
 
@@ -6,7 +8,7 @@ Temporary stack to validate vLLM on GB10 before the vLLM Studio vs Rookery bake-
 
 | Layer | Tool | URL |
 |-------|------|-----|
-| Engine | vLLM cu130 nightly | http://sparky:8000/v1 |
+| Engine | eugr spark-vllm-docker | http://sparky:8000/v1 |
 | Chat UI | Open WebUI | http://sparky:3000 |
 
 Open WebUI is **only for basic chat testing**. It is not part of the Phase 4 orchestrator bake-off.
@@ -15,37 +17,43 @@ Open WebUI is **only for basic chat testing**. It is not part of the Phase 4 orc
 
 - Path: `/models/nvidia/qwen3.6-35b-a3b/nvfp4`
 - Served name: `qwen3.6-35b-a3b-nvfp4`
-- Format: NVFP4 (vLLM `compressed-tensors` only — not llama.cpp)
+- Format: NVFP4 (vLLM `compressed-tensors` — not llama.cpp)
+- Context: 65K (`--max-model-len 65536`)
 
+## Why eugr, not stock vLLM
 
-## Current status (2026-06-21)
+Stock `vllm/vllm-openai:cu130-nightly` fails to load this checkpoint:
 
-- **Open WebUI** is up at http://sparky:3000 — create a local account on first visit.
-- **Stock `vllm/vllm-openai:cu130-nightly`** fails to load `nvidia/Qwen3.6-35B-A3B-NVFP4` with `KeyError: layers.0.mlp.experts.w2_input_scale` (MoE treated as unquantized while checkpoint has NVFP4 scale tensors). This is a known vLLM + ModelOpt loader gap on Spark.
-- **Next engine fix:** use [eugr/spark-vllm-docker](https://github.com/eugr/spark-vllm-docker) recipe `qwen3.6-35b-a3b-nvfp4` (Spark-patched vLLM), or try the RedHatAI NVFP4 checkpoint (`compressed-tensors` format).
+```
+KeyError: layers.0.mlp.experts.w2_input_scale
+```
+
+MoE NVFP4 scale tensors aren't handled by the stock ModelOpt loader on Spark. The eugr build + `mods/fix-qwen3.6-chat-template` recipe works.
 
 ## Commands
 
 ```bash
-# Start (pulls images on first run — large download)
-spark-inference up
+# Start (build once via install/07-eugr-vllm-qwen36.sh)
+spark-eugr up
 
-# Logs (first vLLM boot may take 5–15 min for CUDA graph compile)
-spark-inference logs
+# Logs (first boot may take 5–15 min for CUDA graph compile)
+spark-eugr logs
 
-# Status
-spark-inference status
+# Status + /v1/models
+spark-eugr status
 
-# Stop
-spark-inference down
+# Stop (required before llama.cpp smoke — one GPU workload at a time)
+spark-eugr down
 ```
+
+Legacy `spark-inference` / stock compose is stopped; use `spark-eugr` only.
 
 ## First chat in Open WebUI
 
 1. Open http://sparky:3000
 2. Create a local account (first user becomes admin)
-3. New chat → pick model `qwen3.6-35b-a3b-nvfp4`
-4. If no models appear, wait for vLLM to finish loading (`curl http://sparky:8000/v1/models`)
+3. New chat → model `qwen3.6-35b-a3b-nvfp4`
+4. Admin → Models → enable **Usage** capability for token counts on replies
 
 ## API test (no UI)
 
@@ -56,8 +64,23 @@ curl http://sparky:8000/v1/chat/completions \
   -d '{"model":"qwen3.6-35b-a3b-nvfp4","messages":[{"role":"user","content":"Hello!"}],"max_tokens":64}'
 ```
 
+## Key paths
+
+| Item | Path |
+|------|------|
+| Vendor | `/opt/spark/vendor/spark-vllm-docker` |
+| Recipe | `/opt/spark/services/eugr-qwen36-local.yaml` |
+| CLI | `/usr/local/bin/spark-eugr` |
+| Container | `vllm_node` |
+
+Launch uses `VLLM_SPARK_EXTRA_DOCKER_ARGS="-v /models:/models:ro"` and `--solo --daemon --apply-mod mods/fix-qwen3.6-chat-template`.
+
 ## Troubleshooting
 
-- **Open WebUI shows no models** — vLLM still loading; check `docker logs spark-vllm-qwen36`
-- **FlashInfer / NVFP4 errors** — see ROADMAP Phase 3 fallbacks (eugr, avarok images)
-- **OOM** — lower `--gpu-memory-utilization` or `--max-model-len` in compose.yaml
+- **Open WebUI shows no models** — vLLM still loading; `spark-eugr logs` or `curl http://sparky:8000/v1/models`
+- **OOM** — lower gpu-memory-utilization in eugr recipe
+- **Switching to llama.cpp** — `spark-eugr down` first
+
+## Next
+
+Phase 3b: llama.cpp GGUF smoke — see `docs/LLAMACPP-SMOKE.md`.

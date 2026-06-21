@@ -1,25 +1,21 @@
-# Sparky Dashboard
+# Spark Home Lab (`/opt/spark`)
 
-Home lab portal and ops tooling for the DGX Spark (`sparky`) — live system dashboard, model inventory, inference helpers, and idempotent install scripts.
+Organized services and docs for the DGX Spark (sparky).
 
 ## Layout
 
 ```
 /opt/spark/
 ├── README.md           -> symlink to docs/README.md
-├── portal/             LAN portal shell (nginx, port 80)
-│   ├── index.html      System dashboard + nav (Models / Chat / Netdata)
-│   └── models.html     Model inventory view
-├── scripts/            spark-gpu-metrics, inference, inventory, shelf tools
+├── portal/             Static LAN portal (nginx)
+│   └── index.html
+├── docs/               This documentation
 ├── install/            Idempotent install scripts (run with sudo)
-├── docs/               Documentation
-├── services/           Docker compose / service configs
-├── data/               model-catalog.yaml
-└── vendor/
-    └── spark-vllm-docker/   Upstream: https://github.com/eugr/spark-vllm-docker
+│   └── 01-netdata-portal.sh
+└── services/           Future: inference, cache, sync configs
 ```
 
-Generated or local-only (not in git): `venv/`, `logs/`, `run/`, `portal/models.json`, `vendor/spark-vllm-docker/wheels/`.
+Staging copies live in `~/spark/` until install scripts promote them to `/opt/spark`.
 
 ## Network
 
@@ -27,27 +23,37 @@ Generated or local-only (not in git): `venv/`, `logs/`, `run/`, `portal/models.j
 |------|-------|
 | Hostname | sparky |
 | LAN IP | 192.168.0.101 (DHCP reservation) |
+| WiFi iface | wlP9s9 |
 
 ## Services
 
-| Service | URL | Notes |
-|---------|-----|-------|
-| Portal | http://sparky/ | nginx → `/opt/spark/portal` |
-| Metrics API | http://sparky/api/gpu | proxied to `spark-gpu-metrics` on :8765 |
-| Netdata | http://sparky:19999 | System monitoring |
-| Open WebUI | http://sparky:3000 | Chat (iframe in portal) |
-| vLLM | http://sparky:8000 | Inference API |
+| Service | URL | Port | Status |
+|---------|-----|------|--------|
+| Portal | http://sparky/ | 80 | after install |
+| Netdata | http://sparky:19999 | 19999 | after install |
 
-## Install
+## Install / update
 
-Run install scripts **as the script path** (not `sudo bash …`) so the passwordless install sudo rule applies:
+From sparky (requires sudo password once):
 
 ```bash
-sudo /opt/spark/install/01-netdata-portal.sh
-sudo /opt/spark/install/10-portal-gpu-widget.sh
+sudo bash ~/spark/install/01-netdata-portal.sh
 ```
 
-Full install order: `00-grant-install-sudo.sh` (one-time) → `01` → shelf scripts `02`–`04` as needed → `10` for metrics widget.
+## What is NOT installed yet
+
+- Tailscale / remote VPN
+- Inference stacks (vLLM, llama.cpp)
+- Inference UIs (vLLM Studio, Rookery)
+- QNAP model shelf mount
+
+See `~/spark/docs/ROADMAP.md` for planned phases.
+
+## Changelog
+
+- 2026-06-21: Shelf push `--background`/`--bwlimit`, `spark-hf-login`, llama.cpp smoke (install 11)
+
+- 2026-06-21: Initial portal + Netdata install script
 
 ## Model shelf (QNAP)
 
@@ -56,12 +62,13 @@ Full install order: `00-grant-install-sudo.sh` (one-time) → `01` → shelf scr
 | NAS IP | 192.168.0.99 |
 | Share | models |
 | Mount | /mnt/model-shelf |
-| Credentials | `/etc/spark/smb-credentials-models` (root, 600) |
+| Protocol | SMB/CIFS (NFS not enabled on NAS) |
+| Credentials | /etc/spark/smb-credentials-models (root, 600) |
 
-See `docs/MODEL-SHELF.md` and `install/02-model-shelf-mount.sh`.
-
-## Changelog
-
-- 2026-06-21: Portal shell with system metrics, sparklines, Docker/inference status
-- 2026-06-21: Model inventory, shelf tooling, vLLM vendor integration
-- 2026-06-21: Initial portal + Netdata install script
+Install:
+```bash
+# one-time credentials (replace password)
+sudo install -m 600 /dev/stdin /etc/spark/smb-credentials-models <<EOF
+username=shawn
+password=YOUR_PASSWORD
+domain=WORKGROUP

@@ -4,7 +4,17 @@ set -euo pipefail
 
 MODELS="/models"
 SHELF="/mnt/model-shelf/models"
-RSYNC=(rsync -avh --progress --partial)
+RUN_DIR="/opt/spark/run"
+LOG_DIR="/opt/spark/logs"
+PID_FILE="${RUN_DIR}/shelf-push.pid"
+LOG_FILE="${LOG_DIR}/shelf-push-latest.log"
+
+RSYNC=(rsync -avh --partial)
+BWLIMIT_MBPS=0
+DRY_RUN=0
+PUSH_ALL=0
+BACKGROUND=0
+PATHS=()
 
 usage() {
   cat <<EOF
@@ -15,27 +25,61 @@ Push from ${MODELS} to ${SHELF} (same relative layout).
 Examples:
   spark-shelf-push google/gemma-4-26b-a4b
   spark-shelf-push --all
+  spark-shelf-push --all --background --bwlimit 200
+  spark-shelf-push --status
   spark-shelf-push --dry-run meta-llama/llama-3.1-70b-instruct
 
 Options:
-  --all       Push every lab/model under /models (excludes _incoming)
-  --dry-run   Show what would be transferred
-  -h, --help  This help
+  --all         Push every lab/model under /models (excludes _incoming)
+  --background  Run in background (nohup + low I/O priority)
+  --bwlimit N   Cap transfer at N megabits/sec (rsync --bwlimit)
+  --status      Show background push status / tail log
+  --dry-run     Show what would be transferred
+  -h, --help    This help
 EOF
 }
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-[[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
-mountpoint -q /mnt/model-shelf || die "/mnt/model-shelf not mounted"
+cleanup_pid() {
+  rm -f "${PID_FILE}"
+}
 
-DRY_RUN=0
-PUSH_ALL=0
-PATHS=()
+push_one() {
+  local rel="$1"
+  echo "==> Pushing ${rel}"
+  mkdir -p "${SHELF}/$(dirname "${rel}")"
+  "${RSYNC[@]}" "${MODELS}/${rel}/" "${SHELF}/${rel}/"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all) PUSH_ALL=1; shift ;;
+    --background) BACKGROUND=1; shift ;;
+    --bwlimit)
+      [[ $# -ge 2 ]] || die "--bwlimit requires a number (megabits/sec)"
+      BWLIMIT_MBPS="$2"
+      shift 2
+      ;;
+    --status)
+      if [[ -f "${PID_FILE}" ]]; then
+        pid="$(cat "${PID_FILE}")"
+        if kill -0 "${pid}" 2>/dev/null; then
+          echo "Shelf push running (pid ${pid})"
+          echo "Log: ${LOG_FILE}"
+          tail -5 "${LOG_FILE}" 2>/dev/null || true
+          exit 0
+        fi
+        echo "Stale pid file (${pid}); removing"
+        rm -f "${PID_FILE}"
+      fi
+      echo "No shelf push running"
+      if [[ -f "${LOG_FILE}" ]]; then
+        echo "Last log: ${LOG_FILE}"
+        tail -5 "${LOG_FILE}" || true
+      fi
+      exit 0
+      ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) die "Unknown option: $1" ;;
@@ -43,7 +87,46 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+[[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
+mountpoint -q /mnt/model-shelf || die "/mnt/model-shelf not mounted"
+
+if [[ ${BWLIMIT_MBPS} -gt 0 ]]; then
+  # rsync --bwlimit is KiB/s; 1 Mbps ≈ 125 KiB/s
+  bw_kib=$((BWLIMIT_MBPS * 125))
+  RSYNC+=(--bwlimit="${bw_kib}")
+fi
+
 [[ ${DRY_RUN} -eq 1 ]] && RSYNC+=(--dry-run)
+
+if [[ -t 1 && ${BACKGROUND} -eq 0 ]]; then
+  RSYNC+=(--progress)
+fi
+
+if [[ ${BACKGROUND} -eq 1 ]]; then
+  if [[ -f "${PID_FILE}" ]]; then
+    old_pid="$(cat "${PID_FILE}")"
+    kill -0 "${old_pid}" 2>/dev/null && die "Shelf push already running (pid ${old_pid}). Check: spark-shelf-push --status"
+    rm -f "${PID_FILE}"
+  fi
+  mkdir -p "${RUN_DIR}" "${LOG_DIR}"
+  bg_args=()
+  [[ ${PUSH_ALL} -eq 1 ]] && bg_args+=(--all)
+  [[ ${DRY_RUN} -eq 1 ]] && bg_args+=(--dry-run)
+  [[ ${BWLIMIT_MBPS} -gt 0 ]] && bg_args+=(--bwlimit "${BWLIMIT_MBPS}")
+  bg_args+=("${PATHS[@]}")
+  {
+    echo "=== shelf push started $(date -Is) bwlimit=${BWLIMIT_MBPS}Mbps ==="
+  } >>"${LOG_FILE}"
+  nohup nice -n 10 ionice -c3 "$0" "${bg_args[@]}" >>"${LOG_FILE}" 2>&1 &
+  echo $! >"${PID_FILE}"
+  echo "Started background shelf push (pid $(cat "${PID_FILE}"))"
+  echo "  Log: ${LOG_FILE}"
+  [[ ${BWLIMIT_MBPS} -gt 0 ]] && echo "  Rate cap: ~${BWLIMIT_MBPS} Mbps"
+  echo "  Status: spark-shelf-push --status"
+  exit 0
+fi
+
+trap cleanup_pid EXIT
 
 if [[ ${PUSH_ALL} -eq 1 ]]; then
   shopt -s nullglob
@@ -52,11 +135,10 @@ if [[ ${PUSH_ALL} -eq 1 ]]; then
     for model in "${lab}"*/; do
       rel="${model#${MODELS}/}"
       rel="${rel%/}"
-      echo "==> Pushing ${rel}"
-      mkdir -p "${SHELF}/$(dirname "${rel}")"
-      "${RSYNC[@]}" "${MODELS}/${rel}/" "${SHELF}/${rel}/"
+      push_one "${rel}"
     done
   done
+  echo "OK: push complete ($(date -Is))"
   exit 0
 fi
 
@@ -67,9 +149,7 @@ for rel in "${PATHS[@]}"; do
   rel="${rel%/}"
   src="${MODELS}/${rel}"
   [[ -d "${src}" ]] || die "Not found: ${src}"
-  echo "==> Pushing ${rel}"
-  mkdir -p "${SHELF}/$(dirname "${rel}")"
-  "${RSYNC[@]}" "${src}/" "${SHELF}/${rel}/"
+  push_one "${rel}"
 done
 
-echo "OK: push complete"
+echo "OK: push complete ($(date -Is))"

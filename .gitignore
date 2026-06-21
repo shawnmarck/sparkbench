@@ -12,6 +12,8 @@ portal/models.json
 
 # Vendor build artifacts (sources track upstream eugr/spark-vllm-docker)
 vendor/spark-vllm-docker/wheels/
+vendor/llama.cpp/build/
+vendor/llama.cpp/models/
 
 # Secrets / local env
 .env

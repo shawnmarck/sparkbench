@@ -15,6 +15,9 @@ _HISTORY = {
     "cpu_util_pct": deque(maxlen=_HISTORY_LEN),
     "gpu_util_pct": deque(maxlen=_HISTORY_LEN),
     "memory_used_pct": deque(maxlen=_HISTORY_LEN),
+    "gpu_temp_c": deque(maxlen=_HISTORY_LEN),
+    "cpu_temp_c": deque(maxlen=_HISTORY_LEN),
+    "gpu_power_w": deque(maxlen=_HISTORY_LEN),
 }
 _PREV_CPU = None
 _PREV_CPU_CORES = None

@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Store Hugging Face credentials for spark-download-models and hf CLI.
+set -euo pipefail
+
+HF="/opt/spark/venv/bin/hf"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+[[ -x "${HF}" ]] || die "${HF} not found — run install/04-model-inventory.sh first"
+
+usage() {
+  cat <<EOF
+Usage: spark-hf-login [OPTIONS]
+
+Authenticate huggingface-cli on sparky for gated models and higher rate limits.
+
+Options:
+  --token TOKEN   Non-interactive login (or set HF_TOKEN env var)
+  --whoami        Show current user only
+  -h, --help      This help
+
+Interactive: run without --token and paste a read token when prompted.
+Create one at: https://huggingface.co/settings/tokens
+For gated models (e.g. Gemma): accept the license on the model page first.
+EOF
+}
+
+WHOAMI_ONLY=0
+TOKEN=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --token) TOKEN="$2"; shift 2 ;;
+    --whoami) WHOAMI_ONLY=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+  esac
+done
+
+if [[ ${WHOAMI_ONLY} -eq 1 ]]; then
+  "${HF}" auth whoami
+  exit 0
+fi
+
+if [[ -z "${TOKEN}" ]]; then
+  TOKEN="${HF_TOKEN:-}"
+fi
+
+if [[ -z "${TOKEN}" ]]; then
+  echo "Create a read token: https://huggingface.co/settings/tokens"
+  echo "For gated repos, accept the model license on huggingface.co first."
+  read -rsp "Paste HF token (hidden): " TOKEN
+  echo
+fi
+
+[[ -n "${TOKEN}" ]] || { echo "ERROR: no token provided" >&2; exit 1; }
+
+"${HF}" auth login --token "${TOKEN}"
+echo
+echo "Logged in as:"
+"${HF}" auth whoami
+echo
+echo "Token stored in ~/.cache/huggingface/token (user: $(whoami))"
+echo "Downloads via spark-download-models.sh will use this automatically."

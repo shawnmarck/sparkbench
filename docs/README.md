@@ -8,8 +8,6 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
   </video>
 </p>
 
-<p align="center"><sub>Optional <strong>Theme B</strong> — DGX OOBE-style canvas nebula. Constellation icon in the nav.</sub></p>
-
 ## Links
 
 | | |

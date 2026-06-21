@@ -99,6 +99,84 @@ def max_context_from_config(cfg: dict) -> int | None:
     return None
 
 
+def infer_hf_repo_from_path(model_dir: Path) -> str | None:
+    for sub in ("hf", "nvfp4", "gguf", "."):
+        base = model_dir if sub == "." else model_dir / sub
+        cfg = read_local_config(base)
+        for key in ("_name_or_path", "name_or_path"):
+            val = cfg.get(key)
+            if val and isinstance(val, str) and "/" in val and "://" not in val:
+                return val.strip().strip("/")
+    readme = model_dir / "README.md"
+    if readme.is_file():
+        try:
+            text = readme.read_text(errors="ignore")[:8000]
+        except OSError:
+            text = ""
+        match = re.search(r"huggingface\.co/([^\s)\]\"']+)", text)
+        if match:
+            return match.group(1).rstrip("/")
+    return None
+
+
+def fallback_release_date(path: Path) -> str | None:
+    try:
+        mtimes = [path.stat().st_mtime]
+        for root, _dirs, files in os.walk(path):
+            for fname in files[:300]:
+                try:
+                    mtimes.append((Path(root) / fname).stat().st_mtime)
+                except OSError:
+                    pass
+        if mtimes:
+            return datetime.fromtimestamp(min(mtimes), timezone.utc).isoformat()
+    except OSError:
+        pass
+    return None
+
+
+def collect_hf_repos(hf_repo: str | None, variants: list) -> list[str]:
+    repos: list[str] = []
+    if hf_repo:
+        repos.append(hf_repo)
+    for variant in variants or []:
+        repo = variant.get("hf_repo")
+        if repo and repo not in repos:
+            repos.append(repo)
+    return repos
+
+
+def resolve_release_date(
+    hf_repo: str | None,
+    variants: list,
+    model_path: Path,
+    hf_cache: dict,
+) -> tuple[str | None, str | None]:
+    repos = collect_hf_repos(hf_repo, variants)
+    for repo in repos:
+        info = hf_enrich(repo, hf_cache)
+        if info.get("release_date"):
+            return info["release_date"], "huggingface"
+    inferred = infer_hf_repo_from_path(model_path)
+    if inferred and inferred not in repos:
+        info = hf_enrich(inferred, hf_cache)
+        if info.get("release_date"):
+            return info["release_date"], "huggingface"
+    local = fallback_release_date(model_path)
+    if local:
+        return local, "local_earliest"
+    return None, None
+
+
+def model_engines(variants: list) -> list[str]:
+    seen: list[str] = []
+    for variant in variants or []:
+        engine = variant.get("engine")
+        if engine and engine not in seen:
+            seen.append(engine)
+    return seen
+
+
 def hf_enrich(repo: str, cache: dict) -> dict:
     if repo in cache:
         return cache[repo]
@@ -303,6 +381,16 @@ def main() -> int:
         if desc:
             desc = re.sub(r"\s+", " ", desc.strip())[:500]
 
+        release_date, release_date_source = resolve_release_date(
+            hf_repo or None,
+            m.get("variants", []),
+            base,
+            hf_cache,
+        )
+        if not release_date:
+            release_date = hf_info.get("release_date")
+            release_date_source = "huggingface" if release_date else None
+
         shelf = location_info(SHELF_ROOT, lab, slug)
         shelf["mounted"] = shelf_mounted()
 
@@ -330,7 +418,8 @@ def main() -> int:
                 "capabilities": m.get("capabilities", []),
                 "why_downloaded": (m.get("why_downloaded") or "").strip(),
                 "description": desc or None,
-                "release_date": hf_info.get("release_date"),
+                "release_date": release_date,
+                "release_date_source": release_date_source,
                 "max_context": max_ctx,
                 "param_b": param_b,
                 "param_active_b": param_active_b,
@@ -339,6 +428,7 @@ def main() -> int:
                 "status": overall,
                 "size_bytes": total_size,
                 "size_human": human_size(total_size),
+                "engines": model_engines(variants),
                 "variants": variants,
             }
         )
@@ -352,12 +442,20 @@ def main() -> int:
                 if not model_dir.is_dir():
                     continue
                 mid = f"{lab_dir.name}/{model_dir.name}"
-                if any(e["id"] == mid for e in entries):
+                if any(e.get("rel_path") == mid or e["id"] == mid for e in entries):
                     continue
                 size = dir_size(model_dir)
                 shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
                 shelf["mounted"] = shelf_mounted()
                 slug = model_dir.name
+                inferred_repo = infer_hf_repo_from_path(model_dir)
+                untracked_variants = []
+                untracked_release, untracked_source = resolve_release_date(
+                    inferred_repo,
+                    untracked_variants,
+                    model_dir,
+                    hf_cache,
+                )
                 entries.append(
                     {
                         "id": mid,
@@ -368,19 +466,21 @@ def main() -> int:
                         "path": str(model_dir),
                         "local": location_info(MODELS_ROOT, lab_dir.name, model_dir.name),
                         "shelf": shelf,
-                        "hf_repo": None,
-                        "hf_url": None,
+                        "hf_repo": inferred_repo,
+                        "hf_url": f"https://huggingface.co/{inferred_repo}" if inferred_repo else None,
                         "capabilities": ["untracked"],
                         "why_downloaded": "Not in catalog — add to model-catalog.yaml",
                         "description": None,
-                        "release_date": None,
-                        "max_context": None,
+                        "release_date": untracked_release,
+                        "release_date_source": untracked_source,
+                        "max_context": max_context_from_config(read_local_config(model_dir)),
                         "param_b": parse_param_b(model_dir.name, slug, read_local_config(model_dir)),
                         "param_active_b": parse_active_param_b(model_dir.name, slug),
                         "status": "ready" if size else "empty",
                         "size_bytes": size,
                         "size_human": human_size(size),
-                        "variants": [],
+                        "engines": model_engines(untracked_variants),
+                        "variants": untracked_variants,
                     }
                 )
 
@@ -399,6 +499,14 @@ def main() -> int:
                 size = dir_size(model_dir)
                 shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
                 shelf["mounted"] = True
+                inferred_repo = infer_hf_repo_from_path(model_dir)
+                shelf_variants = []
+                shelf_release, shelf_source = resolve_release_date(
+                    inferred_repo,
+                    shelf_variants,
+                    model_dir,
+                    hf_cache,
+                )
                 entries.append(
                     {
                         "id": mid,
@@ -409,19 +517,21 @@ def main() -> int:
                         "path": str(MODELS_ROOT / lab_dir.name / model_dir.name),
                         "local": location_info(MODELS_ROOT, lab_dir.name, model_dir.name),
                         "shelf": shelf,
-                        "hf_repo": None,
-                        "hf_url": None,
+                        "hf_repo": inferred_repo,
+                        "hf_url": f"https://huggingface.co/{inferred_repo}" if inferred_repo else None,
                         "capabilities": ["shelf-only"],
                         "why_downloaded": "On NAS shelf only — fetch to Spark to use locally",
                         "description": None,
-                        "release_date": None,
-                        "max_context": None,
+                        "release_date": shelf_release,
+                        "release_date_source": shelf_source,
+                        "max_context": max_context_from_config(read_local_config(model_dir)),
                         "param_b": parse_param_b(model_dir.name, model_dir.name, {}),
                         "param_active_b": parse_active_param_b(model_dir.name, model_dir.name),
                         "status": "shelf-only",
                         "size_bytes": size,
                         "size_human": human_size(size),
-                        "variants": [],
+                        "engines": model_engines(shelf_variants),
+                        "variants": shelf_variants,
                     }
                 )
                 seen_ids.add(mid)

@@ -8,6 +8,8 @@
     :root { color-scheme: dark; --bg: #0f1117; --card: #1a1d27; --text: #e6e6e6; --muted: #9aa0a6; --accent: #76b900; --border: #2a2f3a; --warn: #e8b84a; --ok: #6bc46d; --dl: #6eb5ff; }
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; }
+    body.embedded .portal-link, body.embedded .page-head { display: none; }
+    body.embedded main { padding-top: .85rem; }
     main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
     a { color: var(--accent); }
     .top { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1.25rem; }
@@ -18,10 +20,16 @@
     .control-group label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
     input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; }
     input[type=search] { min-width: 180px; flex: 1; }
-    .toggle { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: #c5cdd8; cursor: pointer; user-select: none; padding: .38rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); transition: border-color .15s, background .15s, color .15s; }
-    .toggle:hover { border-color: #3a4a2a; }
-    .toggle:has(input:checked) { border-color: #2a4a2a; background: #142014; color: var(--ok); }
-    .toggle input { width: 14px; height: 14px; accent-color: var(--accent); margin: 0; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; width: 100%; }
+    .chip-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-right: .15rem; }
+    .chip { appearance: none; border: 1px solid var(--border); background: var(--card); color: #c5cdd8; font: inherit; font-size: .78rem; padding: .32rem .62rem; border-radius: 999px; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+    .chip:hover { border-color: #3a4a2a; }
+    .chip.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+    .chip.active.spark-works { border-color: #2a4a2a; background: #142014; color: var(--ok); }
+    .chip.active.spark-failed { border-color: #4a2a2a; background: #241414; color: #e8a0a0; }
+    .chip.active.spark-wip { border-color: #2a3a4a; background: #141c24; color: var(--dl); }
+    .chip.active.spark-queued { border-color: #4a402a; background: #241c10; color: var(--warn); }
+    .meta-warn { color: var(--warn); }
     .meta { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
     .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
     .model-list { display: flex; flex-direction: column; gap: .35rem; }
@@ -50,6 +58,9 @@
     .badge.spark-works { border-color: #2a4a2a; color: var(--ok); }
     .badge.spark-failed { border-color: #4a2a2a; color: #e8a0a0; }
     .badge.queued { border-color: #4a402a; color: var(--warn); }
+    .badge.engine-vllm { border-color: #2a3a5a; color: #9ec8ff; }
+    .badge.engine-llamacpp { border-color: #3a4a2a; color: #b8d88a; }
+    .release-est { opacity: .75; font-style: italic; }
     .detail-section { margin-top: .75rem; }
     .badges { display: flex; flex-wrap: wrap; gap: .35rem; }
     .storage { display: grid; gap: .45rem; padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
@@ -90,12 +101,12 @@
 </head>
 <body>
   <main>
-    <div class="top">
+    <div class="top page-head">
       <div>
         <h1>Model inventory</h1>
         <p class="sub">Compact list · expand for actions · removals purge nightly 03:00</p>
       </div>
-      <a href="/" target="_top">← Portal</a>
+      <a href="/" class="portal-link" target="_top">← Portal</a>
     </div>
 
     <div class="controls">
@@ -128,8 +139,15 @@
           <option value="lab">Lab A→Z</option>
         </select>
       </div>
-      <label class="toggle" title="When on, hide everything except models marked Works"><input type="checkbox" id="works-only"> Works on Spark only</label>
-      <label class="toggle" title="When on, show only models queued for nightly removal"><input type="checkbox" id="queued-only"> Queued removal</label>
+      <div class="chip-row" id="spark-filter">
+        <span class="chip-label">Spark</span>
+        <button type="button" class="chip active" data-spark="">All</button>
+        <button type="button" class="chip" data-spark="unverified">Untested</button>
+        <button type="button" class="chip" data-spark="wip">Testing</button>
+        <button type="button" class="chip" data-spark="works">Works</button>
+        <button type="button" class="chip" data-spark="failed">Failed</button>
+        <button type="button" class="chip" data-spark="queued">Queued</button>
+      </div>
     </div>
 
     <div class="job-banner" id="job-banner"></div>
@@ -145,11 +163,27 @@
     let expandedId = null, pollTimer = null, jobTimer = null;
     const REFRESH_MS = 30000, JOB_POLL_MS = 2000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
+    const engineLabels = { vllm: 'vLLM', llamacpp: 'GGUF' };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
+    let sparkFilter = '';
 
     const $ = (id) => document.getElementById(id);
     const esc = (s) => (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const fmtDate = (iso) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return iso.slice(0, 10); } };
+    const fmtDate = (iso, est) => {
+      if (!iso) return '—';
+      let text;
+      try { text = new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+      catch { text = iso.slice(0, 10); }
+      return est ? `<span class="release-est" title="Estimated from local files">~${text}</span>` : text;
+    };
+    const fmtRelease = (m) => fmtDate(m.release_date, m.release_date_source === 'local_earliest');
+    const modelEngines = (m) => {
+      if (m.engines && m.engines.length) return m.engines;
+      return [...new Set((m.variants || []).map(v => v.engine).filter(Boolean))];
+    };
+    const engineBadgeHtml = (m) => modelEngines(m).map(e =>
+      `<span class="badge engine engine-${esc(e)}">${esc(engineLabels[e] || e)}</span>`
+    ).join('');
     const fmtTime = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString(); } catch { return ''; } };
     const fmtCtx = (n) => !n ? '—' : n >= 1000 ? (n / 1000).toFixed(0) + 'K' : String(n);
     const fmtParams = (m) => {
@@ -240,6 +274,7 @@
         const spark = sparkStatus(m);
         const queued = removalPending(m);
         const badges = [
+          engineBadgeHtml(m),
           queued ? '<span class="badge queued">queued</span>' : '',
           `<span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span>`,
           `<span class="badge status-${m.status || 'missing'}">${esc(m.status)}</span>`,
@@ -252,7 +287,7 @@
             <div class="row-meta">
               <span><b>Local</b> ${esc(localSize(m))}</span>
               <span><b>Shelf</b> ${esc(shelfSize(m))}</span>
-              <span><b>Released</b> ${fmtDate(m.release_date)}</span>
+              <span><b>Released</b> ${fmtRelease(m)}</span>
               <span><b>Ctx</b> ${fmtCtx(m.max_context)}</span>
               <span><b>Params</b> ${fmtParams(m)}</span>
             </div>
@@ -278,21 +313,36 @@
     function savePrefs() {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         q: $('q').value, lab: $('lab').value, cap: $('cap').value, status: $('status').value,
-        sort: $('sort').value, worksOnly: $('works-only').checked, queuedOnly: $('queued-only').checked,
+        sort: $('sort').value, sparkFilter,
       }));
+    }
+
+    function setSparkFilter(value) {
+      sparkFilter = value || '';
+      document.querySelectorAll('#spark-filter .chip').forEach((chip) => {
+        const on = chip.dataset.spark === sparkFilter;
+        chip.classList.toggle('active', on);
+        chip.classList.toggle('spark-works', on && sparkFilter === 'works');
+        chip.classList.toggle('spark-failed', on && sparkFilter === 'failed');
+        chip.classList.toggle('spark-wip', on && sparkFilter === 'wip');
+        chip.classList.toggle('spark-queued', on && sparkFilter === 'queued');
+      });
+      applyFilters();
     }
 
     function applyFilters() {
       const q = $('q').value.toLowerCase();
       const lab = $('lab').value, cap = $('cap').value, status = $('status').value;
-      const worksOnly = $('works-only').checked, queuedOnly = $('queued-only').checked;
       savePrefs();
       let filtered = all.filter(m => {
         if (lab && m.lab !== lab) return false;
         if (cap && !(m.capabilities || []).includes(cap)) return false;
         if (status && m.status !== status) return false;
-        if (worksOnly && sparkStatus(m) !== 'works') return false;
-        if (queuedOnly && !removalPending(m)) return false;
+        if (sparkFilter === 'queued') {
+          if (!removalPending(m)) return false;
+        } else if (sparkFilter && sparkStatus(m) !== sparkFilter) {
+          return false;
+        }
         if (q) {
           const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, ...(m.capabilities||[])].join(' ').toLowerCase();
           if (!hay.includes(q)) return false;
@@ -300,7 +350,10 @@
         return true;
       });
       filtered = sortModels(filtered);
-      $('summary').textContent = `Showing ${filtered.length} of ${all.length} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
+      const queuedTotal = all.filter(removalPending).length;
+      const queuedPart = queuedTotal ? ` · ${queuedTotal} queued for purge` : '';
+      $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
+      if (queuedTotal) $('summary').classList.add('meta-warn'); else $('summary').classList.remove('meta-warn');
       render(filtered);
     }
 
@@ -308,9 +361,8 @@
       const stored = readPrefs();
       const prev = preserve ? {
         lab: $('lab').value, cap: $('cap').value, status: $('status').value,
-        sort: $('sort').value, q: $('q').value,
-        worksOnly: $('works-only').checked, queuedOnly: $('queued-only').checked,
-      } : { sort: 'newest', ...stored };
+        sort: $('sort').value, q: $('q').value, sparkFilter,
+      } : { sort: 'newest', sparkFilter: stored.worksOnly ? 'works' : (stored.sparkFilter || ''), ...stored };
       const fill = (id, key, items, fn) => {
         const el = $(id), first = el.options[0].outerHTML;
         el.innerHTML = first;
@@ -322,8 +374,15 @@
       fill('status', 'status', [...new Set(models.map(m => m.status))].sort(), null);
       $('sort').value = prev.sort || 'newest';
       $('q').value = prev.q || '';
-      $('works-only').checked = !!prev.worksOnly;
-      $('queued-only').checked = !!prev.queuedOnly;
+      sparkFilter = prev.sparkFilter || '';
+      document.querySelectorAll('#spark-filter .chip').forEach((chip) => {
+        const on = chip.dataset.spark === sparkFilter;
+        chip.classList.toggle('active', on);
+        chip.classList.toggle('spark-works', on && sparkFilter === 'works');
+        chip.classList.toggle('spark-failed', on && sparkFilter === 'failed');
+        chip.classList.toggle('spark-wip', on && sparkFilter === 'wip');
+        chip.classList.toggle('spark-queued', on && sparkFilter === 'queued');
+      });
     }
 
     async function setSparkVerify(path, spark_status, btn) {
@@ -413,10 +472,18 @@
       modelAction(btn.dataset.action, btn.dataset.path, btn, extra);
     });
 
-    ['q','lab','cap','status','sort','works-only','queued-only'].forEach(id => {
+    ['q','lab','cap','status','sort'].forEach(id => {
       $(id).addEventListener('input', applyFilters);
       $(id).addEventListener('change', applyFilters);
     });
+
+    $('spark-filter').addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-spark]');
+      if (!chip) return;
+      setSparkFilter(chip.dataset.spark);
+    });
+
+    if (window.self !== window.top) document.body.classList.add('embedded');
 
     function loadData(preserve) {
       return fetch('models.json?' + Date.now(), { cache: 'no-store' })

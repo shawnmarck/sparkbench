@@ -295,8 +295,8 @@
           <option value="ctx-asc">Max context ↑</option>
           <option value="params-desc">Parameters ↓</option>
           <option value="params-asc">Parameters ↑</option>
-          <option value="bench-desc">Benchmark tok/s ↓</option>
-          <option value="bench-asc">Benchmark tok/s ↑</option>
+          <option value="bench-desc">Speed (fastest first)</option>
+          <option value="bench-asc">Speed (slowest first)</option>
           <option value="lab">Lab A→Z</option>
         </select>
       </div>
@@ -447,6 +447,17 @@
     const localSize = (m) => (m.local && m.local.present) ? m.local.size_human : '—';
     const shelfSize = (m) => (m.shelf && m.shelf.present) ? m.shelf.size_human : '—';
 
+    const benchRated = (m) => m.best_bench_tok_s != null && !Number.isNaN(Number(m.best_bench_tok_s));
+
+    function compareBenchSpeed(a, b, desc) {
+      const aRated = benchRated(a);
+      const bRated = benchRated(b);
+      if (aRated !== bRated) return aRated ? -1 : 1;
+      if (!aRated) return a.name.localeCompare(b.name);
+      const diff = Number(a.best_bench_tok_s) - Number(b.best_bench_tok_s);
+      return (desc ? -diff : diff) || a.name.localeCompare(b.name);
+    }
+
     function sortModels(models) {
       const mode = $('sort').value;
       const arr = [...models];
@@ -462,8 +473,8 @@
           case 'ctx-asc': return n(a.max_context) - n(b.max_context) || a.name.localeCompare(b.name);
           case 'params-desc': return n(b.param_b) - n(a.param_b) || a.name.localeCompare(b.name);
           case 'params-asc': return n(a.param_b) - n(b.param_b) || a.name.localeCompare(b.name);
-          case 'bench-desc': return n(b.best_bench_tok_s) - n(a.best_bench_tok_s) || a.name.localeCompare(b.name);
-          case 'bench-asc': return n(a.best_bench_tok_s) - n(b.best_bench_tok_s) || a.name.localeCompare(b.name);
+          case 'bench-desc': return compareBenchSpeed(a, b, true);
+          case 'bench-asc': return compareBenchSpeed(a, b, false);
           case 'lab': return a.lab.localeCompare(b.lab) || a.name.localeCompare(b.name);
           default: return a.name.localeCompare(b.name);
         }

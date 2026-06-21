@@ -1,4 +1,18 @@
-# Documentation
+# Spark Home Lab
+
+Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, NAS shelf sync, inference tooling.
+
+<p align="center">
+  <video src="docs/assets/portal-nebula-theme.mp4" autoplay muted loop playsinline width="100%" style="max-width: 820px; border-radius: 12px;">
+    <a href="docs/assets/portal-nebula-theme.mp4">Portal nebula theme demo (mp4)</a>
+  </video>
+</p>
+
+<p align="center"><sub>Optional <strong>Theme B</strong> — DGX OOBE-style canvas nebula behind System and Models. Toggle via the constellation icon in the nav.</sub></p>
+
+---
+
+## Documentation
 
 **Start here:** [`ROADMAP.md`](ROADMAP.md) — phases, current state, and what to build next.
 
@@ -56,4 +70,5 @@ The single source of truth for **phases, status, URLs, and next steps**. If you�
 
 ## Changelog
 
+- 2026-06-21: README portal nebula demo video (`docs/assets/portal-nebula-theme.mp4`)
 - 2026-06-21: Reorganized docs into guides/ runbooks/ reference/ examples/; ROADMAP is the master plan.

@@ -1,4 +1,16 @@
-# bash completion for spark — source or install to /etc/bash_completion.d/spark
+# bash completion for spark — prefix-aware at every level
+# install to /etc/bash_completion.d/spark
+
+_spark_profiles() {
+  /opt/spark/scripts/spark inference list 2>/dev/null \
+    | awk 'NR>2 && $1 !~ /^-+/ {print $1}'
+}
+
+_spark_recipes() {
+  /opt/spark/scripts/spark recipe list 2>/dev/null \
+    | awk 'NF {print $1}'
+}
+
 _spark() {
   local cur prev words cword
   COMPREPLY=()
@@ -16,11 +28,17 @@ _spark() {
     inference)
       if [[ ${COMP_CWORD} -eq 2 ]]; then
         COMPREPLY=( $(compgen -W "list status up down logs bench" -- "${cur}") )
+      elif [[ ${COMP_CWORD} -eq 3 && "${prev}" == up || ${COMP_CWORD} -eq 3 && "${prev}" == logs ]]; then
+        COMPREPLY=( $(compgen -W "$(_spark_profiles)" -- "${cur}") )
       fi
       ;;
     recipe)
       if [[ ${COMP_CWORD} -eq 2 ]]; then
         COMPREPLY=( $(compgen -W "list scaffold testing promote discard" -- "${cur}") )
+      elif [[ ${COMP_CWORD} -eq 3 && "${prev}" =~ ^(testing|promote|discard)$ ]]; then
+        COMPREPLY=( $(compgen -W "$(_spark_recipes)" -- "${cur}") )
+      elif [[ ${COMP_CWORD} -eq 4 && "${COMP_WORDS[2]}" == scaffold ]]; then
+        COMPREPLY=( $(compgen -W "llamacpp eugr" -- "${cur}") )
       fi
       ;;
     models)
@@ -54,4 +72,4 @@ _spark() {
   esac
 }
 
-complete -F _spark spark
+complete -o bashdefault -o default -F _spark spark

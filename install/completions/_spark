@@ -1,35 +1,98 @@
 #compdef spark
-# zsh completion for spark
+# zsh completion for spark — prefix-aware at every level
+
+_spark_profile_ids() {
+  local -a ids
+  ids=("${(@f)$(
+    _call_program profiles /opt/spark/scripts/spark inference list 2>/dev/null \
+      | awk 'NR>2 && $1 !~ /^-+/ {print $1}'
+  )}")
+  (( ${#ids} )) && _describe -t profiles 'profile' ids
+}
+
+_spark_recipe_ids() {
+  local -a ids
+  ids=("${(@f)$(
+    _call_program recipes /opt/spark/scripts/spark recipe list 2>/dev/null \
+      | awk 'NF {print $1}'
+  )}")
+  (( ${#ids} )) && _describe -t recipes 'recipe' ids
+}
+
+_spark_words() {
+  local expl="$1" tag="$2"
+  shift 2
+  local -a choices=("$@")
+  _wanted "$tag" expl "$tag" compadd -Q -S '' -a choices
+}
 
 _spark() {
-  local -a groups inference recipe models_verify models shelf engine eugr llama hf
-  groups=(status inference recipe models shelf engine gpu hf help)
-  inference=(list status up down logs bench)
-  recipe=(list scaffold testing promote discard)
-  models_verify=(get set list pending)
-  shelf=(pull push rm status)
-  eugr=(up down logs status build)
-  llama=(up down logs status)
-  hf=(login)
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
 
-  case $CURRENT in
-    2)
-      _describe -t groups 'spark group' groups
+  _arguments -C \
+    '1: :->group' \
+    '2: :->subcmd' \
+    '3: :->arg1' \
+    '4: :->arg2' \
+    && return 0
+
+  case $state in
+    group)
+      _spark_words group group \
+        status inference recipe models shelf engine gpu hf
       ;;
-    3)
+    subcmd)
       case $words[2] in
-        inference) _describe 'inference command' inference ;;
-        recipe) _describe 'recipe command' recipe ;;
-        models) _describe 'models command' models_verify ;;
-        shelf) _describe 'shelf command' shelf ;;
-        engine) _describe 'engine' eugr llama ;;
-        hf) _describe 'hf command' hf ;;
+        inference)
+          _spark_words inference inference \
+            list status up down logs bench
+          ;;
+        recipe)
+          _spark_words recipe recipe \
+            list scaffold testing promote discard
+          ;;
+        models)
+          _spark_words models models \
+            verify removal inventory
+          ;;
+        shelf)
+          _spark_words shelf shelf \
+            pull push rm status
+          ;;
+        engine)
+          _spark_words engine engine eugr llama
+          ;;
+        hf)
+          _spark_words hf hf login
+          ;;
       esac
       ;;
-    4)
-      case $words[2]:$words[3] in
-        engine:eugr) _describe 'eugr command' eugr ;;
-        engine:llama) _describe 'llama command' llama ;;
+    arg1)
+      case ${words[2]}:${words[3]} in
+        inference:up|inference:logs)
+          _spark_profile_ids
+          ;;
+        recipe:testing|recipe:promote|recipe:discard)
+          _spark_recipe_ids
+          ;;
+        models:verify)
+          _spark_words models-verify verify \
+            get set list pending
+          ;;
+        engine:eugr)
+          _spark_words eugr eugr up down logs status build
+          ;;
+        engine:llama)
+          _spark_words llama llama up down logs status
+          ;;
+      esac
+      ;;
+    arg2)
+      case ${words[2]}:${words[3]}:${words[4]} in
+        recipe:scaffold:*)
+          _spark_words scaffold-engine engine llamacpp eugr
+          ;;
       esac
       ;;
   esac

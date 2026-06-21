@@ -492,6 +492,40 @@
         return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
       }
 
+      function inferenceLoadingInfo(data) {
+        if (!data) return null;
+        if (data.loading && data.loading.profile) return data.loading;
+        const sw = data.switch;
+        if (sw && sw.running) {
+          const id = sw.profile;
+          if (!id) return { phase: 'switch', profile: null, name: null };
+          const prof = (data.profiles || []).find((p) => p.id === id);
+          return { phase: 'switch', profile: id, name: (prof && prof.name) || id };
+        }
+        const active = data.active;
+        if (active && !active.ready) {
+          return {
+            phase: active.starting ? 'model' : 'waiting',
+            profile: active.id,
+            name: active.name || active.id,
+          };
+        }
+        return null;
+      }
+
+      function inferenceLoadingLabel(info) {
+        const name = (info && (info.name || info.profile)) || '…';
+        return 'loading: ' + name;
+      }
+
+      function inferenceLoadingTitle(info) {
+        if (!info || !info.profile) return 'Inference loading';
+        const name = info.name || info.profile;
+        if (info.phase === 'switch') return 'Switching to ' + name;
+        if (info.phase === 'model') return 'Loading model — ' + name;
+        return 'Waiting for engine — ' + name;
+      }
+
       function renderNavInference(data) {
         const el = $('nav-inf');
         const text = $('nav-inf-text');
@@ -501,22 +535,19 @@
           el.title = 'Inference API offline';
           return;
         }
-        const switching = data.switch && data.switch.running;
-        const active = data.active;
-        if (switching) {
-          const prof = data.switch.profile || '…';
+        const loading = inferenceLoadingInfo(data);
+        if (loading) {
           el.className = 'nav-metric inf warn';
-          text.textContent = '↻ ' + prof;
-          el.title = 'Switching to ' + prof;
+          text.textContent = inferenceLoadingLabel(loading);
+          el.title = inferenceLoadingTitle(loading);
           return;
         }
-        if (active) {
-          const cls = active.ready ? 'up' : (active.starting ? 'warn' : 'down');
-          const state = active.ready ? 'ready' : (active.starting ? 'loading' : 'waiting');
-          el.className = 'nav-metric inf ' + cls;
-          text.textContent = active.id + ' · ' + state;
+        const active = data.active;
+        if (active && active.ready) {
+          el.className = 'nav-metric inf up';
+          text.textContent = active.id + ' · ready';
           const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
-          el.title = (active.name || active.id) + ' · ' + state + tok;
+          el.title = (active.name || active.id) + ' · ready' + tok;
           return;
         }
         el.className = 'nav-metric inf down';
@@ -531,22 +562,19 @@
           el.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Inference · API offline</span>';
           return;
         }
-        const switching = data.switch && data.switch.running;
+        const loading = inferenceLoadingInfo(data);
         const active = data.active;
         const pills = [];
 
-        if (switching) {
-          const prof = data.switch.profile || 'profile';
-          pills.push('<span class="pill warn"><span class="pill-dot"></span>Switching · '
-            + prof + '</span>');
+        if (loading) {
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>' + inferenceLoadingLabel(loading) + '</a>');
           pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
             + '<span class="pill-dot"></span>View progress →</a>');
-        } else if (active) {
-          const cls = active.ready ? 'up' : (active.starting ? 'warn' : 'down');
-          const state = active.ready ? 'ready' : (active.starting ? 'loading' : 'waiting');
+        } else if (active && active.ready) {
           const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
-          pills.push('<a href="#inference" class="pill ' + cls + ' inf-pill-link" data-goto-inference>'
-            + '<span class="pill-dot"></span>' + active.id + ' · ' + state + tok + '</a>');
+          pills.push('<a href="#inference" class="pill up inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>' + active.id + ' · ready' + tok + '</a>');
         } else {
           pills.push('<span class="pill down"><span class="pill-dot"></span>Inference offline</span>');
           pills.push('<a href="#inference" class="pill inf-pill-link" data-goto-inference>'
@@ -647,27 +675,41 @@
 
       function renderInferencePanel(data) {
         const active = data.active;
+        const loading = inferenceLoadingInfo(data);
         const switching = data.switch && data.switch.running;
         const benching = data.bench && data.bench.running;
         const profiles = data.profiles || [];
         const switchBanner = $('inf-switch-banner');
 
-        if (switching) {
-          $('inf-head-meta').textContent = 'switching… pid ' + (data.switch.pid || '—');
-          $('inf-active-title').textContent = 'Switch in progress';
-          const prof = data.switch.profile || 'profile';
+        if (loading && !benching) {
+          const prof = loading.profile || '…';
           const profMeta = profiles.find((p) => p.id === prof);
+          const display = loading.name || prof;
           const tierHint = profMeta && profMeta.tier === 'heavy' ? ' (heavy — may take minutes)' : '';
-          $('inf-active-meta').textContent = prof + tierHint + ' — log updates below';
-          const tail = (data.switch.log_tail || []).slice(-4).join('\n');
-          if (tail) {
-            switchBanner.hidden = false;
-            switchBanner.textContent = tail;
+          if (loading.phase === 'switch') {
+            $('inf-head-meta').textContent = 'switching… pid ' + (data.switch.pid || '—');
+            $('inf-active-title').textContent = inferenceLoadingLabel(loading);
+            $('inf-active-meta').textContent = prof + tierHint + ' — log updates below';
+            const tail = (data.switch.log_tail || []).slice(-4).join('\n');
+            if (tail) {
+              switchBanner.hidden = false;
+              switchBanner.textContent = tail;
+            } else {
+              switchBanner.hidden = true;
+              switchBanner.textContent = '';
+            }
+            setInfMsg('Profile switch running — API may be unavailable until ready.', 'warn');
           } else {
             switchBanner.hidden = true;
             switchBanner.textContent = '';
+            $('inf-head-meta').textContent = (active && active.engine ? active.engine + ' · :' + active.port : 'engine starting')
+              + (active && active.tier ? ' · ' + active.tier : '');
+            $('inf-active-title').textContent = inferenceLoadingLabel(loading);
+            $('inf-active-meta').textContent = prof + tierHint
+              + (loading.phase === 'model' ? ' · model loading into GPU' : ' · waiting for /v1/models')
+              + (active && active.started_at ? ' · since ' + active.started_at : '');
+            setInfMsg('Waiting for /v1/models — heavy profiles can take minutes.', 'warn');
           }
-          setInfMsg('Profile switch running — API may be unavailable until ready.', 'warn');
         } else if (benching) {
           switchBanner.hidden = true;
           switchBanner.textContent = '';
@@ -680,15 +722,14 @@
         } else {
           switchBanner.hidden = true;
           switchBanner.textContent = '';
-          if (active) {
+          if (active && active.ready) {
             $('inf-head-meta').textContent = active.engine + ' · :' + active.port
               + (active.tier ? ' · ' + active.tier : '');
             $('inf-active-title').textContent = active.name || active.id;
-            const ready = active.ready ? 'ready' : (active.starting ? 'starting (model loading)' : 'waiting');
             const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
             $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
-              + tok + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
-            setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');
+              + tok + ' · ready' + (active.started_at ? ' · since ' + active.started_at : '');
+            setInfMsg('');
           } else {
             $('inf-head-meta').textContent = 'no active profile';
             $('inf-active-title').textContent = 'Inference offline';

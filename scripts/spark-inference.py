@@ -25,12 +25,16 @@ SERVICES_DIR = ROOT / "services"
 PROFILES_INDEX = ROOT / "data" / "inference-profiles.yaml"
 STATE_FILE = ROOT / "run" / "inference-active.json"
 SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
+SWITCH_META_FILE = ROOT / "run" / "inference-switch.meta.json"
 SWITCH_LOG_FILE = ROOT / "logs" / "inference-switch-latest.log"
+SWITCH_LOG_PROFILE_RE = re.compile(r"^==>\s+switch\s+to\s+(\S+)")
 BENCH_PID_FILE = ROOT / "run" / "inference-bench.pid"
 BENCH_RESULT_FILE = ROOT / "run" / "inference-bench-result.json"
 LOG_DIR = ROOT / "logs"
 BENCHMARKS_FILE = ROOT / "data" / "inference-benchmarks.yaml"
-BENCHMARK_HISTORY_FILE = ROOT / "data" / "inference-benchmark-history.yaml"
+BENCHMARK_HISTORY_LEGACY = ROOT / "data" / "inference-benchmark-history.yaml"
+BENCHMARK_HISTORY_FILE = ROOT / "run" / "inference-benchmark-history.yaml"
+BENCHMARK_HISTORY_OWNER = "techno"
 BENCH_HISTORY_RUN_RE = re.compile(
     r"^/api/inference/benchmarks/([^/]+)/runs/([^/]+)$"
 )
@@ -708,7 +712,30 @@ def make_bench_run_id(measured_at: str) -> str:
     return f"{slug}-{uuid.uuid4().hex[:6]}"
 
 
+def _chown_benchmark_history_if_root(path: Path) -> None:
+    if os.geteuid() != 0:
+        return
+    try:
+        import pwd
+
+        pw = pwd.getpwnam(BENCHMARK_HISTORY_OWNER)
+        os.chown(path, pw.pw_uid, pw.pw_gid)
+    except (KeyError, OSError):
+        pass
+
+
+def _ensure_benchmark_history_file() -> None:
+    if BENCHMARK_HISTORY_FILE.is_file():
+        _chown_benchmark_history_if_root(BENCHMARK_HISTORY_FILE)
+        return
+    BENCHMARK_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if BENCHMARK_HISTORY_LEGACY.is_file():
+        BENCHMARK_HISTORY_FILE.write_text(BENCHMARK_HISTORY_LEGACY.read_text())
+        _chown_benchmark_history_if_root(BENCHMARK_HISTORY_FILE)
+
+
 def load_benchmark_history_store() -> dict[str, Any]:
+    _ensure_benchmark_history_file()
     ensure_benchmark_history_migrated()
     if not BENCHMARK_HISTORY_FILE.is_file():
         return {"profiles": {}}
@@ -725,6 +752,7 @@ def save_benchmark_history_store(store: dict[str, Any]) -> None:
     BENCHMARK_HISTORY_FILE.write_text(
         yaml.safe_dump(payload, sort_keys=False, default_flow_style=False)
     )
+    _chown_benchmark_history_if_root(BENCHMARK_HISTORY_FILE)
 
 
 def ensure_benchmark_history_migrated() -> None:
@@ -1210,17 +1238,68 @@ def tail_log(path: Path, lines: int = 12) -> list[str]:
     return content[-lines:]
 
 
+def _read_switch_meta() -> dict[str, Any]:
+    if not SWITCH_META_FILE.is_file():
+        return {}
+    try:
+        data = json.loads(SWITCH_META_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_switch_meta(profile_id: str) -> None:
+    SWITCH_META_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SWITCH_META_FILE.write_text(
+        json.dumps(
+            {
+                "profile": profile_id,
+                "started_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _clear_switch_meta() -> None:
+    SWITCH_META_FILE.unlink(missing_ok=True)
+
+
+def _switch_target_profile() -> str | None:
+    profile_id = _read_switch_meta().get("profile")
+    if isinstance(profile_id, str) and profile_id.strip():
+        return profile_id.strip()
+    if not SWITCH_LOG_FILE.is_file():
+        return None
+    try:
+        for line in SWITCH_LOG_FILE.read_text(encoding="utf-8", errors="replace").splitlines()[:5]:
+            match = SWITCH_LOG_PROFILE_RE.match(line.strip())
+            if match:
+                return match.group(1)
+    except OSError:
+        return None
+    return None
+
+
 def active_switch_job() -> dict[str, Any]:
     pid = read_pid_file(SWITCH_PID_FILE)
     if not pid:
         SWITCH_PID_FILE.unlink(missing_ok=True)
+        _clear_switch_meta()
         return {"running": False}
-    return {
+    job: dict[str, Any] = {
         "running": True,
         "pid": pid,
         "log": SWITCH_LOG_FILE.name,
         "log_tail": tail_log(SWITCH_LOG_FILE),
     }
+    meta = _read_switch_meta()
+    profile_id = meta.get("profile") or _switch_target_profile()
+    if isinstance(profile_id, str) and profile_id.strip():
+        job["profile"] = profile_id.strip()
+    if isinstance(meta.get("started_at"), str):
+        job["started_at"] = meta["started_at"]
+    return job
 
 
 def _read_bench_result() -> dict[str, Any] | None:
@@ -1309,18 +1388,50 @@ def api_profiles(active_id: str | None = None) -> list[dict[str, Any]]:
     return profiles
 
 
+def api_loading_state(
+    *,
+    switch_job: dict[str, Any] | None = None,
+    active_id: str | None = None,
+    recipe: dict[str, Any] | None = None,
+    ready: bool = False,
+    starting: bool = False,
+) -> dict[str, Any] | None:
+    switch_job = switch_job if switch_job is not None else active_switch_job()
+    if switch_job.get("running"):
+        profile_id = switch_job.get("profile")
+        if not profile_id:
+            return {"phase": "switch", "profile": None, "name": None}
+        try:
+            target = load_recipe(profile_id)
+            name = target.get("name") or profile_id
+        except SystemExit:
+            name = profile_id
+        return {"phase": "switch", "profile": profile_id, "name": name}
+
+    if active_id and recipe and not ready:
+        phase = "model" if starting else "waiting"
+        return {
+            "phase": phase,
+            "profile": active_id,
+            "name": recipe.get("name") or active_id,
+        }
+    return None
+
+
 def api_status() -> dict[str, Any]:
     active = detect_active_profile()
     active_id = active["profile"] if active else None
     recipe = active["recipe"] if active else None
     ready = engine_ready(recipe) if recipe else False
     port = int(recipe.get("port") or 0) if recipe else None
+    switch_job = active_switch_job()
 
     payload: dict[str, Any] = {
         "active": None,
+        "loading": None,
         "profiles": api_profiles(active_id),
         "engines": {"eugr": eugr_running(), "llamacpp": llama_running()},
-        "switch": active_switch_job(),
+        "switch": switch_job,
         "bench": active_bench_job(),
         "urls": {
             "openwebui": "http://sparky:3000",
@@ -1345,6 +1456,13 @@ def api_status() -> dict[str, Any]:
         bench = benchmark_for_profile(active_id)
         if bench:
             payload["active"]["benchmark"] = bench
+    payload["loading"] = api_loading_state(
+        switch_job=switch_job,
+        active_id=active_id,
+        recipe=recipe,
+        ready=ready,
+        starting=bool(payload.get("active") and payload["active"].get("starting")),
+    )
 
     payload["benchmarks"] = load_benchmarks()
     return payload
@@ -1367,6 +1485,7 @@ def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
 
     SWITCH_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     SWITCH_PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _write_switch_meta(profile_id)
     with SWITCH_LOG_FILE.open("w", encoding="utf-8") as log:
         log.write(f"==> switch to {profile_id} {datetime.now(timezone.utc).isoformat()}\n")
         proc = subprocess.Popen(

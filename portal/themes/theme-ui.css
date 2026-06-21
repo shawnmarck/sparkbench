@@ -95,16 +95,58 @@
   z-index: 20;
 }
 
-.nebula-tune-wrap {
+.portal-dock {
   position: fixed;
   bottom: 1rem;
   left: 1rem;
   z-index: 30;
   display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: .4rem;
+  pointer-events: none;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+.portal-dock > * {
+  pointer-events: auto;
+}
+
+.portal-dock-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.72);
+  color: #9aa0a6;
+  padding: .38rem;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0.55;
+  transition: opacity .15s, color .15s, border-color .15s;
+}
+
+.portal-dock-btn:hover,
+.portal-dock-btn.active {
+  opacity: 1;
+  color: #dfb15f;
+  border-color: rgba(223, 181, 95, 0.35);
+}
+
+.portal-dock-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.nebula-tune-wrap {
+  position: static;
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: .45rem;
-  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  font-family: inherit;
   pointer-events: none;
 }
 

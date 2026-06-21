@@ -77,7 +77,8 @@
       + '<button type="button" class="nebula-tune-btn" id="nebula-tune-reset">Reset defaults</button>'
       + '</div></div>';
 
-    document.body.appendChild(wrap);
+    const dock = document.getElementById('portal-dock');
+    (dock || document.body).appendChild(wrap);
 
     const panel = wrap.querySelector('#nebula-tune-panel');
     const gear = wrap.querySelector('#nebula-tune-gear');

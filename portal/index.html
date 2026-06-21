@@ -63,7 +63,8 @@
     .live-stale i { background: var(--warn); box-shadow: none; animation: none; }
     .shell { flex: 1; min-height: 0; position: relative; }
     .dashboard { height: 100%; overflow: auto; padding: 1.25rem 1rem 2rem; }
-    .dashboard-inner { max-width: 800px; margin: 0 auto; }
+    .dashboard-inner { max-width: 800px; margin: 0 auto; transition: max-width .2s ease; }
+    body.portal-wide .dashboard-inner { max-width: none; padding-left: 0.5in; padding-right: 0.5in; box-sizing: border-box; }
     .frame-panel { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
     .frame-panel.open { display: flex; }
     .frame-bar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .45rem .75rem; border-bottom: 1px solid var(--border); font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; background: #12151c; }
@@ -131,12 +132,13 @@
     .inf-active-title { font-weight: 600; color: var(--text); margin-bottom: .35rem; }
     .inf-active-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .76rem; line-height: 1.5; }
     .inf-profile-grid { display: grid; gap: .45rem; margin-top: .35rem; }
-    .inf-profile { display: flex; flex-wrap: wrap; gap: .35rem .65rem; justify-content: space-between; align-items: baseline; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
+    .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
     .inf-profile.active { border-color: #3a4a2a; background: #141a10; }
-    .inf-profile .name { color: var(--text); font-weight: 600; }
-    .inf-profile .meta { color: var(--muted); font-family: ui-monospace, monospace; }
-    .inf-profile .tier-heavy { color: var(--warn); }
-    .inf-profile .notes { display: block; width: 100%; margin-top: .25rem; color: #9aa0a6; font-size: .72rem; line-height: 1.4; font-style: italic; }
+    .inf-profile-row { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; width: 100%; min-width: 0; }
+    .inf-profile .name { color: var(--text); font-weight: 600; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .inf-profile .meta { flex: 0 0 auto; text-align: right; white-space: nowrap; color: #c9b86a; font-family: ui-monospace, monospace; font-size: .74rem; }
+    .inf-profile .meta.tier-heavy { color: var(--warn); }
+    .inf-profile .notes { display: block; width: 100%; margin: 0; color: #7a8088; font-size: .7rem; line-height: 1.35; font-style: italic; }
     .inf-life { display: inline-block; font-size: .68rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: .35rem; }
     .inf-life.life-testing { border-color: #2a3a4a; color: #8ab4d8; }
     .inf-life.life-draft { border-color: #3a3a3a; color: var(--muted); opacity: .85; }
@@ -334,6 +336,12 @@
       </div>
       <iframe id="content-frame" title="Sparky portal content" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"></iframe>
     </div>
+  </div>
+
+  <div class="portal-dock" id="portal-dock">
+    <button type="button" class="portal-dock-btn" id="wide-toggle" title="Wide layout off" aria-label="Toggle wide layout" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M18 15.5 21 17.5 18 19.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
   </div>
 
   <script src="/assets/sparky-theme.js"></script>
@@ -546,9 +554,9 @@
           const tok = p.tok_s != null ? ' · ' + Math.round(p.tok_s) + ' tok/s' : '';
           const note = p.notes ? '<span class="notes">' + truncateNote(p.notes, 100) + '</span>' : '';
           const switchHint = lc === 'draft' ? ' · not switchable' : '';
-          return '<div class="' + cls + '"><span class="name">' + infLifeBadge(lc) + (p.name || p.id) + '</span>'
+          return '<div class="' + cls + '"><div class="inf-profile-row"><span class="name">' + infLifeBadge(lc) + (p.name || p.id) + '</span>'
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
-            + ' · :' + p.port + tok + ' · ' + state + switchHint + '</span>' + note + '</div>';
+            + ' · :' + p.port + tok + ' · ' + state + switchHint + '</span></div>' + note + '</div>';
         }).join('') || '<div class="inf-profile"><span class="name">No recipes yet</span>'
           + '<span class="meta">Create drafts on the <a href="/#models">Models</a> page.</span></div>';
 
@@ -1042,6 +1050,23 @@
       } else {
         showSystem(nav.querySelector('[data-view="system"]'));
       }
+
+      const WIDE_KEY = 'sparky-portal-wide';
+      const wideBtn = $('wide-toggle');
+
+      function applyWideMode(on) {
+        document.body.classList.toggle('portal-wide', on);
+        wideBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        wideBtn.title = on ? 'Wide layout on' : 'Wide layout off';
+        wideBtn.classList.toggle('active', on);
+      }
+
+      applyWideMode(localStorage.getItem(WIDE_KEY) === '1');
+      wideBtn.addEventListener('click', () => {
+        const on = !document.body.classList.contains('portal-wide');
+        localStorage.setItem(WIDE_KEY, on ? '1' : '0');
+        applyWideMode(on);
+      });
 
       pollTimer = setInterval(gpuPoll, 1000);
       infPollTimer = setInterval(infTick, 2000);

@@ -45,9 +45,13 @@
     @media (max-width: 720px) { .metric-grid { grid-template-columns: 1fr 1fr; } .nav-btn { padding: .35rem .5rem; } }
     @media (max-width: 480px) { .metric-grid { grid-template-columns: 1fr; } .brand small { display: none; } }
     .metric h3 { margin: 0 0 .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+    .metric-head { display: flex; align-items: flex-end; justify-content: space-between; gap: .5rem; margin-bottom: .45rem; }
+    .metric > .metric-value { margin-bottom: .45rem; }
+    .metric-head .metric-value { margin-bottom: 0; }
+    .metric-hint { font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; text-align: right; white-space: nowrap; padding-bottom: .25rem; }
     .metric-value { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
     .metric-value span { font-size: 1rem; color: var(--muted); font-weight: 500; }
-    .metric-bar { height: 8px; background: #12151c; border-radius: 999px; overflow: hidden; margin-top: .55rem; border: 1px solid var(--border); }
+    .metric-bar { height: 8px; background: #12151c; border-radius: 999px; overflow: hidden; margin-top: 0; border: 1px solid var(--border); }
     .metric-bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #5a9200, var(--accent)); border-radius: 999px; transition: width .35s ease; }
     .spark { height: 28px; margin-top: .45rem; opacity: .9; }
     .spark svg { width: 100%; height: 100%; display: block; }
@@ -120,10 +124,12 @@
           <div class="metric-grid">
             <div class="metric">
               <h3>CPU</h3>
-              <div class="metric-value"><span id="cpu-util">—</span><span>%</span></div>
+              <div class="metric-head">
+                <div class="metric-value"><span id="cpu-util">—</span><span>%</span></div>
+                <div class="metric-hint" id="cpu-sub">peak —%</div>
+              </div>
               <div class="metric-bar"><i id="cpu-bar"></i></div>
               <div class="spark" id="cpu-spark"></div>
-              <div class="metric-sub" id="cpu-sub">peak —%</div>
             </div>
             <div class="metric">
               <h3>GPU</h3>
@@ -133,10 +139,12 @@
             </div>
             <div class="metric">
               <h3>Memory</h3>
-              <div class="metric-value"><span id="mem-util">—</span><span>%</span></div>
+              <div class="metric-head">
+                <div class="metric-value"><span id="mem-util">—</span><span>%</span></div>
+                <div class="metric-hint" id="mem-sub">— / — GB</div>
+              </div>
               <div class="metric-bar"><i id="mem-bar"></i></div>
               <div class="spark" id="mem-spark"></div>
-              <div class="metric-sub" id="mem-sub">— / — GB</div>
             </div>
           </div>
 
@@ -146,14 +154,12 @@
               <div class="metric-value" id="gpu-temp-val"><span id="gpu-temp">—</span><span>°C</span></div>
               <div class="metric-bar temp-bar"><i id="gpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
               <div class="spark" id="gpu-temp-spark"></div>
-              <div class="metric-sub" id="gpu-temp-sub">—</div>
             </div>
             <div class="metric">
               <h3>CPU temp</h3>
               <div class="metric-value" id="cpu-temp-val"><span id="cpu-temp">—</span><span>°C</span></div>
               <div class="metric-bar temp-bar"><i id="cpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
               <div class="spark" id="cpu-temp-spark"></div>
-              <div class="metric-sub" id="cpu-temp-sub">—</div>
             </div>
             <div class="metric">
               <h3>Power</h3>
@@ -198,26 +204,20 @@
       const TEMP_REDLINE_C = 85;
 
       function tempZone(c) {
-        if (c == null && c !== 0) return { cls: '', label: '—', fill: 'temp-fill-ok' };
-        if (c >= TEMP_REDLINE_C) return { cls: 'temp-hot', label: 'critical', fill: 'temp-fill-hot' };
-        if (c >= 75) return { cls: 'temp-warn', label: 'hot', fill: 'temp-fill-warn' };
-        if (c >= 65) return { cls: 'temp-warm', label: 'warm', fill: 'temp-fill-warm' };
-        return { cls: 'temp-ok', label: 'normal', fill: 'temp-fill-ok' };
+        if (c == null && c !== 0) return { cls: '', fill: 'temp-fill-ok' };
+        if (c >= TEMP_REDLINE_C) return { cls: 'temp-hot', fill: 'temp-fill-hot' };
+        if (c >= 75) return { cls: 'temp-warn', fill: 'temp-fill-warn' };
+        if (c >= 65) return { cls: 'temp-warm', fill: 'temp-fill-warm' };
+        return { cls: 'temp-ok', fill: 'temp-fill-ok' };
       }
 
-      const setTempWidget = (wrapId, valId, barId, subId, c) => {
+      const setTempWidget = (wrapId, valId, barId, c) => {
         const zone = tempZone(c);
         $(wrapId).className = 'metric-value ' + zone.cls;
         $(valId).textContent = c != null ? Math.round(c) : '—';
         const bar = $(barId);
         bar.style.width = (c != null ? Math.min(100, (c / TEMP_SCALE_MAX) * 100) : 0) + '%';
         bar.className = zone.fill;
-        const sub = $(subId);
-        if (sub) {
-          sub.textContent = zone.label === '—'
-            ? '—'
-            : zone.label + ' · Spark typ. 45–65°C under load';
-        }
       };
 
       function sparkline(el, values, color) {
@@ -313,8 +313,8 @@
           sparkline($('gpu-spark'), hist.gpu_util_pct, '#76b900');
           sparkline($('mem-spark'), hist.memory_used_pct, '#c5a3ff');
 
-          setTempWidget('gpu-temp-val', 'gpu-temp', 'gpu-temp-bar', 'gpu-temp-sub', d.gpu_temp_c);
-          setTempWidget('cpu-temp-val', 'cpu-temp', 'cpu-temp-bar', 'cpu-temp-sub', d.cpu_temp_c);
+          setTempWidget('gpu-temp-val', 'gpu-temp', 'gpu-temp-bar', d.gpu_temp_c);
+          setTempWidget('cpu-temp-val', 'cpu-temp', 'cpu-temp-bar', d.cpu_temp_c);
           sparkline($('gpu-temp-spark'), hist.gpu_temp_c, '#f08a5d');
           sparkline($('cpu-temp-spark'), hist.cpu_temp_c, '#e8b84a');
 

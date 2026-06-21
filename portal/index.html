@@ -275,8 +275,8 @@
           $('cpu-sub').textContent = 'peak core ' + d.cpu_peak_core_pct.toFixed(1) + '%';
           $('mem-sub').textContent = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB';
 
-          sparkline($('cpu-spark'), hist.cpu_util_pct, '#76b900');
-          sparkline($('gpu-spark'), hist.gpu_util_pct, '#6eb5ff');
+          sparkline($('cpu-spark'), hist.cpu_util_pct, '#6eb5ff');
+          sparkline($('gpu-spark'), hist.gpu_util_pct, '#76b900');
           sparkline($('mem-spark'), hist.memory_used_pct, '#c5a3ff');
 
           setTempValue('gpu-temp-val', 'gpu-temp', d.gpu_temp_c);

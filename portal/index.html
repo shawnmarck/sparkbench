@@ -35,6 +35,18 @@
     .nav-btn.experimental { opacity: .55; }
     .nav-btn.experimental::after { content: 'exp'; font-size: .58rem; margin-left: .25rem; color: var(--warn); vertical-align: super; }
     .nav-meta { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
+    .nav-metrics { display: flex; align-items: center; gap: .4rem; }
+    .nav-metric { display: inline-flex; align-items: center; gap: .3rem; padding: .22rem .45rem .22rem .4rem; border-radius: 8px; border: 1px solid var(--border); background: #0c0e14; font-family: ui-monospace, monospace; font-size: .68rem; color: var(--muted); text-decoration: none; min-width: 4.6rem; }
+    .nav-metric:hover { border-color: #3a4a2a; background: #12151c; }
+    .nav-metric-label { font-size: .58rem; letter-spacing: .04em; opacity: .75; }
+    .nav-metric-val { color: var(--text); font-weight: 600; font-size: .72rem; }
+    .nav-metric.gpu .nav-metric-val { color: var(--accent); }
+    .nav-metric.mem .nav-metric-val { color: #c5a3ff; }
+    .nav-metric-bar { width: 28px; height: 4px; background: #12151c; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
+    .nav-metric-bar > i { display: block; height: 100%; width: 0%; border-radius: 999px; transition: width .35s ease; }
+    .nav-metric.gpu .nav-metric-bar > i { background: linear-gradient(90deg, #5a9200, var(--accent)); }
+    .nav-metric.mem .nav-metric-bar > i { background: linear-gradient(90deg, #7a5ab0, #c5a3ff); }
+    @media (max-width: 640px) { .nav-metric-bar { display: none; } .nav-metric-label { display: none; } }
     .live { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
@@ -145,12 +157,24 @@
     <a href="/" class="brand" id="brand-home">Sparky<small>home lab</small></a>
     <nav class="nav" id="nav">
       <a href="/" class="nav-btn active" data-view="system">System</a>
-      <a href="/models.html" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</a>
+      <a href="/#models" class="nav-btn" data-src="/models.html" data-title="Model inventory" data-popout="/#models">Models</a>
       <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
     </nav>
     <div class="nav-meta">
+      <div class="nav-metrics" id="nav-metrics">
+        <a href="#system" class="nav-metric gpu" id="nav-gpu" title="GPU utilization">
+          <span class="nav-metric-label">GPU</span>
+          <span class="nav-metric-val"><span id="nav-gpu-util">—</span>%</span>
+          <span class="nav-metric-bar" aria-hidden="true"><i id="nav-gpu-bar"></i></span>
+        </a>
+        <a href="#system" class="nav-metric mem" id="nav-mem" title="System memory">
+          <span class="nav-metric-label">MEM</span>
+          <span class="nav-metric-val"><span id="nav-mem-util">—</span>%</span>
+          <span class="nav-metric-bar" aria-hidden="true"><i id="nav-mem-bar"></i></span>
+        </a>
+      </div>
       <button type="button" class="theme-toggle" id="theme-toggle" title="Nebula background" aria-label="Toggle nebula background">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle class="theme-toggle-ring" cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width=".55" stroke-dasharray="3.5 16" fill="none"/>
@@ -282,7 +306,7 @@
           <div class="section-title">Log</div>
           <pre class="inf-log" id="inf-log">—</pre>
           <div class="inf-links">
-            <a href="/models.html" id="inf-models-link">Model inventory</a>
+            <a href="/#models" id="inf-models-link">Model inventory</a>
             <a href="http://sparky:3000/" target="_blank" rel="noopener">Open WebUI ↗</a>
             <a href="#" id="inf-api-link" target="_blank" rel="noopener">API ↗</a>
           </div>
@@ -480,7 +504,7 @@
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
             + ' · :' + p.port + tok + ' · ' + state + switchHint + '</span>' + note + '</div>';
         }).join('') || '<div class="inf-profile"><span class="name">No recipes yet</span>'
-          + '<span class="meta">Create drafts on the <a href="/models.html">Models</a> page.</span></div>';
+          + '<span class="meta">Create drafts on the <a href="/#models">Models</a> page.</span></div>';
 
         $('inf-switch').disabled = !!switching || !switchable.length;
         $('inf-down').disabled = !!switching;
@@ -546,8 +570,8 @@
         $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
         const invPath = active && active.inventory_path;
         $('inf-models-link').href = invPath
-          ? '/models.html?highlight=' + encodeURIComponent(invPath)
-          : '/models.html';
+          ? '/?highlight=' + encodeURIComponent(invPath) + '#models'
+          : '/#models';
         $('inf-models-link').textContent = invPath ? 'View model in inventory' : 'Model inventory';
       }
 
@@ -749,16 +773,41 @@
         }
       }
 
-      async function tick() {
-        if (!onSystem) return;
+      function updateNavMetrics(d) {
+        $('nav-gpu-util').textContent = d.gpu_util_pct != null ? Math.round(d.gpu_util_pct) : '—';
+        $('nav-mem-util').textContent = d.memory_used_pct != null ? Math.round(d.memory_used_pct) : '—';
+        setBar($('nav-gpu-bar'), d.gpu_util_pct || 0);
+        setBar($('nav-mem-bar'), d.memory_used_pct || 0);
+        const gpuTitle = (d.gpu_name || 'GPU') + ' · ' + (d.gpu_util_pct != null ? d.gpu_util_pct.toFixed(1) + '%' : '—');
+        $('nav-gpu').title = d.gpu_power_w != null ? gpuTitle + ' · ' + d.gpu_power_w + ' W' : gpuTitle;
+        $('nav-mem').title = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB system memory';
+      }
+
+      function modelsFrameUrl(base) {
+        let url = window.SparkyTheme && SparkyTheme.themedUrl ? SparkyTheme.themedUrl(base) : base;
+        const hp = new URLSearchParams(location.search).get('highlight');
+        if (hp && base.includes('models.html')) {
+          url += (url.includes('?') ? '&' : '?') + 'highlight=' + encodeURIComponent(hp);
+        }
+        return url;
+      }
+
+      async function gpuPoll() {
         try {
           const [gpuRes, infData] = await Promise.all([
             fetch('/api/gpu', { cache: 'no-store' }),
-            fetchInferenceStatus(),
+            onSystem ? fetchInferenceStatus() : Promise.resolve(null),
           ]);
           if (!gpuRes.ok) throw new Error('bad status');
           const d = await gpuRes.json();
           const hist = d.history || {};
+
+          updateNavMetrics(d);
+          if (!onSystem) {
+            $('live').classList.remove('live-stale');
+            $('live').lastChild.textContent = 'live';
+            return;
+          }
 
           $('gpu-name').textContent = d.gpu_name;
           $('uptime-text').textContent = d.uptime_human;
@@ -823,7 +872,7 @@
         inferenceCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
-        tick();
+        gpuPoll();
       }
 
       function showInference(btn) {
@@ -842,12 +891,16 @@
         const src = btn.dataset.src;
         const title = btn.dataset.title || src;
         const popout = btn.dataset.popout || src;
-        const frameSrc = window.SparkyTheme && SparkyTheme.themedUrl
-          ? SparkyTheme.themedUrl(src)
-          : src;
-        const popoutHref = window.SparkyTheme && SparkyTheme.themedUrl
-          ? SparkyTheme.themedUrl(popout)
-          : popout;
+        const frameSrc = src.includes('models.html') ? modelsFrameUrl(src) : (
+          window.SparkyTheme && SparkyTheme.themedUrl ? SparkyTheme.themedUrl(src) : src
+        );
+        let popoutHref = popout;
+        if (popout.includes('models') && !popout.includes('models.html')) {
+          const hp = new URLSearchParams(location.search).get('highlight');
+          popoutHref = '/' + (hp ? '?highlight=' + encodeURIComponent(hp) : '') + '#models';
+        } else if (window.SparkyTheme && SparkyTheme.themedUrl) {
+          popoutHref = SparkyTheme.themedUrl(popout);
+        }
         onSystem = false;
         onInference = false;
         setActiveNav(btn);
@@ -901,6 +954,14 @@
         history.replaceState(null, '', '#system');
       });
 
+      $('nav-metrics').addEventListener('click', (e) => {
+        const link = e.target.closest('.nav-metric');
+        if (!link || navModifierClick(e)) return;
+        e.preventDefault();
+        showSystem(nav.querySelector('[data-view="system"]'));
+        history.replaceState(null, '', '#system');
+      });
+
       $('inf-switch').addEventListener('click', infSwitch);
       $('inf-bench').addEventListener('click', infBench);
       $('inf-down').addEventListener('click', infDown);
@@ -930,9 +991,9 @@
         showSystem(nav.querySelector('[data-view="system"]'));
       }
 
-      pollTimer = setInterval(tick, 1000);
+      pollTimer = setInterval(gpuPoll, 1000);
       infPollTimer = setInterval(infTick, 2000);
-      tick();
+      gpuPoll();
     })();
   </script>
 </body>

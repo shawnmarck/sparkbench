@@ -242,7 +242,15 @@
     html.theme-b .page-shell > main { background: transparent; }
     body.embedded .theme-toggle-floating { display: none; }
   </style>
-  <script>if (window.self !== window.top) document.documentElement.classList.add('embedded-pending');</script>
+  <script>
+    (function () {
+      if (window.self !== window.top) {
+        document.documentElement.classList.add('embedded-pending');
+        return;
+      }
+      location.replace('/' + (location.search || '') + '#models');
+    })();
+  </script>
 </head>
 <body>
   <button type="button" class="theme-toggle theme-toggle-floating" id="theme-toggle" title="Nebula background" aria-label="Toggle nebula background">

@@ -30,8 +30,8 @@ Examples:
   spark shelf pull nvidia/qwen3.6-35b-a3b
   spark engine llama status
 
-Tip: spark <group> ?  — contextual help (prefixes OK). Quote ? in shell: spark inf '?'
-      spark inf help     Same without quoting ?
+Tip: spark <group> ?  — contextual help (prefixes OK; zsh: unquoted ? works after install/20)
+      spark inf help     Same without ?
 EOF
 }
 

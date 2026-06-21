@@ -53,6 +53,12 @@ mkdir -p "${ZSH_SITE}"
 install -m 644 "${SCRIPT_DIR}/completions/_spark" "${ZSH_SITE}/_spark"
 echo "OK: zsh completion → ${ZSH_SITE}/_spark"
 
+ZSH_RC="/etc/zsh/zshrc.d"
+if [[ -d "${ZSH_RC}" ]]; then
+  install -m 644 "${SCRIPT_DIR}/completions/spark.zsh" "${ZSH_RC}/spark.zsh"
+  echo "OK: zsh noglob + ? help → ${ZSH_RC}/spark.zsh"
+fi
+
 "${SPARK_BIN}" --help >/dev/null
 "${SPARK_BIN}" inference list >/dev/null
 echo "OK: spark CLI at /usr/local/bin/spark"

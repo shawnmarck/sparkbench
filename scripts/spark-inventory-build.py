@@ -21,6 +21,7 @@ VERIFY_FILE = Path("/opt/spark/data/model-verification.yaml")
 RECIPES_DIR = Path("/opt/spark/recipes")
 INFERENCE_PROFILES = Path("/opt/spark/data/inference-profiles.yaml")
 BENCHMARKS_FILE = Path("/opt/spark/data/inference-benchmarks.yaml")
+BENCHMARK_HISTORY_FILE = Path("/opt/spark/data/inference-benchmark-history.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
 HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
@@ -315,6 +316,25 @@ def parse_active_param_b(name: str, slug: str) -> float | None:
     return None
 
 
+def load_bench_history_counts() -> dict[str, int]:
+    if yaml is None or not BENCHMARK_HISTORY_FILE.is_file():
+        return {}
+    try:
+        data = yaml.safe_load(BENCHMARK_HISTORY_FILE.read_text()) or {}
+        profiles = data.get("profiles") or {}
+        if not isinstance(profiles, dict):
+            return {}
+        out: dict[str, int] = {}
+        for profile_id, prof in profiles.items():
+            if isinstance(prof, dict):
+                runs = prof.get("runs") or []
+                if isinstance(runs, list):
+                    out[str(profile_id)] = len(runs)
+        return out
+    except (OSError, yaml.YAMLError):
+        return {}
+
+
 def load_profile_benchmarks() -> dict[str, dict]:
     if yaml is None or not BENCHMARKS_FILE.is_file():
         return {}
@@ -348,6 +368,7 @@ def attach_best_bench_tok(entries: list) -> None:
             if p.get("tok_s") is not None
         ]
         entry["best_bench_tok_s"] = max(toks) if toks else None
+        entry["latest_bench_tok_s"] = entry["best_bench_tok_s"]
 
 
 def load_inference_profile_map() -> dict[str, list[dict]]:
@@ -371,6 +392,7 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             benchmarks = raw if isinstance(raw, dict) else {}
         except (OSError, yaml.YAMLError):
             benchmarks = {}
+    history_counts = load_bench_history_counts()
 
     by_path: dict[str, list[dict]] = {}
     recipe_files = sorted(RECIPES_DIR.glob("*.yaml"))
@@ -406,6 +428,8 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             "tok_s": bench.get("tok_s") if measured else None,
             "bench_method": method if measured else None,
             "bench_measured_at": bench.get("measured_at") if measured else None,
+            "latest_run_id": bench.get("latest_run_id") if measured else None,
+            "bench_run_count": history_counts.get(profile_id, 0),
             "notes": first_note,
         }
         by_path.setdefault(str(inv_path), []).append(info)

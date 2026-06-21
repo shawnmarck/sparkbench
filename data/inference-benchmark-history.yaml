@@ -1,0 +1,224 @@
+_meta:
+  migrated_from_latest: '2026-06-21T20:12:27.193806+00:00'
+profiles:
+  gemma4-12b-coder-q4:
+    runs:
+    - id: 20260621T08283563-c3b73a
+      measured_at: '2026-06-21T08:28:35.638042+00:00'
+      method: bench
+      engine: llamacpp
+      tok_s: 18.6
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 13
+      prompt_tokens: 10
+      elapsed_s: 0.7
+      system_note: bench 13 tok in 0.7s
+  qwen36-nvfp4:
+    runs:
+    - id: 20260621T08535201-16a13c
+      measured_at: '2026-06-21T08:53:52.017644+00:00'
+      method: bench-agent
+      engine: eugr
+      tok_s: 73.5
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2304
+      prompt_tokens: 876
+      elapsed_s: 31.35
+      tok_s_min: 73.3
+      tok_s_max: 73.6
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 73.3
+      - 73.6
+      - 73.6
+      system_note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304\
+        \ tok in 31.3s)"
+  qwen36-q4-llama:
+    runs:
+    - id: 20260621T08591389-da2af5
+      measured_at: '2026-06-21T08:59:13.892448+00:00'
+      method: bench-agent
+      engine: llamacpp
+      tok_s: 48.6
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2304
+      prompt_tokens: 876
+      elapsed_s: 47.37
+      tok_s_min: 48.6
+      tok_s_max: 48.7
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 48.7
+      - 48.6
+      - 48.6
+      system_note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304\
+        \ tok in 47.4s)"
+  google-gemma-4-12b-it-llama:
+    runs:
+    - id: 20260621T09163370-e8688b
+      measured_at: '2026-06-21T09:16:33.702063+00:00'
+      method: bench-agent
+      engine: llamacpp
+      tok_s: 21.1
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2304
+      prompt_tokens: 885
+      elapsed_s: 109.4
+      tok_s_min: 20.9
+      tok_s_max: 21.1
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 21.1
+      - 21.1
+      - 20.9
+      system_note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304\
+        \ tok in 109.4s)"
+  microsoft-phi-4-eugr:
+    runs:
+    - id: 20260621T18174950-8f90c7
+      measured_at: '2026-06-21T18:17:49.502330+00:00'
+      method: bench-agent
+      engine: eugr
+      tok_s: 8.1
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2304
+      prompt_tokens: 3120
+      elapsed_s: 285.55
+      tok_s_min: 8.1
+      tok_s_max: 8.1
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 8.1
+      - 8.1
+      - 8.1
+      system_note: "agent bench avg 8.1 tok/s over 3 sessions \xD7 3 turns (2304 tok\
+        \ in 285.5s)"
+  nousresearch-hermes-4-14b-eugr:
+    runs:
+    - id: 20260621T18251226-b5d9b1
+      measured_at: '2026-06-21T18:25:12.265283+00:00'
+      method: bench-agent
+      engine: eugr
+      tok_s: 8.0
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 1995
+      prompt_tokens: 2538
+      elapsed_s: 250.63
+      tok_s_min: 8.0
+      tok_s_max: 8.0
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 8.0
+      - 8.0
+      - 8.0
+      system_note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (1995 tok\
+        \ in 250.6s)"
+  nvidia-qwen3-30b-a3b-eugr:
+    runs:
+    - id: 20260621T18283089-93bc4f
+      measured_at: '2026-06-21T18:28:30.898759+00:00'
+      method: bench-agent
+      engine: eugr
+      tok_s: 74.6
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2304
+      prompt_tokens: 3162
+      elapsed_s: 30.87
+      tok_s_min: 74.2
+      tok_s_max: 75.0
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 74.2
+      - 74.7
+      - 75.0
+      system_note: "agent bench avg 74.6 tok/s over 3 sessions \xD7 3 turns (2304\
+        \ tok in 30.9s)"
+  unsloth-qwen3-coder-30b-a3b-instruct-llama:
+    runs:
+    - id: 20260621T18355629-4459e0
+      measured_at: '2026-06-21T18:35:56.292177+00:00'
+      method: bench-agent
+      engine: llamacpp
+      tok_s: 48.7
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2256
+      prompt_tokens: 3062
+      elapsed_s: 46.57
+      tok_s_min: 45.7
+      tok_s_max: 54.3
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 46.0
+      - 45.7
+      - 54.3
+      system_note: "agent bench avg 48.7 tok/s over 3 sessions \xD7 3 turns (2256\
+        \ tok in 46.6s)"
+  deepseek-ai-deepseek-r1-distill-qwen-32b-eugr:
+    runs:
+    - id: 20260621T19242405-3cd2b2
+      measured_at: '2026-06-21T19:24:24.051416+00:00'
+      method: bench-agent
+      engine: eugr
+      tok_s: 3.5
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2304
+      prompt_tokens: 3027
+      elapsed_s: 654.7
+      tok_s_min: 3.5
+      tok_s_max: 3.5
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 3.5
+      - 3.5
+      - 3.5
+      system_note: "agent bench avg 3.5 tok/s over 3 sessions \xD7 3 turns (2304 tok\
+        \ in 654.7s)"
+  google-gemma-4-26b-a4b-it-eugr:
+    runs:
+    - id: 20260621T19492885-77bbb2
+      measured_at: '2026-06-21T19:49:28.854111+00:00'
+      method: bench-agent
+      engine: eugr
+      tok_s: 21.8
+      source: import
+      note: ''
+      tags: []
+      completion_tokens: 2023
+      prompt_tokens: 2733
+      elapsed_s: 93.14
+      tok_s_min: 21.0
+      tok_s_max: 23.0
+      sessions: 3
+      turns_per_session: 3
+      run_tok_s:
+      - 21.2
+      - 21.0
+      - 23.0
+      system_note: "agent bench avg 21.8 tok/s over 3 sessions \xD7 3 turns (2023\
+        \ tok in 93.1s)"

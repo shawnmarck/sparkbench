@@ -20,6 +20,7 @@ Groups:
   shelf pull|push|rm|status
   engine eugr|llama <up|down|logs|status|build>
   gpu                    Metrics JSON (same as /api/gpu)
+  bench history|show|note|latest   Benchmark run history (per recipe)
   hf login               Hugging Face token setup
 
 Examples:
@@ -53,7 +54,7 @@ run_py() {
 
 # --- contextual help (? at any level) ---
 
-SPARK_GROUPS=(status inference recipe models shelf engine gpu hf)
+SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf)
 
 resolve_prefix() {
   local word="$1"
@@ -223,6 +224,19 @@ spark gpu — metrics JSON
 EOF
 }
 
+help_bench() {
+  cat <<'EOF'
+spark bench — per-recipe benchmark history (latest still on cards)
+
+  history <profile> [--json] [--limit N]   List runs (newest first)
+  show <profile> <run_id> [--json]         One run
+  latest <profile> [--json]                Latest cached result
+  note <profile> <run_id> <text>           Agent/human note on a run
+
+Run benchmarks: spark inference bench (unchanged)
+EOF
+}
+
 context_help() {
   local -a args=("$@")
 
@@ -240,6 +254,15 @@ context_help() {
       ;;
     gpu)
       help_gpu
+      ;;
+    bench)
+      if [[ ${#args[@]} -eq 1 ]]; then
+        help_bench
+      else
+        local sub
+        sub="$(resolve_prefix "${args[1]}" history show note latest)" || return 1
+        help_bench
+      fi
       ;;
     inference)
       if [[ ${#args[@]} -eq 1 ]]; then
@@ -418,6 +441,13 @@ cmd_gpu() {
   run_py "${LIB}/spark-gpu-metrics" "$@"
 }
 
+cmd_bench() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_bench; exit 0; }
+  shift
+  run_py "${LIB}/spark-inference.py" bench "$sub" "$@"
+}
+
 cmd_hf() {
   local sub="${1:-login}"
   shift
@@ -440,6 +470,7 @@ dispatch_group() {
     shelf) cmd_shelf "$@" ;;
     engine) cmd_engine "$@" ;;
     gpu) cmd_gpu "$@" ;;
+    bench) cmd_bench "$@" ;;
     hf) cmd_hf "$@" ;;
     *)
       die "unknown group: $group (run spark --help or spark ?)"
@@ -460,7 +491,7 @@ main() {
   [[ -n "$cmd" ]] || { usage; exit 0; }
   case "$cmd" in
     -h|--help|help) usage ;;
-    status|gpu) shift; dispatch_group "$cmd" "$@" ;;
+    status|gpu|bench) shift; dispatch_group "$cmd" "$@" ;;
     inference|recipe|models|shelf|engine|hf) shift; dispatch_group "$cmd" "$@" ;;
     *)
       local group

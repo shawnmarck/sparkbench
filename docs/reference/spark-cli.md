@@ -22,6 +22,7 @@ spark <group> <subcommand> [args...]
 |-------|---------|
 | `status` | GPU + inference overview |
 | `inference` | Profile switch (`up` / `down` / `bench`) |
+| `bench` | Per-recipe benchmark **history** (read/write notes) |
 | `recipe` | Model Lab lifecycle |
 | `models` | Inventory verify / removal / rebuild |
 | `shelf` | Local disk ↔ NAS |
@@ -129,8 +130,21 @@ spark models inventory
 
 - **stdout** — human tables or JSON (`spark gpu`); suitable for parsing where documented.
 - **stderr** — errors (`spark: …`).
-- **`spark inference bench`** — can take minutes; run with adequate timeout.
+- **`spark inference bench`** — can take minutes; run with adequate timeout. Appends to per-recipe history; does not change start/poll semantics.
 - **`spark shelf push --background`** — returns immediately; poll `spark shelf push --status` or shelf API.
+
+### Benchmark history (read/write notes)
+
+```bash
+spark bench history <profile> [--json] [--limit N]
+spark bench show <profile> <run_id> [--json]
+spark bench note <profile> <run_id> "baseline before MTP tweak"
+spark bench latest <profile> [--json]
+```
+
+HTTP: `GET /api/inference/benchmarks/<profile>/history`, `PATCH .../runs/<run_id>` with `{"note":"..."}`.
+
+Cards and Inference tab still show **latest** `tok_s`; full timeline is in history + Models detail panel.
 
 ### Environment
 

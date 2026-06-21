@@ -37,7 +37,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _json(self, code: int, payload: dict[str, Any]) -> None:
@@ -82,6 +82,13 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"ok": False, "error": "invalid JSON"})
             return
         self._dispatch("POST", data)
+
+    def do_PATCH(self) -> None:
+        data = self._read_json_body()
+        if data is None:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        self._dispatch("PATCH", data)
 
     def log_message(self, *_args: object) -> None:
         return

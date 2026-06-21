@@ -197,6 +197,17 @@
     .inf-profile-info strong { display: block; font-size: .84rem; }
     .inf-profile-info code { font-size: .72rem; color: var(--muted); }
     .inf-profile-actions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .inf-profile-block { border-top: 1px solid var(--border); padding: .45rem 0 0; }
+    .inf-profile-block:first-of-type { border-top: 0; padding-top: 0; }
+    .inf-profile-block .inf-profile-row { border-top: 0; padding-top: 0; padding-bottom: .35rem; }
+    details.bench-history { margin: 0 0 .35rem; font-size: .78rem; }
+    details.bench-history summary { cursor: pointer; color: var(--dl); user-select: none; }
+    .bench-history-table { width: 100%; border-collapse: collapse; margin-top: .35rem; font-size: .75rem; }
+    .bench-history-table th, .bench-history-table td { text-align: left; padding: .25rem .35rem; border-top: 1px solid var(--border); vertical-align: top; }
+    .bench-history-table th { color: var(--muted); font-weight: 600; font-size: .68rem; text-transform: uppercase; }
+    .bench-history-table tr.latest td { background: #151a22; }
+    .bench-note-input { width: 100%; min-width: 8rem; font-size: .75rem; padding: .2rem .35rem; background: #0e1014; border: 1px solid var(--border); border-radius: 4px; color: inherit; }
+    .bench-note-save { font-size: .7rem; padding: .15rem .4rem; margin-top: .2rem; }
     .model-row.highlight { border-color: #3a4a3a; box-shadow: 0 0 0 1px #3a4a3a; }
     .release-est { opacity: .75; font-style: italic; }
     .detail-section { margin-top: .75rem; }
@@ -558,9 +569,15 @@
         } else {
           actions = '<span class="badge">off</span>';
         }
-        return `<div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
+        const runCount = p.bench_run_count || 0;
+        const histSummary = runCount
+          ? `Benchmark history (${runCount})`
+          : 'Benchmark history';
+        return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
           + `<code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div>`
-          + `<div class="inf-profile-actions">${lifeBadge(lc)}${tier}${tokBadge}${actions}</div></div>`;
+          + `<div class="inf-profile-actions">${lifeBadge(lc)}${tier}${tokBadge}${actions}</div></div>`
+          + `<details class="bench-history" data-profile="${esc(p.id)}"><summary>${histSummary}</summary>`
+          + `<div class="bench-history-panel"></div></details></div>`;
       }).join('');
       const create = onDisk ? `<div class="recipe-lab-create">`
         + `<span class="verify-label">New recipe</span>`
@@ -636,7 +653,7 @@
         const spark = sparkStatus(m);
         const queued = removalPending(m);
         const benchTok = m.best_bench_tok_s != null
-          ? `<span class="badge tok-s" title="best measured recipe on this model">${Math.round(m.best_bench_tok_s)} tok/s</span>`
+          ? `<span class="badge tok-s" title="latest benchmark per recipe (fastest shown)">${Math.round(m.best_bench_tok_s)} tok/s</span>`
           : '';
         const badges = [
           engineBadgeHtml(m),
@@ -817,6 +834,66 @@
       updateSparkFilterChips();
     }
 
+    function formatBenchWhen(iso) {
+      if (!iso) return '—';
+      return String(iso).slice(0, 19).replace('T', ' ');
+    }
+
+    async function loadBenchHistory(detailsEl) {
+      const profile = detailsEl.dataset.profile;
+      const panel = detailsEl.querySelector('.bench-history-panel');
+      if (!profile || !panel || panel.dataset.loaded === '1') return;
+      panel.innerHTML = '<div class="meta-warn">Loading…</div>';
+      try {
+        const res = await fetch('/api/inference/benchmarks/' + encodeURIComponent(profile) + '/history', { cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        const runs = data.runs || [];
+        panel.dataset.loaded = '1';
+        if (!runs.length) {
+          panel.innerHTML = '<div class="meta-warn">No runs yet — bench on Inference tab.</div>';
+          return;
+        }
+        const latestId = (data.latest || {}).latest_run_id;
+        const rows = runs.map((run) => {
+          const tok = run.tok_s != null ? Math.round(run.tok_s) + ' tok/s' : '—';
+          const range = (run.tok_s_min != null && run.tok_s_max != null)
+            ? ` (${Math.round(run.tok_s_min)}–${Math.round(run.tok_s_max)})` : '';
+          const sys = run.system_note ? `<div class="verify-note">${esc(run.system_note)}</div>` : '';
+          const cls = run.id === latestId ? 'latest' : '';
+          return `<tr class="${cls}"><td>${esc(formatBenchWhen(run.measured_at))}</td>`
+            + `<td>${esc(tok + range)}<br><code>${esc(run.method || '')}</code>${sys}</td>`
+            + `<td><textarea class="bench-note-input" rows="2" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">${esc(run.note || '')}</textarea>`
+            + `<button type="button" class="btn bench-note-save" data-action="bench-note-save" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">Save note</button></td></tr>`;
+        }).join('');
+        panel.innerHTML = `<table class="bench-history-table"><thead><tr><th>When</th><th>Speed</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>`;
+      } catch (err) {
+        panel.innerHTML = `<div class="meta-warn">${esc(err.message)}</div>`;
+      }
+    }
+
+    async function saveBenchNote(profile, runId, note, btn) {
+      btn.disabled = true;
+      try {
+        const res = await fetch(
+          '/api/inference/benchmarks/' + encodeURIComponent(profile) + '/runs/' + encodeURIComponent(runId),
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note }),
+          }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        btn.textContent = 'Saved';
+        setTimeout(() => { btn.textContent = 'Save note'; }, 1500);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     async function refreshInferenceStatus() {
       try {
         const res = await fetch('/api/inference/status', { cache: 'no-store' });
@@ -990,6 +1067,11 @@
       } catch (_) {}
     }
 
+    $('list').addEventListener('toggle', (e) => {
+      const det = e.target.closest('details.bench-history');
+      if (det && det.open) loadBenchHistory(det);
+    }, true);
+
     $('list').addEventListener('click', (e) => {
       const expand = e.target.closest('[data-expand]');
       if (expand) {
@@ -1035,6 +1117,15 @@
       if (sbtn && !sbtn.disabled) {
         e.stopPropagation();
         startProfile(sbtn.dataset.profile, sbtn.dataset.tier, sbtn);
+        return;
+      }
+      const noteBtn = e.target.closest('[data-action="bench-note-save"]');
+      if (noteBtn && !noteBtn.disabled) {
+        e.stopPropagation();
+        const row = noteBtn.closest('td');
+        const input = row ? row.querySelector('.bench-note-input') : null;
+        const note = input ? input.value.trim() : '';
+        saveBenchNote(noteBtn.dataset.profile, noteBtn.dataset.runId, note, noteBtn);
         return;
       }
       const btn = e.target.closest('[data-action]');

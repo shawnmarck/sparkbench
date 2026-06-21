@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,14 @@ BENCH_PID_FILE = ROOT / "run" / "inference-bench.pid"
 BENCH_RESULT_FILE = ROOT / "run" / "inference-bench-result.json"
 LOG_DIR = ROOT / "logs"
 BENCHMARKS_FILE = ROOT / "data" / "inference-benchmarks.yaml"
+BENCHMARK_HISTORY_FILE = ROOT / "data" / "inference-benchmark-history.yaml"
+BENCH_HISTORY_RUN_RE = re.compile(
+    r"^/api/inference/benchmarks/([^/]+)/runs/([^/]+)$"
+)
+BENCH_HISTORY_LIST_RE = re.compile(
+    r"^/api/inference/benchmarks/([^/]+)/history$"
+)
+_history_migrated = False
 VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
@@ -694,6 +703,194 @@ def benchmark_for_profile(profile_id: str) -> dict[str, Any] | None:
     return entry if isinstance(entry, dict) else None
 
 
+def make_bench_run_id(measured_at: str) -> str:
+    slug = re.sub(r"[^0-9TZ]", "", measured_at.replace("+00:00", "Z"))[:17]
+    return f"{slug}-{uuid.uuid4().hex[:6]}"
+
+
+def load_benchmark_history_store() -> dict[str, Any]:
+    ensure_benchmark_history_migrated()
+    if not BENCHMARK_HISTORY_FILE.is_file():
+        return {"profiles": {}}
+    data = load_yaml(BENCHMARK_HISTORY_FILE)
+    profiles = data.get("profiles") or {}
+    if not isinstance(profiles, dict):
+        profiles = {}
+    return {"profiles": profiles, "_meta": data.get("_meta") or {}}
+
+
+def save_benchmark_history_store(store: dict[str, Any]) -> None:
+    BENCHMARK_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"_meta": store.get("_meta") or {}, "profiles": store.get("profiles") or {}}
+    BENCHMARK_HISTORY_FILE.write_text(
+        yaml.safe_dump(payload, sort_keys=False, default_flow_style=False)
+    )
+
+
+def ensure_benchmark_history_migrated() -> None:
+    global _history_migrated
+    if _history_migrated:
+        return
+    _history_migrated = True
+    store = {"profiles": {}, "_meta": {}}
+    if BENCHMARK_HISTORY_FILE.is_file():
+        try:
+            data = load_yaml(BENCHMARK_HISTORY_FILE)
+            store["profiles"] = data.get("profiles") or {}
+            store["_meta"] = data.get("_meta") or {}
+            if not isinstance(store["profiles"], dict):
+                store["profiles"] = {}
+        except SystemExit:
+            store["profiles"] = {}
+    if store["_meta"].get("migrated_from_latest"):
+        return
+    latest = load_benchmarks()
+    for profile_id, entry in latest.items():
+        if not isinstance(entry, dict) or entry.get("tok_s") is None:
+            continue
+        prof = store["profiles"].setdefault(profile_id, {"runs": []})
+        runs = prof.setdefault("runs", [])
+        if runs:
+            continue
+        measured_at = str(entry.get("measured_at") or datetime.now(timezone.utc).isoformat())
+        run = {
+            "id": make_bench_run_id(measured_at),
+            "measured_at": measured_at,
+            "method": entry.get("method"),
+            "engine": entry.get("engine"),
+            "tok_s": entry.get("tok_s"),
+            "source": "import",
+            "note": "",
+            "tags": [],
+        }
+        for key in (
+            "completion_tokens",
+            "prompt_tokens",
+            "elapsed_s",
+            "tok_s_min",
+            "tok_s_max",
+            "sessions",
+            "turns_per_session",
+            "run_tok_s",
+        ):
+            if entry.get(key) is not None:
+                run[key] = entry[key]
+        if entry.get("note"):
+            run["system_note"] = entry["note"]
+        runs.append(run)
+        entry_copy = dict(entry)
+        entry_copy["latest_run_id"] = run["id"]
+        latest[profile_id] = entry_copy
+    store["_meta"]["migrated_from_latest"] = datetime.now(timezone.utc).isoformat()
+    save_benchmark_history_store(store)
+    if latest:
+        save_benchmarks(latest)
+
+
+def bench_history_runs(profile_id: str) -> list[dict[str, Any]]:
+    store = load_benchmark_history_store()
+    prof = store["profiles"].get(profile_id) or {}
+    runs = prof.get("runs") or []
+    return [r for r in runs if isinstance(r, dict)]
+
+
+def bench_history_count(profile_id: str) -> int:
+    return len(bench_history_runs(profile_id))
+
+
+def append_benchmark_history_run(
+    profile_id: str,
+    entry: dict[str, Any],
+    *,
+    system_note: str | None = None,
+    source: str = "auto",
+) -> dict[str, Any]:
+    store = load_benchmark_history_store()
+    prof = store["profiles"].setdefault(profile_id, {"runs": []})
+    runs = prof.setdefault("runs", [])
+    measured_at = str(entry.get("measured_at") or datetime.now(timezone.utc).isoformat())
+    run: dict[str, Any] = {
+        "id": make_bench_run_id(measured_at),
+        "measured_at": measured_at,
+        "method": entry.get("method"),
+        "engine": entry.get("engine"),
+        "tok_s": entry.get("tok_s"),
+        "source": source,
+        "note": "",
+        "tags": [],
+    }
+    for key in (
+        "completion_tokens",
+        "prompt_tokens",
+        "elapsed_s",
+        "tok_s_min",
+        "tok_s_max",
+        "sessions",
+        "turns_per_session",
+        "run_tok_s",
+    ):
+        if entry.get(key) is not None:
+            run[key] = entry[key]
+    if system_note:
+        run["system_note"] = system_note
+    runs.append(run)
+    save_benchmark_history_store(store)
+    return run
+
+
+def list_bench_history(
+    profile_id: str, *, limit: int = 50
+) -> list[dict[str, Any]]:
+    runs = bench_history_runs(profile_id)
+    runs_sorted = sorted(
+        runs,
+        key=lambda r: str(r.get("measured_at") or ""),
+        reverse=True,
+    )
+    return runs_sorted[: max(1, min(limit, 200))]
+
+
+def get_bench_history_run(profile_id: str, run_id: str) -> dict[str, Any] | None:
+    for run in bench_history_runs(profile_id):
+        if run.get("id") == run_id:
+            return run
+    return None
+
+
+def update_bench_history_run(
+    profile_id: str,
+    run_id: str,
+    *,
+    note: str | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    store = load_benchmark_history_store()
+    prof = store["profiles"].get(profile_id)
+    if not prof:
+        raise RuntimeError(f"no benchmark history for profile {profile_id}")
+    runs = prof.get("runs") or []
+    for run in runs:
+        if run.get("id") != run_id:
+            continue
+        if note is not None:
+            run["note"] = note
+        if tags is not None:
+            run["tags"] = tags
+        run["updated_at"] = datetime.now(timezone.utc).isoformat()
+        save_benchmark_history_store(store)
+        return run
+    raise RuntimeError(f"benchmark run not found: {run_id}")
+
+
+def validate_history_profile(profile_id: str) -> str | None:
+    profile_id = profile_id.strip()
+    if not profile_id or not PROFILE_ID_RE.match(profile_id):
+        return None
+    if resolve_recipe_path(profile_id) is None:
+        return None
+    return profile_id
+
+
 def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
     profile_id = recipe.get("id")
     bench = benchmark_for_profile(profile_id) if profile_id else None
@@ -712,6 +909,9 @@ def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
         out["tok_s"] = bench.get("tok_s")
         out["tok_s_method"] = bench.get("method")
         out["tok_s_measured_at"] = bench.get("measured_at")
+        if bench.get("latest_run_id"):
+            out["latest_run_id"] = bench.get("latest_run_id")
+        out["bench_run_count"] = bench_history_count(profile_id) if profile_id else 0
     return out
 
 
@@ -758,6 +958,10 @@ def record_benchmark(
         entry["run_tok_s"] = [round(float(v), 1) for v in run_tok_s]
     if note:
         entry["note"] = note
+    run = append_benchmark_history_run(
+        profile_id, entry, system_note=note, source="auto"
+    )
+    entry["latest_run_id"] = run["id"]
     profiles[profile_id] = entry
     save_benchmarks(profiles)
 
@@ -1203,6 +1407,37 @@ def api_dispatch(
             return 200, {"ok": True, **api_status()}
         if route == "/api/inference/recipes":
             return 200, {"ok": True, "recipes": api_recipe_list()}
+        hist_match = BENCH_HISTORY_LIST_RE.match(route)
+        if hist_match:
+            profile = validate_history_profile(hist_match.group(1))
+            if not profile:
+                return 404, {"ok": False, "error": "unknown profile"}
+            limit = 50
+            if "?" in path:
+                for part in path.split("?", 1)[1].split("&"):
+                    if part.startswith("limit="):
+                        try:
+                            limit = max(1, min(200, int(part.split("=", 1)[1])))
+                        except ValueError:
+                            pass
+            runs = list_bench_history(profile, limit=limit)
+            latest = benchmark_for_profile(profile)
+            return 200, {
+                "ok": True,
+                "profile": profile,
+                "latest": latest,
+                "runs": runs,
+                "count": bench_history_count(profile),
+            }
+        run_match = BENCH_HISTORY_RUN_RE.match(route)
+        if run_match:
+            profile = validate_history_profile(run_match.group(1))
+            if not profile:
+                return 404, {"ok": False, "error": "unknown profile"}
+            run = get_bench_history_run(profile, run_match.group(2))
+            if not run:
+                return 404, {"ok": False, "error": "run not found"}
+            return 200, {"ok": True, "profile": profile, "run": run}
         if path.startswith("/api/inference/logs"):
             lines = 30
             if "?" in path:
@@ -1222,6 +1457,30 @@ def api_dispatch(
                 "switch": active_switch_job(),
             }
         return None
+
+    if method == "PATCH":
+        run_match = BENCH_HISTORY_RUN_RE.match(route)
+        if not run_match:
+            return None
+        profile = validate_history_profile(run_match.group(1))
+        if not profile:
+            return 404, {"ok": False, "error": "unknown profile"}
+        note = body.get("note")
+        tags = body.get("tags")
+        if note is None and tags is None:
+            return 400, {"ok": False, "error": "note or tags required"}
+        if tags is not None and not isinstance(tags, list):
+            return 400, {"ok": False, "error": "tags must be a list"}
+        try:
+            run = update_bench_history_run(
+                profile,
+                run_match.group(2),
+                note=str(note) if note is not None else None,
+                tags=[str(t) for t in tags] if tags is not None else None,
+            )
+        except RuntimeError as exc:
+            return 404, {"ok": False, "error": str(exc)}
+        return 200, {"ok": True, "profile": profile, "run": run}
 
     if method != "POST":
         return None
@@ -1327,6 +1586,108 @@ def cmd_logs(profile_id: str | None) -> int:
     return 0
 
 
+def cmd_bench_history_cli(argv: list[str]) -> int:
+    if len(argv) < 3:
+        raise SystemExit(
+            "usage: spark-inference bench {history|show|note|latest} ..."
+        )
+    sub = argv[2]
+    as_json = "--json" in argv
+
+    if sub == "history":
+        if len(argv) < 4:
+            raise SystemExit("usage: spark-inference bench history <profile> [--json]")
+        profile = validate_history_profile(argv[3])
+        if not profile:
+            raise SystemExit(f"unknown profile: {argv[3]}")
+        limit = 50
+        for i, arg in enumerate(argv):
+            if arg == "--limit" and i + 1 < len(argv):
+                try:
+                    limit = max(1, min(200, int(argv[i + 1])))
+                except ValueError:
+                    pass
+        runs = list_bench_history(profile, limit=limit)
+        if as_json:
+            print(
+                json.dumps(
+                    {
+                        "profile": profile,
+                        "latest": benchmark_for_profile(profile),
+                        "runs": runs,
+                        "count": bench_history_count(profile),
+                    },
+                    indent=2,
+                )
+            )
+            return 0
+        if not runs:
+            print(f"No benchmark history for {profile}")
+            return 0
+        print(f"Benchmark history: {profile} ({bench_history_count(profile)} runs)")
+        for run in runs:
+            tok = run.get("tok_s")
+            when = (run.get("measured_at") or "")[:19].replace("T", " ")
+            note = (run.get("note") or "").strip()
+            tag = f"  {note}" if note else ""
+            print(f"  {when}  {tok} tok/s  {run.get('id')}{tag}")
+        return 0
+
+    if sub == "show":
+        if len(argv) < 5:
+            raise SystemExit("usage: spark-inference bench show <profile> <run_id> [--json]")
+        profile = validate_history_profile(argv[3])
+        if not profile:
+            raise SystemExit(f"unknown profile: {argv[3]}")
+        run = get_bench_history_run(profile, argv[4])
+        if not run:
+            raise SystemExit(f"run not found: {argv[4]}")
+        if as_json:
+            print(json.dumps({"profile": profile, "run": run}, indent=2))
+        else:
+            print(yaml.safe_dump(run, sort_keys=False, default_flow_style=False))
+        return 0
+
+    if sub == "latest":
+        if len(argv) < 4:
+            raise SystemExit("usage: spark-inference bench latest <profile> [--json]")
+        profile = validate_history_profile(argv[3])
+        if not profile:
+            raise SystemExit(f"unknown profile: {argv[3]}")
+        latest = benchmark_for_profile(profile)
+        if not latest:
+            raise SystemExit(f"no benchmark for {profile}")
+        if as_json:
+            print(json.dumps({"profile": profile, "latest": latest}, indent=2))
+        else:
+            print(yaml.safe_dump(latest, sort_keys=False, default_flow_style=False))
+        return 0
+
+    if sub == "note":
+        if len(argv) < 5:
+            raise SystemExit(
+                "usage: spark-inference bench note <profile> <run_id> <text>"
+            )
+        profile = validate_history_profile(argv[3])
+        if not profile:
+            raise SystemExit(f"unknown profile: {argv[3]}")
+        run_id = argv[4]
+        text = " ".join(a for a in argv[5:] if a != "--json").strip()
+        if not text:
+            raise SystemExit("note text required")
+        try:
+            run = update_bench_history_run(profile, run_id, note=text)
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
+        if as_json:
+            print(json.dumps({"profile": profile, "run": run}, indent=2))
+        else:
+            print(f"Updated note on {run_id}")
+        return 0
+
+    raise SystemExit(f"unknown bench subcommand: {sub}")
+
+
 def cmd_bench(write_result: bool = False) -> int:
     try:
         result = run_benchmark()
@@ -1427,6 +1788,8 @@ def main(argv: list[str]) -> int:
     if cmd == "logs":
         return cmd_logs(argv[2] if len(argv) > 2 else None)
     if cmd == "bench":
+        if len(argv) > 2 and argv[2] in ("history", "show", "note", "latest"):
+            return cmd_bench_history_cli(argv)
         return cmd_bench(write_result="--write-result" in argv)
     if cmd == "recipe":
         return cmd_recipe(argv)

@@ -131,9 +131,49 @@
     .inf-active-box { padding: .75rem .85rem; background: #12151c; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem; }
     .inf-active-title { font-weight: 600; color: var(--text); margin-bottom: .35rem; }
     .inf-active-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .76rem; line-height: 1.5; }
-    .inf-profile-grid { display: grid; gap: .45rem; margin-top: .35rem; min-width: 0; }
-    .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; min-width: 0; overflow: hidden; }
-    .inf-profile.active { border-color: #3a4a2a; background: #141a10; }
+    .inf-card-body { display: flex; flex-direction: column; gap: 0; min-height: 0; }
+    .inf-controls-block { flex-shrink: 0; padding-bottom: .15rem; }
+    .inf-recipes-panel {
+      display: flex; flex-direction: column; min-height: 0; flex-shrink: 0;
+      max-height: min(280px, 34vh); margin-top: .65rem;
+      border: 1px solid var(--border); border-radius: 10px; background: #0c0e14;
+    }
+    .inf-recipes-head {
+      flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: .35rem .65rem; padding: .45rem .6rem; border-bottom: 1px solid var(--border);
+      font-size: .72rem; color: var(--muted);
+    }
+    .inf-recipes-head .section-title { margin: 0; }
+    .inf-recipes-count { font-family: ui-monospace, monospace; font-size: .7rem; color: var(--muted); }
+    .inf-recipes-scroll {
+      flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+      padding: .4rem .45rem .5rem; overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+    .inf-recipes-scroll::-webkit-scrollbar { width: 8px; }
+    .inf-recipes-scroll::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 4px; }
+    .inf-recipes-panel > .inf-tier-legend.compact {
+      flex-shrink: 0; margin: 0; padding: .35rem .6rem; gap: .35rem .75rem; font-size: .68rem; line-height: 1.35;
+      border-bottom: 1px solid var(--border);
+    }
+    .inf-tier-legend.compact span { white-space: nowrap; }
+    .inf-log-wrap { flex-shrink: 0; margin-top: .75rem; }
+    .inf-log-wrap .section-title { margin-top: 0; }
+    body.inf-view .dashboard { overflow: hidden; display: flex; flex-direction: column; }
+    body.inf-view .dashboard-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; max-width: none; }
+    body.inf-view #inference-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
+    body.inf-view #inference-card .card-head { flex-shrink: 0; }
+    body.inf-view .inf-card-body { flex: 1; min-height: 0; }
+    body.inf-view .inf-recipes-panel { flex: 1; max-height: none; min-height: 8rem; }
+    body.inf-view .inf-log { max-height: min(200px, 22vh); }
+    .inf-profile-grid { display: grid; gap: .45rem; margin-top: 0; min-width: 0; }
+    .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; min-width: 0; overflow: hidden; cursor: pointer; transition: border-color .12s, background .12s; }
+    .inf-profile:hover { border-color: #3a4250; }
+    .inf-profile.active { border-color: #3a4a2a; background: #141a10; cursor: default; }
+    .inf-profile.selected:not(.active) { border-color: #3a4a5a; background: #131820; box-shadow: inset 0 0 0 1px #2a3545; }
+    .inf-profile.draft { cursor: default; }
+    .inf-profile.draft:hover { border-color: var(--border); }
+    .inf-profile.pickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .inf-profile-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem .75rem; width: 100%; min-width: 0; }
     .inf-profile .name { color: var(--text); font-weight: 600; flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inf-profile .meta { flex: 1 1 11rem; min-width: 0; max-width: 100%; text-align: right; margin-left: auto; color: #c9b86a; font-family: ui-monospace, monospace; font-size: .74rem; line-height: 1.45; overflow-wrap: anywhere; }
@@ -295,35 +335,48 @@
             <div class="card-head-meta" id="inf-head-meta">one GPU profile at a time</div>
           </div>
 
-          <div class="inf-active-box" id="inf-active-box">
-            <div class="inf-active-title" id="inf-active-title">No active profile</div>
-            <div class="inf-active-meta" id="inf-active-meta">Stop engines or switch to a recipe below.</div>
-            <div class="inf-switch-banner" id="inf-switch-banner" hidden></div>
-          </div>
+          <div class="inf-card-body">
+            <div class="inf-active-box" id="inf-active-box">
+              <div class="inf-active-title" id="inf-active-title">No active profile</div>
+              <div class="inf-active-meta" id="inf-active-meta">Pick a recipe and switch — log stays visible below.</div>
+              <div class="inf-switch-banner" id="inf-switch-banner" hidden></div>
+            </div>
 
-          <div class="section-title">Recipes</div>
-          <div class="inf-tier-legend">
-            <span><b>fast</b> — seconds to swap</span>
-            <span><b>heavy</b> — minutes to load (confirm before switch)</span>
-            <span><b>draft</b> — Model Lab only (not switchable)</span>
-            <span><b>testing</b> — switchable before promote</span>
-          </div>
-          <div class="inf-profile-grid" id="inf-profiles"></div>
+            <div class="inf-controls-block">
+              <div class="inf-actions">
+                <select id="inf-select" aria-label="Inference profile"></select>
+                <button type="button" class="inf-btn" id="inf-switch">Switch</button>
+                <button type="button" class="inf-btn" id="inf-bench">Benchmark</button>
+                <button type="button" class="inf-btn danger" id="inf-down">Stop</button>
+              </div>
+              <div class="inf-msg" id="inf-msg"></div>
+            </div>
 
-          <div class="inf-actions">
-            <select id="inf-select" aria-label="Inference profile"></select>
-            <button type="button" class="inf-btn" id="inf-switch">Switch</button>
-            <button type="button" class="inf-btn" id="inf-bench">Benchmark</button>
-            <button type="button" class="inf-btn danger" id="inf-down">Stop</button>
-          </div>
-          <div class="inf-msg" id="inf-msg"></div>
+            <div class="inf-recipes-panel">
+              <div class="inf-recipes-head">
+                <div class="section-title">Recipes</div>
+                <span class="inf-recipes-count" id="inf-recipes-count">0 profiles</span>
+              </div>
+              <div class="inf-tier-legend compact">
+                <span><b>fast</b> — quick swap</span>
+                <span><b>heavy</b> — minutes</span>
+                <span><b>testing</b> — switchable</span>
+                <span><b>draft</b> — Models only</span>
+              </div>
+              <div class="inf-recipes-scroll" id="inf-recipes-scroll">
+                <div class="inf-profile-grid" id="inf-profiles"></div>
+              </div>
+            </div>
 
-          <div class="section-title">Log</div>
-          <pre class="inf-log" id="inf-log">—</pre>
-          <div class="inf-links">
-            <a href="/#models" id="inf-models-link">Model inventory</a>
-            <a href="http://sparky:3000/" target="_blank" rel="noopener">Open WebUI ↗</a>
-            <a href="#" id="inf-api-link" target="_blank" rel="noopener">API ↗</a>
+            <div class="inf-log-wrap">
+              <div class="section-title">Log</div>
+              <pre class="inf-log" id="inf-log">—</pre>
+              <div class="inf-links">
+                <a href="/#models" id="inf-models-link">Model inventory</a>
+                <a href="http://sparky:3000/" target="_blank" rel="noopener">Open WebUI ↗</a>
+                <a href="#" id="inf-api-link" target="_blank" rel="noopener">API ↗</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -550,9 +603,21 @@
         else if (activeId && switchable.some((p) => p.id === activeId)) sel.value = activeId;
         else if (switchable.length) sel.value = switchable[0].id;
 
+        const countEl = $('inf-recipes-count');
+        if (countEl) {
+          const n = all.length;
+          const sw = switchable.length;
+          countEl.textContent = n + ' profile' + (n === 1 ? '' : 's')
+            + (sw !== n ? ' · ' + sw + ' switchable' : '');
+        }
+
+        const selectedId = sel.value;
         $('inf-profiles').innerHTML = all.map((p) => {
           const lc = p.lifecycle || 'production';
-          const cls = 'inf-profile' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '');
+          const canPick = p.switchable !== false && lc !== 'draft';
+          const cls = 'inf-profile' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '')
+            + (p.id === selectedId && !p.active ? ' selected' : '')
+            + (canPick ? ' pickable' : '');
           const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
           const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
           const tok = p.tok_s != null ? ' · ' + Math.round(p.tok_s) + ' tok/s' : '';
@@ -560,11 +625,19 @@
           const switchHint = lc === 'draft' ? ' · not switchable' : '';
           const metaShort = (p.engine || '?') + ' · ' + (p.tier || '?') + ' · :' + (p.port || '?') + tok + ' · ' + state + switchHint;
           const metaTitle = p.id + ' · ' + metaShort;
-          return '<div class="' + cls + '"><div class="inf-profile-row"><span class="name" title="' + attrEsc(p.name || p.id) + '">'
+          const pickAttrs = canPick
+            ? ' data-profile-id="' + attrEsc(p.id) + '" tabindex="0" role="button" title="Select for switch"'
+            : '';
+          return '<div class="' + cls + '"' + pickAttrs + '><div class="inf-profile-row"><span class="name" title="' + attrEsc(p.name || p.id) + '">'
             + infLifeBadge(lc) + (p.name || p.id) + '</span>'
             + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + metaShort + '</span></div>' + note + '</div>';
         }).join('') || '<div class="inf-profile"><span class="name">No recipes yet</span>'
           + '<span class="meta">Create drafts on the <a href="/#models">Models</a> page.</span></div>';
+
+        const activeRow = $('inf-profiles').querySelector('.inf-profile.active');
+        if (activeRow && activeRow.scrollIntoView) {
+          requestAnimationFrame(() => activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+        }
 
         $('inf-switch').disabled = !!switching || !switchable.length;
         $('inf-down').disabled = !!switching;
@@ -927,6 +1000,7 @@
       function showSystem(btn) {
         onSystem = true;
         onInference = false;
+        document.body.classList.remove('inf-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         systemCard.hidden = false;
@@ -939,6 +1013,7 @@
       function showInference(btn) {
         onSystem = false;
         onInference = true;
+        document.body.classList.add('inf-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         systemCard.hidden = true;
@@ -949,6 +1024,7 @@
       }
 
       function showFrame(btn) {
+        document.body.classList.remove('inf-view');
         const src = btn.dataset.src;
         const title = btn.dataset.title || src;
         const popout = btn.dataset.popout || src;
@@ -1031,6 +1107,38 @@
       $('inf-switch').addEventListener('click', infSwitch);
       $('inf-bench').addEventListener('click', infBench);
       $('inf-down').addEventListener('click', infDown);
+
+      function pickInfProfile(profileId) {
+        const sel = $('inf-select');
+        if (!sel || !profileId) return;
+        const opt = Array.from(sel.options).find((o) => o.value === profileId);
+        if (!opt) return;
+        sel.value = profileId;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      $('inf-profiles').addEventListener('click', (e) => {
+        const row = e.target.closest('.inf-profile.pickable[data-profile-id]');
+        if (!row) return;
+        pickInfProfile(row.dataset.profileId);
+      });
+      $('inf-profiles').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const row = e.target.closest('.inf-profile.pickable[data-profile-id]');
+        if (!row) return;
+        e.preventDefault();
+        pickInfProfile(row.dataset.profileId);
+      });
+      $('inf-select').addEventListener('change', () => {
+        if (!lastInfStatus) return;
+        const busy = (lastInfStatus.switch && lastInfStatus.switch.running)
+          || (lastInfStatus.bench && lastInfStatus.bench.running);
+        renderInfProfiles(
+          lastInfStatus.profiles || [],
+          lastInfStatus.active && lastInfStatus.active.id,
+          busy
+        );
+      });
 
       $('inference-status').addEventListener('click', (e) => {
         const link = e.target.closest('[data-goto-inference]');

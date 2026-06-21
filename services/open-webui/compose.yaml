@@ -1,0 +1,25 @@
+# Open WebUI — dual backend (vLLM :8000 + llama.cpp :8081)
+# vLLM runs via spark-eugr; llama via spark-llama (one engine at a time on GPU)
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: spark-open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - ENABLE_OLLAMA_API=false
+      # Semicolon-separated OpenAI-compatible backends (host → container via host-gateway)
+      - OPENAI_API_BASE_URLS=http://host.docker.internal:8000/v1;http://host.docker.internal:8081/v1
+      - OPENAI_API_KEYS=local;local
+      - AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST=3
+    volumes:
+      - open-webui-data:/app/backend/data
+
+volumes:
+  open-webui-data:
+    external: true
+    name: qwen36-nvfp4_open-webui-data

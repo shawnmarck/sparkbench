@@ -38,78 +38,32 @@ Picked for **single DGX Spark (128 GB)**, **Hermes-style agent workloads**, and 
 **Role:** **Tool calling / Hermes-aligned agentic** · vLLM  
 **Why:** Hermes line is literally tuned for function calling and agent frameworks. 14B is small enough to leave headroom for long context + tools while staying responsive. Pairs naturally with Hermes agent stack.
 
-### 5. `NousResearch/Hermes-3-Llama-3.1-8B` (~16 GB)
-**Path:** `/models/nousresearch/hermes-3-llama-3.1-8b/hf/`  
-**Role:** **Fast tool-calling sidecar** · vLLM  
-**Why:** When you want snappy tool routing, plan summarization, or a cheap “router” model in multi-agent setups. Proven Hermes 3 tool format; tiny footprint on Spark.
-
-### 6. `unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF` (Q4_K_M + Q5_K_M ~40 GB)
+### 5. `unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF` (Q4_K_M + Q5_K_M ~40 GB)
 **Path:** `/models/unsloth/qwen3-coder-30b-a3b-instruct/gguf/`  
 **Role:** **Agentic coding** · llama.cpp  
 **Why:** DGX Spark forum consensus for coding quality/speed is Qwen3-Coder family. MoE 30B-A3B fits Spark well. Q4 for daily use, Q5 when you want sharper code gen. llama.cpp path for bake-off.
 
-### 7. `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` (~65 GB)
+### 6. `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` (~65 GB)
 **Path:** `/models/deepseek-ai/deepseek-r1-distill-qwen-32b/hf/`  
 **Role:** **Reasoning / intelligence** · vLLM  
 **Why:** Distilled R1 reasoning into a 32B dense model — strong chain-of-thought for hard agent planning without 671B MoE complexity. “Optimize for intelligence” slot in your library.
 
-### 8. `microsoft/phi-4` (~29 GB)
+### 7. `microsoft/phi-4` (~29 GB)
 **Path:** `/models/microsoft/phi-4/hf/`  
 **Role:** **Fast general** · vLLM  
 **Why:** Spark community pick for low-latency general tasks — quick drafts, classification, short summarization before escalating to bigger models. Good “first pass” in agent pipelines.
 
-### 9. `google/gemma-3-27b-it` (~55 GB)
-**Path:** `/models/google/gemma-3-27b-it/hf/`  
-**Role:** **Balanced general + long context** · vLLM / SGLang  
-**Why:** Frequently recommended on Spark for balanced quality and long context. Native function-calling support in SGLang-oriented stacks. Non-Qwen diversity so you’re not single-vendor for everything.
+## Gemma 4 add-on (separate script)
 
----
+Run `scripts/spark-download-gemma4.sh` after the main batch.
 
-## Total estimated download: ~280 GB
+### 8. `google/gemma-4-12b-it`
+**Path:** `/models/google/gemma-4-12b-it/` — vLLM + GGUF variants
 
-| Category | Models | ~GB |
-|----------|--------|-----|
-| Your picks (vLLM + GGUF) | Qwen3.6 NVFP4 + 2 GGUF quants | ~68 |
-| Fast / routing | Qwen3-30B NVFP4, Hermes-3-8B, Phi-4 | ~63 |
-| Agentic / tools | Hermes-4-14B | ~30 |
-| Coding | Qwen3-Coder GGUF ×2 | ~40 |
-| Reasoning | DeepSeek-R1-Distill-32B | ~65 |
-| General | Gemma-3-27b-it | ~55 |
+### 9. `google/gemma-4-26b-a4b-it`
+**Path:** `/models/google/gemma-4-26b-a4b-it/` — MoE vision/text
 
----
+### 10. `yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF`
+**Path:** `/models/yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1/gguf/` — coding GGUF
 
-## Not downloaded (and why)
-
-| Model | Reason |
-|-------|--------|
-| Full Unsloth GGUF repos | 500+ GB each — only selected quants |
-| `nvidia/Qwen3-Coder-*-NVFP4` | Gated — requires HF login/token on Spark |
-| `nvidia/Llama-3.3-Nemotron-*` | Gated NVIDIA NIM models |
-| 70B+ dense models | Tight for 128GB with agent context + KV |
-| MiniMax M2.7 / Qwen3.5-397B | Multi-node territory; you’re single Spark for now |
-
-**Recommendation:** Add `HF_TOKEN` to `/etc/spark/` or `hf login` on Spark to unlock NVIDIA gated NVFP4 coder models later.
-
----
-
-## After downloads complete
-
-```bash
-# Check progress
-tail -f /opt/spark/logs/model-download-latest.log
-
-# Push to NAS shelf (when ready)
-spark-shelf-push --all
-
-# Disk usage
-du -sh /models/*/*
-```
-
----
-
-## Next steps (when you’re back)
-
-1. Confirm downloads finished (`/opt/spark/logs/`)
-2. `spark-shelf-push --all` to back up to QNAP
-3. Inference smoke test: Qwen3.6 NVFP4 on vLLM, Qwen3.6 Q4_K_M on llama.cpp
-4. vLLM Studio vs Rookery bake-off using these paths
+**Removed 2026-06-21:** Hermes-3-8B, Gemma-3-27b (superseded by Hermes-4 and Gemma 4 above).

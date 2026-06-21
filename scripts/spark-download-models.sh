@@ -53,9 +53,7 @@ download_files unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF /models/unsloth/qwen3-c
 
 download_repo deepseek-ai/DeepSeek-R1-Distill-Qwen-32B /models/deepseek-ai/deepseek-r1-distill-qwen-32b/hf
 
-download_repo NousResearch/Hermes-3-Llama-3.1-8B /models/nousresearch/hermes-3-llama-3.1-8b/hf
 
-download_repo google/gemma-3-27b-it /models/google/gemma-3-27b-it/hf
 
 echo
 echo "==> Download batch finished $(date -Is)"

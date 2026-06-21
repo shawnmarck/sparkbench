@@ -115,7 +115,7 @@ if [[ ${BACKGROUND} -eq 1 ]]; then
   [[ ${BWLIMIT_MBPS} -gt 0 ]] && bg_args+=(--bwlimit "${BWLIMIT_MBPS}")
   bg_args+=("${PATHS[@]}")
   {
-    echo "=== shelf push started $(date -Is) bwlimit=${BWLIMIT_MBPS}Mbps ==="
+    echo "=== shelf push started $(date -Is) path=${PATHS[0]:-ALL} bwlimit=${BWLIMIT_MBPS}Mbps ==="
   } >>"${LOG_FILE}"
   nohup nice -n 10 ionice -c3 "$0" "${bg_args[@]}" >>"${LOG_FILE}" 2>&1 &
   echo $! >"${PID_FILE}"

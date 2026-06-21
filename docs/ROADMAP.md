@@ -16,8 +16,8 @@ Last updated: 2026-06-21
 - [x] `spark-shelf-push` / `spark-shelf-pull`
 - [x] Model inventory dashboard at http://sparky/models.html
 - [x] Auto-refresh (`spark-inventory-refresh` timer + inotify)
-- [ ] **In progress:** first full shelf backup (`spark-shelf-push --all --background --bwlimit 200`)
-- [ ] `HF_TOKEN` / `spark-hf-login` for gated models (Gemma-3-27B blocked without approval)
+- [x] First shelf backup started (background push) (`spark-shelf-push --all --background --bwlimit 200`)
+- [ ] `HF_TOKEN` / `spark-hf-login` for gated models (Gemma 4 catalog updated (Gemma 3 removed))
 
 Deferred from original plan: LRU cache at `/var/lib/spark-model-cache` — not needed yet with 4TB local NVMe.
 
@@ -44,9 +44,9 @@ See `docs/INFERENCE-SMOKE.md`.
 
 Run **one GPU engine at a time** — stop vLLM (`spark-eugr down`) before llama.cpp load.
 
-See `docs/LLAMACPP-SMOKE.md`. Install: `sudo /opt/spark/install/11-llama-cpp-smoke.sh`
+See `docs/LLAMACPP-SMOKE.md`. Install: `sudo /opt/spark/install/13-llama-cpp-smoke.sh`
 
-## Phase 4 — UI bake-off (not started)
+## Phase 4 — UI bake-off (in progress)
 
 **Compare:** vLLM Studio vs Rookery (orchestrator UIs)
 
@@ -68,6 +68,12 @@ Deferred until desk setup is stable.
 - Portal TPS / per-request inference metrics (vLLM `/metrics` scrape)
 - Netdata vLLM integration
 
+## Layout
+
+- `/opt/spark/` — dashboard repo (portal, inventory, install scripts)
+- `/ops/rookery/` — Rookery bake-off
+- `/ops/vllm-studio/` — vLLM Studio bake-off
+
 ## Current stack (quick reference)
 
 | Service | URL | Command |
@@ -75,6 +81,8 @@ Deferred until desk setup is stable.
 | Portal | http://sparky/ | nginx |
 | Models | http://sparky/models.html | inventory JSON |
 | vLLM | http://sparky:8000/v1 | `spark-eugr up/down/status` |
-| Open WebUI | http://sparky:3000 | docker compose (install 06/07) |
+| Open WebUI | http://sparky:3000 | docker |
+| Rookery | http://sparky:3131 | `spark-rookery` |
+| vLLM Studio | http://sparky:3080 | `spark-vllm-studio` |
 | Shelf push | — | `spark-shelf-push --all --background --bwlimit 200` |
 | HF auth | — | `spark-hf-login` |

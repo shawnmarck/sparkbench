@@ -1,5 +1,6 @@
 # Curated model download batch — 2026-06-21
 # Run: sudo /opt/spark/scripts/spark-download-models.sh
+# Gemma 4 add-on: sudo /opt/spark/scripts/spark-download-gemma4.sh
 # HF CLI: /opt/spark/venv/bin/hf
 
 user_requested:
@@ -36,13 +37,19 @@ curated_agentic:
     path: /models/deepseek-ai/deepseek-r1-distill-qwen-32b/hf
     size_gb: ~65
     role: reasoning / chain-of-thought quality
-  - repo: NousResearch/Hermes-3-Llama-3.1-8B
-    path: /models/nousresearch/hermes-3-llama-3.1-8b/hf
-    size_gb: ~16
-    role: fast tool-calling sidecar / low VRAM agent loops
-  - repo: google/gemma-3-27b-it
-    path: /models/google/gemma-3-27b-it/hf
-    size_gb: ~55
-    role: balanced general + long context (Spark community pick)
 
-estimated_total_gb: ~280
+gemma4_addon:
+  script: spark-download-gemma4.sh
+  models:
+    - repo: google/gemma-4-12B-it
+      path: /models/google/gemma-4-12b-it
+    - repo: google/gemma-4-26B-A4B-it
+      path: /models/google/gemma-4-26b-a4b-it
+    - repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
+      path: /models/yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1/gguf
+
+removed_2026_06_21:
+  - NousResearch/Hermes-3-Llama-3.1-8B
+  - google/gemma-3-27b-it
+
+estimated_total_gb: ~250

@@ -13,7 +13,7 @@ Goal: run the same Qwen3.6 family via **GGUF** on GB10 for comparison with NVFP4
 ## Install
 
 ```bash
-sudo /opt/spark/install/11-llama-cpp-smoke.sh
+sudo /opt/spark/install/13-llama-cpp-smoke.sh
 ```
 
 Builds from source into `/opt/spark/vendor/llama.cpp` with `CMAKE_CUDA_ARCHITECTURES=121` (GB10). Installs `spark-llama` CLI.
@@ -72,3 +72,19 @@ Subjective feel + tok/s (manual or `llama-bench`) — no portal TPS widget yet.
 
 - `docs/INFERENCE-SMOKE.md` — vLLM path (3a)
 - `docs/ROADMAP.md` — Phase 3b checklist
+
+
+## Open WebUI
+
+Open WebUI is wired for **both** backends (install `14-openwebui-dual-backend.sh`):
+
+| Backend | URL | When |
+|---------|-----|------|
+| vLLM | `http://host.docker.internal:8000/v1` | `spark-eugr up` |
+| llama.cpp | `http://host.docker.internal:8081/v1` | `spark-llama up` |
+
+1. Open http://sparky:3000 (same account as before — volume preserved)
+2. New chat → model picker → **`qwen3.6-35b-a3b-q4`** (llama) or **`qwen3.6-35b-a3b-nvfp4`** (vLLM)
+3. Only one GPU engine at a time — if a model is missing, start the matching backend
+
+Admin → Connections → OpenAI shows both URLs if you need to verify.

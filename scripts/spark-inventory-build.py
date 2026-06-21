@@ -19,6 +19,8 @@ SHELF_ROOT = Path("/mnt/model-shelf/models")
 CATALOG = Path("/opt/spark/data/model-catalog.yaml")
 VERIFY_FILE = Path("/opt/spark/data/model-verification.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
+HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
+HF_CACHE_TTL_DAYS = 7
 SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
 HF = Path("/opt/spark/venv/bin/python")
 
@@ -177,9 +179,40 @@ def model_engines(variants: list) -> list[str]:
     return seen
 
 
+def hf_cache_entry_fresh(entry: dict) -> bool:
+    fetched = entry.get("_fetched_at")
+    if not fetched:
+        return False
+    try:
+        ts = datetime.fromisoformat(fetched)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - ts
+        return age.days < HF_CACHE_TTL_DAYS
+    except Exception:
+        return False
+
+
+def load_hf_disk_cache() -> dict:
+    if not HF_CACHE_FILE.is_file():
+        return {}
+    try:
+        data = json.loads(HF_CACHE_FILE.read_text())
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_hf_disk_cache(cache: dict) -> None:
+    HF_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    HF_CACHE_FILE.write_text(json.dumps(cache, indent=2))
+
+
 def hf_enrich(repo: str, cache: dict) -> dict:
     if repo in cache:
-        return cache[repo]
+        entry = cache[repo]
+        if hf_cache_entry_fresh(entry):
+            return entry
     info = {
         "description": None,
         "release_date": None,
@@ -212,6 +245,7 @@ def hf_enrich(repo: str, cache: dict) -> dict:
             pass
     except Exception as e:
         info["hf_error"] = str(e)[:120]
+    info["_fetched_at"] = datetime.now(timezone.utc).isoformat()
     cache[repo] = info
     return info
 
@@ -328,7 +362,7 @@ def main() -> int:
         yaml = _yaml
 
     catalog = load_catalog()
-    hf_cache: dict = {}
+    hf_cache: dict = load_hf_disk_cache()
     entries = []
     now = datetime.now(timezone.utc).isoformat()
 
@@ -549,6 +583,7 @@ def main() -> int:
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(payload, indent=2))
+    save_hf_disk_cache(hf_cache)
     print(f"Wrote {OUT_JSON} ({len(entries)} models)")
     return 0
 

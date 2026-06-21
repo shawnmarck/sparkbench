@@ -1,4 +1,54 @@
 #!/usr/bin/env bash
+# Build llama.cpp for GB10 (sm_121) and install spark-llama helper.
+set -euo pipefail
+
+STAGING="/home/techno/spark"
+SPARK_ROOT="/opt/spark"
+VENDOR="${SPARK_ROOT}/vendor/llama.cpp"
+BIN_DIR="${SPARK_ROOT}/bin"
+TECHNO="techno"
+MODEL_Q4="/models/unsloth/qwen3.6-35b-a3b/gguf/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf"
+PORT=8081
+
+echo "==> Sync staging"
+rsync -a "${STAGING}/scripts/" "${SPARK_ROOT}/scripts/" 2>/dev/null || true
+rsync -a "${STAGING}/docs/" "${SPARK_ROOT}/docs/" 2>/dev/null || true
+
+echo "==> Package deps"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get install -y -qq git cmake build-essential libssl-dev pkg-config
+
+echo "==> Clone / update llama.cpp"
+mkdir -p "${SPARK_ROOT}/vendor"
+if [[ -d "${VENDOR}/.git" ]]; then
+  git -C "${VENDOR}" fetch --depth 1 origin master
+  git -C "${VENDOR}" checkout -f origin/master
+else
+  git clone --depth 1 https://github.com/ggml-org/llama.cpp.git "${VENDOR}"
+fi
+chown -R "${TECHNO}:${TECHNO}" "${VENDOR}"
+
+echo "==> Build (CUDA sm_121 — GB10)"
+sudo -u "${TECHNO}" bash -lc "
+  cd '${VENDOR}'
+  rm -rf build
+  cmake -B build \
+    -DGGML_CUDA=ON \
+    -DCMAKE_CUDA_ARCHITECTURES=121 \
+    -DGGML_CUDA_F16=ON \
+    -DLLAMA_CURL=ON \
+    -DCMAKE_BUILD_TYPE=Release
+  cmake --build build --config Release -j\"\$(nproc)\"
+"
+
+mkdir -p "${BIN_DIR}"
+install -m 755 "${VENDOR}/build/bin/llama-server" "${BIN_DIR}/llama-server"
+install -m 755 "${VENDOR}/build/bin/llama-cli" "${BIN_DIR}/llama-cli"
+chown -R "${TECHNO}:${TECHNO}" "${BIN_DIR}"
+
+cat >"${SPARK_ROOT}/scripts/spark-llama" <<'SCRIPT'
+#!/usr/bin/env bash
 # Start/stop llama.cpp OpenAI-compatible server on GB10.
 set -euo pipefail
 
@@ -81,3 +131,23 @@ case "${cmd}" in
     exit 1
     ;;
 esac
+SCRIPT
+
+chmod 755 "${SPARK_ROOT}/scripts/spark-llama"
+install -m 755 "${SPARK_ROOT}/scripts/spark-llama" /usr/local/bin/spark-llama
+chown techno:techno "${SPARK_ROOT}/scripts/spark-llama"
+
+mkdir -p /opt/spark/run /opt/spark/logs
+chown techno:techno /opt/spark/run /opt/spark/logs
+
+echo
+echo "Done. llama-server -> ${BIN_DIR}/llama-server"
+echo "Smoke:"
+echo "  spark-eugr down"
+echo "  spark-llama up"
+echo "  spark-llama status"
+if [[ -f "${MODEL_Q4}" ]]; then
+  echo "  Model ready: ${MODEL_Q4}"
+else
+  echo "  WARNING: default Q4 model not found at ${MODEL_Q4}"
+fi

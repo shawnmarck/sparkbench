@@ -1,141 +1,214 @@
-# Canonical metadata for Spark model inventory.
-# Disk scan merges actual sizes + status. HF API fills release date / description when missing.
-# Regenerate dashboard: spark-inventory-build
-
 models:
-  - id: nvidia/qwen3.6-35b-a3b-nvfp4
-    lab: nvidia
-    name: Qwen3.6-35B-A3B (NVFP4)
-    slug: qwen3.6-35b-a3b
+- id: nvidia/qwen3.6-35b-a3b-nvfp4
+  lab: nvidia
+  name: Qwen3.6-35B-A3B (NVFP4)
+  slug: qwen3.6-35b-a3b
+  hf_repo: nvidia/Qwen3.6-35B-A3B-NVFP4
+  capabilities:
+  - general
+  - moe
+  - multimodal
+  - vllm
+  - nvfp4
+  - agentic
+  why_downloaded: 'Your requested flagship Qwen3.6 MoE (~3B active / 35B total). NVIDIA NVFP4 build is the native Spark/Blackwell
+    vLLM path — primary production inference target.
+
+    '
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
     hf_repo: nvidia/Qwen3.6-35B-A3B-NVFP4
-    capabilities: [general, moe, multimodal, vllm, nvfp4, agentic]
-    why_downloaded: >
-      Your requested flagship Qwen3.6 MoE (~3B active / 35B total). NVIDIA NVFP4 build
-      is the native Spark/Blackwell vLLM path — primary production inference target.
-    variants:
-      - format: nvfp4
-        subpath: nvfp4
-        engine: vllm
-        hf_repo: nvidia/Qwen3.6-35B-A3B-NVFP4
+- id: unsloth/qwen3.6-35b-a3b-gguf
+  lab: unsloth
+  name: Qwen3.6-35B-A3B (GGUF)
+  slug: qwen3.6-35b-a3b
+  hf_repo: unsloth/Qwen3.6-35B-A3B-GGUF
+  capabilities:
+  - general
+  - moe
+  - llamacpp
+  - gguf
+  - agentic
+  why_downloaded: 'Same Qwen3.6 base model for llama.cpp bake-off. Q4_K_M + MXFP4_MOE quants only (full Unsloth repo is ~550GB).
 
-  - id: unsloth/qwen3.6-35b-a3b-gguf
-    lab: unsloth
-    name: Qwen3.6-35B-A3B (GGUF)
-    slug: qwen3.6-35b-a3b
+    '
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
     hf_repo: unsloth/Qwen3.6-35B-A3B-GGUF
-    capabilities: [general, moe, llamacpp, gguf, agentic]
-    why_downloaded: >
-      Same Qwen3.6 base model for llama.cpp bake-off. Q4_K_M + MXFP4_MOE quants only
-      (full Unsloth repo is ~550GB).
-    variants:
-      - format: gguf
-        subpath: gguf
-        engine: llamacpp
-        hf_repo: unsloth/Qwen3.6-35B-A3B-GGUF
-        note: Q4_K_M + MXFP4_MOE
+    note: Q4_K_M + MXFP4_MOE
+- id: nvidia/qwen3-30b-a3b
+  lab: nvidia
+  name: Qwen3-30B-A3B
+  slug: qwen3-30b-a3b
+  hf_repo: nvidia/Qwen3-30B-A3B-NVFP4
+  capabilities:
+  - general
+  - moe
+  - fast
+  - vllm
+  - nvfp4
+  - tool-calling
+  why_downloaded: 'Faster MoE sibling for interactive agent loops — lower latency and memory pressure when max intelligence
+    isn''t required.
 
-  - id: nvidia/qwen3-30b-a3b
-    lab: nvidia
-    name: Qwen3-30B-A3B
-    slug: qwen3-30b-a3b
+    '
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
     hf_repo: nvidia/Qwen3-30B-A3B-NVFP4
-    capabilities: [general, moe, fast, vllm, nvfp4, tool-calling]
-    why_downloaded: >
-      Faster MoE sibling for interactive agent loops — lower latency and memory
-      pressure when max intelligence isn't required.
-    variants:
-      - format: nvfp4
-        subpath: nvfp4
-        engine: vllm
-        hf_repo: nvidia/Qwen3-30B-A3B-NVFP4
-
-  - id: nousresearch/hermes-4-14b
-    lab: nousresearch
-    name: Hermes-4-14B
-    slug: hermes-4-14b
+- id: nousresearch/hermes-4-14b
+  lab: nousresearch
+  name: Hermes-4-14B
+  slug: hermes-4-14b
+  hf_repo: NousResearch/Hermes-4-14B
+  capabilities:
+  - agentic
+  - tool-calling
+  - hermes
+  - vllm
+  - function-calling
+  - router
+  - hermes-4
+  why_downloaded: Nous Hermes 4 (Aug 2025) — smallest Hermes 4 size (14B Qwen3 base). Hybrid reasoning, tool calling, structured
+    outputs. Replaces Hermes-3-8B as the lightweight Nous agent/router slot on Spark.
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
     hf_repo: NousResearch/Hermes-4-14B
-    capabilities: [agentic, tool-calling, hermes, vllm, function-calling]
-    why_downloaded: >
-      Hermes-aligned 14B for function calling and agent frameworks. Sized for long
-      context + tools while staying responsive on 128GB Spark.
-    variants:
-      - format: hf
-        subpath: hf
-        engine: vllm
-        hf_repo: NousResearch/Hermes-4-14B
+- id: unsloth/qwen3-coder-30b-a3b-instruct
+  lab: unsloth
+  name: Qwen3-Coder-30B-A3B-Instruct
+  slug: qwen3-coder-30b-a3b-instruct
+  hf_repo: unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+  capabilities:
+  - coding
+  - agentic
+  - moe
+  - llamacpp
+  - gguf
+  why_downloaded: 'DGX Spark forum pick for agentic coding. MoE coder fits 128GB; Q4 + Q5 GGUF for llama.cpp bake-off path.
 
-  - id: nousresearch/hermes-3-llama-3.1-8b
-    lab: nousresearch
-    name: Hermes-3-Llama-3.1-8B
-    slug: hermes-3-llama-3.1-8b
-    hf_repo: NousResearch/Hermes-3-Llama-3.1-8B
-    capabilities: [agentic, tool-calling, hermes, fast, vllm, router]
-    why_downloaded: >
-      Fast tool-calling sidecar / router model for multi-step agent pipelines.
-      Proven Hermes 3 format; tiny footprint.
-    variants:
-      - format: hf
-        subpath: hf
-        engine: vllm
-        hf_repo: NousResearch/Hermes-3-Llama-3.1-8B
-
-  - id: unsloth/qwen3-coder-30b-a3b-instruct
-    lab: unsloth
-    name: Qwen3-Coder-30B-A3B-Instruct
-    slug: qwen3-coder-30b-a3b-instruct
+    '
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
     hf_repo: unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
-    capabilities: [coding, agentic, moe, llamacpp, gguf]
-    why_downloaded: >
-      DGX Spark forum pick for agentic coding. MoE coder fits 128GB; Q4 + Q5 GGUF
-      for llama.cpp bake-off path.
-    variants:
-      - format: gguf
-        subpath: gguf
-        engine: llamacpp
-        hf_repo: unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
-        note: Q4_K_M + Q5_K_M
+    note: Q4_K_M + Q5_K_M
+- id: deepseek-ai/deepseek-r1-distill-qwen-32b
+  lab: deepseek-ai
+  name: DeepSeek-R1-Distill-Qwen-32B
+  slug: deepseek-r1-distill-qwen-32b
+  hf_repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+  capabilities:
+  - reasoning
+  - intelligence
+  - chain-of-thought
+  - vllm
+  why_downloaded: 'Reasoning slot — distilled R1 CoT in 32B dense. Hard planning without 671B MoE complexity. Note: R1 distill
+    lineage; not the newest frontier model.
 
-  - id: deepseek-ai/deepseek-r1-distill-qwen-32b
-    lab: deepseek-ai
-    name: DeepSeek-R1-Distill-Qwen-32B
-    slug: deepseek-r1-distill-qwen-32b
+    '
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
     hf_repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
-    capabilities: [reasoning, intelligence, chain-of-thought, vllm]
-    why_downloaded: >
-      Reasoning slot — distilled R1 CoT in 32B dense. Hard planning without 671B
-      MoE complexity. Note: R1 distill lineage; not the newest frontier model.
-    variants:
-      - format: hf
-        subpath: hf
-        engine: vllm
-        hf_repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+- id: microsoft/phi-4
+  lab: microsoft
+  name: Phi-4
+  slug: phi-4
+  hf_repo: microsoft/phi-4
+  capabilities:
+  - general
+  - fast
+  - low-latency
+  - vllm
+  why_downloaded: 'Spark community fast-general pick — quick drafts, classification, first-pass before escalating to larger
+    models. Released late 2024; smaller but capable.
 
-  - id: microsoft/phi-4
-    lab: microsoft
-    name: Phi-4
-    slug: phi-4
+    '
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
     hf_repo: microsoft/phi-4
-    capabilities: [general, fast, low-latency, vllm]
-    why_downloaded: >
-      Spark community fast-general pick — quick drafts, classification, first-pass
-      before escalating to larger models. Released late 2024; smaller but capable.
-    variants:
-      - format: hf
-        subpath: hf
-        engine: vllm
-        hf_repo: microsoft/phi-4
+- id: google/gemma-4-12b-it
+  lab: google
+  name: Gemma-4-12B-IT
+  slug: gemma-4-12b-it
+  hf_repo: google/gemma-4-12B-it
+  capabilities:
+  - general
+  - multimodal
+  - audio
+  - vision
+  - agentic
+  - coding
+  - vllm
+  - llamacpp
+  - apache-2.0
+  why_downloaded: 'Best mid-size Gemma 4 for a single Spark: encoder-free unified multimodal (text/image/audio), 256K context,
+    near-26B-MoE quality at ~12B dense. Apache 2.0, not gated. Prefer -it over base.
 
-  - id: google/gemma-3-27b-it
-    lab: google
-    name: Gemma-3-27B-IT
-    slug: gemma-3-27b-it
-    hf_repo: google/gemma-3-27b-it
-    capabilities: [general, long-context, function-calling, vllm, sglang]
-    why_downloaded: >
-      Balanced non-Qwen option with long context and function-calling (SGLang-friendly).
-      Spark community general-purpose pick.
-    variants:
-      - format: hf
-        subpath: hf
-        engine: vllm
-        hf_repo: google/gemma-3-27b-it
+    '
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: google/gemma-4-12B-it
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: unsloth/gemma-4-12B-it-GGUF
+    note: Q4_K_M recommended
+- id: google/gemma-4-26b-a4b-it
+  lab: google
+  name: Gemma-4-26B-A4B-IT
+  slug: gemma-4-26b-a4b-it
+  hf_repo: google/gemma-4-26B-A4B-it
+  capabilities:
+  - general
+  - moe
+  - multimodal
+  - vision
+  - agentic
+  - coding
+  - vllm
+  - apache-2.0
+  why_downloaded: 'Popular MoE pick (~3.8B active / 26B total) — same efficiency class as Qwen3.6 MoE. 256K context, text+image.
+    Heavier than 12B but fast inference per token.
+
+    '
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: google/gemma-4-26B-A4B-it
+- id: yuxinlu1/gemma-4-12b-coder-gguf
+  lab: yuxinlu1
+  name: Gemma-4-12B-Coder (Fable5×Composer2.5)
+  slug: gemma-4-12b-coder-fable5-composer2.5-v1
+  hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
+  capabilities:
+  - coding
+  - chain-of-thought
+  - llamacpp
+  - gguf
+  - thinking
+  why_downloaded: 'Community coding fine-tune of Gemma 4 12B — verifiable Python CoT, thinking mode. Q4_K_M ~7.4GB. Niche
+    vs official -it; v2 agentic release exists if you want newer.
+
+    '
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
+    note: gemma4-coding-Q4_K_M.gguf

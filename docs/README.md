@@ -1,74 +1,106 @@
 # Spark Home Lab (`/opt/spark`)
 
-Organized services and docs for the DGX Spark (sparky).
+DGX Spark homelab dashboard, model inventory, and inference tooling.
+
+**Agents:** start with [`AGENT.md`](../AGENT.md).  
+**Install index:** [`install/INSTALL.md`](../install/INSTALL.md).  
+**Roadmap:** [`ROADMAP.md`](ROADMAP.md).
 
 ## Layout
 
 ```
 /opt/spark/
-├── README.md           -> symlink to docs/README.md
-├── portal/             Static LAN portal (nginx)
-│   └── index.html
-├── docs/               This documentation
-├── install/            Idempotent install scripts (run with sudo)
-│   └── 01-netdata-portal.sh
-└── services/           Future: inference, cache, sync configs
+├── AGENT.md              Agent + human quick start
+├── README.md             → this file
+├── portal/               LAN portal (nginx :80)
+├── scripts/              spark-* CLIs and APIs
+├── install/              Idempotent sudo scripts
+├── data/                 model-catalog.yaml, model-verification.yaml
+├── docs/                 Documentation
+└── services/             Inference compose files
 ```
 
-Staging copies live in `~/spark/` until install scripts promote them to `/opt/spark`.
+Staging copies may live in `~/spark` until install scripts promote to `/opt/spark`.
 
 ## Network
 
 | Item | Value |
 |------|-------|
 | Hostname | sparky |
-| LAN IP | 192.168.0.101 (DHCP reservation) |
-| WiFi iface | wlP9s9 |
+| LAN IP | 192.168.0.101 |
+| WiFi | wlP9s9 |
+| 10GbE | enP7s7 (when cabled) |
 
-## Services
+## Services (current)
 
-| Service | URL | Port | Status |
-|---------|-----|------|--------|
-| Portal | http://sparky/ | 80 | after install |
-| Netdata | http://sparky:19999 | 19999 | after install |
+| Service | URL | Notes |
+|---------|-----|-------|
+| Portal | http://sparky/ | System · Models · Chat · Netdata |
+| Models | http://sparky/models.html | Inventory + shelf ops |
+| Metrics | http://sparky/api/gpu | `spark-gpu-metrics` |
+| Netdata | http://sparky:19999/v3/ | Host metrics |
+| vLLM (eugr) | http://sparky:8000/v1 | `spark-eugr` |
+| llama.cpp | http://sparky:8081/v1 | `spark-llama` |
+| Open WebUI | http://sparky:3000 | Chat UI |
+| vLLM Studio | http://sparky:3080 | Bake-off UI (primary) |
+| Rookery | http://sparky:3131 | Experimental / disqualified |
+
+## Model storage
+
+| Path | Role |
+|------|------|
+| `/models` | Local workspace (4 TB NVMe) |
+| `/mnt/model-shelf/models` | NAS mirror (SMB) |
+
+See [`MODEL-SHELF.md`](MODEL-SHELF.md).
+
+## Key commands
+
+```bash
+spark-eugr status              # vLLM NVFP4
+spark-llama status             # llama.cpp GGUF
+spark-shelf-push --all         # backup to NAS
+spark-shelf-pull <path>        # fetch from NAS
+spark-inventory-build          # portal/models.json
+spark-hf-login                 # Hugging Face token
+```
+
+Downloads: `scripts/spark-download-models.sh` (batch), `scripts/spark-download-gemma4.sh` (Gemma 4 add-on).
 
 ## Install / update
 
-From sparky (requires sudo password once):
-
 ```bash
-sudo bash ~/spark/install/01-netdata-portal.sh
+cd /opt/spark   # or ~/spark staging
+sudo bash install/<script>.sh
 ```
 
-## What is NOT installed yet
+Core stack: `02` → `03` → `04` → `05` → `10` → `11` → `12`.  
+Inference: `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh` (one engine at a time).  
+UI bake-off: `18-ops-layout.sh` → `17-vllm-studio.sh`.
 
-- Tailscale / remote VPN
-- Inference stacks (vLLM, llama.cpp)
-- Inference UIs (vLLM Studio, Rookery)
-- QNAP model shelf mount
+## Documentation map
 
-See `~/spark/docs/ROADMAP.md` for planned phases.
+| Doc | Topic |
+|-----|-------|
+| `ROADMAP.md` | Phases and status |
+| `BAKE-OFF.md` | vLLM Studio vs Rookery |
+| `OPS-LAYOUT.md` | `/ops` directory layout |
+| `INFERENCE-SMOKE.md` | eugr vLLM smoke |
+| `LLAMACPP-SMOKE.md` | llama.cpp smoke |
+| `MODEL-SHELF.md` | Shelf layout + sync |
+| `MODEL-PICKS-REPORT.md` | Why each model was downloaded |
 
-## Changelog
-
-- 2026-06-21: Shelf push `--background`/`--bwlimit`, `spark-hf-login`, llama.cpp smoke (install 11)
-
-- 2026-06-21: Initial portal + Netdata install script
-
-## Model shelf (QNAP)
+## NAS credentials
 
 | Item | Value |
 |------|-------|
-| NAS IP | 192.168.0.99 |
-| Share | models |
-| Mount | /mnt/model-shelf |
-| Protocol | SMB/CIFS (NFS not enabled on NAS) |
-| Credentials | /etc/spark/smb-credentials-models (root, 600) |
+| NAS | 192.168.0.99 |
+| Share | `models` |
+| Mount | `/mnt/model-shelf` |
+| Creds file | `/etc/spark/smb-credentials-models` (root, 600) |
 
-Install:
-```bash
-# one-time credentials (replace password)
-sudo install -m 600 /dev/stdin /etc/spark/smb-credentials-models <<EOF
-username=shawn
-password=YOUR_PASSWORD
-domain=WORKGROUP
+## Changelog
+
+- 2026-06-21: AGENT.md, install renumber, nginx common helper, network tile, model inventory chips
+- 2026-06-21: Shelf API, Spark verify, queued removal, llama.cpp + Gemma 4 catalog
+- 2026-06-21: Initial portal + Netdata

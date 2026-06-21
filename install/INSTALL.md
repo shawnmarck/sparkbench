@@ -1,0 +1,68 @@
+# Install script index
+
+Run with `sudo bash install/<script>.sh` from `/opt/spark` (or staging copy).
+
+Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LAN_IP` — see `common.sh`.
+
+## Bootstrap
+
+| Script | Purpose |
+|--------|---------|
+| `00-grant-install-sudo.sh` | Passwordless sudo for `install/*.sh` |
+| `07-grant-agent-sudo.sh` | Agent sudo grants |
+
+## Visibility
+
+| Script | Purpose |
+|--------|---------|
+| `01-netdata-portal.sh` | Netdata + portal nginx base |
+
+## Model shelf & inventory
+
+| Script | Purpose |
+|--------|---------|
+| `02-model-shelf-mount.sh` | CIFS mount `/mnt/model-shelf` |
+| `03-model-shelf-layout.sh` | `/models` + shelf directory skeleton |
+| `03a-shelf-hf-tools.sh` | `spark-shelf-push/pull`, `spark-hf-login`, `hf` CLI |
+| `04-model-inventory.sh` | Catalog, inventory builder, portal pages |
+| `05-model-inventory-auto-refresh.sh` | Timer + inotify refresh; nginx (via `common.sh`) |
+| `10-portal-gpu-widget.sh` | `spark-gpu-metrics` API + nginx |
+| `11-model-shelf-api.sh` | Shelf/model APIs + removal cron deps |
+| `12-model-removal-cron.sh` | Nightly queued local model purge |
+
+## Inference engines
+
+| Script | Purpose |
+|--------|---------|
+| `15-vllm-openwebui-smoke.sh` | Stock vLLM compose smoke (legacy) |
+| `15b-sync-inference-compose.sh` | Sync compose files to `/opt/spark/services` |
+| `16-eugr-vllm-qwen36.sh` | eugr vLLM NVFP4 (`spark-eugr`) |
+| `16b-fix-spark-eugr.sh` | eugr stack fixes |
+| `13-llama-cpp-smoke.sh` | Build llama.cpp + `spark-llama` |
+| `14-openwebui-dual-backend.sh` | Open WebUI dual backend compose |
+
+## UI bake-off (ops layout)
+
+| Script | Purpose |
+|--------|---------|
+| `18-ops-layout.sh` | `/ops` directory layout |
+| `19-rookery.sh` | Rookery install (**experimental**, disqualified in bake-off) |
+| `17-vllm-studio.sh` | vLLM Studio (primary bake-off UI) |
+| `17b-vllm-studio-node22.sh` | Node 22 fix variant |
+| `17c-vllm-studio-finish.sh` | Finish / enable services |
+
+## Convenience
+
+| Script | Purpose |
+|--------|---------|
+| `06-kitty-terminal.sh` | Kitty terminal config |
+| `08-zsh-powerlevel10k.sh` | Shell prompt |
+| `09-lazydocker.sh` | lazydocker |
+
+## Typical fresh order
+
+```
+02 → 03 → 04 → 05 → 10 → 11 → 12
+16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
+17 (vLLM Studio) for bake-off UI
+```

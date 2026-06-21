@@ -4,7 +4,16 @@ set -euo pipefail
 
 MODELS="/models"
 SHELF="/mnt/model-shelf/models"
-RSYNC=(rsync -avh --progress --partial)
+RUN_DIR="/opt/spark/run"
+LOG_DIR="/opt/spark/logs"
+PID_FILE="${RUN_DIR}/shelf-pull.pid"
+LOG_FILE="${LOG_DIR}/shelf-pull-latest.log"
+
+RSYNC=(rsync -avh --partial)
+BWLIMIT_MBPS=0
+DRY_RUN=0
+BACKGROUND=0
+PATHS=()
 
 usage() {
   cat <<EOF
@@ -14,24 +23,58 @@ Pull from ${SHELF} to ${MODELS} (same relative layout).
 
 Examples:
   spark-shelf-pull google/gemma-4-26b-a4b
-  spark-shelf-pull --dry-run meta-llama/llama-3.1-70b-instruct
+  spark-shelf-pull --background nvidia/qwen3.6-35b-a3b
+  spark-shelf-pull --status
 
 Options:
-  --dry-run   Show what would be transferred
-  -h, --help  This help
+  --background  Run in background (nohup + low I/O priority)
+  --bwlimit N   Cap transfer at N megabits/sec (rsync --bwlimit)
+  --status      Show background pull status / tail log
+  --dry-run     Show what would be transferred
+  -h, --help    This help
 EOF
 }
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-[[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
-mountpoint -q /mnt/model-shelf || die "/mnt/model-shelf not mounted"
+cleanup_pid() {
+  rm -f "${PID_FILE}"
+}
 
-DRY_RUN=0
-PATHS=()
+pull_one() {
+  local rel="$1"
+  echo "==> Pulling ${rel}"
+  mkdir -p "${MODELS}/$(dirname "${rel}")"
+  "${RSYNC[@]}" "${SHELF}/${rel}/" "${MODELS}/${rel}/"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --background) BACKGROUND=1; shift ;;
+    --bwlimit)
+      [[ $# -ge 2 ]] || die "--bwlimit requires a number (megabits/sec)"
+      BWLIMIT_MBPS="$2"
+      shift 2
+      ;;
+    --status)
+      if [[ -f "${PID_FILE}" ]]; then
+        pid="$(cat "${PID_FILE}")"
+        if kill -0 "${pid}" 2>/dev/null; then
+          echo "Shelf pull running (pid ${pid})"
+          echo "Log: ${LOG_FILE}"
+          tail -5 "${LOG_FILE}" 2>/dev/null || true
+          exit 0
+        fi
+        echo "Stale pid file (${pid}); removing"
+        rm -f "${PID_FILE}"
+      fi
+      echo "No shelf pull running"
+      if [[ -f "${LOG_FILE}" ]]; then
+        echo "Last log: ${LOG_FILE}"
+        tail -5 "${LOG_FILE}" || true
+      fi
+      exit 0
+      ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) die "Unknown option: $1" ;;
@@ -39,17 +82,58 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ ${#PATHS[@]} -eq 0 ]] && { usage; exit 1; }
+[[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
+mountpoint -q /mnt/model-shelf || die "/mnt/model-shelf not mounted"
+
+if [[ ${BWLIMIT_MBPS} -gt 0 ]]; then
+  bw_kib=$((BWLIMIT_MBPS * 125))
+  RSYNC+=(--bwlimit="${bw_kib}")
+fi
+
 [[ ${DRY_RUN} -eq 1 ]] && RSYNC+=(--dry-run)
+
+if [[ -t 1 && ${BACKGROUND} -eq 0 ]]; then
+  RSYNC+=(--progress)
+fi
+
+if [[ ${BACKGROUND} -eq 1 ]]; then
+  [[ ${#PATHS[@]} -eq 1 ]] || die "--background requires exactly one MODEL_PATH"
+  if [[ -f "${PID_FILE}" ]]; then
+    old_pid="$(cat "${PID_FILE}")"
+    kill -0 "${old_pid}" 2>/dev/null && die "Shelf pull already running (pid ${old_pid}). Check: spark-shelf-pull --status"
+    rm -f "${PID_FILE}"
+  fi
+  mkdir -p "${RUN_DIR}" "${LOG_DIR}"
+  bg_args=()
+  [[ ${DRY_RUN} -eq 1 ]] && bg_args+=(--dry-run)
+  [[ ${BWLIMIT_MBPS} -gt 0 ]] && bg_args+=(--bwlimit "${BWLIMIT_MBPS}")
+  bg_args+=("${PATHS[@]}")
+  {
+    echo "=== shelf pull started $(date -Is) path=${PATHS[0]} bwlimit=${BWLIMIT_MBPS}Mbps ==="
+  } >>"${LOG_FILE}"
+  nohup nice -n 10 ionice -c3 "$0" "${bg_args[@]}" >>"${LOG_FILE}" 2>&1 &
+  echo $! >"${PID_FILE}"
+  echo "Started background shelf pull (pid $(cat "${PID_FILE}"))"
+  echo "  Log: ${LOG_FILE}"
+  echo "  Status: spark-shelf-pull --status"
+  exit 0
+fi
+
+trap cleanup_pid EXIT
+
+[[ ${#PATHS[@]} -eq 0 ]] && { usage; exit 1; }
+
+LOCK="${RUN_DIR}/shelf-pull.lock"
+mkdir -p "${RUN_DIR}"
+exec 8>"${LOCK}"
+flock 8
 
 for rel in "${PATHS[@]}"; do
   rel="${rel#/}"
   rel="${rel%/}"
   src="${SHELF}/${rel}"
   [[ -d "${src}" ]] || die "Not found on shelf: ${src}"
-  echo "==> Pulling ${rel}"
-  mkdir -p "${MODELS}/$(dirname "${rel}")"
-  "${RSYNC[@]}" "${src}/" "${MODELS}/${rel}/"
+  pull_one "${rel}"
 done
 
-echo "OK: pull complete"
+echo "OK: pull complete ($(date -Is))"

@@ -98,6 +98,9 @@
     .pill { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; padding: .25rem .55rem; border-radius: 999px; border: 1px solid var(--border); font-family: ui-monospace, monospace; color: #c5cdd8; }
     .pill.up { border-color: #2a4a2a; color: var(--ok); }
     .pill.down { border-color: #4a2a2a; color: var(--down); }
+    .pill.warn { border-color: #4a402a; color: var(--warn); }
+    .pill.inf-pill-link { text-decoration: none; cursor: pointer; }
+    .pill.inf-pill-link:hover { border-color: #3a4a2a; background: #141a10; }
     .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .svc-list { display: grid; gap: .45rem; margin-top: .5rem; }
     .svc-item { display: flex; flex-wrap: wrap; gap: .35rem .75rem; justify-content: space-between; font-size: .8rem; font-family: ui-monospace, monospace; color: #c5cdd8; padding: .45rem .55rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
@@ -112,6 +115,10 @@
     .inf-profile .name { color: var(--text); font-weight: 600; }
     .inf-profile .meta { color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-profile .tier-heavy { color: var(--warn); }
+    .inf-profile .notes { display: block; width: 100%; margin-top: .25rem; color: #9aa0a6; font-size: .72rem; line-height: 1.4; font-style: italic; }
+    .inf-tier-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .35rem 0 .15rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .inf-tier-legend b { color: #c5cdd8; font-weight: 600; }
+    .inf-switch-banner { margin-top: .5rem; padding: .55rem .65rem; background: #241c10; border: 1px solid #4a402a; border-radius: 8px; font-size: .74rem; color: var(--warn); font-family: ui-monospace, monospace; line-height: 1.45; white-space: pre-wrap; }
     .inf-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
     .inf-actions select { appearance: none; background: #12151c; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .65rem; font: inherit; font-size: .8rem; min-width: 220px; }
     .inf-btn { appearance: none; border: 1px solid var(--border); background: #1a2210; color: var(--accent); font: inherit; font-size: .78rem; padding: .45rem .75rem; border-radius: 8px; cursor: pointer; }
@@ -132,8 +139,8 @@
     <a href="/" class="brand" id="brand-home">Sparky<small>home lab</small></a>
     <nav class="nav" id="nav">
       <a href="/" class="nav-btn active" data-view="system">System</a>
-      <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
       <a href="/models.html" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</a>
+      <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
     </nav>
@@ -246,9 +253,14 @@
           <div class="inf-active-box" id="inf-active-box">
             <div class="inf-active-title" id="inf-active-title">No active profile</div>
             <div class="inf-active-meta" id="inf-active-meta">Stop engines or switch to a recipe below.</div>
+            <div class="inf-switch-banner" id="inf-switch-banner" hidden></div>
           </div>
 
           <div class="section-title">Profiles</div>
+          <div class="inf-tier-legend">
+            <span><b>fast</b> — seconds to swap</span>
+            <span><b>heavy</b> — minutes to load (confirm before switch)</span>
+          </div>
           <div class="inf-profile-grid" id="inf-profiles"></div>
 
           <div class="inf-actions">
@@ -262,6 +274,7 @@
           <div class="section-title">Log</div>
           <pre class="inf-log" id="inf-log">—</pre>
           <div class="inf-links">
+            <a href="/models.html" id="inf-models-link">Model inventory</a>
             <a href="http://sparky:3000/" target="_blank" rel="noopener">Open WebUI ↗</a>
             <a href="#" id="inf-api-link" target="_blank" rel="noopener">API ↗</a>
           </div>
@@ -293,6 +306,8 @@
       let infPollTimer = null;
       let onSystem = true;
       let onInference = false;
+      let lastInfStatus = null;
+      let pendingStartProfile = null;
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
 
@@ -359,19 +374,40 @@
         }).join('');
       }
 
-      function renderInference(inf) {
-        const engines = (inf && inf.engines) || [];
-        if (!engines.length) {
-          const cls = inf && inf.up ? 'pill up' : 'pill down';
-          const label = inf && inf.up ? ('Inference · ' + (inf.model || 'ready')) : 'Inference offline';
-          $('inference-status').innerHTML = '<span class="' + cls + '"><span class="pill-dot"></span>' + label + '</span>';
+      function truncateNote(text, max) {
+        if (!text) return '';
+        const t = String(text).trim();
+        return t.length <= max ? t : t.slice(0, max - 1) + '…';
+      }
+
+      function renderInferencePills(data) {
+        const el = $('inference-status');
+        if (!data) {
+          el.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Inference · API offline</span>';
           return;
         }
-        $('inference-status').innerHTML = engines.map((e) => {
-          const cls = e.up ? 'pill up' : 'pill down';
-          const label = e.up ? (e.label + ' · ' + (e.model || 'ready')) : (e.label + ' offline');
-          return '<span class="' + cls + '"><span class="pill-dot"></span>' + label + '</span>';
-        }).join('');
+        const switching = data.switch && data.switch.running;
+        const active = data.active;
+        const pills = [];
+
+        if (switching) {
+          const prof = data.switch.profile || 'profile';
+          pills.push('<span class="pill warn"><span class="pill-dot"></span>Switching · '
+            + prof + '</span>');
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>View progress →</a>');
+        } else if (active) {
+          const cls = active.ready ? 'up' : (active.starting ? 'warn' : 'down');
+          const state = active.ready ? 'ready' : (active.starting ? 'loading' : 'waiting');
+          const tok = active.tok_s != null ? ' · ~' + Math.round(active.tok_s) + ' tok/s' : '';
+          pills.push('<a href="#inference" class="pill ' + cls + ' inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>' + active.id + ' · ' + state + tok + '</a>');
+        } else {
+          pills.push('<span class="pill down"><span class="pill-dot"></span>Inference offline</span>');
+          pills.push('<a href="#inference" class="pill inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>Switch profile →</a>');
+        }
+        el.innerHTML = pills.join('');
       }
 
       function renderContainers(list) {
@@ -408,45 +444,68 @@
           const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
           const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
           const tok = p.tok_s != null ? ' · ~' + Math.round(p.tok_s) + ' tok/s' : '';
+          const note = p.notes ? '<span class="notes">' + truncateNote(p.notes, 100) + '</span>' : '';
           return '<div class="' + cls + '"><span class="name">' + p.name + '</span>'
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
-            + ' · :' + p.port + tok + ' · ' + state + '</span></div>';
+            + ' · :' + p.port + tok + ' · ' + state + '</span>' + note + '</div>';
         }).join('') || '<div class="inf-profile"><span class="name">No profiles enabled</span></div>';
 
         $('inf-switch').disabled = !!switching;
         $('inf-down').disabled = !!switching;
+        $('inf-bench').disabled = !!switching || !(activeId && profiles.some((p) => p.id === activeId && p.ready));
       }
 
       function renderInferencePanel(data) {
         const active = data.active;
         const switching = data.switch && data.switch.running;
         const profiles = data.profiles || [];
+        const switchBanner = $('inf-switch-banner');
 
         if (switching) {
           $('inf-head-meta').textContent = 'switching… pid ' + (data.switch.pid || '—');
           $('inf-active-title').textContent = 'Switch in progress';
-          $('inf-active-meta').textContent = (data.switch.profile || 'profile')
-            + ' — see log below';
+          const prof = data.switch.profile || 'profile';
+          const profMeta = profiles.find((p) => p.id === prof);
+          const tierHint = profMeta && profMeta.tier === 'heavy' ? ' (heavy — may take minutes)' : '';
+          $('inf-active-meta').textContent = prof + tierHint + ' — log updates below';
+          const tail = (data.switch.log_tail || []).slice(-4).join('\n');
+          if (tail) {
+            switchBanner.hidden = false;
+            switchBanner.textContent = tail;
+          } else {
+            switchBanner.hidden = true;
+            switchBanner.textContent = '';
+          }
           setInfMsg('Profile switch running — API may be unavailable until ready.', 'warn');
-        } else if (active) {
-          $('inf-head-meta').textContent = active.engine + ' · :' + active.port;
-          $('inf-active-title').textContent = active.name || active.id;
-          const ready = active.ready ? 'ready' : (active.starting ? 'starting (model loading)' : 'waiting');
-          const tok = active.tok_s != null ? ' · ~' + Math.round(active.tok_s) + ' tok/s' : '';
-          $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
-            + tok + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
-          setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');
         } else {
-          $('inf-head-meta').textContent = 'no active profile';
-          $('inf-active-title').textContent = 'Inference offline';
-          $('inf-active-meta').textContent = 'eugr: ' + (data.engines.eugr ? 'up' : 'down')
-            + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down');
-          setInfMsg('');
+          switchBanner.hidden = true;
+          switchBanner.textContent = '';
+          if (active) {
+            $('inf-head-meta').textContent = active.engine + ' · :' + active.port
+              + (active.tier ? ' · ' + active.tier : '');
+            $('inf-active-title').textContent = active.name || active.id;
+            const ready = active.ready ? 'ready' : (active.starting ? 'starting (model loading)' : 'waiting');
+            const tok = active.tok_s != null ? ' · ~' + Math.round(active.tok_s) + ' tok/s' : '';
+            $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
+              + tok + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
+            setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');
+          } else {
+            $('inf-head-meta').textContent = 'no active profile';
+            $('inf-active-title').textContent = 'Inference offline';
+            $('inf-active-meta').textContent = 'eugr: ' + (data.engines.eugr ? 'up' : 'down')
+              + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down');
+            setInfMsg('');
+          }
         }
 
         renderInfProfiles(profiles, active && active.id, switching);
         $('inf-api-link').href = (data.urls && data.urls.api) || '#';
         $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
+        const invPath = active && active.inventory_path;
+        $('inf-models-link').href = invPath
+          ? '/models.html?highlight=' + encodeURIComponent(invPath)
+          : '/models.html';
+        $('inf-models-link').textContent = invPath ? 'View model in inventory' : 'Model inventory';
       }
 
       async function fetchInfLogs() {
@@ -462,21 +521,55 @@
         }
       }
 
-      async function infTick() {
-        if (!onInference) return;
+      async function fetchInferenceStatus() {
         try {
           const res = await fetch('/api/inference/status', { cache: 'no-store' });
           if (!res.ok) throw new Error('bad status');
-          const d = await res.json();
+          lastInfStatus = await res.json();
+          return lastInfStatus;
+        } catch (e) {
+          lastInfStatus = null;
+          return null;
+        }
+      }
+
+      async function infTick() {
+        if (!onInference) return;
+        const d = await fetchInferenceStatus();
+        if (d) {
           renderInferencePanel(d);
           await fetchInfLogs();
           $('live').classList.remove('live-stale');
           $('live').lastChild.textContent = 'live';
-        } catch (e) {
+          maybeAutoStartProfile(d);
+        } else {
           $('live').classList.add('live-stale');
           $('live').lastChild.textContent = 'offline';
           setInfMsg('Inference API unavailable — run install/17-inference-api.sh', 'err');
         }
+      }
+
+      function maybeAutoStartProfile(data) {
+        if (!pendingStartProfile || !data) return;
+        const profile = pendingStartProfile;
+        const prof = (data.profiles || []).find((p) => p.id === profile);
+        if (!prof) {
+          pendingStartProfile = null;
+          setInfMsg('Unknown profile: ' + profile, 'err');
+          return;
+        }
+        if (data.switch && data.switch.running) return;
+        if (data.active && data.active.id === profile && data.active.ready) {
+          pendingStartProfile = null;
+          return;
+        }
+        pendingStartProfile = null;
+        $('inf-select').value = profile;
+        if (prof.tier === 'heavy') {
+          setInfMsg('Confirm heavy profile switch using the Switch button.', 'warn');
+          return;
+        }
+        infSwitch();
       }
 
       async function infSwitch() {
@@ -559,9 +652,12 @@
       async function tick() {
         if (!onSystem) return;
         try {
-          const res = await fetch('/api/gpu', { cache: 'no-store' });
-          if (!res.ok) throw new Error('bad status');
-          const d = await res.json();
+          const [gpuRes, infData] = await Promise.all([
+            fetch('/api/gpu', { cache: 'no-store' }),
+            fetchInferenceStatus(),
+          ]);
+          if (!gpuRes.ok) throw new Error('bad status');
+          const d = await gpuRes.json();
           const hist = d.history || {};
 
           $('gpu-name').textContent = d.gpu_name;
@@ -602,7 +698,7 @@
           sparkline($('net-spark'), hist.net_rx_mbps, '#6bc46d');
 
           renderStorage(d.storage || []);
-          renderInference(d.inference || {});
+          renderInferencePills(infData);
           renderContainers(d.containers || []);
 
           $('live').classList.remove('live-stale');
@@ -709,9 +805,21 @@
       $('inf-bench').addEventListener('click', infBench);
       $('inf-down').addEventListener('click', infDown);
 
-      const hash = location.hash.replace('#', '');
-      if (hash === 'inference') {
+      $('inference-status').addEventListener('click', (e) => {
+        const link = e.target.closest('[data-goto-inference]');
+        if (!link) return;
+        e.preventDefault();
         showInference(nav.querySelector('[data-view="inference"]'));
+        history.replaceState(null, '', '#inference');
+      });
+
+      const urlParams = new URLSearchParams(location.search);
+      pendingStartProfile = urlParams.get('start');
+
+      const hash = location.hash.replace('#', '');
+      if (hash === 'inference' || pendingStartProfile) {
+        showInference(nav.querySelector('[data-view="inference"]'));
+        if (pendingStartProfile) history.replaceState(null, '', '#inference');
       } else if (hash && hash !== 'system') {
         const match = Array.from(nav.querySelectorAll('.nav-btn')).find((b) =>
           (b.textContent || '').trim().toLowerCase() === hash

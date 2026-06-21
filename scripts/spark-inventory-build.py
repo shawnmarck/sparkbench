@@ -18,6 +18,9 @@ MODELS_ROOT = Path("/models")
 SHELF_ROOT = Path("/mnt/model-shelf/models")
 CATALOG = Path("/opt/spark/data/model-catalog.yaml")
 VERIFY_FILE = Path("/opt/spark/data/model-verification.yaml")
+RECIPES_DIR = Path("/opt/spark/recipes")
+INFERENCE_PROFILES = Path("/opt/spark/data/inference-profiles.yaml")
+BENCHMARKS_FILE = Path("/opt/spark/data/inference-benchmarks.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
 HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
@@ -317,6 +320,67 @@ def attach_spark_verify(entries: list, store: dict) -> None:
         entry["spark_verify"] = spark_verify_for(rel, store)
 
 
+def load_inference_profile_map() -> dict[str, list[dict]]:
+    """Map inventory_path -> enabled recipe profiles for portal bridge."""
+    if yaml is None or not RECIPES_DIR.is_dir():
+        return {}
+
+    enabled: set[str] = set()
+    if INFERENCE_PROFILES.is_file():
+        try:
+            data = yaml.safe_load(INFERENCE_PROFILES.read_text()) or {}
+            enabled = {p for p in (data.get("profiles") or []) if isinstance(p, str) and p}
+        except (OSError, yaml.YAMLError):
+            enabled = set()
+
+    benchmarks: dict = {}
+    if BENCHMARKS_FILE.is_file():
+        try:
+            bench_data = yaml.safe_load(BENCHMARKS_FILE.read_text()) or {}
+            raw = bench_data.get("profiles") or {}
+            benchmarks = raw if isinstance(raw, dict) else {}
+        except (OSError, yaml.YAMLError):
+            benchmarks = {}
+
+    by_path: dict[str, list[dict]] = {}
+    for recipe_file in sorted(RECIPES_DIR.glob("*.yaml")):
+        profile_id = recipe_file.stem
+        try:
+            recipe = yaml.safe_load(recipe_file.read_text()) or {}
+        except (OSError, yaml.YAMLError):
+            continue
+        if not isinstance(recipe, dict):
+            continue
+        inv_path = recipe.get("inventory_path") or recipe.get("catalog_id")
+        if not inv_path:
+            continue
+        bench = benchmarks.get(profile_id) or {}
+        notes = (recipe.get("notes") or "").strip()
+        first_note = notes.split("\n", 1)[0].strip() if notes else None
+        info = {
+            "id": profile_id,
+            "name": recipe.get("name"),
+            "engine": recipe.get("engine"),
+            "tier": recipe.get("tier"),
+            "enabled": profile_id in enabled,
+            "tok_s": bench.get("tok_s"),
+            "notes": first_note,
+        }
+        by_path.setdefault(str(inv_path), []).append(info)
+
+    for profiles in by_path.values():
+        profiles.sort(key=lambda p: (not p.get("enabled"), p.get("id") or ""))
+    return by_path
+
+
+def attach_inference_profiles(entries: list, by_path: dict[str, list[dict]]) -> None:
+    for entry in entries:
+        rel = entry.get("rel_path") or entry.get("id")
+        profiles = by_path.get(rel)
+        if profiles:
+            entry["inference_profiles"] = profiles
+
+
 def load_catalog() -> list:
     if not CATALOG.is_file():
         return []
@@ -574,6 +638,7 @@ def main() -> int:
                 seen_ids.add(mid)
 
     attach_spark_verify(entries, load_spark_verification())
+    attach_inference_profiles(entries, load_inference_profile_map())
 
     payload = {
         "generated_at": now,

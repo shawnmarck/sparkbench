@@ -179,6 +179,18 @@
     .badge.queued { border-color: #4a402a; color: var(--warn); }
     .badge.engine-vllm { border-color: #2a3a5a; color: #9ec8ff; }
     .badge.engine-llamacpp { border-color: #3a4a2a; color: #b8d88a; }
+    .badge.inf-profile { border-color: #2a3a4a; color: #9ec8ff; }
+    .badge.inf-active { border-color: #3a4a2a; color: var(--accent); }
+    .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
+    .inference-block { padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
+    .inference-block h4 { margin: 0 0 .45rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+    .inf-profile-row { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: center; justify-content: space-between; padding: .45rem 0; border-top: 1px solid var(--border); font-size: .82rem; }
+    .inf-profile-row:first-of-type { border-top: 0; padding-top: 0; }
+    .inf-profile-info { min-width: 0; flex: 1; }
+    .inf-profile-info strong { display: block; font-size: .84rem; }
+    .inf-profile-info code { font-size: .72rem; color: var(--muted); }
+    .inf-profile-actions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .model-row.highlight { border-color: #3a4a3a; box-shadow: 0 0 0 1px #3a4a3a; }
     .release-est { opacity: .75; font-style: italic; }
     .detail-section { margin-top: .75rem; }
     .badges { display: flex; flex-wrap: wrap; gap: .35rem; }
@@ -327,8 +339,9 @@
   </script>
   <script>
     let all = [], shelfMounted = false, activeJob = { running: false };
-    let expandedId = null, pollTimer = null, jobTimer = null;
-    const REFRESH_MS = 30000, JOB_POLL_MS = 2000, PREFS_KEY = 'spark-models-filters';
+    let infStatus = null, highlightPath = null;
+    let expandedId = null, pollTimer = null, jobTimer = null, infPollTimer = null;
+    const REFRESH_MS = 30000, JOB_POLL_MS = 2000, INF_POLL_MS = 5000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
     const engineLabels = { vllm: 'vLLM', llamacpp: 'GGUF' };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
@@ -425,6 +438,59 @@
 
     function modelBusy(m) { return activeJob.running && activeJob.path === m.rel_path; }
 
+    function inferenceSwitching() {
+      return !!(infStatus && infStatus.switch && infStatus.switch.running);
+    }
+
+    function activeProfileId() {
+      return infStatus && infStatus.active && infStatus.active.id;
+    }
+
+    function inferenceBadge(m) {
+      const profiles = (m.inference_profiles || []).filter((p) => p.enabled);
+      if (!profiles.length) return '';
+      const activeId = activeProfileId();
+      const active = profiles.find((p) => p.id === activeId);
+      if (active) {
+        const state = infStatus.active.ready ? 'active' : 'loading';
+        return `<span class="badge inf-active">${esc(active.id)} · ${state}</span>`;
+      }
+      return `<span class="badge inf-profile">${profiles.length} profile${profiles.length === 1 ? '' : 's'}</span>`;
+    }
+
+    function inferenceSection(m) {
+      const profiles = m.inference_profiles || [];
+      if (!profiles.length) {
+        return `<div class="detail-section inference-block"><h4>Inference</h4>`
+          + '<span class="meta-warn">No inference recipe configured for this model.</span></div>';
+      }
+      const switching = inferenceSwitching();
+      const activeId = activeProfileId();
+      const rows = profiles.map((p) => {
+        const tier = p.tier === 'heavy' ? '<span class="badge tier-heavy">heavy</span>' : '<span class="badge">fast</span>';
+        const tok = p.tok_s != null ? ` · ~${Math.round(p.tok_s)} tok/s` : '';
+        const note = p.notes ? `<div class="verify-note">${esc(p.notes)}</div>` : '';
+        let actions = '';
+        if (!p.enabled) {
+          actions = '<span class="badge">disabled</span>';
+        } else if (p.id === activeId) {
+          const ready = infStatus.active.ready;
+          actions = ready
+            ? '<span class="badge status-ready">active</span><a href="/#inference" target="_top">Inference ↗</a>'
+            : '<span class="badge status-downloading">loading…</span><a href="/#inference" target="_top">View progress ↗</a>';
+        } else if (switching) {
+          actions = '<button type="button" class="btn" disabled>Switch in progress</button>';
+        } else {
+          actions = `<button type="button" class="btn primary" data-action="start-profile" data-profile="${esc(p.id)}" data-tier="${esc(p.tier || '')}">Start profile</button>`;
+        }
+        return `<div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
+          + `<code>${esc(p.id)} · ${esc(p.engine || '')}${tok}</code>${note}</div>`
+          + `<div class="inf-profile-actions">${tier}${actions}</div></div>`;
+      }).join('');
+      return `<div class="detail-section inference-block"><h4>Inference profiles</h4>${rows}`
+        + '<div class="actions" style="margin-top:.55rem"><a href="/#inference" target="_top">Open Inference tab ↗</a></div></div>';
+    }
+
     function renderDetail(m) {
       const rel = esc(m.rel_path || m.id);
       const spark = sparkStatus(m);
@@ -456,6 +522,7 @@
         </div>` : '';
       return `
         ${tagBlock}
+        ${inferenceSection(m)}
         <div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>
         ${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}
         <div class="detail-section storage">
@@ -486,12 +553,14 @@
         const tokS = svRow.tok_s != null ? `<span class="badge tok-s">~${Math.round(svRow.tok_s)} tok/s</span>` : '';
         const badges = [
           engineBadgeHtml(m),
+          inferenceBadge(m),
           tokS,
           queued ? '<span class="badge queued">queued</span>' : '',
           `<span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span>`,
           `<span class="badge status-${m.status || 'missing'}">${esc(m.status)}</span>`,
         ].join('');
-        return `<article class="model-row${open ? ' open' : ''}${queued ? ' queued' : ''}" data-id="${id}">
+        const highlighted = highlightPath && (m.rel_path === highlightPath || m.id === highlightPath);
+        return `<article class="model-row${open ? ' open' : ''}${queued ? ' queued' : ''}${highlighted ? ' highlight' : ''}" data-id="${id}" data-path="${esc(m.rel_path || m.id)}">
           <button type="button" class="row-main" data-expand="${id}">
             <div class="row-title"><strong>${esc(m.name)}</strong><code>${esc(m.rel_path || m.id)}</code></div>
             <div class="row-badges">${badges}</div>
@@ -508,6 +577,13 @@
         </article>`;
       }).join('');
       renderJobBanner();
+      scrollToHighlight();
+    }
+
+    function scrollToHighlight() {
+      if (!highlightPath) return;
+      const row = $('list').querySelector('[data-path="' + CSS.escape(highlightPath) + '"]');
+      if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
     function renderJobBanner() {
@@ -666,6 +742,43 @@
       });
     }
 
+    async function refreshInferenceStatus() {
+      try {
+        const res = await fetch('/api/inference/status', { cache: 'no-store' });
+        if (!res.ok) return;
+        infStatus = await res.json();
+        if (expandedId || highlightPath) applyFilters();
+      } catch (_) {}
+    }
+
+    async function startProfile(profileId, tier, btn) {
+      if (tier === 'heavy') {
+        const ok = confirm('Heavy profile (“' + profileId + '”) may take several minutes to load.\n\nContinue?');
+        if (!ok) return;
+      }
+      btn.disabled = true;
+      btn.classList.add('busy');
+      try {
+        const body = { profile: profileId, confirm: true };
+        if (tier === 'heavy') body.confirm_heavy = true;
+        const res = await fetch('/api/inference/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        await refreshInferenceStatus();
+        applyFilters();
+        window.top.location.href = '/#inference';
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('busy');
+      }
+    }
+
     async function setSparkVerify(path, spark_status, btn) {
       btn.disabled = true;
       try {
@@ -746,6 +859,12 @@
       if (vbtn) { e.stopPropagation(); setSparkVerify(vbtn.dataset.path, vbtn.dataset.verify, vbtn); return; }
       const qbtn = e.target.closest('[data-action="queue-removal"]');
       if (qbtn && !qbtn.disabled) { e.stopPropagation(); setRemovalQueue(qbtn.dataset.path, qbtn.dataset.pending === '1', qbtn); return; }
+      const sbtn = e.target.closest('[data-action="start-profile"]');
+      if (sbtn && !sbtn.disabled) {
+        e.stopPropagation();
+        startProfile(sbtn.dataset.profile, sbtn.dataset.tier, sbtn);
+        return;
+      }
       const btn = e.target.closest('[data-action]');
       if (!btn || btn.disabled) return;
       e.stopPropagation();
@@ -782,18 +901,31 @@
           all = data.models || [];
           shelfMounted = !!data.shelf_mounted;
           window.__generated = data.generated_at;
+          if (highlightPath) {
+            const hit = all.find((m) => m.rel_path === highlightPath || m.id === highlightPath);
+            if (hit) expandedId = hit.id;
+          }
           populateFilters(all, preserve);
           applyFilters();
           refreshShelfStatus();
+          refreshInferenceStatus();
         });
     }
+
+    highlightPath = new URLSearchParams(location.search).get('highlight');
 
     loadData(false).catch(err => {
       $('summary').textContent = 'Failed to load models.json';
       $('list').innerHTML = `<div class="empty">${esc(String(err))}</div>`;
     });
     pollTimer = setInterval(() => loadData(true).catch(() => {}), REFRESH_MS);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadData(true).catch(() => {}); });
+    infPollTimer = setInterval(() => refreshInferenceStatus(), INF_POLL_MS);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        loadData(true).catch(() => {});
+        refreshInferenceStatus();
+      }
+    });
   </script>
 </body>
 </html>

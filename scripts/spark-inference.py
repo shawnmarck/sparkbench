@@ -297,6 +297,7 @@ def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
         "tier": recipe.get("tier"),
         "port": recipe.get("port"),
         "served_name": recipe.get("served_name"),
+        "inventory_path": recipe.get("inventory_path") or recipe.get("catalog_id"),
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
     }

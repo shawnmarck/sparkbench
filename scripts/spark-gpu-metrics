@@ -19,9 +19,14 @@ _HISTORY = {
     "gpu_temp_c": deque(maxlen=_HISTORY_LEN),
     "cpu_temp_c": deque(maxlen=_HISTORY_LEN),
     "gpu_power_w": deque(maxlen=_HISTORY_LEN),
+    "net_rx_mbps": deque(maxlen=_HISTORY_LEN),
+    "net_tx_mbps": deque(maxlen=_HISTORY_LEN),
 }
 _PREV_CPU = None
 _PREV_CPU_CORES = None
+_PREV_NET = None
+_SKIP_IFACES = frozenset({"lo"})
+_SKIP_IFACE_PREFIXES = ("docker", "br-", "veth", "virbr", "ifb")
 
 
 def _read_proc_stat():
@@ -93,6 +98,106 @@ def read_load():
         "load_1": round(float(one), 2),
         "load_5": round(float(five), 2),
         "load_15": round(float(fifteen), 2),
+    }
+
+
+def _iface_kind(name: str) -> str | None:
+    if name.startswith("wl"):
+        return "wifi"
+    if name.startswith("eth") or name.startswith("en"):
+        return "ethernet"
+    return None
+
+
+def _iface_operstate(name: str) -> str:
+    path = Path("/sys/class/net") / name / "operstate"
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return "unknown"
+
+
+def pick_network_iface() -> tuple[str | None, str | None]:
+    base = Path("/sys/class/net")
+    if not base.is_dir():
+        return None, None
+    ethernet: list[str] = []
+    wifi: list[str] = []
+    for entry in sorted(base.iterdir()):
+        name = entry.name
+        if name in _SKIP_IFACES or name.startswith(_SKIP_IFACE_PREFIXES):
+            continue
+        kind = _iface_kind(name)
+        if not kind or _iface_operstate(name) != "up":
+            continue
+        if kind == "ethernet":
+            ethernet.append(name)
+        else:
+            wifi.append(name)
+    if ethernet:
+        return ethernet[0], "ethernet"
+    if wifi:
+        return wifi[0], "wifi"
+    return None, None
+
+
+def _read_iface_bytes(iface: str) -> tuple[int, int] | None:
+    with open("/proc/net/dev", encoding="utf-8") as fh:
+        for line in fh:
+            if ":" not in line:
+                continue
+            name, rest = line.split(":", 1)
+            if name.strip() != iface:
+                continue
+            parts = rest.split()
+            if len(parts) < 9:
+                return None
+            return int(parts[0]), int(parts[8])
+    return None
+
+
+def read_network() -> dict:
+    global _PREV_NET
+    iface, kind = pick_network_iface()
+    if not iface:
+        return {
+            "iface": None,
+            "kind": None,
+            "label": "offline",
+            "rx_mbps": None,
+            "tx_mbps": None,
+        }
+
+    counters = _read_iface_bytes(iface)
+    if not counters:
+        return {
+            "iface": iface,
+            "kind": kind,
+            "label": "Wi‑Fi" if kind == "wifi" else "Ethernet",
+            "rx_mbps": None,
+            "tx_mbps": None,
+        }
+
+    rx_bytes, tx_bytes = counters
+    now = time.time()
+    rx_mbps = None
+    tx_mbps = None
+    if _PREV_NET and _PREV_NET.get("iface") == iface:
+        dt = now - _PREV_NET["at"]
+        if dt > 0:
+            rx_mbps = round((rx_bytes - _PREV_NET["rx"]) * 8 / dt / 1_000_000, 1)
+            tx_mbps = round((tx_bytes - _PREV_NET["tx"]) * 8 / dt / 1_000_000, 1)
+            rx_mbps = max(rx_mbps, 0.0)
+            tx_mbps = max(tx_mbps, 0.0)
+
+    _PREV_NET = {"iface": iface, "rx": rx_bytes, "tx": tx_bytes, "at": now}
+    label = "Wi‑Fi" if kind == "wifi" else "10GbE" if kind == "ethernet" else "Ethernet"
+    return {
+        "iface": iface,
+        "kind": kind,
+        "label": label,
+        "rx_mbps": rx_mbps,
+        "tx_mbps": tx_mbps,
     }
 
 
@@ -362,6 +467,11 @@ def read_metrics():
     metrics.update(read_thermals())
     metrics.update(read_uptime())
     metrics.update(read_load())
+    network = read_network()
+    metrics["network"] = network
+    if network.get("rx_mbps") is not None:
+        metrics["net_rx_mbps"] = network["rx_mbps"]
+        metrics["net_tx_mbps"] = network["tx_mbps"]
     metrics["storage"] = read_storage()
     metrics["containers"] = read_docker()
     metrics["inference"] = read_inference()
@@ -389,6 +499,7 @@ def main():
                 return
 
         read_cpu_metrics()
+        read_network()
         time.sleep(0.2)
         HTTPServer(("127.0.0.1", 8765), Handler).serve_forever()
         return

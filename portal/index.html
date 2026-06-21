@@ -49,6 +49,7 @@
     .metric > .metric-value { margin-bottom: .45rem; }
     .metric-head .metric-value { margin-bottom: 0; }
     .metric-hint { font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; text-align: right; white-space: nowrap; padding-bottom: .25rem; }
+    .net-dir { font-size: 1rem; color: var(--muted); margin-right: .1rem; font-weight: 500; }
     .metric-value { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
     .metric-value span { font-size: 1rem; color: var(--muted); font-weight: 500; }
     .metric-bar { height: 8px; background: #12151c; border-radius: 999px; overflow: hidden; margin-top: 0; border: 1px solid var(--border); }
@@ -133,7 +134,10 @@
             </div>
             <div class="metric">
               <h3>GPU</h3>
-              <div class="metric-value"><span id="gpu-util">—</span><span>%</span></div>
+              <div class="metric-head">
+                <div class="metric-value"><span id="gpu-util">—</span><span>%</span></div>
+                <div class="metric-hint" id="gpu-sub">— W</div>
+              </div>
               <div class="metric-bar"><i id="gpu-bar"></i></div>
               <div class="spark" id="gpu-spark"></div>
             </div>
@@ -162,10 +166,13 @@
               <div class="spark" id="cpu-temp-spark"></div>
             </div>
             <div class="metric">
-              <h3>Power</h3>
-              <div class="metric-value"><span id="power-val">—</span><span>W</span></div>
-              <div class="metric-bar"><i id="power-bar"></i></div>
-              <div class="spark" id="power-spark"></div>
+              <h3>Network</h3>
+              <div class="metric-head">
+                <div class="metric-value"><span class="net-dir">↓</span><span id="net-rx">—</span><span>Mbps</span></div>
+                <div class="metric-hint" id="net-sub">↑ — · —</div>
+              </div>
+              <div class="metric-bar"><i id="net-bar"></i></div>
+              <div class="spark" id="net-spark"></div>
             </div>
           </div>
 
@@ -308,6 +315,7 @@
           setBar($('mem-bar'), d.memory_used_pct);
           $('cpu-sub').textContent = 'peak core ' + d.cpu_peak_core_pct.toFixed(1) + '%';
           $('mem-sub').textContent = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB';
+          $('gpu-sub').textContent = d.gpu_power_w != null ? d.gpu_power_w + ' W' : '— W';
 
           sparkline($('cpu-spark'), hist.cpu_util_pct, '#6eb5ff');
           sparkline($('gpu-spark'), hist.gpu_util_pct, '#76b900');
@@ -318,15 +326,20 @@
           sparkline($('gpu-temp-spark'), hist.gpu_temp_c, '#f08a5d');
           sparkline($('cpu-temp-spark'), hist.cpu_temp_c, '#e8b84a');
 
-          if (d.gpu_power_w != null) {
-            $('power-val').textContent = d.gpu_power_w;
-            const powerMax = Math.max(300, ...(hist.gpu_power_w || []), d.gpu_power_w);
-            setBar($('power-bar'), (d.gpu_power_w / powerMax) * 100);
+          const net = d.network || {};
+          if (net.rx_mbps != null) {
+            $('net-rx').textContent = net.rx_mbps.toFixed(1);
+            $('net-sub').textContent = '↑ ' + net.tx_mbps.toFixed(1) + ' Mbps · ' + (net.label || net.iface || '—');
+            const netMax = Math.min(10000, Math.max(100, ...(hist.net_rx_mbps || []), net.rx_mbps));
+            setBar($('net-bar'), (net.rx_mbps / netMax) * 100);
           } else {
-            $('power-val').textContent = '—';
-            setBar($('power-bar'), 0);
+            $('net-rx').textContent = '—';
+            $('net-sub').textContent = net.iface
+              ? ('↑ — Mbps · ' + (net.label || net.iface))
+              : 'offline';
+            setBar($('net-bar'), 0);
           }
-          sparkline($('power-spark'), hist.gpu_power_w, '#6bc46d');
+          sparkline($('net-spark'), hist.net_rx_mbps, '#6bc46d');
 
           renderStorage(d.storage || []);
           renderInference(d.inference || {});

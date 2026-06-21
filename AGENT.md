@@ -49,6 +49,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | Portal | http://sparky/ |
 | Models | http://sparky/models.html |
 | Metrics API | http://sparky/api/gpu |
+| Inference API | http://sparky/api/inference/status |
 | Shelf API | http://sparky/api/shelf/status |
 | vLLM | http://sparky:8000/v1 |
 | llama.cpp | http://sparky:8081/v1 |
@@ -79,6 +80,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 spark-inference list       # enabled profiles
 spark-inference status     # active profile + engine health
 spark-inference up <id>    # switch profile (evicts current)
+curl http://sparky/api/inference/status   # JSON for portal/gateway
 spark-eugr status          # vLLM NVFP4 stack (direct)
 spark-llama status         # llama.cpp server (direct)
 spark-shelf-push --help    # NAS backup

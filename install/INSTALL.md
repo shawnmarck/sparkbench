@@ -29,6 +29,7 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 | `10-portal-gpu-widget.sh` | `spark-gpu-metrics` API + nginx |
 | `11-model-shelf-api.sh` | Shelf/model APIs + removal cron deps |
 | `12-model-removal-cron.sh` | Nightly queued local model purge |
+| `17-inference-api.sh` | Inference control API + nginx route |
 
 ## Inference engines
 

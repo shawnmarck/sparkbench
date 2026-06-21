@@ -19,8 +19,12 @@ ROOT = Path("/opt/spark")
 RECIPES_DIR = ROOT / "recipes"
 PROFILES_INDEX = ROOT / "data" / "inference-profiles.yaml"
 STATE_FILE = ROOT / "run" / "inference-active.json"
+SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
+SWITCH_LOG_FILE = ROOT / "logs" / "inference-switch-latest.log"
+LOG_DIR = ROOT / "logs"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
+PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -242,6 +246,160 @@ def cmd_up(profile_id: str) -> int:
     write_state(profile_id)
     print(f"Profile {profile_id} started — run: spark-inference status")
     return 0
+
+
+def validate_profile_id(profile_id: str) -> str | None:
+    profile_id = profile_id.strip()
+    if not profile_id or not PROFILE_ID_RE.match(profile_id):
+        return None
+    if profile_id not in enabled_profiles():
+        return None
+    return profile_id
+
+
+def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": recipe.get("id"),
+        "name": recipe.get("name"),
+        "engine": recipe.get("engine"),
+        "tier": recipe.get("tier"),
+        "port": recipe.get("port"),
+        "served_name": recipe.get("served_name"),
+        "tags": recipe.get("tags") or [],
+        "notes": (recipe.get("notes") or "").strip(),
+    }
+
+
+def engine_ready(recipe: dict[str, Any]) -> bool:
+    port = int(recipe.get("port") or 0)
+    if not port:
+        return False
+    served = served_name_from_port(port)
+    return served == recipe.get("served_name")
+
+
+def read_pid_file(path: Path) -> int | None:
+    if not path.is_file():
+        return None
+    try:
+        pid = int(path.read_text().strip())
+    except (OSError, ValueError):
+        return None
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        path.unlink(missing_ok=True)
+        return None
+    return pid
+
+
+def tail_log(path: Path, lines: int = 12) -> list[str]:
+    if not path.is_file():
+        return []
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    return content[-lines:]
+
+
+def active_switch_job() -> dict[str, Any]:
+    pid = read_pid_file(SWITCH_PID_FILE)
+    if not pid:
+        SWITCH_PID_FILE.unlink(missing_ok=True)
+        return {"running": False}
+    return {
+        "running": True,
+        "pid": pid,
+        "log": SWITCH_LOG_FILE.name,
+        "log_tail": tail_log(SWITCH_LOG_FILE),
+    }
+
+
+def engine_log_file(recipe: dict[str, Any] | None) -> Path:
+    if not recipe:
+        return LOG_DIR / "llama-server.log"
+    if recipe.get("engine") == "eugr":
+        return SWITCH_LOG_FILE
+    return LOG_DIR / "llama-server.log"
+
+
+def api_profiles(active_id: str | None = None) -> list[dict[str, Any]]:
+    profiles = []
+    for profile_id in enabled_profiles():
+        recipe = load_recipe(profile_id)
+        item = recipe_public(recipe)
+        item["active"] = profile_id == active_id
+        item["ready"] = bool(active_id == profile_id and engine_ready(recipe))
+        profiles.append(item)
+    return profiles
+
+
+def api_status() -> dict[str, Any]:
+    active = detect_active_profile()
+    active_id = active["profile"] if active else None
+    recipe = active["recipe"] if active else None
+    ready = engine_ready(recipe) if recipe else False
+    port = int(recipe.get("port") or 0) if recipe else None
+
+    payload: dict[str, Any] = {
+        "active": None,
+        "profiles": api_profiles(active_id),
+        "engines": {"eugr": eugr_running(), "llamacpp": llama_running()},
+        "switch": active_switch_job(),
+        "urls": {
+            "openwebui": "http://sparky:3000",
+            "portal": "http://sparky/",
+        },
+    }
+
+    if active and recipe:
+        payload["active"] = {
+            **recipe_public(recipe),
+            "started_at": (active.get("state") or {}).get("started_at"),
+            "ready": ready,
+            "api_url": f"http://sparky:{port}/v1" if port else None,
+            "log_file": engine_log_file(recipe).name,
+        }
+        payload["urls"]["api"] = payload["active"]["api_url"]
+
+    return payload
+
+
+def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
+    profile_id = validate_profile_id(profile_id)
+    if not profile_id:
+        return False, "unknown or disabled profile", {}
+
+    if active_switch_job().get("running"):
+        return False, "profile switch already running", active_switch_job()
+
+    active = detect_active_profile()
+    if active and active["profile"] == profile_id and engine_ready(active["recipe"]):
+        return False, "profile already active", api_status()
+
+    SWITCH_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SWITCH_PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with SWITCH_LOG_FILE.open("w", encoding="utf-8") as log:
+        log.write(f"==> switch to {profile_id} {datetime.now(timezone.utc).isoformat()}\n")
+        proc = subprocess.Popen(
+            [sys.executable, str(ROOT / "scripts" / "spark-inference.py"), "up", profile_id],
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    SWITCH_PID_FILE.write_text(str(proc.pid))
+    job = active_switch_job()
+    job["profile"] = profile_id
+    job["started_at"] = datetime.now(timezone.utc).isoformat()
+    return True, "started", job
+
+
+def api_down() -> dict[str, Any]:
+    if active_switch_job().get("running"):
+        raise RuntimeError("profile switch in progress")
+    cmd_down()
+    return api_status()
 
 
 def cmd_logs(profile_id: str | None) -> int:

@@ -103,6 +103,28 @@
     .svc-item { display: flex; flex-wrap: wrap; gap: .35rem .75rem; justify-content: space-between; font-size: .8rem; font-family: ui-monospace, monospace; color: #c5cdd8; padding: .45rem .55rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
     .svc-item .name { color: var(--text); font-weight: 600; }
     .svc-item .ports { color: var(--accent); }
+    .inf-active-box { padding: .75rem .85rem; background: #12151c; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem; }
+    .inf-active-title { font-weight: 600; color: var(--text); margin-bottom: .35rem; }
+    .inf-active-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .76rem; line-height: 1.5; }
+    .inf-profile-grid { display: grid; gap: .45rem; margin-top: .35rem; }
+    .inf-profile { display: flex; flex-wrap: wrap; gap: .35rem .65rem; justify-content: space-between; align-items: baseline; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
+    .inf-profile.active { border-color: #3a4a2a; background: #141a10; }
+    .inf-profile .name { color: var(--text); font-weight: 600; }
+    .inf-profile .meta { color: var(--muted); font-family: ui-monospace, monospace; }
+    .inf-profile .tier-heavy { color: var(--warn); }
+    .inf-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
+    .inf-actions select { appearance: none; background: #12151c; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .65rem; font: inherit; font-size: .8rem; min-width: 220px; }
+    .inf-btn { appearance: none; border: 1px solid var(--border); background: #1a2210; color: var(--accent); font: inherit; font-size: .78rem; padding: .45rem .75rem; border-radius: 8px; cursor: pointer; }
+    .inf-btn:hover { border-color: #3a4a2a; }
+    .inf-btn.danger { background: #221414; color: var(--down); border-color: #4a2a2a; }
+    .inf-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .inf-log { margin: .35rem 0 0; padding: .65rem .75rem; max-height: 200px; overflow: auto; background: #0c0e14; border: 1px solid var(--border); border-radius: 8px; font-size: .72rem; font-family: ui-monospace, monospace; color: #aeb6c2; white-space: pre-wrap; }
+    .inf-links { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .65rem; font-size: .78rem; }
+    .inf-links a { color: var(--accent); text-decoration: none; }
+    .inf-links a:hover { text-decoration: underline; }
+    .inf-msg { margin-top: .5rem; font-size: .76rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .inf-msg.warn { color: var(--warn); }
+    .inf-msg.err { color: var(--down); }
   </style>
 </head>
 <body>
@@ -110,6 +132,7 @@
     <a href="/" class="brand" id="brand-home">Sparky<small>home lab</small></a>
     <nav class="nav" id="nav">
       <a href="/" class="nav-btn active" data-view="system">System</a>
+      <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
       <a href="/models.html" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
@@ -213,6 +236,35 @@
           <div class="section-title">Model storage</div>
           <div class="storage-grid" id="storage"></div>
         </div>
+
+        <div class="card" id="inference-card" hidden>
+          <div class="card-head">
+            <h2>Inference</h2>
+            <div class="card-head-meta" id="inf-head-meta">one GPU profile at a time</div>
+          </div>
+
+          <div class="inf-active-box" id="inf-active-box">
+            <div class="inf-active-title" id="inf-active-title">No active profile</div>
+            <div class="inf-active-meta" id="inf-active-meta">Stop engines or switch to a recipe below.</div>
+          </div>
+
+          <div class="section-title">Profiles</div>
+          <div class="inf-profile-grid" id="inf-profiles"></div>
+
+          <div class="inf-actions">
+            <select id="inf-select" aria-label="Inference profile"></select>
+            <button type="button" class="inf-btn" id="inf-switch">Switch</button>
+            <button type="button" class="inf-btn danger" id="inf-down">Stop</button>
+          </div>
+          <div class="inf-msg" id="inf-msg"></div>
+
+          <div class="section-title">Log</div>
+          <pre class="inf-log" id="inf-log">—</pre>
+          <div class="inf-links">
+            <a href="http://sparky:3000/" target="_blank" rel="noopener">Open WebUI ↗</a>
+            <a href="#" id="inf-api-link" target="_blank" rel="noopener">API ↗</a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -237,7 +289,11 @@
       const frame = $('content-frame');
       const nav = $('nav');
       let pollTimer = null;
+      let infPollTimer = null;
       let onSystem = true;
+      let onInference = false;
+      const systemCard = $('system-card');
+      const inferenceCard = $('inference-card');
 
       const fmtGb = (mb) => (mb / 1024).toFixed(1);
       const setBar = (el, pct) => { el.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
@@ -330,6 +386,150 @@
         ).join('');
       }
 
+      function setInfMsg(text, kind) {
+        const el = $('inf-msg');
+        el.textContent = text || '';
+        el.className = 'inf-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function renderInfProfiles(profiles, activeId, switching) {
+        const sel = $('inf-select');
+        const prev = sel.value;
+        sel.innerHTML = (profiles || []).map((p) =>
+          '<option value="' + p.id + '" data-tier="' + (p.tier || '') + '">'
+          + p.id + ' · ' + (p.engine || '') + ' · ' + (p.tier || '') + '</option>'
+        ).join('');
+        if (prev && profiles.some((p) => p.id === prev)) sel.value = prev;
+        else if (activeId) sel.value = activeId;
+
+        $('inf-profiles').innerHTML = (profiles || []).map((p) => {
+          const cls = p.active ? 'inf-profile active' : 'inf-profile';
+          const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
+          const state = p.active ? (p.ready ? 'ready' : 'starting') : 'idle';
+          return '<div class="' + cls + '"><span class="name">' + p.name + '</span>'
+            + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
+            + ' · :' + p.port + ' · ' + state + '</span></div>';
+        }).join('') || '<div class="inf-profile"><span class="name">No profiles enabled</span></div>';
+
+        $('inf-switch').disabled = !!switching;
+        $('inf-down').disabled = !!switching;
+      }
+
+      function renderInferencePanel(data) {
+        const active = data.active;
+        const switching = data.switch && data.switch.running;
+        const profiles = data.profiles || [];
+
+        if (switching) {
+          $('inf-head-meta').textContent = 'switching… pid ' + (data.switch.pid || '—');
+          $('inf-active-title').textContent = 'Switch in progress';
+          $('inf-active-meta').textContent = (data.switch.profile || 'profile')
+            + ' — see log below';
+          setInfMsg('Profile switch running — API may be unavailable until ready.', 'warn');
+        } else if (active) {
+          $('inf-head-meta').textContent = active.engine + ' · :' + active.port;
+          $('inf-active-title').textContent = active.name || active.id;
+          const ready = active.ready ? 'ready' : 'starting (model loading)';
+          $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
+            + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
+          setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');
+        } else {
+          $('inf-head-meta').textContent = 'no active profile';
+          $('inf-active-title').textContent = 'Inference offline';
+          $('inf-active-meta').textContent = 'eugr: ' + (data.engines.eugr ? 'up' : 'down')
+            + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down');
+          setInfMsg('');
+        }
+
+        renderInfProfiles(profiles, active && active.id, switching);
+        $('inf-api-link').href = (data.urls && data.urls.api) || '#';
+        $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
+      }
+
+      async function fetchInfLogs() {
+        try {
+          const res = await fetch('/api/inference/logs?lines=40', { cache: 'no-store' });
+          if (!res.ok) return;
+          const d = await res.json();
+          const lines = (d.lines || []).join('\n');
+          const sw = d.switch && d.switch.running ? '\n[switch running]\n' + (d.switch.log_tail || []).join('\n') : '';
+          $('inf-log').textContent = (lines || sw || '—').trim() || '—';
+        } catch (e) {
+          $('inf-log').textContent = 'log unavailable';
+        }
+      }
+
+      async function infTick() {
+        if (!onInference) return;
+        try {
+          const res = await fetch('/api/inference/status', { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          const d = await res.json();
+          renderInferencePanel(d);
+          await fetchInfLogs();
+          $('live').classList.remove('live-stale');
+          $('live').lastChild.textContent = 'live';
+        } catch (e) {
+          $('live').classList.add('live-stale');
+          $('live').lastChild.textContent = 'offline';
+          setInfMsg('Inference API unavailable — run install/17-inference-api.sh', 'err');
+        }
+      }
+
+      async function infSwitch() {
+        const sel = $('inf-select');
+        const profile = sel.value;
+        const tier = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.tier;
+        if (!profile) return;
+        if (tier === 'heavy') {
+          const ok = confirm(
+            'Heavy profile (“' + profile + '”) may take several minutes to load.\n\nContinue?'
+          );
+          if (!ok) return;
+        }
+        setInfMsg('Starting switch…', 'warn');
+        $('inf-switch').disabled = true;
+        try {
+          const body = { profile: profile, confirm: true };
+          if (tier === 'heavy') body.confirm_heavy = true;
+          const res = await fetch('/api/inference/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setInfMsg(d.error || 'switch failed', 'err');
+            return;
+          }
+          setInfMsg('Switch started for ' + profile, 'warn');
+          infTick();
+        } catch (e) {
+          setInfMsg('switch request failed', 'err');
+        }
+      }
+
+      async function infDown() {
+        if (!confirm('Stop the active inference engine?')) return;
+        setInfMsg('Stopping…', 'warn');
+        try {
+          const res = await fetch('/api/inference/down', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirm: true }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setInfMsg(d.error || 'stop failed', 'err');
+            return;
+          }
+          setInfMsg('Inference stopped');
+          infTick();
+        } catch (e) {
+          setInfMsg('stop request failed', 'err');
+        }
+      }
+
       async function tick() {
         if (!onSystem) return;
         try {
@@ -394,11 +594,26 @@
 
       function showSystem(btn) {
         onSystem = true;
+        onInference = false;
         setActiveNav(btn);
         dashboard.style.display = '';
+        systemCard.hidden = false;
+        inferenceCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
         tick();
+      }
+
+      function showInference(btn) {
+        onSystem = false;
+        onInference = true;
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        systemCard.hidden = true;
+        inferenceCard.hidden = false;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        infTick();
       }
 
       function showFrame(btn) {
@@ -412,6 +627,7 @@
           ? SparkyTheme.themedUrl(popout)
           : popout;
         onSystem = false;
+        onInference = false;
         setActiveNav(btn);
         dashboard.style.display = 'none';
         framePanel.classList.add('open');
@@ -430,6 +646,11 @@
         if (btn.dataset.view === 'system') {
           showSystem(btn);
           history.replaceState(null, '', '#system');
+          return;
+        }
+        if (btn.dataset.view === 'inference') {
+          showInference(btn);
+          history.replaceState(null, '', '#inference');
           return;
         }
         if (btn.dataset.src) {
@@ -458,8 +679,13 @@
         history.replaceState(null, '', '#system');
       });
 
+      $('inf-switch').addEventListener('click', infSwitch);
+      $('inf-down').addEventListener('click', infDown);
+
       const hash = location.hash.replace('#', '');
-      if (hash && hash !== 'system') {
+      if (hash === 'inference') {
+        showInference(nav.querySelector('[data-view="inference"]'));
+      } else if (hash && hash !== 'system') {
         const match = Array.from(nav.querySelectorAll('.nav-btn')).find((b) =>
           (b.textContent || '').trim().toLowerCase() === hash
         );
@@ -470,6 +696,7 @@
       }
 
       pollTimer = setInterval(tick, 1000);
+      infPollTimer = setInterval(infTick, 2000);
       tick();
     })();
   </script>

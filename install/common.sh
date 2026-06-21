@@ -38,6 +38,12 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location /api/inference/ {
+        proxy_pass http://127.0.0.1:8767/api/inference/;
+        proxy_http_version 1.1;
+        add_header Cache-Control "no-store";
+    }
+
     location / {
         try_files \$uri \$uri/ =404;
     }

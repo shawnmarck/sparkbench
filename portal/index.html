@@ -34,12 +34,12 @@
     .frame-bar a:hover { text-decoration: underline; }
     iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
-    .card-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .45rem .75rem; margin-bottom: .15rem; }
+    .card-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .45rem .75rem; margin-bottom: .65rem; }
     .card h2 { margin: 0; font-size: 1.05rem; color: var(--accent); }
     .card-head-meta { display: inline-flex; align-items: center; gap: .35rem; font-size: .82rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .card-head-meta .sep { opacity: .45; }
     .uptime-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: .75; }
-    .load-line { margin: 0 0 .65rem; font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; }
+
     .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: .5rem; }
     .metric-grid + .metric-grid { margin-top: 1.25rem; }
     @media (max-width: 720px) { .metric-grid { grid-template-columns: 1fr 1fr; } .nav-btn { padding: .35rem .5rem; } }
@@ -99,9 +99,10 @@
               <span class="sep">·</span>
               <svg class="uptime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
               <span id="uptime-text">—</span>
+              <span class="sep">·</span>
+              <span id="load-line">load —</span>
             </div>
           </div>
-          <p class="load-line" id="load-line">—</p>
 
           <div class="metric-grid">
             <div class="metric">

@@ -345,7 +345,8 @@
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
     const engineLabels = { vllm: 'vLLM', llamacpp: 'GGUF' };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
-    let sparkFilter = '';
+    const SPARK_FILTER_OPTS = ['unverified', 'wip', 'works', 'failed', 'queued'];
+    let sparkFilters = [];
     let tagFilter = [];
     let hfTaskFilter = '';
     const HF_NOISE = new Set(['transformers', 'safetensors', 'endpoints_compatible', 'text-generation-inference', 'eval-results', 'gguf', 'ggml']);
@@ -404,6 +405,35 @@
     };
     const sparkStatus = (m) => (m.spark_verify && m.spark_verify.spark_status) || 'unverified';
     const removalPending = (m) => !!(m.spark_verify && m.spark_verify.removal_pending);
+
+    function loadSparkFilters(stored) {
+      if (Array.isArray(stored.sparkFilters)) {
+        return stored.sparkFilters.filter((f) => SPARK_FILTER_OPTS.includes(f));
+      }
+      if (stored.worksOnly) return ['works'];
+      const legacy = stored.sparkFilter || '';
+      return legacy && SPARK_FILTER_OPTS.includes(legacy) ? [legacy] : [];
+    }
+
+    function modelMatchesSparkFilter(m) {
+      if (!sparkFilters.length) return true;
+      return sparkFilters.some((f) => {
+        if (f === 'queued') return removalPending(m);
+        return sparkStatus(m) === f;
+      });
+    }
+
+    function updateSparkFilterChips() {
+      document.querySelectorAll('#spark-filter .chip').forEach((chip) => {
+        const val = chip.dataset.spark;
+        const on = val === '' ? !sparkFilters.length : sparkFilters.includes(val);
+        chip.classList.toggle('active', on);
+        chip.classList.toggle('spark-works', on && val === 'works');
+        chip.classList.toggle('spark-failed', on && val === 'failed');
+        chip.classList.toggle('spark-wip', on && val === 'wip');
+        chip.classList.toggle('spark-queued', on && val === 'queued');
+      });
+    }
     const parseDate = (iso) => { const t = Date.parse(iso || ''); return Number.isNaN(t) ? 0 : t; };
     const localSize = (m) => (m.local && m.local.present) ? m.local.size_human : '—';
     const shelfSize = (m) => (m.shelf && m.shelf.present) ? m.shelf.size_human : '—';
@@ -601,7 +631,7 @@
     function savePrefs() {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         q: $('q').value, lab: $('lab').value, status: $('status').value,
-        sort: $('sort').value, sparkFilter, tagFilter, hfTaskFilter,
+        sort: $('sort').value, sparkFilters, tagFilter, hfTaskFilter,
       }));
     }
 
@@ -654,16 +684,15 @@
       $('tag-picker-search').focus();
     }
 
-    function setSparkFilter(value) {
-      sparkFilter = value || '';
-      document.querySelectorAll('#spark-filter .chip').forEach((chip) => {
-        const on = chip.dataset.spark === sparkFilter;
-        chip.classList.toggle('active', on);
-        chip.classList.toggle('spark-works', on && sparkFilter === 'works');
-        chip.classList.toggle('spark-failed', on && sparkFilter === 'failed');
-        chip.classList.toggle('spark-wip', on && sparkFilter === 'wip');
-        chip.classList.toggle('spark-queued', on && sparkFilter === 'queued');
-      });
+    function toggleSparkFilter(value) {
+      if (!value) {
+        sparkFilters = [];
+      } else if (sparkFilters.includes(value)) {
+        sparkFilters = sparkFilters.filter((f) => f !== value);
+      } else {
+        sparkFilters = [...sparkFilters, value];
+      }
+      updateSparkFilterChips();
       applyFilters();
     }
 
@@ -677,11 +706,7 @@
         if (tagFilter.length && !tagFilter.every((t) => catalogTagSet(m).has(t))) return false;
         if (hfTaskFilter && tagKey(m.pipeline_tag) !== hfTaskFilter) return false;
         if (status && m.status !== status) return false;
-        if (sparkFilter === 'queued') {
-          if (!removalPending(m)) return false;
-        } else if (sparkFilter && sparkStatus(m) !== sparkFilter) {
-          return false;
-        }
+        if (!modelMatchesSparkFilter(m)) return false;
         if (q) {
           const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, m.pipeline_tag, ...catalogCapabilities(m), ...notableHfTags(m)].join(' ').toLowerCase();
           if (!hay.includes(q)) return false;
@@ -705,10 +730,10 @@
       const storedTags = (stored.tagFilter || (stored.cap ? [stored.cap] : [])).map(tagKey);
       const prev = preserve ? {
         lab: $('lab').value, status: $('status').value, hfTaskFilter,
-        sort: $('sort').value, q: $('q').value, sparkFilter, tagFilter,
+        sort: $('sort').value, q: $('q').value, sparkFilters, tagFilter,
       } : {
         sort: 'newest',
-        sparkFilter: stored.worksOnly ? 'works' : (stored.sparkFilter || ''),
+        sparkFilters: loadSparkFilters(stored),
         q: stored.q || '', lab: stored.lab || '', status: stored.status || '',
         tagFilter: storedTags,
         hfTaskFilter: tagKey(stored.hfTaskFilter || ''),
@@ -731,15 +756,8 @@
       renderTagPickerList(collectCatalogTags(models), '');
       $('sort').value = prev.sort || 'newest';
       $('q').value = prev.q || '';
-      sparkFilter = prev.sparkFilter || '';
-      document.querySelectorAll('#spark-filter .chip').forEach((chip) => {
-        const on = chip.dataset.spark === sparkFilter;
-        chip.classList.toggle('active', on);
-        chip.classList.toggle('spark-works', on && sparkFilter === 'works');
-        chip.classList.toggle('spark-failed', on && sparkFilter === 'failed');
-        chip.classList.toggle('spark-wip', on && sparkFilter === 'wip');
-        chip.classList.toggle('spark-queued', on && sparkFilter === 'queued');
-      });
+      sparkFilters = prev.sparkFilters || [];
+      updateSparkFilterChips();
     }
 
     async function refreshInferenceStatus() {
@@ -880,7 +898,7 @@
     $('spark-filter').addEventListener('click', (e) => {
       const chip = e.target.closest('[data-spark]');
       if (!chip) return;
-      setSparkFilter(chip.dataset.spark);
+      toggleSparkFilter(chip.dataset.spark);
     });
 
     $('tag-picker-btn').addEventListener('click', (e) => {

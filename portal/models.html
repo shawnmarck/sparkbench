@@ -181,6 +181,8 @@
     .badge.engine-llamacpp { border-color: #3a4a2a; color: #b8d88a; }
     .badge.inf-profile { border-color: #2a3a4a; color: #9ec8ff; }
     .badge.inf-active { border-color: #3a4a2a; color: var(--accent); }
+    .badge.tok-s { border-color: #2a4a5a; color: #9ec8ff; }
+    .badge.tok-s.unbench { border-color: #3a3a3a; color: var(--muted); }
     .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
     .inference-block { padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
     .inference-block h4 { margin: 0 0 .45rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
@@ -288,6 +290,8 @@
           <option value="ctx-asc">Max context ↑</option>
           <option value="params-desc">Parameters ↓</option>
           <option value="params-asc">Parameters ↑</option>
+          <option value="bench-desc">Benchmark tok/s ↓</option>
+          <option value="bench-asc">Benchmark tok/s ↑</option>
           <option value="lab">Lab A→Z</option>
         </select>
       </div>
@@ -453,6 +457,8 @@
           case 'ctx-asc': return n(a.max_context) - n(b.max_context) || a.name.localeCompare(b.name);
           case 'params-desc': return n(b.param_b) - n(a.param_b) || a.name.localeCompare(b.name);
           case 'params-asc': return n(a.param_b) - n(b.param_b) || a.name.localeCompare(b.name);
+          case 'bench-desc': return n(b.best_bench_tok_s) - n(a.best_bench_tok_s) || a.name.localeCompare(b.name);
+          case 'bench-asc': return n(a.best_bench_tok_s) - n(b.best_bench_tok_s) || a.name.localeCompare(b.name);
           case 'lab': return a.lab.localeCompare(b.lab) || a.name.localeCompare(b.name);
           default: return a.name.localeCompare(b.name);
         }
@@ -498,7 +504,9 @@
       const activeId = activeProfileId();
       const rows = profiles.map((p) => {
         const tier = p.tier === 'heavy' ? '<span class="badge tier-heavy">heavy</span>' : '<span class="badge">fast</span>';
-        const tok = p.tok_s != null ? ` · ~${Math.round(p.tok_s)} tok/s` : '';
+        const tokBadge = p.tok_s != null
+          ? `<span class="badge tok-s">${Math.round(p.tok_s)} tok/s</span>`
+          : '<span class="badge tok-s unbench">not benchmarked</span>';
         const note = p.notes ? `<div class="verify-note">${esc(p.notes)}</div>` : '';
         let actions = '';
         if (!p.enabled) {
@@ -514,8 +522,8 @@
           actions = `<button type="button" class="btn primary" data-action="start-profile" data-profile="${esc(p.id)}" data-tier="${esc(p.tier || '')}">Start profile</button>`;
         }
         return `<div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
-          + `<code>${esc(p.id)} · ${esc(p.engine || '')}${tok}</code>${note}</div>`
-          + `<div class="inf-profile-actions">${tier}${actions}</div></div>`;
+          + `<code>${esc(p.id)} · ${esc(p.engine || '')}</code>${note}</div>`
+          + `<div class="inf-profile-actions">${tier}${tokBadge}${actions}</div></div>`;
       }).join('');
       return `<div class="detail-section inference-block"><h4>Inference profiles</h4>${rows}`
         + '<div class="actions" style="margin-top:.55rem"><a href="/#inference" target="_top">Open Inference tab ↗</a></div></div>';
@@ -579,12 +587,13 @@
         const open = expandedId === m.id;
         const spark = sparkStatus(m);
         const queued = removalPending(m);
-        const svRow = m.spark_verify || {};
-        const tokS = svRow.tok_s != null ? `<span class="badge tok-s">~${Math.round(svRow.tok_s)} tok/s</span>` : '';
+        const benchTok = m.best_bench_tok_s != null
+          ? `<span class="badge tok-s" title="best measured recipe on this model">${Math.round(m.best_bench_tok_s)} tok/s</span>`
+          : '';
         const badges = [
           engineBadgeHtml(m),
           inferenceBadge(m),
-          tokS,
+          benchTok,
           queued ? '<span class="badge queued">queued</span>' : '',
           `<span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span>`,
           `<span class="badge status-${m.status || 'missing'}">${esc(m.status)}</span>`,

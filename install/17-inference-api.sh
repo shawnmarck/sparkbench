@@ -44,3 +44,5 @@ write_nginx_portal_site
 sleep 1
 curl -fsS "http://127.0.0.1/api/inference/status" >/dev/null
 echo "OK: inference API at http://sparky/api/inference/status"
+
+bash "${SCRIPT_DIR}/18-inference-api-watch.sh"

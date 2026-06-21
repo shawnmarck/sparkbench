@@ -29,6 +29,7 @@ VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
+BENCH_METHODS = frozenset({"bench", "bench-agent"})
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -303,7 +304,7 @@ def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
     }
-    if bench and bench.get("tok_s") is not None:
+    if bench and bench.get("tok_s") is not None and bench.get("method") in BENCH_METHODS:
         out["tok_s"] = bench.get("tok_s")
         out["tok_s_method"] = bench.get("method")
         out["tok_s_measured_at"] = bench.get("measured_at")

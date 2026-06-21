@@ -25,6 +25,7 @@ OUT_JSON = Path("/opt/spark/portal/models.json")
 HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
 SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
+BENCH_METHODS = frozenset({"bench", "bench-agent"})
 HF = Path("/opt/spark/venv/bin/python")
 
 
@@ -314,10 +315,39 @@ def parse_active_param_b(name: str, slug: str) -> float | None:
     return None
 
 
-def attach_spark_verify(entries: list, store: dict) -> None:
+def load_profile_benchmarks() -> dict[str, dict]:
+    if yaml is None or not BENCHMARKS_FILE.is_file():
+        return {}
+    try:
+        data = yaml.safe_load(BENCHMARKS_FILE.read_text()) or {}
+        raw = data.get("profiles") or {}
+        return raw if isinstance(raw, dict) else {}
+    except (OSError, yaml.YAMLError):
+        return {}
+
+
+def attach_spark_verify(entries: list, store: dict, benchmarks: dict[str, dict]) -> None:
     for entry in entries:
         rel = entry.get("rel_path") or entry.get("id")
-        entry["spark_verify"] = spark_verify_for(rel, store)
+        sv = spark_verify_for(rel, store)
+        profile = sv.get("tok_s_profile")
+        if profile:
+            bench = benchmarks.get(profile) or {}
+            if bench.get("method") not in BENCH_METHODS:
+                sv["tok_s"] = None
+                sv["tok_s_engine"] = None
+                sv["tok_s_profile"] = None
+        entry["spark_verify"] = sv
+
+
+def attach_best_bench_tok(entries: list) -> None:
+    for entry in entries:
+        toks = [
+            p["tok_s"]
+            for p in (entry.get("inference_profiles") or [])
+            if p.get("tok_s") is not None
+        ]
+        entry["best_bench_tok_s"] = max(toks) if toks else None
 
 
 def load_inference_profile_map() -> dict[str, list[dict]]:
@@ -355,6 +385,8 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         if not inv_path:
             continue
         bench = benchmarks.get(profile_id) or {}
+        method = bench.get("method")
+        measured = method in BENCH_METHODS
         notes = (recipe.get("notes") or "").strip()
         first_note = notes.split("\n", 1)[0].strip() if notes else None
         info = {
@@ -363,7 +395,9 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             "engine": recipe.get("engine"),
             "tier": recipe.get("tier"),
             "enabled": profile_id in enabled,
-            "tok_s": bench.get("tok_s"),
+            "tok_s": bench.get("tok_s") if measured else None,
+            "bench_method": method if measured else None,
+            "bench_measured_at": bench.get("measured_at") if measured else None,
             "notes": first_note,
         }
         by_path.setdefault(str(inv_path), []).append(info)
@@ -585,8 +619,9 @@ def main() -> int:
                     }
                 )
 
-    # Shelf-only models (on NAS, not in catalog or local scan above)
+    # Shelf-only models (on NAS, not already represented by catalog/untracked rel_path)
     seen_ids = {e["id"] for e in entries}
+    seen_rel_paths = {e.get("rel_path") or e["id"] for e in entries}
     if shelf_mounted() and SHELF_ROOT.is_dir():
         for lab_dir in SHELF_ROOT.iterdir():
             if not lab_dir.is_dir() or lab_dir.name.startswith("_"):
@@ -595,7 +630,7 @@ def main() -> int:
                 if not model_dir.is_dir():
                     continue
                 mid = f"{lab_dir.name}/{model_dir.name}"
-                if mid in seen_ids:
+                if mid in seen_ids or mid in seen_rel_paths:
                     continue
                 size = dir_size(model_dir)
                 shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
@@ -637,8 +672,10 @@ def main() -> int:
                 )
                 seen_ids.add(mid)
 
-    attach_spark_verify(entries, load_spark_verification())
+    profile_benchmarks = load_profile_benchmarks()
+    attach_spark_verify(entries, load_spark_verification(), profile_benchmarks)
     attach_inference_profiles(entries, load_inference_profile_map())
+    attach_best_bench_tok(entries)
 
     payload = {
         "generated_at": now,

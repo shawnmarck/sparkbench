@@ -9,14 +9,20 @@ profiles:
     elapsed_s: 0.7
     note: bench 13 tok in 0.7s
   qwen36-nvfp4:
-    tok_s: 70
+    tok_s: 73.5
     engine: eugr
-    method: reported
-    measured_at: '2026-06-21T08:00:00+00:00'
-    note: "MoE ~3B active/token \u2014 NVFP4 eugr, operator-reported"
-  qwen36-q4-llama:
-    tok_s: 20
-    engine: llamacpp
-    method: reported
-    measured_at: '2026-06-21T08:16:00+00:00'
-    note: "MoE Q4 GGUF \u2014 similar to early llama.cpp session (~20 tok/s)"
+    method: bench-agent
+    measured_at: '2026-06-21T08:53:52.017644+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 876
+    elapsed_s: 31.35
+    tok_s_min: 73.3
+    tok_s_max: 73.6
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 73.3
+    - 73.6
+    - 73.6
+    note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
+

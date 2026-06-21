@@ -402,7 +402,7 @@
         } else if (active) {
           const cls = active.ready ? 'up' : (active.starting ? 'warn' : 'down');
           const state = active.ready ? 'ready' : (active.starting ? 'loading' : 'waiting');
-          const tok = active.tok_s != null ? ' · ~' + Math.round(active.tok_s) + ' tok/s' : '';
+          const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
           pills.push('<a href="#inference" class="pill ' + cls + ' inf-pill-link" data-goto-inference>'
             + '<span class="pill-dot"></span>' + active.id + ' · ' + state + tok + '</a>');
         } else {
@@ -447,7 +447,7 @@
           const cls = p.active ? 'inf-profile active' : 'inf-profile';
           const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
           const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
-          const tok = p.tok_s != null ? ' · ~' + Math.round(p.tok_s) + ' tok/s' : '';
+          const tok = p.tok_s != null ? ' · ' + Math.round(p.tok_s) + ' tok/s' : '';
           const note = p.notes ? '<span class="notes">' + truncateNote(p.notes, 100) + '</span>' : '';
           return '<div class="' + cls + '"><span class="name">' + p.name + '</span>'
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
@@ -500,7 +500,7 @@
               + (active.tier ? ' · ' + active.tier : '');
             $('inf-active-title').textContent = active.name || active.id;
             const ready = active.ready ? 'ready' : (active.starting ? 'starting (model loading)' : 'waiting');
-            const tok = active.tok_s != null ? ' · ~' + Math.round(active.tok_s) + ' tok/s' : '';
+            const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
             $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
               + tok + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
             setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');
@@ -621,7 +621,7 @@
       }
 
       function showBenchResult(d) {
-        let msg = 'Avg ~' + Math.round(d.tok_s) + ' tok/s';
+        let msg = 'Avg ' + Math.round(d.tok_s) + ' tok/s';
         if (d.tok_s_min != null && d.tok_s_max != null) {
           msg += ' (' + Math.round(d.tok_s_min) + '–' + Math.round(d.tok_s_max) + ')';
         }

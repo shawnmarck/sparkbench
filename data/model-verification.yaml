@@ -1,17 +1,14 @@
 models:
   nvidia/qwen3.6-35b-a3b:
-    spark_status: wip
-    tok_s: 70
+    spark_status: works
+    tok_s: 73.5
     tok_s_engine: eugr
     tok_s_profile: qwen36-nvfp4
-    note: "MoE ~3B active/token \u2014 NVFP4 eugr, operator-reported ~70 tok/s"
-    updated_at: '2026-06-21T08:00:00+00:00'
+    note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
+    updated_at: '2026-06-21T08:53:52.017644+00:00'
   unsloth/qwen3.6-35b-a3b:
     spark_status: wip
-    tok_s: 20
-    tok_s_engine: llamacpp
-    tok_s_profile: qwen36-q4-llama
-    note: "MoE Q4 GGUF \u2014 ~20 tok/s llama.cpp session 2026-06-21"
+    note: MoE Q4 GGUF — run spark-inference bench on qwen36-q4-llama profile
     updated_at: '2026-06-21T08:16:00+00:00'
   yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
     spark_status: works

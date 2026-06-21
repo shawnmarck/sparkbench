@@ -11,10 +11,13 @@ tags:
   - gguf
   - llamacpp
 llamacpp_args:
-  - -ngl 999
-  - -fa 1
+  - -ngl
+  - "999"
+  - -fa
+  - "1"
   - --no-mmap
-  - -c 32768
+  - -c
+  - "32768"
 notes: |
   Same Qwen3.6 MoE base as NVFP4 tier, GGUF Q4_K_M via llama-server.
   Lighter to cold-start than eugr NVFP4 but still a heavy slot on GB10.

@@ -114,6 +114,10 @@ def detect_active_profile() -> dict[str, Any] | None:
                     return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "llamacpp" and llama_running():
                     return {"profile": profile_id, "recipe": recipe, "state": state}
+                if engine == "eugr" and not eugr_running() and not llama_running():
+                    clear_state()
+                elif engine == "llamacpp" and not llama_running() and not eugr_running():
+                    clear_state()
         except (json.JSONDecodeError, OSError, SystemExit):
             pass
 
@@ -330,7 +334,15 @@ def api_profiles(active_id: str | None = None) -> list[dict[str, Any]]:
         recipe = load_recipe(profile_id)
         item = recipe_public(recipe)
         item["active"] = profile_id == active_id
-        item["ready"] = bool(active_id == profile_id and engine_ready(recipe))
+        if active_id == profile_id:
+            item["ready"] = engine_ready(recipe)
+            item["starting"] = not item["ready"] and (
+                (recipe.get("engine") == "llamacpp" and llama_running())
+                or (recipe.get("engine") == "eugr" and eugr_running())
+            )
+        else:
+            item["ready"] = False
+            item["starting"] = False
         profiles.append(item)
     return profiles
 
@@ -354,10 +366,15 @@ def api_status() -> dict[str, Any]:
     }
 
     if active and recipe:
+        starting = not ready and (
+            (recipe.get("engine") == "llamacpp" and llama_running())
+            or (recipe.get("engine") == "eugr" and eugr_running())
+        )
         payload["active"] = {
             **recipe_public(recipe),
             "started_at": (active.get("state") or {}).get("started_at"),
             "ready": ready,
+            "starting": starting,
             "api_url": f"http://sparky:{port}/v1" if port else None,
             "log_file": engine_log_file(recipe).name,
         }

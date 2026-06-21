@@ -11,10 +11,13 @@ tags:
   - coding
   - llamacpp
 llamacpp_args:
-  - -ngl 999
-  - -fa 1
+  - -ngl
+  - "999"
+  - -fa
+  - "1"
   - --no-mmap
-  - -c 32768
+  - -c
+  - "32768"
 notes: |
   Community Gemma 4 12B coding fine-tune (yuxinlu1). Q4_K_M ~6.9GB.
   Smoke tested 2026-06-21 on GB10: ~21 tok/s, 32k ctx loaded.

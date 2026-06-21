@@ -405,7 +405,7 @@
         $('inf-profiles').innerHTML = (profiles || []).map((p) => {
           const cls = p.active ? 'inf-profile active' : 'inf-profile';
           const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
-          const state = p.active ? (p.ready ? 'ready' : 'starting') : 'idle';
+          const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
           return '<div class="' + cls + '"><span class="name">' + p.name + '</span>'
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
             + ' · :' + p.port + ' · ' + state + '</span></div>';
@@ -429,7 +429,7 @@
         } else if (active) {
           $('inf-head-meta').textContent = active.engine + ' · :' + active.port;
           $('inf-active-title').textContent = active.name || active.id;
-          const ready = active.ready ? 'ready' : 'starting (model loading)';
+          const ready = active.ready ? 'ready' : (active.starting ? 'starting (model loading)' : 'waiting');
           $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
             + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
           setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');

@@ -34,6 +34,9 @@ EOF
 
 systemctl daemon-reload
 systemctl enable spark-inference-api.service
+# Dev/manual runs can leave :8767 occupied — free it before systemd start.
+fuser -k 8767/tcp 2>/dev/null || true
+sleep 1
 systemctl restart spark-inference-api.service
 
 write_nginx_portal_site

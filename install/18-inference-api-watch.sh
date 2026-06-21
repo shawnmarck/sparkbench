@@ -37,6 +37,7 @@ EOF
 systemctl daemon-reload
 systemctl enable spark-inference-api-watch.path
 systemctl restart spark-inference-api-watch.path
+systemctl restart spark-inference-api.service
 
 echo "OK: inference API auto-reload on changes to:"
 echo "  ${TARGET}/scripts/spark-inference-api.py"

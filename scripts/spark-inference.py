@@ -1077,6 +1077,132 @@ def api_down() -> dict[str, Any]:
     return api_status()
 
 
+def api_route_path(path: str) -> str:
+    return path.split("?", 1)[0].rstrip("/") or "/"
+
+
+def api_dispatch(
+    method: str, path: str, body: dict[str, Any] | None = None
+) -> tuple[int, dict[str, Any]] | None:
+    """HTTP route table for spark-inference-api (hot-reloaded with this module)."""
+    body = body or {}
+    route = api_route_path(path)
+
+    if method == "GET":
+        if route == "/api/inference/status":
+            return 200, {"ok": True, **api_status()}
+        if route == "/api/inference/recipes":
+            return 200, {"ok": True, "recipes": api_recipe_list()}
+        if path.startswith("/api/inference/logs"):
+            lines = 30
+            if "?" in path:
+                for part in path.split("?", 1)[1].split("&"):
+                    if part.startswith("lines="):
+                        try:
+                            lines = max(5, min(200, int(part.split("=", 1)[1])))
+                        except ValueError:
+                            pass
+            active = detect_active_profile()
+            recipe = active["recipe"] if active else None
+            log_path = engine_log_file(recipe)
+            return 200, {
+                "ok": True,
+                "file": log_path.name,
+                "lines": tail_log(log_path, lines),
+                "switch": active_switch_job(),
+            }
+        return None
+
+    if method != "POST":
+        return None
+
+    if route == "/api/inference/switch":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        profile = str(body.get("profile", "")).strip()
+        if not validate_profile_id(profile):
+            return 400, {"ok": False, "error": "unknown or disabled profile"}
+        recipe = load_recipe(profile)
+        if recipe.get("tier") == "heavy" and not body.get("confirm_heavy"):
+            return 400, {
+                "ok": False,
+                "error": "heavy tier requires confirm_heavy",
+                "profile": profile,
+                "notes": (recipe.get("notes") or "").strip(),
+            }
+        ok, message, job = start_switch_job(profile)
+        if not ok:
+            code = 409 if "already" in message else 400
+            return code, {"ok": False, "error": message, "job": job}
+        return 202, {"ok": True, "message": message, "profile": profile, "job": job}
+
+    if route == "/api/inference/bench":
+        ok, message, job = start_bench_job()
+        if not ok:
+            code = 409 if "already" in message or "progress" in message else 400
+            return code, {"ok": False, "error": message, "bench": job}
+        return 202, {"ok": True, "message": message, "bench": job}
+
+    if route == "/api/inference/recipes/scaffold":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        inv = str(body.get("inventory_path", "")).strip()
+        engine = str(body.get("engine", "")).strip().lower()
+        try:
+            recipe = scaffold_recipe(
+                inv,
+                engine,
+                name=str(body.get("name", "")).strip() or None,
+                tier=str(body.get("tier", "")).strip() or None,
+            )
+        except RuntimeError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        pub = recipe_public(recipe)
+        pub["lifecycle"] = recipe.get("lifecycle")
+        return 201, {"ok": True, "recipe": pub}
+
+    if route == "/api/inference/recipes/testing":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        profile = str(body.get("profile", "")).strip()
+        try:
+            recipe = set_recipe_lifecycle(profile, LIFECYCLE_TESTING)
+        except RuntimeError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        return 200, {"ok": True, "recipe": recipe_public(recipe)}
+
+    if route == "/api/inference/recipes/promote":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        profile = str(body.get("profile", "")).strip()
+        try:
+            recipe = promote_recipe(profile)
+        except RuntimeError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        return 200, {"ok": True, "recipe": recipe_public(recipe)}
+
+    if route == "/api/inference/recipes/discard":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        profile = str(body.get("profile", "")).strip()
+        try:
+            discard_recipe(profile)
+        except RuntimeError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        return 200, {"ok": True, "profile": profile}
+
+    if route == "/api/inference/down":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        try:
+            status = api_down()
+        except RuntimeError as exc:
+            return 409, {"ok": False, "error": str(exc)}
+        return 200, {"ok": True, "message": "stopped", **status}
+
+    return None
+
+
 def cmd_logs(profile_id: str | None) -> int:
     active = detect_active_profile()
     target = profile_id or (active["profile"] if active else None)

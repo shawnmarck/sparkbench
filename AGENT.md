@@ -108,7 +108,16 @@ Inference (pick what you need): `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh
 
 ## Sudo
 
-Passwordless sudo for `install/*.sh` only (via `00-grant-install-sudo.sh`).
+Passwordless sudo for `install/*.sh` only (via `00-grant-install-sudo.sh`). Optional full agent sudo: `install/07-grant-agent-sudo.sh`.
+
+## Inference API reload (agents)
+
+`spark-inference-api` **hot-reloads** `scripts/spark-inference.py` on each request when the file changes — new routes and logic apply without `systemctl restart`.
+
+- **Routine code changes:** no restart; hit any `/api/inference/*` endpoint after editing `spark-inference.py`.
+- **Full process restart** (rare — e.g. first deploy of hot-reload shell, port stuck):  
+  `sudo bash install/19-inference-api-restart.sh` (needs `00-grant-install-sudo.sh` once).
+- **Auto-restart on script save:** `sudo bash install/18-inference-api-watch.sh` (systemd path unit; chained from `17`).
 
 ## Threat model (short)
 

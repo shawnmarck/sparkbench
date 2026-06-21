@@ -135,7 +135,7 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 4. [x] **Portal Models** — Create recipe, mark testing, switch, bench, promote
 5. [x] Testing recipes switchable; production = `data/inference-profiles.yaml`
 
-**One-time:** `sudo bash install/18-inference-api-watch.sh` — auto-restart API when scripts change.
+**Ops:** API hot-reloads `spark-inference.py` on request (no restart for most changes). One-time: `install/18` (watch) or `install/19` (manual restart); agents use `sudo bash install/19-inference-api-restart.sh` if needed.
 
 ### States
 

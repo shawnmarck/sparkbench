@@ -1,0 +1,66 @@
+# Recipe: GLM-4.7-Flash-AWQ-4bit
+# cyankiwi's AWQ quantized GLM-4.7-Flash model
+# Requires a patch for inference speed optimization
+#
+# NOTE: vLLM implementation is suboptimal even with the patch. 
+# The model performance is still significantly slower than it should be 
+# for a model with this number of active parameters. Running in cluster 
+# increases prompt processing performance, but not token generation.
+# Expect ~40 t/s generation speed in both single node and cluster.
+
+recipe_version: "1"
+name: GLM-4.7-Flash-AWQ
+description: vLLM serving cyankiwi/GLM-4.7-Flash-AWQ-4bit with speed optimization patch
+
+# HuggingFace model to download
+model: cyankiwi/GLM-4.7-Flash-AWQ-4bit
+
+# This model can run on single node (solo) or cluster
+cluster_only: false
+
+solo_only: false
+
+# Container image to use
+container: vllm-node-tf5
+
+# Build arguments for build-and-copy.sh
+# tf5 = transformers 5.0 (required for GLM-4.7)
+build_args:
+  - --pre-tf
+
+# Mods to apply before running (paths relative to repo root)
+# This mod prevents severe inference speed degradation
+# mods:
+#   - mods/fix-glm-4.7-flash-AWQ
+
+# Default settings (can be overridden via CLI)
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.8
+  max_model_len: 202752
+  max_num_batched_tokens: 4096
+  max_num_seqs: 64
+  served_model_name: glm-4.7-flash
+
+# Environment variables to set in the container
+env:
+  # Add any required env vars here
+
+# The vLLM serve command template
+# Use {var_name} for substitution from defaults/overrides
+# In cluster mode, --distributed-executor-backend ray and -tp 2 are added
+command: |
+  vllm serve cyankiwi/GLM-4.7-Flash-AWQ-4bit \
+      --tool-call-parser glm47 \
+      --reasoning-parser glm45 \
+      --enable-auto-tool-choice \
+      --served-model-name {served_model_name} \
+      --max-model-len {max_model_len} \
+      --max-num-batched-tokens {max_num_batched_tokens} \
+      --max-num-seqs {max_num_seqs} \
+      --gpu-memory-utilization {gpu_memory_utilization} \
+      -tp {tensor_parallel} \
+      --host {host} \
+      --port {port}

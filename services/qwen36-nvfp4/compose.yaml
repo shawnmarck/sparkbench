@@ -1,0 +1,60 @@
+# Qwen3.6-35B-A3B NVFP4 smoke stack — vLLM + Open WebUI
+
+services:
+  vllm:
+    image: vllm/vllm-openai:cu130-nightly
+    container_name: spark-vllm-qwen36
+    network_mode: host
+    ipc: host
+    restart: unless-stopped
+    volumes:
+      - /models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - VLLM_FP8_MOE_BACKEND=flashinfer_cutlass
+      - FLASHINFER_DISABLE_VERSION_CHECK=1
+      - CUTE_DSL_ARCH=sm_121a
+    command:
+      - /models/nvidia/qwen3.6-35b-a3b/nvfp4
+      - --host=0.0.0.0
+      - --port=8000
+      - --served-model-name=qwen3.6-35b-a3b-nvfp4
+      - --trust-remote-code
+      - --dtype=auto
+      - --quantization=modelopt
+      - --kv-cache-dtype=fp8
+      - --attention-backend=flashinfer
+      - --moe-backend=flashinfer_cutlass
+      - --tensor-parallel-size=1
+      - --gpu-memory-utilization=0.85
+      - --max-model-len=65536
+      - --max-num-seqs=4
+      - --max-num-batched-tokens=8192
+      - --language-model-only
+      - --reasoning-parser=qwen3
+      - --enable-auto-tool-choice
+      - --tool-call-parser=qwen3_coder
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: spark-open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - OPENAI_API_BASE_URL=http://host.docker.internal:8000/v1
+      - OPENAI_API_KEY=local
+      - ENABLE_OLLAMA_API=false
+    volumes:
+      - open-webui-data:/app/backend/data
+
+volumes:
+  open-webui-data:

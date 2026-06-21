@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+"""Emit live system metrics (JSON) for the Spark portal."""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from collections import deque
+
+_HISTORY_LEN = 60
+_HISTORY = {
+    "cpu_util_pct": deque(maxlen=_HISTORY_LEN),
+    "gpu_util_pct": deque(maxlen=_HISTORY_LEN),
+    "memory_used_pct": deque(maxlen=_HISTORY_LEN),
+}
+_PREV_CPU = None
+_PREV_CPU_CORES = None
+
+
+def _read_proc_stat():
+    cpus = {}
+    with open("/proc/stat", encoding="utf-8") as fh:
+        for line in fh:
+            if not line.startswith("cpu"):
+                continue
+            parts = line.split()
+            name = parts[0]
+            fields = [int(x) for x in parts[1:11]]
+            while len(fields) < 10:
+                fields.append(0)
+            cpus[name] = fields
+    return cpus
+
+
+def _cpu_busy(fields):
+    user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice = fields
+    idle_all = idle + iowait
+    busy = user + nice + system + irq + softirq + steal + guest + guest_nice
+    return busy, busy + idle_all
+
+
+def _cpu_delta(prev_fields, curr_fields):
+    busy_prev, total_prev = _cpu_busy(prev_fields)
+    busy_curr, total_curr = _cpu_busy(curr_fields)
+    dt = total_curr - total_prev
+    if dt <= 0:
+        return 0.0
+    return round((busy_curr - busy_prev) / dt * 100, 1)
+
+
+def read_cpu_metrics():
+    global _PREV_CPU, _PREV_CPU_CORES
+    curr = _read_proc_stat()
+    overall = 0.0
+    peak_core = 0.0
+    core_count = 0
+
+    if _PREV_CPU and "cpu" in curr and "cpu" in _PREV_CPU:
+        overall = _cpu_delta(_PREV_CPU["cpu"], curr["cpu"])
+
+    if _PREV_CPU_CORES:
+        for name, fields in curr.items():
+            if name == "cpu" or not name.startswith("cpu"):
+                continue
+            if name in _PREV_CPU_CORES:
+                core_pct = _cpu_delta(_PREV_CPU_CORES[name], fields)
+                peak_core = max(peak_core, core_pct)
+                core_count += 1
+
+    _PREV_CPU = {"cpu": curr.get("cpu")}
+    _PREV_CPU_CORES = {k: v for k, v in curr.items() if k.startswith("cpu") and k != "cpu"}
+    if not core_count:
+        core_count = len(_PREV_CPU_CORES)
+
+    return {
+        "cpu_util_pct": overall,
+        "cpu_peak_core_pct": peak_core,
+        "cpu_cores": core_count,
+    }
+
+
+def read_load():
+    with open("/proc/loadavg", encoding="utf-8") as fh:
+        one, five, fifteen, _ = fh.read().split()[:4]
+    return {
+        "load_1": round(float(one), 2),
+        "load_5": round(float(five), 2),
+        "load_15": round(float(fifteen), 2),
+    }
+
+
+def read_thermals():
+    gpu_temp = None
+    gpu_power = None
+    try:
+        out = subprocess.check_output(
+            [
+                "nvidia-smi",
+                "--query-gpu=temperature.gpu,power.draw",
+                "--format=csv,noheader,nounits",
+            ],
+            text=True,
+        ).strip()
+        temp_s, power_s = [p.strip() for p in out.split(",", 1)]
+        gpu_temp = float(temp_s)
+        if power_s not in ("", "[N/A]"):
+            gpu_power = round(float(power_s), 1)
+    except (subprocess.CalledProcessError, ValueError):
+        pass
+
+    cpu_temps = []
+    base = "/sys/class/thermal"
+    if os.path.isdir(base):
+        for entry in sorted(os.listdir(base)):
+            if not entry.startswith("thermal_zone"):
+                continue
+            zone = os.path.join(base, entry)
+            type_path = os.path.join(zone, "type")
+            temp_path = os.path.join(zone, "temp")
+            if not os.path.isfile(temp_path):
+                continue
+            try:
+                with open(type_path, encoding="utf-8") as fh:
+                    label = fh.read().strip()
+                with open(temp_path, encoding="utf-8") as fh:
+                    temp_c = int(fh.read().strip()) / 1000.0
+                cpu_temps.append({"name": label, "temp_c": round(temp_c, 1)})
+            except OSError:
+                continue
+
+    cpu_temp = max((t["temp_c"] for t in cpu_temps), default=None)
+    return {
+        "gpu_temp_c": gpu_temp,
+        "gpu_power_w": gpu_power,
+        "cpu_temp_c": cpu_temp,
+    }
+
+
+def format_uptime(seconds):
+    seconds = int(seconds)
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, _ = divmod(rem, 60)
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours or days:
+        parts.append(f"{hours}h")
+    parts.append(f"{minutes}m")
+    return " ".join(parts)
+
+
+def read_uptime():
+    with open("/proc/uptime", encoding="utf-8") as fh:
+        uptime_s = float(fh.read().split()[0])
+    return {
+        "uptime_seconds": int(uptime_s),
+        "uptime_human": format_uptime(uptime_s),
+    }
+
+
+def read_disk(path, label):
+    mounted = os.path.ismount(path) if path.startswith("/mnt") else os.path.exists(path)
+    if not mounted and path.startswith("/mnt"):
+        return {"label": label, "path": path, "mounted": False}
+    try:
+        usage = shutil.disk_usage(path)
+        total_gb = round(usage.total / (1024**3), 1)
+        used_gb = round(usage.used / (1024**3), 1)
+        used_pct = round(usage.used / usage.total * 100, 1) if usage.total else 0.0
+        return {
+            "label": label,
+            "path": path,
+            "mounted": True,
+            "total_gb": total_gb,
+            "used_gb": used_gb,
+            "used_pct": used_pct,
+        }
+    except OSError:
+        return {"label": label, "path": path, "mounted": False}
+
+
+def read_disks():
+    return [
+        read_disk("/", "root"),
+        read_disk("/models", "models"),
+        read_disk("/mnt/model-shelf", "nas"),
+    ]
+
+
+def read_docker():
+    try:
+        out = subprocess.check_output(
+            [
+                "docker",
+                "ps",
+                "--format",
+                "{{.Names}}\t{{.Status}}\t{{.Ports}}",
+            ],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+
+    containers = []
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 2)
+        name = parts[0]
+        status = parts[1] if len(parts) > 1 else ""
+        ports = parts[2] if len(parts) > 2 else ""
+        containers.append(
+            {
+                "name": name,
+                "status": status,
+                "ports": ports,
+                "up": status.lower().startswith("up"),
+            }
+        )
+    return containers
+
+
+def read_inference():
+    try:
+        req = urllib.request.Request(
+            "http://127.0.0.1:8000/v1/models",
+            headers={"Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            payload = json.loads(resp.read().decode())
+        models = [m.get("id") for m in payload.get("data", []) if m.get("id")]
+        return {
+            "up": True,
+            "model": models[0] if models else None,
+            "models": models,
+        }
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return {"up": False, "model": None, "models": []}
+
+
+def append_history(metrics):
+    for key in _HISTORY:
+        if key in metrics and metrics[key] is not None:
+            _HISTORY[key].append(metrics[key])
+    return {k: list(v) for k, v in _HISTORY.items()}
+
+
+def read_metrics():
+    gpu_out = subprocess.check_output(
+        [
+            "nvidia-smi",
+            "--query-gpu=name,utilization.gpu",
+            "--format=csv,noheader,nounits",
+        ],
+        text=True,
+    ).strip()
+    name, gpu_util = [part.strip() for part in gpu_out.split(",", 1)]
+    gpu_util = float(gpu_util)
+
+    mem = {}
+    with open("/proc/meminfo", encoding="utf-8") as fh:
+        for line in fh:
+            key, value = line.split(":", 1)
+            mem[key.strip()] = int(value.split()[0]) // 1024
+
+    total_mb = mem.get("MemTotal", 0)
+    avail_mb = mem.get("MemAvailable", mem.get("MemFree", 0))
+    used_mb = max(total_mb - avail_mb, 0)
+    used_pct = round((used_mb / total_mb) * 100, 1) if total_mb else 0.0
+
+    metrics = {
+        "gpu_name": name,
+        "gpu_util_pct": round(gpu_util, 1),
+        "memory_used_mb": used_mb,
+        "memory_total_mb": total_mb,
+        "memory_used_pct": used_pct,
+    }
+    metrics.update(read_cpu_metrics())
+    metrics.update(read_thermals())
+    metrics.update(read_uptime())
+    metrics.update(read_load())
+    metrics["disks"] = read_disks()
+    metrics["containers"] = read_docker()
+    metrics["inference"] = read_inference()
+    metrics["history"] = append_history(metrics)
+    return metrics
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--serve":
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path != "/api/gpu":
+                    self.send_error(404)
+                    return
+                body = json.dumps(read_metrics()).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_args):
+                return
+
+        read_cpu_metrics()
+        time.sleep(0.2)
+        HTTPServer(("127.0.0.1", 8765), Handler).serve_forever()
+        return
+
+    json.dump(read_metrics(), sys.stdout)
+
+
+if __name__ == "__main__":
+    main()

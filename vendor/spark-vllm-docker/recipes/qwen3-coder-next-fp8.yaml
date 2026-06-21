@@ -1,0 +1,47 @@
+# Recipe: Qwen3-Coder-Next-FP8
+# Qwen3-Coder-Next model in native FP8 format
+
+
+recipe_version: "1"
+name: Qwen3-Coder-Next-FP8
+description: vLLM serving Qwen3-Coder-Next-FP8
+
+# HuggingFace model to download (optional, for --download-model)
+model: Qwen/Qwen3-Coder-Next-FP8
+
+#solo_only: true
+
+# Container image to use
+container: vllm-node
+
+# Mod required to fix slowness and crash in the cluster (tracking https://github.com/vllm-project/vllm/issues/33857)
+# mods:
+#   - mods/fix-qwen3-coder-next
+
+# Default settings (can be overridden via CLI)
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 2
+  gpu_memory_utilization: 0.8
+  max_model_len: 131072
+
+# Environment variables
+env: {}
+
+# The vLLM serve command template
+command: |
+  vllm serve Qwen/Qwen3-Coder-Next-FP8 \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_coder \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --host {host} \
+    --port {port} \
+    --kv-cache-dtype fp8 \
+    --load-format fastsafetensors \
+    --attention-backend flashinfer \
+    --enable-prefix-caching \
+    --max-model-len {max_model_len} \
+    -tp {tensor_parallel} \
+    --distributed-executor-backend ray
+

@@ -1,0 +1,13 @@
+# Copy to /models/{lab}/{model-version}/manifest.yaml
+id: lab/model-version
+hf_repo: org/repo-name
+license: apache-2.0
+variants:
+  - format: gguf
+    quant: Q4_K_M
+    files: [gguf/model-version-Q4_K_M.gguf]
+    engine: llamacpp
+  - format: hf
+    path: hf/
+    engine: vllm
+default_variant: gguf/Q4_K_M

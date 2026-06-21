@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Manage Qwen3.6 NVFP4 smoke stack (vLLM + Open WebUI)
+set -euo pipefail
+COMPOSE="/opt/spark/services/qwen36-nvfp4/compose.yaml"
+cmd="${1:-status}"
+
+case "$cmd" in
+  up)
+    docker compose -f "$COMPOSE" pull
+    docker compose -f "$COMPOSE" up -d
+    echo "Started. Chat UI: http://sparky:3000  API: http://sparky:8000/v1"
+    echo "First vLLM boot can take several minutes — run: spark-inference logs"
+    ;;
+  down)
+    docker compose -f "$COMPOSE" down
+    ;;
+  restart)
+    docker compose -f "$COMPOSE" restart
+    ;;
+  logs)
+    docker compose -f "$COMPOSE" logs -f --tail=100
+    ;;
+  status)
+    docker compose -f "$COMPOSE" ps 2>/dev/null || true
+    echo "---"
+    curl -sf http://127.0.0.1:8000/v1/models 2>/dev/null | head -c 500 || echo "vLLM API: not ready yet"
+    echo
+    curl -sf http://127.0.0.1:3000 >/dev/null && echo "Open WebUI: up at http://sparky:3000" || echo "Open WebUI: not responding yet"
+    ;;
+  *)
+    echo "Usage: spark-inference {up|down|restart|logs|status}" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Manage eugr spark-vllm-docker Qwen3.6 NVFP4 stack
+set -euo pipefail
+REPO="/opt/spark/vendor/spark-vllm-docker"
+RECIPE="/opt/spark/services/eugr-qwen36-local.yaml"
+EXTRA="-v /models:/models:ro"
+cmd="${1:-status}"
+
+run_recipe() {
+  export VLLM_SPARK_EXTRA_DOCKER_ARGS="$EXTRA"
+  cd "$REPO"
+  ./run-recipe.sh "$RECIPE" --solo --apply-mod mods/fix-qwen3.6-chat-template "$@"
+}
+
+case "$cmd" in
+  up)
+    docker stop spark-vllm-qwen36 2>/dev/null || true
+    run_recipe --daemon
+    echo "Started eugr vLLM (daemon). Chat: http://sparky:3000  API: http://sparky:8000/v1"
+    echo "First boot may take several minutes — run: spark-eugr logs"
+    ;;
+  down)
+    docker rm -f vllm_node 2>/dev/null || true
+    ;;
+  logs)
+    docker logs -f vllm_node 2>/dev/null || docker ps -a --format "{{.Names}}" | grep -i vllm | xargs -r docker logs -f
+    ;;
+  status)
+    docker ps -a --format "table {{.Names}}\t{{.Status}}" | grep -E "vllm|NAMES" || true
+    echo "---"
+    curl -sf http://127.0.0.1:8000/v1/models 2>/dev/null | head -c 600 || echo "vLLM API: not ready"
+    echo
+    ;;
+  build)
+    cd "$REPO"
+    ./build-and-copy.sh
+    ;;
+  *)
+    echo "Usage: spark-eugr {up|down|logs|status|build}" >&2
+    exit 1
+    ;;
+esac

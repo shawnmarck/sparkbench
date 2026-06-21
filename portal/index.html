@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sparky — Home Lab Portal</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0f1117; --card: #1a1d27; --text: #e6e6e6; --muted: #9aa0a6; --accent: #76b900; --border: #2a2f3a; --ok: #6bc46d; --warn: #e8b84a; --down: #c85c5c; --nav-h: 52px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden; }
+    .topnav { height: var(--nav-h); flex-shrink: 0; display: flex; align-items: center; gap: 1rem; padding: 0 1rem; border-bottom: 1px solid var(--border); background: #12151c; }
+    .brand { font-weight: 700; font-size: 1rem; color: var(--accent); white-space: nowrap; }
+    .brand small { color: var(--muted); font-weight: 500; font-size: .72rem; margin-left: .45rem; }
+    .nav { display: flex; flex-wrap: wrap; gap: .25rem; flex: 1; }
+    .nav-btn { appearance: none; border: 1px solid transparent; background: transparent; color: #c5cdd8; font: inherit; font-size: .82rem; padding: .4rem .7rem; border-radius: 8px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+    .nav-btn:hover { color: var(--text); border-color: var(--border); background: var(--card); }
+    .nav-btn.active { color: var(--accent); border-color: #3a4a2a; background: #1a2210; }
+    .nav-btn .ext { opacity: .45; font-size: .7rem; margin-left: .2rem; }
+    .nav-meta { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
+    .live { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+    .live-stale { color: var(--warn); }
+    .live-stale i { background: var(--warn); box-shadow: none; animation: none; }
+    .shell { flex: 1; min-height: 0; position: relative; }
+    .dashboard { height: 100%; overflow: auto; padding: 1.25rem 1rem 2rem; }
+    .dashboard-inner { max-width: 800px; margin: 0 auto; }
+    .frame-panel { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
+    .frame-panel.open { display: flex; }
+    .frame-bar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .45rem .75rem; border-bottom: 1px solid var(--border); font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; background: #12151c; }
+    .frame-bar a { color: var(--accent); text-decoration: none; }
+    .frame-bar a:hover { text-decoration: underline; }
+    iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
+    .card h2 { margin: 0 0 .35rem; font-size: 1.05rem; color: var(--accent); }
+    .card p { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: .5rem; }
+    @media (max-width: 720px) { .metric-grid { grid-template-columns: 1fr 1fr; } .nav-btn { padding: .35rem .5rem; } }
+    @media (max-width: 480px) { .metric-grid { grid-template-columns: 1fr; } .brand small { display: none; } }
+    .metric h3 { margin: 0 0 .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+    .metric-value { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+    .metric-value span { font-size: 1rem; color: var(--muted); font-weight: 500; }
+    .metric-bar { height: 8px; background: #12151c; border-radius: 999px; overflow: hidden; margin-top: .55rem; border: 1px solid var(--border); }
+    .metric-bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #5a9200, var(--accent)); border-radius: 999px; transition: width .35s ease; }
+    .spark { height: 28px; margin-top: .45rem; opacity: .9; }
+    .spark svg { width: 100%; height: 100%; display: block; }
+    .metric-sub { margin-top: .4rem; font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .sys-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 1.25rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); font-family: ui-monospace, monospace; font-size: .78rem; color: #c5cdd8; }
+    .sys-meta-item { display: inline-flex; align-items: center; gap: .45rem; min-width: 6.5rem; }
+    .sys-icon { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); opacity: .85; }
+    .temp-warn { color: var(--warn); }
+    .temp-hot { color: #f08a5d; }
+    .section-title { margin: 1rem 0 .5rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+    .disk-grid { display: grid; gap: .65rem; }
+    .disk-row { display: grid; grid-template-columns: 5.5rem 1fr 4.5rem; gap: .6rem; align-items: center; font-size: .8rem; font-family: ui-monospace, monospace; }
+    .disk-row .metric-bar { margin: 0; height: 6px; }
+    .disk-unmounted { color: var(--down); }
+    .status-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .35rem; }
+    .pill { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; padding: .25rem .55rem; border-radius: 999px; border: 1px solid var(--border); font-family: ui-monospace, monospace; color: #c5cdd8; }
+    .pill.up { border-color: #2a4a2a; color: var(--ok); }
+    .pill.down { border-color: #4a2a2a; color: var(--down); }
+    .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .svc-list { display: grid; gap: .45rem; margin-top: .5rem; }
+    .svc-item { display: flex; flex-wrap: wrap; gap: .35rem .75rem; justify-content: space-between; font-size: .8rem; font-family: ui-monospace, monospace; color: #c5cdd8; padding: .45rem .55rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
+    .svc-item .name { color: var(--text); font-weight: 600; }
+    .svc-item .ports { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">Sparky<small>home lab</small></div>
+    <nav class="nav" id="nav">
+      <button type="button" class="nav-btn active" data-view="system">System</button>
+      <button type="button" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</button>
+      <button type="button" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</button>
+      <button type="button" class="nav-btn" data-src="http://sparky:19999/" data-title="Netdata" data-popout="http://sparky:19999/">Netdata</button>
+    </nav>
+    <div class="nav-meta">
+      <span class="live" id="live"><i></i>live</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <div class="dashboard" id="dashboard">
+      <div class="dashboard-inner">
+        <div class="card" id="system-card">
+          <h2>System</h2>
+          <p id="sys-sub">—</p>
+
+          <div class="metric-grid">
+            <div class="metric">
+              <h3>CPU</h3>
+              <div class="metric-value"><span id="cpu-util">—</span><span>%</span></div>
+              <div class="metric-bar"><i id="cpu-bar"></i></div>
+              <div class="spark" id="cpu-spark"></div>
+              <div class="metric-sub" id="cpu-sub">peak —%</div>
+            </div>
+            <div class="metric">
+              <h3>GPU</h3>
+              <div class="metric-value"><span id="gpu-util">—</span><span>%</span></div>
+              <div class="metric-bar"><i id="gpu-bar"></i></div>
+              <div class="spark" id="gpu-spark"></div>
+            </div>
+            <div class="metric">
+              <h3>Memory</h3>
+              <div class="metric-value"><span id="mem-util">—</span><span>%</span></div>
+              <div class="metric-bar"><i id="mem-bar"></i></div>
+              <div class="spark" id="mem-spark"></div>
+              <div class="metric-sub" id="mem-sub">— / — GB</div>
+            </div>
+          </div>
+
+          <div class="sys-meta">
+            <span class="sys-meta-item" id="uptime">
+              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span class="sys-meta-text">—</span>
+            </span>
+            <span class="sys-meta-item" id="load">
+              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14l4-6 4 3 4-7 4 5"/></svg>
+              <span class="sys-meta-text">—</span>
+            </span>
+            <span class="sys-meta-item" id="gpu-temp">
+              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="4" width="10" height="14" rx="1.5"/><path d="M9 8h6M9 11h6"/><path d="M12 18v2"/></svg>
+              <span class="sys-meta-text">—</span>
+            </span>
+            <span class="sys-meta-item" id="cpu-temp">
+              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V5.5a2 2 0 0 0-4 0v9.26a4 4 0 1 0 4 0z"/></svg>
+              <span class="sys-meta-text">—</span>
+            </span>
+            <span class="sys-meta-item" id="power">
+              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <span class="sys-meta-text">—</span>
+            </span>
+            <span class="sys-meta-item" id="cores">
+              <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
+              <span class="sys-meta-text">—</span>
+            </span>
+          </div>
+
+          <div class="section-title">Storage</div>
+          <div class="disk-grid" id="disks"></div>
+
+          <div class="section-title">Inference &amp; containers</div>
+          <div class="status-row" id="inference-status"></div>
+          <div class="svc-list" id="containers"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-panel" id="frame-panel">
+      <div class="frame-bar">
+        <span id="frame-title">—</span>
+        <a id="frame-popout" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+      </div>
+      <iframe id="content-frame" title="Sparky portal content" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"></iframe>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const dashboard = $('dashboard');
+      const framePanel = $('frame-panel');
+      const frame = $('content-frame');
+      const nav = $('nav');
+      let pollTimer = null;
+      let onSystem = true;
+
+      const fmtGb = (mb) => (mb / 1024).toFixed(1);
+      const setBar = (el, pct) => { el.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
+      const tempClass = (c) => !c && c !== 0 ? '' : c >= 85 ? 'temp-hot' : c >= 70 ? 'temp-warn' : '';
+      const setMeta = (id, text, cls) => {
+        const el = $(id);
+        el.querySelector('.sys-meta-text').textContent = text;
+        el.className = 'sys-meta-item ' + (cls || '');
+      };
+
+      function sparkline(el, values, color) {
+        if (!values || !values.length) { el.innerHTML = ''; return; }
+        const w = 120, h = 28;
+        const max = Math.max(...values, 1);
+        const pts = values.map((v, i) => {
+          const x = values.length === 1 ? w / 2 : (i / (values.length - 1)) * w;
+          const y = h - (v / max) * (h - 2) - 1;
+          return x.toFixed(1) + ',' + y.toFixed(1);
+        }).join(' ');
+        const fill = color + '33';
+        const area = pts + ' ' + w + ',' + h + ' 0,' + h;
+        el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+          + '<polygon fill="' + fill + '" points="' + area + '"/>'
+          + '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + pts + '"/>'
+          + '</svg>';
+      }
+
+      function renderDisks(disks) {
+        $('disks').innerHTML = disks.map((d) => {
+          if (!d.mounted) {
+            return '<div class="disk-row disk-unmounted"><span>' + d.label + '</span><span>not mounted</span><span>' + d.path + '</span></div>';
+          }
+          return '<div class="disk-row"><span>' + d.label + '</span>'
+            + '<div class="metric-bar"><i style="width:' + d.used_pct + '%"></i></div>'
+            + '<span>' + d.used_gb + ' / ' + d.total_gb + ' GB</span></div>';
+        }).join('');
+      }
+
+      function renderInference(inf) {
+        const cls = inf.up ? 'pill up' : 'pill down';
+        const label = inf.up ? ('vLLM · ' + (inf.model || 'ready')) : 'vLLM offline';
+        $('inference-status').innerHTML = '<span class="' + cls + '"><span class="pill-dot"></span>' + label + '</span>';
+      }
+
+      function renderContainers(list) {
+        if (!list.length) {
+          $('containers').innerHTML = '<div class="svc-item"><span class="name">No running containers</span></div>';
+          return;
+        }
+        $('containers').innerHTML = list.map((c) =>
+          '<div class="svc-item"><span class="name">' + c.name + '</span>'
+          + '<span>' + c.status + '</span>'
+          + (c.ports ? '<span class="ports">' + c.ports + '</span>' : '')
+          + '</div>'
+        ).join('');
+      }
+
+      async function tick() {
+        if (!onSystem) return;
+        try {
+          const res = await fetch('/api/gpu', { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          const d = await res.json();
+          const hist = d.history || {};
+
+          $('sys-sub').textContent = d.gpu_name + ' · unified memory · sparklines = last ~60s';
+          $('cpu-util').textContent = d.cpu_util_pct.toFixed(1);
+          $('gpu-util').textContent = d.gpu_util_pct.toFixed(1);
+          $('mem-util').textContent = d.memory_used_pct.toFixed(1);
+          setBar($('cpu-bar'), d.cpu_util_pct);
+          setBar($('gpu-bar'), d.gpu_util_pct);
+          setBar($('mem-bar'), d.memory_used_pct);
+          $('cpu-sub').textContent = 'peak core ' + d.cpu_peak_core_pct.toFixed(1) + '%';
+          $('mem-sub').textContent = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB';
+
+          sparkline($('cpu-spark'), hist.cpu_util_pct, '#76b900');
+          sparkline($('gpu-spark'), hist.gpu_util_pct, '#6eb5ff');
+          sparkline($('mem-spark'), hist.memory_used_pct, '#c5a3ff');
+
+          setMeta('uptime', d.uptime_human);
+          setMeta('load', 'load ' + d.load_1 + ' · ' + d.load_5 + ' · ' + d.load_15);
+          setMeta('gpu-temp', 'GPU ' + Math.round(d.gpu_temp_c) + '°C', tempClass(d.gpu_temp_c));
+          setMeta('cpu-temp', 'CPU ' + Math.round(d.cpu_temp_c) + '°C', tempClass(d.cpu_temp_c));
+          setMeta('power', d.gpu_power_w != null ? d.gpu_power_w + ' W' : 'power n/a');
+          setMeta('cores', d.cpu_cores + ' cores');
+
+          renderDisks(d.disks || []);
+          renderInference(d.inference || {});
+          renderContainers(d.containers || []);
+
+          $('live').classList.remove('live-stale');
+          $('live').lastChild.textContent = 'live';
+        } catch (e) {
+          $('live').classList.add('live-stale');
+          $('live').lastChild.textContent = 'offline';
+        }
+      }
+
+      function setActiveNav(btn) {
+        nav.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+      }
+
+      function showSystem(btn) {
+        onSystem = true;
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        tick();
+      }
+
+      function showFrame(btn) {
+        const src = btn.dataset.src;
+        const title = btn.dataset.title || src;
+        const popout = btn.dataset.popout || src;
+        onSystem = false;
+        setActiveNav(btn);
+        dashboard.style.display = 'none';
+        framePanel.classList.add('open');
+        $('frame-title').textContent = title;
+        $('frame-popout').href = popout;
+        if (frame.getAttribute('src') !== src) frame.src = src;
+      }
+
+      nav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nav-btn');
+        if (!btn) return;
+        if (btn.dataset.view === 'system') {
+          showSystem(btn);
+          history.replaceState(null, '', '#system');
+          return;
+        }
+        if (btn.dataset.src) {
+          showFrame(btn);
+          const slug = (btn.textContent || 'view').trim().toLowerCase();
+          history.replaceState(null, '', '#' + slug);
+        }
+      });
+
+      const hash = location.hash.replace('#', '');
+      if (hash && hash !== 'system') {
+        const match = Array.from(nav.querySelectorAll('.nav-btn')).find((b) =>
+          (b.textContent || '').trim().toLowerCase() === hash
+        );
+        if (match && match.dataset.src) showFrame(match);
+        else showSystem(nav.querySelector('[data-view="system"]'));
+      } else {
+        showSystem(nav.querySelector('[data-view="system"]'));
+      }
+
+      pollTimer = setInterval(tick, 1000);
+      tick();
+    })();
+  </script>
+</body>
+</html>

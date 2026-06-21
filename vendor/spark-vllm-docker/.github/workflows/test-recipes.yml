@@ -1,0 +1,59 @@
+name: Recipe Tests
+
+on:
+  push:
+    branches: [ main, profiles ]
+    paths:
+      - 'run-recipe.py'
+      - 'run-recipe.sh'
+      - 'launch-cluster.sh'
+      - 'recipes/**'
+      - 'tests/**'
+      - '.github/workflows/test-recipes.yml'
+  pull_request:
+    paths:
+      - 'run-recipe.py'
+      - 'run-recipe.sh'
+      - 'launch-cluster.sh'
+      - 'recipes/**'
+      - 'tests/**'
+      - '.github/workflows/test-recipes.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml
+    
+    - name: Make scripts executable
+      run: |
+        chmod +x run-recipe.py run-recipe.sh launch-cluster.sh
+        chmod +x tests/test_recipes.sh
+    
+    - name: Run recipe integration tests
+      run: |
+        ./tests/test_recipes.sh -v
+    
+    - name: Verify all recipes with dry-run
+      run: |
+        for recipe in recipes/*.yaml; do
+          name=$(basename "$recipe" .yaml)
+          echo "Testing recipe: $name"
+          ./run-recipe.py "$name" --dry-run --solo || exit 1
+        done

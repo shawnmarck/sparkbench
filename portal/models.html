@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sparky — Model Inventory</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0f1117; --card: #1a1d27; --text: #e6e6e6; --muted: #9aa0a6; --accent: #76b900; --border: #2a2f3a; --warn: #e8b84a; --ok: #6bc46d; --dl: #6eb5ff; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; }
+    main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    a { color: var(--accent); }
+    .top { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1.25rem; }
+    h1 { font-size: 1.5rem; margin: 0; }
+    .sub { color: var(--muted); font-size: .9rem; margin: .25rem 0 0; }
+    .back { font-size: .85rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; align-items: center; }
+    .control-group { display: flex; flex-direction: column; gap: .2rem; }
+    .control-group label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; }
+    input[type=search] { min-width: 200px; flex: 1; }
+    select { min-width: 140px; }
+    .meta { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+    .live { display: inline-flex; align-items: center; gap: .35rem; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .grid { display: grid; gap: .85rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
+    .card-head { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; justify-content: space-between; }
+    .card h2 { margin: 0; font-size: 1.05rem; }
+    .lab { color: var(--muted); font-size: .85rem; }
+    .badges { display: flex; flex-wrap: wrap; gap: .35rem; margin: .6rem 0; }
+    .badge { font-size: .72rem; padding: .15rem .45rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    .badge.cap { border-color: #3a4a2a; color: #b8d88a; }
+    .badge.status-ready { border-color: #2a4a2a; color: var(--ok); }
+    .badge.status-downloading { border-color: #2a3a4a; color: var(--dl); }
+    .badge.status-partial, .badge.status-missing { border-color: #4a402a; color: var(--warn); }
+    .stats { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .82rem; color: var(--muted); margin: .5rem 0; }
+    .stats strong { color: var(--text); font-weight: 600; }
+    .why { font-size: .88rem; line-height: 1.45; color: #c8cdd4; margin: .65rem 0; padding: .6rem .75rem; background: #12151c; border-radius: 8px; border-left: 3px solid var(--accent); }
+    .desc { font-size: .86rem; color: var(--muted); line-height: 1.45; margin: .5rem 0; }
+    .variants { margin-top: .65rem; font-size: .8rem; }
+    .variants table { width: 100%; border-collapse: collapse; }
+    .variants th, .variants td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--border); }
+    .variants th { color: var(--muted); font-weight: 500; }
+    .empty { color: var(--muted); padding: 2rem; text-align: center; }
+    code { background: #12151c; padding: .1rem .35rem; border-radius: 4px; font-size: .85em; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <div>
+        <h1>Model inventory</h1>
+        <p class="sub">Auto-refreshed from <code>/models</code> · catalog + Hugging Face</p>
+      </div>
+      <a class="back" href="/" target="_top">← Portal</a>
+    </div>
+
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search name, lab, capability…" autocomplete="off" aria-label="Search">
+      <div class="control-group">
+        <label for="lab">Lab</label>
+        <select id="lab"><option value="">All labs</option></select>
+      </div>
+      <div class="control-group">
+        <label for="cap">Capability</label>
+        <select id="cap"><option value="">All capabilities</option></select>
+      </div>
+      <div class="control-group">
+        <label for="status">Status</label>
+        <select id="status"><option value="">All statuses</option></select>
+      </div>
+      <div class="control-group">
+        <label for="sort">Sort</label>
+        <select id="sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name-asc">Name A → Z</option>
+          <option value="name-desc">Name Z → A</option>
+          <option value="size-desc">Largest first</option>
+          <option value="lab">Lab A → Z</option>
+        </select>
+      </div>
+    </div>
+    <div class="meta">
+      <span id="summary">Loading…</span>
+      <span class="live"><span class="live-dot"></span> auto-refresh 30s</span>
+    </div>
+    <div class="grid" id="list"></div>
+  </main>
+  <script>
+    let all = [];
+    let pollTimer = null;
+    const REFRESH_MS = 30000;
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+      catch { return iso.slice(0, 10); }
+    }
+
+    function fmtTime(iso) {
+      if (!iso) return '';
+      try { return new Date(iso).toLocaleTimeString(); } catch { return ''; }
+    }
+
+    function fmtCtx(n) {
+      if (!n) return '—';
+      return n >= 1000 ? (n / 1000).toFixed(0) + 'K' : String(n);
+    }
+
+    function esc(s) {
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function labLabel(lab) {
+      if (!lab) return '';
+      return lab.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    function parseDate(iso) {
+      if (!iso) return 0;
+      const t = Date.parse(iso);
+      return Number.isNaN(t) ? 0 : t;
+    }
+
+    function sortModels(models) {
+      const mode = document.getElementById('sort').value;
+      const arr = [...models];
+      arr.sort((a, b) => {
+        switch (mode) {
+          case 'newest':
+            return parseDate(b.release_date) - parseDate(a.release_date) || a.name.localeCompare(b.name);
+          case 'oldest':
+            return parseDate(a.release_date) - parseDate(b.release_date) || a.name.localeCompare(b.name);
+          case 'name-desc':
+            return b.name.localeCompare(a.name);
+          case 'size-desc':
+            return (b.size_bytes || 0) - (a.size_bytes || 0);
+          case 'lab':
+            return a.lab.localeCompare(b.lab) || a.name.localeCompare(b.name);
+          case 'name-asc':
+          default:
+            return a.name.localeCompare(b.name);
+        }
+      });
+      return arr;
+    }
+
+    function render(models) {
+      const list = document.getElementById('list');
+      if (!models.length) {
+        list.innerHTML = '<div class="empty">No models match filters.</div>';
+        return;
+      }
+      list.innerHTML = models.map(m => {
+        const caps = (m.capabilities || []).map(c => `<span class="badge cap">${esc(c)}</span>`).join('');
+        const stClass = 'status-' + (m.status || 'missing');
+        const hf = m.hf_url ? `<a href="${esc(m.hf_url)}" target="_blank" rel="noopener">Hugging Face ↗</a>` : '';
+        const vars = (m.variants || []).length ? `<div class="variants"><table>
+          <tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th><th>Path</th></tr>
+          ${m.variants.map(v => `<tr>
+            <td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td>
+            <td>${esc(v.status)}</td><td><code>${esc(v.path)}</code></td>
+          </tr>`).join('')}
+        </table></div>` : '';
+        return `<article class="card" data-id="${esc(m.id)}">
+          <div class="card-head">
+            <div><h2>${esc(m.name)}</h2><div class="lab">${esc(labLabel(m.lab))} · ${esc(m.slug)}</div></div>
+            <span class="badge ${stClass}">${esc(m.status)}</span>
+          </div>
+          <div class="badges">${caps}</div>
+          <div class="stats">
+            <span><strong>Size</strong> ${esc(m.size_human)}</span>
+            <span><strong>Context</strong> ${fmtCtx(m.max_context)}</span>
+            <span><strong>Released</strong> ${fmtDate(m.release_date)}</span>
+            <span>${hf}</span>
+          </div>
+          ${m.why_downloaded ? `<div class="why"><strong>Why downloaded</strong> — ${esc(m.why_downloaded)}</div>` : ''}
+          ${m.description ? `<div class="desc">${esc(m.description)}</div>` : ''}
+          ${vars}
+        </article>`;
+      }).join('');
+    }
+
+    function populateFilters(models, preserve) {
+      const prev = {
+        lab: preserve ? document.getElementById('lab').value : '',
+        cap: preserve ? document.getElementById('cap').value : '',
+        status: preserve ? document.getElementById('status').value : '',
+        sort: preserve ? document.getElementById('sort').value : 'newest',
+        q: preserve ? document.getElementById('q').value : '',
+      };
+      const labs = [...new Set(models.map(m => m.lab))].sort();
+      const caps = [...new Set(models.flatMap(m => m.capabilities || []))].sort();
+      const stats = [...new Set(models.map(m => m.status))].sort();
+      const fill = (elId, items, labelFn, prevVal) => {
+        const el = document.getElementById(elId);
+        const first = el.options[0].outerHTML;
+        el.innerHTML = first;
+        items.forEach(v => {
+          const o = document.createElement('option');
+          o.value = v;
+          o.textContent = labelFn ? labelFn(v) : v;
+          el.appendChild(o);
+        });
+        if (prevVal && [...el.options].some(o => o.value === prevVal)) el.value = prevVal;
+      };
+      fill('lab', labs, labLabel, prev.lab);
+      fill('cap', caps, null, prev.cap);
+      fill('status', stats, null, prev.status);
+      document.getElementById('sort').value = prev.sort || 'newest';
+      document.getElementById('q').value = prev.q || '';
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('q').value.toLowerCase();
+      const lab = document.getElementById('lab').value;
+      const cap = document.getElementById('cap').value;
+      const status = document.getElementById('status').value;
+      let filtered = all.filter(m => {
+        if (lab && m.lab !== lab) return false;
+        if (cap && !(m.capabilities || []).includes(cap)) return false;
+        if (status && m.status !== status) return false;
+        if (q) {
+          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, ...(m.capabilities||[]), ...(m.tags||[])].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      filtered = sortModels(filtered);
+      document.getElementById('summary').textContent =
+        `Showing ${filtered.length} of ${all.length} models · data updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
+      render(filtered);
+    }
+
+    ['q','lab','cap','status','sort'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyFilters);
+      document.getElementById(id).addEventListener('change', applyFilters);
+    });
+
+    function loadData(preserveFilters) {
+      return fetch('models.json?' + Date.now(), { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+          all = data.models || [];
+          window.__generated = data.generated_at;
+          populateFilters(all, preserveFilters);
+          applyFilters();
+        });
+    }
+
+    loadData(false).catch(err => {
+      document.getElementById('summary').textContent = 'Failed to load models.json';
+      document.getElementById('list').innerHTML = `<div class="empty">${esc(String(err))}</div>`;
+    });
+
+    pollTimer = setInterval(() => loadData(true).catch(() => {}), REFRESH_MS);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') loadData(true).catch(() => {});
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+diff --git a/vllm/model_executor/model_loader/weight_utils.py b/vllm/model_executor/model_loader/weight_utils.py
+index d43656c4f382..7025efd1c2de 100644
+--- a/vllm/model_executor/model_loader/weight_utils.py
++++ b/vllm/model_executor/model_loader/weight_utils.py
+@@ -826,6 +826,7 @@ def fastsafetensors_weights_iterator(
+         pg = SingleGroup()
+ 
+     device = torch.device(f"cuda:{current_platform.current_device()}")
++    hf_weights_files = sorted(hf_weights_files, key=_natural_sort_key)
+     weight_files_sub_lists = [
+         hf_weights_files[i : i + pg.size()]
+         for i in range(0, len(hf_weights_files), pg.size())

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Pull model(s) from NAS shelf to Spark /models (restore / fetch for use).
+set -euo pipefail
+
+MODELS="/models"
+SHELF="/mnt/model-shelf/models"
+RSYNC=(rsync -avh --progress --partial)
+
+usage() {
+  cat <<EOF
+Usage: spark-shelf-pull [OPTIONS] MODEL_PATH...
+
+Pull from ${SHELF} to ${MODELS} (same relative layout).
+
+Examples:
+  spark-shelf-pull google/gemma-4-26b-a4b
+  spark-shelf-pull --dry-run meta-llama/llama-3.1-70b-instruct
+
+Options:
+  --dry-run   Show what would be transferred
+  -h, --help  This help
+EOF
+}
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+[[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
+mountpoint -q /mnt/model-shelf || die "/mnt/model-shelf not mounted"
+
+DRY_RUN=0
+PATHS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    -*) die "Unknown option: $1" ;;
+    *) PATHS+=("$1"); shift ;;
+  esac
+done
+
+[[ ${#PATHS[@]} -eq 0 ]] && { usage; exit 1; }
+[[ ${DRY_RUN} -eq 1 ]] && RSYNC+=(--dry-run)
+
+for rel in "${PATHS[@]}"; do
+  rel="${rel#/}"
+  rel="${rel%/}"
+  src="${SHELF}/${rel}"
+  [[ -d "${src}" ]] || die "Not found on shelf: ${src}"
+  echo "==> Pulling ${rel}"
+  mkdir -p "${MODELS}/$(dirname "${rel}")"
+  "${RSYNC[@]}" "${src}/" "${MODELS}/${rel}/"
+done
+
+echo "OK: pull complete"

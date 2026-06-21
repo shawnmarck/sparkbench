@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Push model(s) from Spark /models to NAS shelf (Spark → shelf backup).
+set -euo pipefail
+
+MODELS="/models"
+SHELF="/mnt/model-shelf/models"
+RSYNC=(rsync -avh --progress --partial)
+
+usage() {
+  cat <<EOF
+Usage: spark-shelf-push [OPTIONS] [MODEL_PATH...]
+
+Push from ${MODELS} to ${SHELF} (same relative layout).
+
+Examples:
+  spark-shelf-push google/gemma-4-26b-a4b
+  spark-shelf-push --all
+  spark-shelf-push --dry-run meta-llama/llama-3.1-70b-instruct
+
+Options:
+  --all       Push every lab/model under /models (excludes _incoming)
+  --dry-run   Show what would be transferred
+  -h, --help  This help
+EOF
+}
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+[[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
+mountpoint -q /mnt/model-shelf || die "/mnt/model-shelf not mounted"
+
+DRY_RUN=0
+PUSH_ALL=0
+PATHS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all) PUSH_ALL=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    -*) die "Unknown option: $1" ;;
+    *) PATHS+=("$1"); shift ;;
+  esac
+done
+
+[[ ${DRY_RUN} -eq 1 ]] && RSYNC+=(--dry-run)
+
+if [[ ${PUSH_ALL} -eq 1 ]]; then
+  shopt -s nullglob
+  for lab in "${MODELS}"/*/; do
+    [[ "$(basename "${lab}")" == "_incoming" ]] && continue
+    for model in "${lab}"*/; do
+      rel="${model#${MODELS}/}"
+      rel="${rel%/}"
+      echo "==> Pushing ${rel}"
+      mkdir -p "${SHELF}/$(dirname "${rel}")"
+      "${RSYNC[@]}" "${MODELS}/${rel}/" "${SHELF}/${rel}/"
+    done
+  done
+  exit 0
+fi
+
+[[ ${#PATHS[@]} -eq 0 ]] && { usage; exit 1; }
+
+for rel in "${PATHS[@]}"; do
+  rel="${rel#/}"
+  rel="${rel%/}"
+  src="${MODELS}/${rel}"
+  [[ -d "${src}" ]] || die "Not found: ${src}"
+  echo "==> Pushing ${rel}"
+  mkdir -p "${SHELF}/$(dirname "${rel}")"
+  "${RSYNC[@]}" "${src}/" "${SHELF}/${rel}/"
+done
+
+echo "OK: push complete"

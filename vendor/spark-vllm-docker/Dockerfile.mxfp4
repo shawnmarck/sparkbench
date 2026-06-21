@@ -1,0 +1,293 @@
+# syntax=docker/dockerfile:1.6
+
+# Limit build parallelism to reduce OOM situations
+ARG BUILD_JOBS=16
+
+# =========================================================
+# STAGE 1: Base Image (Installs Dependencies)
+# =========================================================
+FROM nvcr.io/nvidia/pytorch:26.01-py3 AS base
+
+# Build parallemism
+ARG BUILD_JOBS
+ENV MAX_JOBS=${BUILD_JOBS}  
+ENV CMAKE_BUILD_PARALLEL_LEVEL=${BUILD_JOBS}
+ENV NINJAFLAGS="-j${BUILD_JOBS}"
+ENV MAKEFLAGS="-j${BUILD_JOBS}"
+
+# =============================================================================
+# Pinned versions from https://github.com/christopherowen/spark-vllm-mxfp4-docker/blob/main/Dockerfile
+# =============================================================================
+
+# ARG VLLM_SHA=045293d82b832229560ac4a13152a095af603b6e
+# ARG FLASHINFER_SHA=1660ee8d740b0385f235519f9e2750db944d1838
+# ARG CUTLASS_SHA=11af7f02ab52c9130e422eeb4b44042fbd60c083
+
+# ARG VLLM_REPO=https://github.com/christopherowen/vllm.git
+# ARG FLASHINFER_REPO=https://github.com/christopherowen/flashinfer.git
+# ARG CUTLASS_REPO=https://github.com/christopherowen/cutlass.git
+
+# Set non-interactive frontend to prevent apt prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Allow pip to install globally on Ubuntu 24.04 without a venv
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# Set pip cache directory
+ENV PIP_CACHE_DIR=/root/.cache/pip
+ENV UV_CACHE_DIR=/root/.cache/uv
+ENV UV_SYSTEM_PYTHON=1
+ENV UV_BREAK_SYSTEM_PACKAGES=1
+ENV UV_LINK_MODE=copy
+
+# Set the base directory environment variable
+ENV VLLM_BASE_DIR=/workspace/vllm
+
+# 1. Install Build Dependencies & Ccache
+# Added ccache to enable incremental compilation caching
+RUN apt update && \
+    apt install -y --no-install-recommends \
+    curl vim ninja-build git \
+    ccache \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install uv && pip uninstall -y flash-attn
+
+# Configure Ccache for CUDA/C++
+ENV PATH=/usr/lib/ccache:$PATH
+ENV CCACHE_DIR=/root/.ccache
+# Limit ccache size to prevent unbounded growth (e.g. 50G)
+ENV CCACHE_MAXSIZE=50G
+# Enable compression to save space
+ENV CCACHE_COMPRESS=1
+# Tell CMake to use ccache for compilation
+ENV CMAKE_CXX_COMPILER_LAUNCHER=ccache
+ENV CMAKE_CUDA_COMPILER_LAUNCHER=ccache
+
+# Setup Workspace
+WORKDIR $VLLM_BASE_DIR
+
+# 2. Set Environment Variables
+ARG TORCH_CUDA_ARCH_LIST="12.1a"
+ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
+ENV TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
+
+# --- CACHE BUSTER ---
+# Change this argument to force a re-download of PyTorch/FlashInfer
+ARG CACHEBUST_DEPS=1
+
+# Install additional dependencies
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    uv pip install fastsafetensors
+
+ARG PRE_TRANSFORMERS=0
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    if [ "$PRE_TRANSFORMERS" = "1" ]; then \
+        uv pip install -U transformers --pre; \
+    fi
+# =========================================================
+# STAGE 2: Builder
+# =========================================================
+FROM base AS builder
+
+ARG FLASHINFER_CUDA_ARCH_LIST="12.1a"
+ENV FLASHINFER_CUDA_ARCH_LIST=${FLASHINFER_CUDA_ARCH_LIST}
+
+WORKDIR $VLLM_BASE_DIR
+
+ARG FLASHINFER_REPO=https://github.com/christopherowen/flashinfer.git
+ARG CUTLASS_REPO=https://github.com/christopherowen/cutlass.git
+
+ARG FLASHINFER_SHA=f349e52496a72a00d8c4ac02c7a1e38523ff7194
+ARG CUTLASS_SHA=fede53000a962b46e05bafe0c86311778caeb380
+
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+     uv pip install "nvidia-nvshmem-cu13<3.6" "apache-tvm-ffi<0.2"
+
+# Clone FlashInfer (cached for faster rebuilds)
+RUN --mount=type=cache,id=git-flashinfer,target=/git-cache/flashinfer \
+    if [ -d /git-cache/flashinfer/.git ]; then \
+        echo "=== Using cached FlashInfer repo ===" && \
+        cp -a /git-cache/flashinfer /workspace/flashinfer && \
+        cd /workspace/flashinfer && \
+        git fetch origin && git fetch origin --tags; \
+    else \
+        echo "=== Cloning FlashInfer (first build) ===" && \
+        git clone ${FLASHINFER_REPO} /workspace/flashinfer && \
+        cp -a /workspace/flashinfer /git-cache/flashinfer; \
+    fi && \
+    cd /workspace/flashinfer &&  (git checkout --detach origin/${FLASHINFER_SHA} 2>/dev/null || git checkout ${FLASHINFER_SHA})
+
+# Clone spdlog submodule (small, no caching needed)
+RUN cd /workspace/flashinfer && \
+    git submodule update --init 3rdparty/spdlog
+
+# Clone CUTLASS directly (skip submodule, use our fork)
+RUN --mount=type=cache,id=git-cutlass,target=/git-cache/cutlass \
+    cd /workspace/flashinfer && \
+    rm -rf 3rdparty/cutlass && \
+    if [ -d /git-cache/cutlass/.git ] && [ -d /git-cache/cutlass/.git/objects ]; then \
+        echo "=== Using cached CUTLASS repo ===" && \
+        cp -a /git-cache/cutlass 3rdparty/cutlass && \
+        cd 3rdparty/cutlass && \
+        git fetch origin && git fetch origin --tags; \
+    else \
+        echo "=== Cloning CUTLASS (first build) ===" && \
+        rm -rf /git-cache/cutlass/* /git-cache/cutlass/.* 2>/dev/null || true && \
+        git clone ${CUTLASS_REPO} 3rdparty/cutlass && \
+        cp -a /workspace/flashinfer/3rdparty/cutlass/. /git-cache/cutlass/; \
+    fi && \
+    cd /workspace/flashinfer/3rdparty/cutlass && (git checkout --detach origin/${CUTLASS_SHA} 2>/dev/null || git checkout ${CUTLASS_SHA})
+
+# Build FlashInfer wheels
+
+WORKDIR /workspace/flashinfer
+
+# flashinfer-python
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    --mount=type=cache,id=ccache,target=/root/.ccache \
+    sed -i -e 's/license = "Apache-2.0"/license = { text = "Apache-2.0" }/' -e '/license-files/d' pyproject.toml && \
+    uv build --no-build-isolation --wheel . --out-dir=/workspace/wheels -v
+
+# flashinfer-cubin
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    --mount=type=cache,id=ccache,target=/root/.ccache \
+    cd flashinfer-cubin && uv build --no-build-isolation --wheel . --out-dir=/workspace/wheels -v
+
+# flashinfer-jit-cache
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    --mount=type=cache,id=ccache,target=/root/.ccache \
+    cd flashinfer-jit-cache && \
+    uv build --no-build-isolation --wheel . --out-dir=/workspace/wheels -v
+
+# --- VLLM SOURCE CACHE BUSTER ---
+# Change THIS argument to force a fresh git clone and rebuild of vLLM
+# without re-installing the dependencies above.
+ARG CACHEBUST_VLLM=1
+
+ARG VLLM_REPO=https://github.com/christopherowen/vllm.git
+
+# Git reference (branch, tag, or SHA) to checkout
+ARG VLLM_SHA=045293d82b832229560ac4a13152a095af603b6e
+
+# 4. Smart Git Clone (Fetch changes instead of full re-clone)
+# We mount a cache at /repo-cache. This directory persists on your host machine.
+RUN --mount=type=cache,id=repo-cache,target=/repo-cache \
+    # 1. Go into the persistent cache directory
+    cd /repo-cache && \
+    # 2. Logic: Clone if missing, otherwise Fetch & Reset
+    if [ ! -d "vllm-mxfp4" ]; then \
+        echo "Cache miss: Cloning vLLM from scratch..." && \
+        git clone --recursive ${VLLM_REPO} vllm-mxfp4 && \
+        cd vllm-mxfp4 && \
+        git checkout ${VLLM_SHA} ; \
+    else \
+        echo "Cache hit: Fetching updates..." && \
+        cd vllm-mxfp4 && \
+        git fetch origin && \
+        git fetch origin --tags && \
+        (git checkout --detach origin/${VLLM_SHA} 2>/dev/null || git checkout ${VLLM_SHA}) && \
+        git submodule update --init --recursive && \
+        git clean -fdx && \
+        # Optimize git repo size
+        git gc --auto; \
+    fi && \
+    # 3. Copy the updated code from the cache to the actual container workspace
+    # We use 'cp -a' to preserve permissions
+    mkdir $VLLM_BASE_DIR/vllm && \
+    cp -a -r /repo-cache/vllm-mxfp4/. $VLLM_BASE_DIR/vllm/
+
+WORKDIR $VLLM_BASE_DIR/vllm
+
+ARG PRE_TRANSFORMERS=0
+
+# Prepare build requirements
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    python3 use_existing_torch.py && \
+    sed -i "/flashinfer/d" requirements/cuda.txt && \
+    sed -i '/^fastsafetensors\b/d' requirements/test.txt && \
+    if [ "$PRE_TRANSFORMERS" = "1" ]; then \
+        sed -i '/^transformers\b/d' requirements/common.txt; \
+        sed -i '/^transformers\b/d' requirements/test.txt; \
+    fi && \
+    uv pip install -r requirements/build.txt
+
+# Apply Patches
+# TEMPORARY PATCH for fastsafetensors loading in cluster setup - tracking https://github.com/vllm-project/vllm/issues/34180
+COPY fastsafetensors_mxfp4.patch .
+RUN patch -p1 < fastsafetensors_mxfp4.patch
+
+# Final Compilation
+# We mount the ccache directory here. Ideally, map this to a host volume for persistence 
+# across totally separate `docker build` invocations.
+RUN --mount=type=cache,id=ccache,target=/root/.ccache \
+    --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    uv build --no-build-isolation --wheel . --out-dir=/workspace/wheels -v
+
+# =========================================================
+# STAGE 4: Runner (Transfers only necessary artifacts)
+# =========================================================
+FROM nvcr.io/nvidia/pytorch:26.01-py3 AS runner
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ENV VLLM_BASE_DIR=/workspace/vllm
+
+# Set pip cache directory
+ENV PIP_CACHE_DIR=/root/.cache/pip
+ENV UV_CACHE_DIR=/root/.cache/uv
+ENV UV_SYSTEM_PYTHON=1
+ENV UV_BREAK_SYSTEM_PACKAGES=1
+ENV UV_LINK_MODE=copy
+
+# Install minimal runtime dependencies (NCCL, Python)
+# Note: "devel" tools like cmake/gcc are NOT installed here to save space
+RUN apt update && \
+    apt install -y --no-install-recommends \
+    curl vim git \
+    libxcb1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install uv && pip uninstall -y flash-attn 
+
+# Set final working directory
+WORKDIR $VLLM_BASE_DIR
+
+# Download Tiktoken files
+RUN mkdir -p tiktoken_encodings && \
+    wget -O tiktoken_encodings/o200k_base.tiktoken "https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken" && \
+    wget -O tiktoken_encodings/cl100k_base.tiktoken "https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken"
+
+# Copy artifacts from Builder Stage
+# FastAPI 0.137.0 adds _IncludedRouter entries that currently break
+# prometheus-fastapi-instrumentator route name lookup.
+RUN --mount=type=bind,from=builder,source=/workspace/wheels,target=/mount/wheels \
+    --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    PINNED_TORCH=$(python3 -c "import torch; print(torch.__version__)") && \
+    echo "torch==${PINNED_TORCH}" > /tmp/wheel-override.txt && \
+    echo "fastapi[standard]>=0.115.0,<0.137.0" >> /tmp/wheel-override.txt && \
+    uv pip install /mount/wheels/*.whl --override /tmp/wheel-override.txt
+
+# Setup environment vars for runtime
+ARG TORCH_CUDA_ARCH_LIST="12.1a"
+ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
+ARG FLASHINFER_CUDA_ARCH_LIST="12.1a"
+ENV FLASHINFER_CUDA_ARCH_LIST=${FLASHINFER_CUDA_ARCH_LIST}
+ENV TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
+ENV TIKTOKEN_ENCODINGS_BASE=$VLLM_BASE_DIR/tiktoken_encodings
+ENV PATH=$VLLM_BASE_DIR:$PATH
+
+# Final extra deps
+# Pin torch via --override so transitive deps can't trigger a re-resolve that
+# swaps the CUDA-built torch for PyPI's CPU wheel.
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    PINNED_TORCH=$(python3 -c "import torch; print(torch.__version__)") && \
+    echo "torch==${PINNED_TORCH}" > /tmp/torch-override.txt && \
+    echo "fastapi[standard]>=0.115.0,<0.137.0" >> /tmp/torch-override.txt && \
+    uv pip install ray[default] fastsafetensors "nvidia-nvshmem-cu13<3.6" \
+        --override /tmp/torch-override.txt
+
+# Build metadata (generated by build-and-copy.sh)
+COPY build-metadata.yaml /workspace/build-metadata.yaml
+
+# If not compiling Triton
+# remove triton-kernels as they are not compatible with this vLLM version yet
+RUN uv pip uninstall triton-kernels

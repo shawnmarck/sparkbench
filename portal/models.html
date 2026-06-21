@@ -19,7 +19,25 @@
     })();
   </script>
   <style>
-    :root { color-scheme: dark; --bg: #0f1117; --card: #1a1d27; --text: #e6e6e6; --muted: #9aa0a6; --accent: #76b900; --border: #2a2f3a; --warn: #e8b84a; --ok: #6bc46d; --dl: #6eb5ff; }
+    :root {
+      color-scheme: dark;
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --text: #e6e6e6;
+      --muted: #9aa0a6;
+      --accent: #76b900;
+      --border: #2a2f3a;
+      --warn: #e8b84a;
+      --ok: #6bc46d;
+      --dl: #6eb5ff;
+      --control-bg: #141820;
+      --control-bg-hover: #171b24;
+      --control-text: #c5cad3;
+      --control-border: rgba(255, 255, 255, 0.07);
+      --menu-bg: #12151c;
+      --menu-hover: rgba(255, 255, 255, 0.04);
+      --menu-border: rgba(255, 255, 255, 0.06);
+    }
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; }
     body.embedded .portal-link, body.embedded .page-head { display: none; }
@@ -32,7 +50,27 @@
     .controls { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; align-items: flex-end; }
     .control-group { display: flex; flex-direction: column; gap: .2rem; }
     .control-group label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; }
+    input, select {
+      background: var(--control-bg);
+      border: 1px solid var(--control-border);
+      color: var(--control-text);
+      border-radius: 8px;
+      padding: .5rem .75rem;
+      font-size: .9rem;
+      transition: background .15s, border-color .15s;
+    }
+    input::placeholder { color: rgba(154, 160, 166, 0.75); }
+    input:hover, select:hover { background: var(--control-bg-hover); border-color: rgba(255, 255, 255, 0.09); }
+    input:focus, select:focus {
+      outline: none;
+      background: var(--control-bg-hover);
+      border-color: rgba(255, 255, 255, 0.11);
+      box-shadow: none;
+    }
+    select option, select optgroup {
+      background: var(--menu-bg);
+      color: var(--control-text);
+    }
     input[type=search] { min-width: 180px; flex: 1; }
     .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; width: 100%; }
     .chip-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-right: .15rem; }
@@ -64,6 +102,73 @@
     .model-row.open .row-detail { display: block; }
     .badge { font-size: .7rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
     .badge.cap { border-color: #3a4a2a; color: #b8d88a; }
+    .badge.hf-task { border-color: #3a4a5a; color: #9ec8ff; font-weight: 500; }
+    .tag-block { padding: .6rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); font-size: .82rem; line-height: 1.45; }
+    .tag-line { display: flex; gap: .55rem; align-items: baseline; margin-top: .35rem; }
+    .tag-line:first-child { margin-top: 0; }
+    .tag-line-label { flex-shrink: 0; width: 5.5rem; font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .tag-line-val { color: #c8cdd4; min-width: 0; }
+    .tag-more { margin-top: .45rem; font-size: .76rem; color: var(--muted); line-height: 1.4; }
+    .tag-more summary { cursor: pointer; color: #9aa0a6; list-style: none; }
+    .tag-more summary::-webkit-details-marker { display: none; }
+    .tag-more summary::before { content: '▸ '; font-size: .7rem; }
+    .tag-more[open] summary::before { content: '▾ '; }
+    .tag-picker { position: relative; }
+    .tag-picker-btn {
+      min-width: 7.5rem;
+      text-align: left;
+      background: var(--control-bg);
+      border: 1px solid var(--control-border);
+      color: var(--control-text);
+      border-radius: 8px;
+      padding: .5rem .75rem;
+      font: inherit;
+      font-size: .9rem;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .tag-picker-btn:hover { background: var(--control-bg-hover); border-color: rgba(255, 255, 255, 0.09); }
+    .tag-picker-btn[aria-expanded="true"] { background: var(--control-bg-hover); border-color: rgba(255, 255, 255, 0.1); }
+    .tag-picker-menu {
+      position: absolute;
+      top: calc(100% + .25rem);
+      left: 0;
+      z-index: 12;
+      min-width: 14rem;
+      max-width: 18rem;
+      max-height: 14rem;
+      overflow: auto;
+      padding: .4rem;
+      border-radius: 10px;
+      border: 1px solid var(--menu-border);
+      background: var(--menu-bg);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+    }
+    .tag-picker-menu[hidden] { display: none; }
+    .tag-picker-search {
+      width: 100%;
+      margin-bottom: .35rem;
+      padding: .38rem .5rem;
+      font-size: .82rem;
+      background: rgba(0, 0, 0, 0.22);
+      border-color: var(--menu-border);
+      color: var(--control-text);
+    }
+    .tag-picker-item {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .3rem .4rem;
+      border-radius: 6px;
+      font-size: .82rem;
+      color: var(--control-text);
+      cursor: pointer;
+    }
+    .tag-picker-item:hover { background: var(--menu-hover); }
+    .tag-picker-item input { accent-color: #5a9200; }
+    .tag-picker-foot { display: flex; justify-content: space-between; gap: .35rem; margin-top: .35rem; padding-top: .35rem; border-top: 1px solid var(--menu-border); }
+    .tag-picker-foot button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .74rem; cursor: pointer; padding: .15rem 0; }
+    .tag-picker-foot button:hover { color: var(--accent); }
     .badge.status-ready { border-color: #2a4a2a; color: var(--ok); }
     .badge.status-downloading { border-color: #2a3a4a; color: var(--dl); }
     .badge.status-partial, .badge.status-missing, .badge.status-shelf-only { border-color: #4a402a; color: var(--warn); }
@@ -154,10 +259,6 @@
         <select id="lab"><option value="">All</option></select>
       </div>
       <div class="control-group">
-        <label for="cap">Capability</label>
-        <select id="cap"><option value="">All</option></select>
-      </div>
-      <div class="control-group">
         <label for="status">Download</label>
         <select id="status"><option value="">All</option></select>
       </div>
@@ -176,6 +277,24 @@
           <option value="params-asc">Parameters ↑</option>
           <option value="lab">Lab A→Z</option>
         </select>
+      </div>
+      <div class="control-group tag-filter-group">
+        <label for="tag-picker-btn">Capabilities</label>
+        <div class="tag-picker">
+          <button type="button" class="tag-picker-btn" id="tag-picker-btn" aria-expanded="false" aria-haspopup="listbox">All</button>
+          <div class="tag-picker-menu" id="tag-picker-menu" hidden>
+            <input type="search" class="tag-picker-search" id="tag-picker-search" placeholder="Search…" autocomplete="off">
+            <div class="tag-picker-list" id="tag-picker-list" role="listbox"></div>
+            <div class="tag-picker-foot">
+              <button type="button" id="tag-picker-clear">Clear</button>
+              <button type="button" id="tag-picker-done">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="control-group">
+        <label for="hf-task">HF task</label>
+        <select id="hf-task"><option value="">All</option></select>
       </div>
       <div class="chip-row" id="spark-filter">
         <span class="chip-label">Spark</span>
@@ -213,8 +332,39 @@
     const engineLabels = { vllm: 'vLLM', llamacpp: 'GGUF' };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
     let sparkFilter = '';
+    let tagFilter = [];
+    let hfTaskFilter = '';
+    const HF_NOISE = new Set(['transformers', 'safetensors', 'endpoints_compatible', 'text-generation-inference', 'eval-results', 'gguf', 'ggml']);
 
     const $ = (id) => document.getElementById(id);
+    const tagKey = (t) => (t || '').toLowerCase();
+    const formatTagLabel = (tag) => {
+      if (!tag) return '';
+      if (/^license:/i.test(tag)) return tag.split(':')[1].toUpperCase();
+      return tag.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    };
+    const isNoiseTag = (t) => {
+      if (!t) return true;
+      const k = tagKey(t);
+      if (HF_NOISE.has(k)) return true;
+      return /^(arxiv:|license:|region:|base_model:)/i.test(t);
+    };
+    const catalogCapabilities = (m) => m.capabilities || [];
+    const catalogTagSet = (m) => new Set(catalogCapabilities(m).map(tagKey));
+    const notableHfTags = (m) => {
+      const seen = new Set();
+      const out = [];
+      (m.tags || []).forEach((t) => {
+        const k = tagKey(t);
+        if (isNoiseTag(t) || k === tagKey(m.pipeline_tag) || seen.has(k)) return;
+        seen.add(k);
+        out.push(t);
+      });
+      return out.sort((a, b) => formatTagLabel(a).localeCompare(formatTagLabel(b)));
+    };
+    const collectCatalogTags = (models) => [...new Set(models.flatMap((m) => catalogCapabilities(m)))].sort((a, b) => formatTagLabel(a).localeCompare(formatTagLabel(b)));
+    const collectHfTasks = (models) => [...new Set(models.map((m) => m.pipeline_tag).filter(Boolean))].sort((a, b) => formatTagLabel(a).localeCompare(formatTagLabel(b)));
+    const tagLine = (items) => items.map((t) => esc(formatTagLabel(t))).join(' · ') || '—';
     const esc = (s) => (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmtDate = (iso, est) => {
       if (!iso) return '—';
@@ -291,8 +441,20 @@
       const queueBtn = queued
         ? `<button type="button" class="btn danger active" data-action="queue-removal" data-pending="0" data-path="${rel}">Cancel removal</button>`
         : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) ? 'disabled' : ''}>Queue removal</button>`;
+      const caps = catalogCapabilities(m);
+      const task = m.pipeline_tag;
+      const hfTags = notableHfTags(m);
+      const hfPreview = hfTags.slice(0, 4);
+      const hfExtra = hfTags.slice(4);
+      const tagBlock = (caps.length || task || hfPreview.length) ? `<div class="detail-section tag-block">
+          ${caps.length ? `<div class="tag-line"><span class="tag-line-label">Catalog</span><span class="tag-line-val">${tagLine(caps)}</span></div>` : ''}
+          ${task ? `<div class="tag-line"><span class="tag-line-label">HF task</span><span class="tag-line-val">${task ? `<span class="badge hf-task">${esc(formatTagLabel(task))}</span>` : '—'}</span></div>` : ''}
+          ${hfPreview.length ? `<div class="tag-line"><span class="tag-line-label">HF tags</span><span class="tag-line-val">${tagLine(hfPreview)}</span></div>` : ''}
+          ${hfExtra.length ? `<details class="tag-more"><summary>${hfExtra.length} more HF tag${hfExtra.length === 1 ? '' : 's'}</summary>${tagLine(hfExtra)}</details>` : ''}
+          ${m.hf_url ? `<div class="tag-line" style="margin-top:.5rem"><span class="tag-line-label"></span><span class="tag-line-val"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">All tags on Hugging Face ↗</a></span></div>` : ''}
+        </div>` : '';
       return `
-        <div class="detail-section badges">${(m.capabilities || []).map(c => `<span class="badge cap">${esc(c)}</span>`).join('')}</div>
+        ${tagBlock}
         <div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>
         ${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}
         <div class="detail-section storage">
@@ -308,7 +470,6 @@
         </div>
         ${m.why_downloaded ? `<div class="detail-section why">${esc(m.why_downloaded)}</div>` : ''}
         ${m.description ? `<div class="detail-section desc">${esc(m.description)}</div>` : ''}
-        ${m.hf_url ? `<div class="detail-section"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">Hugging Face ↗</a></div>` : ''}
         ${vars}`;
     }
 
@@ -359,9 +520,58 @@
 
     function savePrefs() {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
-        q: $('q').value, lab: $('lab').value, cap: $('cap').value, status: $('status').value,
-        sort: $('sort').value, sparkFilter,
+        q: $('q').value, lab: $('lab').value, status: $('status').value,
+        sort: $('sort').value, sparkFilter, tagFilter, hfTaskFilter,
       }));
+    }
+
+    function updateTagPickerButton() {
+      const btn = $('tag-picker-btn');
+      if (!tagFilter.length) btn.textContent = 'All';
+      else if (tagFilter.length === 1) btn.textContent = formatTagLabel(tagFilter[0]);
+      else btn.textContent = `${tagFilter.length} selected`;
+    }
+
+    function renderTagPickerList(available, query) {
+      const list = $('tag-picker-list');
+      const q = (query || '').toLowerCase();
+      list.innerHTML = '';
+      available.filter((t) => !q || formatTagLabel(t).toLowerCase().includes(q) || tagKey(t).includes(q)).forEach((tag) => {
+        const k = tagKey(tag);
+        const row = document.createElement('label');
+        row.className = 'tag-picker-item';
+        row.innerHTML = `<input type="checkbox" value="${esc(k)}" ${tagFilter.includes(k) ? 'checked' : ''}><span>${esc(formatTagLabel(tag))}</span>`;
+        row.querySelector('input').addEventListener('change', (e) => {
+          if (e.target.checked) {
+            if (!tagFilter.includes(k)) tagFilter = [...tagFilter, k];
+          } else {
+            tagFilter = tagFilter.filter((t) => t !== k);
+          }
+          updateTagPickerButton();
+          applyFilters();
+        });
+        list.appendChild(row);
+      });
+      if (!list.children.length) list.innerHTML = '<div class="tag-picker-item" style="cursor:default;color:var(--muted)">No matches</div>';
+    }
+
+    function setTagFilter(next) {
+      tagFilter = [...next].map(tagKey);
+      updateTagPickerButton();
+      renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value);
+      applyFilters();
+    }
+
+    function closeTagPicker() {
+      $('tag-picker-menu').hidden = true;
+      $('tag-picker-btn').setAttribute('aria-expanded', 'false');
+    }
+
+    function openTagPicker() {
+      renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value);
+      $('tag-picker-menu').hidden = false;
+      $('tag-picker-btn').setAttribute('aria-expanded', 'true');
+      $('tag-picker-search').focus();
     }
 
     function setSparkFilter(value) {
@@ -379,11 +589,13 @@
 
     function applyFilters() {
       const q = $('q').value.toLowerCase();
-      const lab = $('lab').value, cap = $('cap').value, status = $('status').value;
+      const lab = $('lab').value, status = $('status').value;
+      hfTaskFilter = tagKey($('hf-task').value);
       savePrefs();
       let filtered = all.filter(m => {
         if (lab && m.lab !== lab) return false;
-        if (cap && !(m.capabilities || []).includes(cap)) return false;
+        if (tagFilter.length && !tagFilter.every((t) => catalogTagSet(m).has(t))) return false;
+        if (hfTaskFilter && tagKey(m.pipeline_tag) !== hfTaskFilter) return false;
         if (status && m.status !== status) return false;
         if (sparkFilter === 'queued') {
           if (!removalPending(m)) return false;
@@ -391,7 +603,7 @@
           return false;
         }
         if (q) {
-          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, ...(m.capabilities||[])].join(' ').toLowerCase();
+          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, m.pipeline_tag, ...catalogCapabilities(m), ...notableHfTags(m)].join(' ').toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -399,17 +611,28 @@
       filtered = sortModels(filtered);
       const queuedTotal = all.filter(removalPending).length;
       const queuedPart = queuedTotal ? ` · ${queuedTotal} queued for purge` : '';
-      $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
+      const filterBits = [];
+      if (tagFilter.length) filterBits.push(tagFilter.map((t) => formatTagLabel(t)).join(' + '));
+      if (hfTaskFilter) filterBits.push(formatTagLabel(hfTaskFilter));
+      const tagPart = filterBits.length ? ` · ${filterBits.join(' · ')}` : '';
+      $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${tagPart}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
       if (queuedTotal) $('summary').classList.add('meta-warn'); else $('summary').classList.remove('meta-warn');
       render(filtered);
     }
 
     function populateFilters(models, preserve) {
       const stored = readPrefs();
+      const storedTags = (stored.tagFilter || (stored.cap ? [stored.cap] : [])).map(tagKey);
       const prev = preserve ? {
-        lab: $('lab').value, cap: $('cap').value, status: $('status').value,
-        sort: $('sort').value, q: $('q').value, sparkFilter,
-      } : { sort: 'newest', sparkFilter: stored.worksOnly ? 'works' : (stored.sparkFilter || ''), ...stored };
+        lab: $('lab').value, status: $('status').value, hfTaskFilter,
+        sort: $('sort').value, q: $('q').value, sparkFilter, tagFilter,
+      } : {
+        sort: 'newest',
+        sparkFilter: stored.worksOnly ? 'works' : (stored.sparkFilter || ''),
+        q: stored.q || '', lab: stored.lab || '', status: stored.status || '',
+        tagFilter: storedTags,
+        hfTaskFilter: tagKey(stored.hfTaskFilter || ''),
+      };
       const fill = (id, key, items, fn) => {
         const el = $(id), first = el.options[0].outerHTML;
         el.innerHTML = first;
@@ -417,8 +640,15 @@
         if (prev[key] && [...el.options].some(o => o.value === prev[key])) el.value = prev[key];
       };
       fill('lab', 'lab', [...new Set(models.map(m => m.lab))].sort(), v => v.split(/[-_]/).map(w => w[0].toUpperCase() + w.slice(1)).join(' '));
-      fill('cap', 'cap', [...new Set(models.flatMap(m => m.capabilities || []))].sort(), null);
       fill('status', 'status', [...new Set(models.map(m => m.status))].sort(), null);
+      fill('hf-task', 'hfTaskFilter', collectHfTasks(models), (v) => formatTagLabel(v));
+      const catalogKeys = new Set(collectCatalogTags(models).map(tagKey));
+      tagFilter = (prev.tagFilter || []).map(tagKey).filter((k) => catalogKeys.has(k));
+      hfTaskFilter = prev.hfTaskFilter || '';
+      if (hfTaskFilter && ![...$('hf-task').options].some((o) => o.value === hfTaskFilter)) hfTaskFilter = '';
+      $('hf-task').value = hfTaskFilter;
+      updateTagPickerButton();
+      renderTagPickerList(collectCatalogTags(models), '');
       $('sort').value = prev.sort || 'newest';
       $('q').value = prev.q || '';
       sparkFilter = prev.sparkFilter || '';
@@ -519,7 +749,7 @@
       modelAction(btn.dataset.action, btn.dataset.path, btn, extra);
     });
 
-    ['q','lab','cap','status','sort'].forEach(id => {
+    ['q','lab','status','sort','hf-task'].forEach(id => {
       $(id).addEventListener('input', applyFilters);
       $(id).addEventListener('change', applyFilters);
     });
@@ -530,6 +760,17 @@
       setSparkFilter(chip.dataset.spark);
     });
 
+    $('tag-picker-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if ($('tag-picker-menu').hidden) openTagPicker();
+      else closeTagPicker();
+    });
+    $('tag-picker-clear').addEventListener('click', () => setTagFilter([]));
+    $('tag-picker-done').addEventListener('click', () => closeTagPicker());
+    $('tag-picker-search').addEventListener('input', (e) => renderTagPickerList(collectCatalogTags(all), e.target.value));
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.tag-picker')) closeTagPicker();
+    });
     function loadData(preserve) {
       return fetch('models.json?' + Date.now(), { cache: 'no-store' })
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })

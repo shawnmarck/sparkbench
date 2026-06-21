@@ -19,7 +19,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 ├── install/              Idempotent sudo install scripts (see install/INSTALL.md)
 ├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml
 ├── recipes/              Inference profile recipes (Phase 5)
-├── docs/                 Human docs (ROADMAP, smoke tests, INFERENCE-STACK)
+├── docs/                 ROADMAP + guides/ runbooks/ reference/ examples/
 └── services/             compose/yaml for inference UIs
 ```
 
@@ -31,14 +31,16 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 
 | Doc | Use when |
 |-----|----------|
-| `docs/ROADMAP.md` | Phase status, URLs, what's done |
-| `docs/INFERENCE-STACK.md` | Phase 5 inference control plane spec |
-| `docs/MODEL-SHELF.md` | `/models` + NAS shelf layout |
-| `docs/INFERENCE-SMOKE.md` | eugr vLLM (`spark-eugr`) |
-| `docs/LLAMACPP-SMOKE.md` | native llama.cpp (`spark-llama`) |
+| `docs/ROADMAP.md` | **The plan** — phases, status, next steps |
+| `docs/README.md` | Doc index — what each file is for |
+| `docs/guides/model-shelf.md` | `/models` + NAS shelf layout |
+| `docs/guides/model-picks.md` | Why each model is in the catalog |
+| `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark-eugr`) |
+| `docs/runbooks/smoke-llamacpp.md` | llama.cpp validation (`spark-llama`) |
+| `docs/reference/inference-stack.md` | Phase 5 technical spec |
 | `install/INSTALL.md` | Install script index + order |
 
-`docs/README.md` is the doc hub. Ignore stale "not installed" remnants if they disagree with ROADMAP.
+`docs/ROADMAP.md` is the single source of truth for phases. Other docs are guides, runbooks, or specs — see `docs/README.md`.
 
 ## Key URLs
 

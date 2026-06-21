@@ -95,14 +95,65 @@ html.theme-b .row-main:hover {
 }
 
 html.theme-b .controls input,
-html.theme-b .controls select {
-  background: rgba(0, 0, 0, 0.45);
+html.theme-b .controls select,
+html.theme-b .tag-picker-btn {
+  background: rgba(0, 0, 0, 0.38);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #b8bec8;
+}
+
+html.theme-b .controls input:hover,
+html.theme-b .controls select:hover,
+html.theme-b .tag-picker-btn:hover,
+html.theme-b .tag-picker-btn[aria-expanded="true"] {
+  background: rgba(0, 0, 0, 0.48);
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.theme-b .controls input:focus,
+html.theme-b .controls select:focus {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+html.theme-b .controls select option {
+  background: #0e1015;
+  color: #b8bec8;
 }
 
 html.theme-b .chip {
   background: rgba(0, 0, 0, 0.4);
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.theme-b .tag-block {
+  background: rgba(0, 0, 0, 0.42);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+html.theme-b .tag-picker-menu {
+  background: rgba(10, 11, 14, 0.97);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+html.theme-b .tag-picker-search {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: #b8bec8;
+}
+
+html.theme-b .tag-picker-item {
+  color: #b8bec8;
+}
+
+html.theme-b .tag-picker-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html.theme-b .badge.hf-task {
+  border-color: rgba(158, 200, 255, 0.35);
+  color: #9ec8ff;
 }
 
 html.theme-b .storage,

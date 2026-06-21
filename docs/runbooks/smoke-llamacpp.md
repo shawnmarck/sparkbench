@@ -2,6 +2,9 @@
 
 Goal: run the same Qwen3.6 family via **GGUF** on GB10 for comparison with NVFP4 vLLM.
 
+**Status: PASSING** (2026-06-21 — Qwen3.6 Q4 + Gemma 4 12B Coder)
+
+
 ## Prerequisites
 
 - Phase 3a done (proves the box runs LLMs)

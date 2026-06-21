@@ -1,8 +1,8 @@
-# Model library — download batch report
+# Model picks — why these models
 
 **Started:** 2026-06-21  
 **Status:** See `/opt/spark/logs/model-download-latest.log`  
-**Batch manifest:** `MODEL-DOWNLOAD-BATCH.yaml`
+**Batch manifest:** `examples/download-batch.yaml`
 
 ---
 

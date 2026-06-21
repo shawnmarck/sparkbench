@@ -458,7 +458,7 @@ def main() -> int:
                 "param_b": param_b,
                 "param_active_b": param_active_b,
                 "pipeline_tag": hf_info.get("pipeline_tag"),
-                "tags": hf_info.get("tags", [])[:12],
+                "tags": hf_info.get("tags", []),
                 "status": overall,
                 "size_bytes": total_size,
                 "size_human": human_size(total_size),

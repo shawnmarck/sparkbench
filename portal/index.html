@@ -606,7 +606,7 @@
       }
 
       async function infBench() {
-        setInfMsg('Running benchmark…', 'warn');
+        setInfMsg('Running agent benchmark (3 sessions × 3 turns)…', 'warn');
         $('inf-bench').disabled = true;
         try {
           const res = await fetch('/api/inference/bench', {
@@ -619,7 +619,15 @@
             setInfMsg(d.error || 'benchmark failed', 'err');
             return;
           }
-          setInfMsg('Measured ~' + Math.round(d.tok_s) + ' tok/s (' + d.completion_tokens + ' tokens)', '');
+          let msg = 'Avg ~' + Math.round(d.tok_s) + ' tok/s';
+          if (d.tok_s_min != null && d.tok_s_max != null) {
+            msg += ' (' + Math.round(d.tok_s_min) + '–' + Math.round(d.tok_s_max) + ')';
+          }
+          if (d.sessions && d.turns_per_session) {
+            msg += ' · ' + d.sessions + '×' + d.turns_per_session + ' turns';
+          }
+          if (d.completion_tokens) msg += ' · ' + d.completion_tokens + ' tokens';
+          setInfMsg(msg, '');
           infTick();
         } catch (e) {
           setInfMsg('benchmark request failed', 'err');

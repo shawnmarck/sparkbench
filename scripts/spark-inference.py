@@ -318,6 +318,11 @@ def record_benchmark(
     prompt_tokens: int | None = None,
     elapsed_s: float | None = None,
     note: str | None = None,
+    tok_s_min: float | None = None,
+    tok_s_max: float | None = None,
+    sessions: int | None = None,
+    turns_per_session: int | None = None,
+    run_tok_s: list[float] | None = None,
 ) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat()
     engine = recipe.get("engine")
@@ -334,6 +339,16 @@ def record_benchmark(
         entry["prompt_tokens"] = prompt_tokens
     if elapsed_s is not None:
         entry["elapsed_s"] = round(elapsed_s, 2)
+    if tok_s_min is not None:
+        entry["tok_s_min"] = round(float(tok_s_min), 1)
+    if tok_s_max is not None:
+        entry["tok_s_max"] = round(float(tok_s_max), 1)
+    if sessions is not None:
+        entry["sessions"] = sessions
+    if turns_per_session is not None:
+        entry["turns_per_session"] = turns_per_session
+    if run_tok_s:
+        entry["run_tok_s"] = [round(float(v), 1) for v in run_tok_s]
     if note:
         entry["note"] = note
     profiles[profile_id] = entry
@@ -365,7 +380,129 @@ def record_benchmark(
     return entry
 
 
-def run_benchmark(max_tokens: int = 64) -> dict[str, Any]:
+BENCH_WARMUP_SESSIONS = 1
+BENCH_MEASURED_SESSIONS = 3
+BENCH_TURNS_PER_SESSION = 3
+BENCH_MAX_TOKENS = 256
+BENCH_MIN_COMPLETION_TOKENS = 48
+BENCH_TEMPERATURE = 0.0
+BENCH_SYSTEM = (
+    "You are a helpful assistant running a throughput benchmark. "
+    "Follow instructions precisely and write substantive responses."
+)
+BENCH_USER_TURNS = [
+    (
+        "Task: design a small REST API for a model inventory service. "
+        "Reply with exactly 8 numbered bullets; each bullet must be one full sentence."
+    ),
+    (
+        "Expand bullets 3 and 4 into Python pseudocode with comments. "
+        "Include at least 20 lines of code total."
+    ),
+    (
+        "List 6 edge cases this API must handle and one pytest idea for each. "
+        "Use a numbered list with two sentences per item."
+    ),
+]
+
+
+def _chat_completion(
+    port: int,
+    model: str,
+    messages: list[dict[str, str]],
+    *,
+    max_tokens: int,
+    min_tokens: int,
+    timeout: float = 180.0,
+) -> tuple[dict[str, Any], float]:
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "min_tokens": min_tokens,
+            "temperature": BENCH_TEMPERATURE,
+        }
+    ).encode()
+    req = Request(
+        f"http://127.0.0.1:{port}/v1/chat/completions",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    start = time.perf_counter()
+    with urlopen(req, timeout=timeout) as resp:
+        payload = json.loads(resp.read().decode())
+    elapsed = time.perf_counter() - start
+    return payload, elapsed
+
+
+def _completion_tokens(payload: dict[str, Any]) -> int:
+    usage = payload.get("usage") or {}
+    completion_tokens = usage.get("completion_tokens")
+    if completion_tokens is not None:
+        return int(completion_tokens)
+    choice = (payload.get("choices") or [{}])[0]
+    text = choice.get("message", {}).get("content") or choice.get("text") or ""
+    return max(1, len(text.split()))
+
+
+def _assistant_text(payload: dict[str, Any]) -> str:
+    choice = (payload.get("choices") or [{}])[0]
+    return (choice.get("message", {}).get("content") or choice.get("text") or "").strip()
+
+
+def _bench_agent_session(
+    port: int,
+    model: str,
+    turn_prompts: list[str],
+) -> tuple[int, int, float]:
+    messages: list[dict[str, str]] = [{"role": "system", "content": BENCH_SYSTEM}]
+    total_completion = 0
+    total_prompt = 0
+    total_elapsed = 0.0
+
+    for user_text in turn_prompts:
+        messages.append({"role": "user", "content": user_text})
+        payload, elapsed = _chat_completion(
+            port,
+            model,
+            messages,
+            max_tokens=BENCH_MAX_TOKENS,
+            min_tokens=BENCH_MIN_COMPLETION_TOKENS,
+        )
+        completion_tokens = _completion_tokens(payload)
+        if completion_tokens < BENCH_MIN_COMPLETION_TOKENS:
+            retry_text = user_text + " Write a longer, more detailed response."
+            payload, retry_elapsed = _chat_completion(
+                port,
+                model,
+                messages[:-1] + [{"role": "user", "content": retry_text}],
+                max_tokens=BENCH_MAX_TOKENS,
+                min_tokens=BENCH_MIN_COMPLETION_TOKENS,
+            )
+            elapsed += retry_elapsed
+            completion_tokens = _completion_tokens(payload)
+        if completion_tokens < BENCH_MIN_COMPLETION_TOKENS:
+            raise RuntimeError(
+                f"benchmark turn too short ({completion_tokens} tok) — model stopped early"
+            )
+
+        usage = payload.get("usage") or {}
+        total_completion += completion_tokens
+        total_prompt += int(usage.get("prompt_tokens") or 0)
+        total_elapsed += elapsed
+        messages.append({"role": "assistant", "content": _assistant_text(payload)})
+
+    return total_completion, total_prompt, total_elapsed
+
+
+def run_benchmark(
+    *,
+    warmup_sessions: int = BENCH_WARMUP_SESSIONS,
+    measured_sessions: int = BENCH_MEASURED_SESSIONS,
+    turns_per_session: int = BENCH_TURNS_PER_SESSION,
+) -> dict[str, Any]:
     active = detect_active_profile()
     if not active:
         raise RuntimeError("no active profile")
@@ -376,49 +513,59 @@ def run_benchmark(max_tokens: int = 64) -> dict[str, Any]:
 
     port = int(recipe.get("port") or 0)
     served = recipe.get("served_name")
-    body = json.dumps(
-        {
-            "model": served,
-            "prompt": "Reply with one short sentence listing three colors.",
-            "max_tokens": max_tokens,
-            "temperature": 0.2,
-        }
-    ).encode()
-    req = Request(
-        f"http://127.0.0.1:{port}/v1/completions",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    start = time.perf_counter()
-    with urlopen(req, timeout=180) as resp:
-        payload = json.loads(resp.read().decode())
-    elapsed = time.perf_counter() - start
+    turn_prompts = BENCH_USER_TURNS[:turns_per_session]
+    if len(turn_prompts) < turns_per_session:
+        raise RuntimeError("benchmark turn prompts misconfigured")
 
-    usage = payload.get("usage") or {}
-    completion_tokens = usage.get("completion_tokens")
-    if completion_tokens is None:
-        text = ((payload.get("choices") or [{}])[0]).get("text") or ""
-        completion_tokens = max(1, len(text.split()))
+    for _ in range(warmup_sessions):
+        _bench_agent_session(port, served, turn_prompts)
 
-    tok_s = completion_tokens / elapsed if elapsed > 0 else 0.0
+    run_rates: list[float] = []
+    total_completion = 0
+    total_prompt = 0
+    total_elapsed = 0.0
+    for _ in range(measured_sessions):
+        completion_tokens, prompt_tokens, elapsed = _bench_agent_session(
+            port, served, turn_prompts
+        )
+        if elapsed <= 0:
+            raise RuntimeError("benchmark elapsed time was zero")
+        run_rates.append(completion_tokens / elapsed)
+        total_completion += completion_tokens
+        total_prompt += prompt_tokens
+        total_elapsed += elapsed
+
+    tok_s = sum(run_rates) / len(run_rates)
     bench = record_benchmark(
         profile_id,
         recipe,
         tok_s,
-        method="bench",
-        completion_tokens=int(completion_tokens),
-        prompt_tokens=usage.get("prompt_tokens"),
-        elapsed_s=elapsed,
-        note=f"bench {int(completion_tokens)} tok in {elapsed:.1f}s",
+        method="bench-agent",
+        completion_tokens=total_completion,
+        prompt_tokens=total_prompt,
+        elapsed_s=total_elapsed,
+        tok_s_min=min(run_rates),
+        tok_s_max=max(run_rates),
+        sessions=measured_sessions,
+        turns_per_session=turns_per_session,
+        run_tok_s=run_rates,
+        note=(
+            f"agent bench avg {tok_s:.1f} tok/s over {measured_sessions} sessions "
+            f"× {turns_per_session} turns ({total_completion} tok in {total_elapsed:.1f}s)"
+        ),
     )
     return {
         "profile": profile_id,
         "served_name": served,
         "tok_s": bench["tok_s"],
-        "completion_tokens": completion_tokens,
-        "prompt_tokens": usage.get("prompt_tokens"),
-        "elapsed_s": round(elapsed, 2),
+        "tok_s_min": bench.get("tok_s_min"),
+        "tok_s_max": bench.get("tok_s_max"),
+        "run_tok_s": run_rates,
+        "sessions": measured_sessions,
+        "turns_per_session": turns_per_session,
+        "completion_tokens": total_completion,
+        "prompt_tokens": total_prompt,
+        "elapsed_s": round(total_elapsed, 2),
         "benchmark": bench,
     }
 
@@ -591,10 +738,18 @@ def cmd_bench() -> int:
         result = run_benchmark()
     except (RuntimeError, URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
         raise SystemExit(str(exc)) from exc
+    runs = ", ".join(f"{v:.1f}" for v in result.get("run_tok_s") or [])
     print(
-        f"Benchmark {result['profile']}: {result['tok_s']:.1f} tok/s "
-        f"({result['completion_tokens']} tokens in {result['elapsed_s']:.1f}s)"
+        f"Benchmark {result['profile']}: {result['tok_s']:.1f} tok/s avg "
+        f"({result['sessions']} sessions × {result['turns_per_session']} turns, "
+        f"{result['completion_tokens']} tokens in {result['elapsed_s']:.1f}s)"
     )
+    if runs:
+        print(f"  session tok/s: {runs}")
+    if result.get("tok_s_min") is not None and result.get("tok_s_max") is not None:
+        print(
+            f"  range: {result['tok_s_min']:.1f}–{result['tok_s_max']:.1f} tok/s"
+        )
     return 0
 
 
@@ -603,7 +758,7 @@ def usage() -> None:
         """Usage: spark-inference {list|status|up <profile>|down|logs [profile]|bench}
 
 Recipe-driven inference control (Phase 5). One GPU workload at a time.
-bench — quick /v1/completions timing on the active profile (updates tok/s).
+bench — multi-turn agent-style timing on the active profile (avg of 3 sessions).
 Profiles: see data/inference-profiles.yaml and recipes/*.yaml"""
     )
 

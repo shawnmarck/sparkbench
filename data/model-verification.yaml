@@ -28,3 +28,12 @@ models:
     tok_s_engine: llamacpp
     tok_s_profile: google-gemma-4-12b-it-llama
     note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 109.4s)"
+  microsoft/phi-4:
+    removal_pending: true
+    removal_queued_at: '2026-06-21T17:20:57.143401+00:00'
+  nvidia/qwen3-30b-a3b:
+    removal_pending: true
+    removal_queued_at: '2026-06-21T17:21:09.913575+00:00'
+  deepseek-ai/deepseek-r1-distill-qwen-32b:
+    removal_pending: true
+    removal_queued_at: '2026-06-21T17:21:35.987485+00:00'

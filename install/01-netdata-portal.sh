@@ -11,14 +11,7 @@ mkdir -p "${TARGET}"/{portal,docs,install,services}
 rsync -a "${STAGING}/portal/" "${TARGET}/portal/"
 rsync -a "${STAGING}/docs/" "${TARGET}/docs/"
 rsync -a "${STAGING}/install/" "${TARGET}/install/"
-if [ -f "${STAGING}/README.md" ]; then
-  rsync -a "${STAGING}/README.md" "${TARGET}/README.md"
-elif [ -f "${TARGET}/README.md" ] && [ ! -L "${TARGET}/README.md" ]; then
-  : # keep existing real root README
-else
-  rm -f "${TARGET}/README.md"
-  cp "${TARGET}/docs/README.md" "${TARGET}/README.md"
-fi
+[ -f "${STAGING}/README.md" ] && rsync -a "${STAGING}/README.md" "${TARGET}/README.md"
 chown -R techno:techno "${TARGET}"
 
 echo "==> Installing Netdata (if missing)"

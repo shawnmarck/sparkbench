@@ -32,7 +32,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | Doc | Use when |
 |-----|----------|
 | `docs/ROADMAP.md` | **The plan** — phases, status, next steps |
-| `docs/README.md` | Doc index — what each file is for |
+| `README.md` | Repo homepage + doc index |
 | `docs/guides/model-shelf.md` | `/models` + NAS shelf layout |
 | `docs/guides/model-picks.md` | Why each model is in the catalog |
 | `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark-eugr`) |
@@ -40,7 +40,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | `docs/reference/inference-stack.md` | Phase 5 technical spec |
 | `install/INSTALL.md` | Install script index + order |
 
-`docs/ROADMAP.md` is the single source of truth for phases. Other docs are guides, runbooks, or specs — see `docs/README.md`.
+`docs/ROADMAP.md` is the single source of truth for phases. Other docs are guides, runbooks, or specs — see `README.md`.
 
 ## Key URLs
 

@@ -176,7 +176,8 @@ Deferred until desk setup is stable.
 ├── install/           sudo install scripts
 ├── data/              model-catalog.yaml, model-verification.yaml
 ├── recipes/           inference profiles (Phase 5)
-├── docs/              README + ROADMAP + guides/runbooks/reference
+├── README.md          Repo homepage + doc index
+├── docs/              ROADMAP + guides/runbooks/reference
 └── services/          eugr recipe yaml, compose files
 ```
 
@@ -186,4 +187,4 @@ Staging: `~/spark` → promoted by install scripts.
 
 ## Documentation
 
-See [`docs/README.md`](README.md) (index) and root [`README.md`](../README.md) (repo homepage).
+See [`README.md`](../README.md) for the doc index and repo homepage.

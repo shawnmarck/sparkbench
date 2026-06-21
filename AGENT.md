@@ -11,7 +11,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 ```
 /opt/spark/
 ├── AGENT.md              This file
-├── README.md             → docs/README.md
+├── README.md             Repo homepage (GitHub + local)
 ├── portal/               Static UI (nginx :80)
 │   ├── assets/           sparky-theme.js, oobe-nebula.js, nebula-tune.js
 │   └── themes/           theme-b.css, theme-ui.css

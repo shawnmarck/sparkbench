@@ -186,4 +186,4 @@ Staging: `~/spark` → promoted by install scripts.
 
 ## Documentation
 
-See [`README.md`](README.md) for what each doc is for.
+See [`docs/README.md`](README.md) (index) and root [`README.md`](../README.md) (repo homepage).

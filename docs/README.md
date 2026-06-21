@@ -1,12 +1,6 @@
-# Spark Home Lab
+# Documentation index
 
-Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, NAS shelf sync, inference tooling.
-
-<p align="center">
-  <video src="https://raw.githubusercontent.com/shawnmarck/sparky-dashboard/main/docs/assets/portal-nebula-theme.mp4" autoplay muted loop playsinline controls width="100%" style="max-width: 820px; border-radius: 12px;">
-    <a href="docs/assets/portal-nebula-theme.mp4">Portal nebula theme demo (mp4)</a>
-  </video>
-</p>
+Repo homepage: [`README.md`](../README.md).
 
 ## Links
 

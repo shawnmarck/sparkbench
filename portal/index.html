@@ -55,10 +55,14 @@
     .metric-value.temp-warn { color: var(--warn); }
     .metric-value.temp-hot { color: #f08a5d; }
     .section-title { margin: 1rem 0 .5rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
-    .disk-grid { display: grid; gap: .65rem; }
-    .disk-row { display: grid; grid-template-columns: 5.5rem 1fr 4.5rem; gap: .6rem; align-items: center; font-size: .8rem; font-family: ui-monospace, monospace; }
-    .disk-row .metric-bar { margin: 0; height: 6px; }
-    .disk-unmounted { color: var(--down); }
+    .storage-grid { display: grid; gap: .75rem; }
+    .storage-card { padding: .65rem .75rem; background: #12151c; border: 1px solid var(--border); border-radius: 10px; }
+    .storage-head { display: flex; flex-wrap: wrap; gap: .35rem .75rem; justify-content: space-between; align-items: baseline; margin-bottom: .45rem; font-size: .8rem; }
+    .storage-head strong { color: var(--text); font-weight: 600; }
+    .storage-models { color: var(--accent); font-family: ui-monospace, monospace; }
+    .storage-disk { color: var(--muted); font-family: ui-monospace, monospace; font-size: .76rem; }
+    .storage-card .metric-bar { margin: 0; height: 6px; }
+    .storage-offline { color: var(--down); font-size: .78rem; font-family: ui-monospace, monospace; }
     .status-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .35rem; }
     .pill { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; padding: .25rem .55rem; border-radius: 999px; border: 1px solid var(--border); font-family: ui-monospace, monospace; color: #c5cdd8; }
     .pill.up { border-color: #2a4a2a; color: var(--ok); }
@@ -147,8 +151,8 @@
           <div class="status-row" id="inference-status"></div>
           <div class="svc-list" id="containers"></div>
 
-          <div class="section-title">Storage</div>
-          <div class="disk-grid" id="disks"></div>
+          <div class="section-title">Model storage</div>
+          <div class="storage-grid" id="storage"></div>
         </div>
       </div>
     </div>
@@ -198,14 +202,27 @@
           + '</svg>';
       }
 
-      function renderDisks(disks) {
-        $('disks').innerHTML = disks.map((d) => {
-          if (!d.mounted) {
-            return '<div class="disk-row disk-unmounted"><span>' + d.label + '</span><span>not mounted</span><span>' + d.path + '</span></div>';
+      function fmtStorageSize(gb) {
+        if (gb == null) return '—';
+        if (gb >= 1024) return (gb / 1024).toFixed(1) + ' TB';
+        return gb.toFixed(1) + ' GB';
+      }
+
+      function renderStorage(volumes) {
+        $('storage').innerHTML = (volumes || []).map((v) => {
+          if (!v.online) {
+            return '<div class="storage-card"><div class="storage-head"><strong>' + v.label + '</strong>'
+              + '<span class="storage-offline">offline</span></div>'
+              + '<div class="storage-disk">' + v.models_path + '</div></div>';
           }
-          return '<div class="disk-row"><span>' + d.label + '</span>'
-            + '<div class="metric-bar"><i style="width:' + d.used_pct + '%"></i></div>'
-            + '<span>' + d.used_gb + ' / ' + d.total_gb + ' GB</span></div>';
+          const models = v.models_gb != null
+            ? '<span class="storage-models">' + fmtStorageSize(v.models_gb) + ' models</span>'
+            : '<span class="storage-models">models —</span>';
+          const disk = fmtStorageSize(v.used_gb) + ' / ' + fmtStorageSize(v.total_gb)
+            + ' · ' + fmtStorageSize(v.avail_gb) + ' free';
+          return '<div class="storage-card"><div class="storage-head"><strong>' + v.label + '</strong>' + models + '</div>'
+            + '<div class="metric-bar"><i style="width:' + v.used_pct + '%"></i></div>'
+            + '<div class="storage-disk">' + disk + '</div></div>';
         }).join('');
       }
 
@@ -278,7 +295,7 @@
           }
           sparkline($('power-spark'), hist.gpu_power_w, '#6bc46d');
 
-          renderDisks(d.disks || []);
+          renderStorage(d.storage || []);
           renderInference(d.inference || {});
           renderContainers(d.containers || []);
 

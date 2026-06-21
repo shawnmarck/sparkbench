@@ -9,6 +9,7 @@ import time
 import urllib.error
 import urllib.request
 from collections import deque
+from pathlib import Path
 
 _HISTORY_LEN = 60
 _HISTORY = {
@@ -165,33 +166,91 @@ def read_uptime():
     }
 
 
-def read_disk(path, label):
-    mounted = os.path.ismount(path) if path.startswith("/mnt") else os.path.exists(path)
-    if not mounted and path.startswith("/mnt"):
-        return {"label": label, "path": path, "mounted": False}
+_MODEL_SIZE_CACHE = {"at": 0.0, "local_gb": None, "shelf_gb": None}
+_MODEL_SIZE_TTL = 120
+_INVENTORY_JSON = Path("/opt/spark/portal/models.json")
+
+
+def _round_gb(nbytes: int) -> float:
+    return round(nbytes / (1024**3), 1)
+
+
+def read_model_footprints() -> tuple[float | None, float | None]:
+    now = time.time()
+    if now - _MODEL_SIZE_CACHE["at"] < _MODEL_SIZE_TTL:
+        return _MODEL_SIZE_CACHE["local_gb"], _MODEL_SIZE_CACHE["shelf_gb"]
+
+    local_gb = None
+    shelf_gb = None
+    if _INVENTORY_JSON.is_file():
+        try:
+            payload = json.loads(_INVENTORY_JSON.read_text())
+            models = payload.get("models") or []
+            local_bytes = sum(
+                (m.get("local") or {}).get("size_bytes", 0) for m in models
+            )
+            shelf_bytes = sum(
+                (m.get("shelf") or {}).get("size_bytes", 0) for m in models
+            )
+            local_gb = _round_gb(local_bytes)
+            shelf_gb = _round_gb(shelf_bytes)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    _MODEL_SIZE_CACHE.update(
+        {"at": now, "local_gb": local_gb, "shelf_gb": shelf_gb}
+    )
+    return local_gb, shelf_gb
+
+
+def read_volume_usage(path: str) -> dict | None:
     try:
         usage = shutil.disk_usage(path)
-        total_gb = round(usage.total / (1024**3), 1)
-        used_gb = round(usage.used / (1024**3), 1)
-        used_pct = round(usage.used / usage.total * 100, 1) if usage.total else 0.0
-        return {
-            "label": label,
-            "path": path,
-            "mounted": True,
-            "total_gb": total_gb,
-            "used_gb": used_gb,
-            "used_pct": used_pct,
-        }
     except OSError:
-        return {"label": label, "path": path, "mounted": False}
+        return None
+    total_gb = _round_gb(usage.total)
+    used_gb = _round_gb(usage.used)
+    avail_gb = _round_gb(usage.free)
+    used_pct = round(usage.used / usage.total * 100, 1) if usage.total else 0.0
+    return {
+        "total_gb": total_gb,
+        "used_gb": used_gb,
+        "avail_gb": avail_gb,
+        "used_pct": used_pct,
+    }
 
 
-def read_disks():
-    return [
-        read_disk("/", "root"),
-        read_disk("/models", "models"),
-        read_disk("/mnt/model-shelf", "nas"),
-    ]
+def read_storage():
+    local_models_gb, shelf_models_gb = read_model_footprints()
+    volumes = []
+
+    spark_usage = read_volume_usage("/")
+    volumes.append(
+        {
+            "label": "Spark SSD",
+            "role": "local",
+            "models_path": "/models",
+            "models_gb": local_models_gb,
+            "disk_path": "/",
+            "online": spark_usage is not None,
+            **(spark_usage or {}),
+        }
+    )
+
+    nas_mounted = os.path.ismount("/mnt/model-shelf")
+    nas_usage = read_volume_usage("/mnt/model-shelf") if nas_mounted else None
+    volumes.append(
+        {
+            "label": "NAS shelf",
+            "role": "nas",
+            "models_path": "/mnt/model-shelf/models",
+            "models_gb": shelf_models_gb if nas_mounted else None,
+            "disk_path": "/mnt/model-shelf",
+            "online": nas_mounted and nas_usage is not None,
+            **(nas_usage or {}),
+        }
+    )
+    return volumes
 
 
 def read_docker():
@@ -303,7 +362,7 @@ def read_metrics():
     metrics.update(read_thermals())
     metrics.update(read_uptime())
     metrics.update(read_load())
-    metrics["disks"] = read_disks()
+    metrics["storage"] = read_storage()
     metrics["containers"] = read_docker()
     metrics["inference"] = read_inference()
     metrics["history"] = append_history(metrics)

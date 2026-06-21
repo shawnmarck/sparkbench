@@ -6,6 +6,7 @@ Last updated: 2026-06-21
 
 - [x] SSH keys + hostname (`sparky`, 192.168.0.101)
 - [x] Portal at http://sparky/ (System | Models | Chat | Netdata tabs)
+- [x] Optional Theme B nebula background (constellation toggle; System + Models)
 - [x] Netdata at http://sparky:19999
 - [x] GPU metrics widget (`spark-gpu-metrics` → `/api/gpu`)
 
@@ -46,19 +47,28 @@ Run **one GPU engine at a time** — stop vLLM (`spark-eugr down`) before llama.
 
 See `docs/LLAMACPP-SMOKE.md`. Install: `sudo /opt/spark/install/13-llama-cpp-smoke.sh`
 
-## Phase 4 — UI bake-off (in progress)
+## Phase 4 — UI bake-off ✅ closed
 
-**Compare:** vLLM Studio vs Rookery (orchestrator UIs)
+**Result:** Bake-off UIs removed. Use thin control plane (Phase 5).
 
-**Do not compare:** Docker vs eugr — eugr is the engine layer both UIs call.
+**Keep:** Open WebUI (:3000) for private chat.
 
-| Layer | Examples | Bake-off? |
-|-------|----------|-----------|
-| Engine | eugr vLLM, llama.cpp | Pick what works on Spark first ✅ vLLM |
-| Orchestrator UI | vLLM Studio, Rookery | **Yes — next after 3b** |
-| API gateway | LiteLLM | Later |
+| Layer | Examples | Status |
+|-------|----------|--------|
+| Engine | eugr vLLM, llama.cpp | ✅ |
+| Orchestrator UI | (removed) | Phase 5 `spark-inference` spec |
+| API gateway | Your OSS gateway | Separate product |
 
-## Phase 5 — Closet / 10Gb
+## Phase 5 — Inference stack (next)
+
+Goal: thin recipe + switch control plane. Spec: `docs/INFERENCE-STACK.md`.
+
+- [ ] `/opt/spark/recipes/` catalog
+- [ ] `spark-inference` CLI + HTTP API
+- [ ] Portal Inference tab
+- [ ] Hermes Agent → local fast tier
+
+## Phase 6 — Closet / 10Gb
 
 Deferred until desk setup is stable.
 
@@ -70,9 +80,7 @@ Deferred until desk setup is stable.
 
 ## Layout
 
-- `/opt/spark/` — dashboard repo (portal, inventory, install scripts)
-- `/ops/rookery/` — Rookery bake-off
-- `/ops/vllm-studio/` — vLLM Studio bake-off
+- `/opt/spark/` — dashboard repo (portal, inventory, install scripts, recipes)
 
 ## Current stack (quick reference)
 
@@ -82,7 +90,5 @@ Deferred until desk setup is stable.
 | Models | http://sparky/models.html | inventory JSON |
 | vLLM | http://sparky:8000/v1 | `spark-eugr up/down/status` |
 | Open WebUI | http://sparky:3000 | docker |
-| Rookery | http://sparky:3131 | `spark-rookery` |
-| vLLM Studio | http://sparky:3080 | `spark-vllm-studio` |
 | Shelf push | — | `spark-shelf-push --all --background --bwlimit 200` |
 | HF auth | — | `spark-hf-login` |

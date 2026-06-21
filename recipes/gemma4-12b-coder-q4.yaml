@@ -1,0 +1,22 @@
+id: gemma4-12b-coder-q4
+name: Gemma 4 12B Coder (Fable5×Composer2.5) Q4
+catalog_id: yuxinlu1/gemma-4-12b-coder-gguf
+engine: llamacpp
+tier: fast
+model: /models/yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1/gguf/gemma4-coding-Q4_K_M.gguf
+served_name: gemma4-12b-coder-q4
+port: 8081
+tags:
+  - testing
+  - coding
+  - llamacpp
+llamacpp_args:
+  - -ngl 999
+  - -fa 1
+  - --no-mmap
+  - -c 32768
+notes: |
+  Community Gemma 4 12B coding fine-tune (yuxinlu1). Q4_K_M ~6.9GB.
+  Smoke tested 2026-06-21 on GB10: ~21 tok/s, 32k ctx loaded.
+  Thinking-style output — prompt "output ONLY code" for clean content field.
+  Start: SPARK_LLAMA_MODEL=<model> SPARK_LLAMA_NAME=gemma4-12b-coder-q4 spark-llama up

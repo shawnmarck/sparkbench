@@ -35,15 +35,13 @@ Staging copies may live in `~/spark` until install scripts promote to `/opt/spar
 
 | Service | URL | Notes |
 |---------|-----|-------|
-| Portal | http://sparky/ | System · Models · Chat · Netdata |
+| Portal | http://sparky/ | System · Models · Chat · Netdata (optional nebula theme) |
 | Models | http://sparky/models.html | Inventory + shelf ops |
 | Metrics | http://sparky/api/gpu | `spark-gpu-metrics` |
 | Netdata | http://sparky:19999/v3/ | Host metrics |
 | vLLM (eugr) | http://sparky:8000/v1 | `spark-eugr` |
 | llama.cpp | http://sparky:8081/v1 | `spark-llama` |
 | Open WebUI | http://sparky:3000 | Chat UI |
-| vLLM Studio | http://sparky:3080 | Bake-off UI (primary) |
-| Rookery | http://sparky:3131 | Experimental / disqualified |
 
 ## Model storage
 
@@ -67,6 +65,20 @@ spark-hf-login                 # Hugging Face token
 
 Downloads: `scripts/spark-download-models.sh` (batch), `scripts/spark-download-gemma4.sh` (Gemma 4 add-on).
 
+## Portal theme (Theme B)
+
+Optional DGX OOBE-style nebula canvas on **System** and **Models**. Toggle via the constellation icon in the top nav; preference persists in `localStorage` (`sparky-theme`). Add `?theme=b` to URL to opt in on first visit.
+
+| Path | Role |
+|------|------|
+| `portal/assets/sparky-theme.js` | Toggle, live theme switch, parent/iframe sync |
+| `portal/assets/oobe-nebula.js` | Canvas particle animation |
+| `portal/assets/nebula-tune.js` | Dev tuning panel (gear icon, bottom-left) |
+| `portal/themes/theme-b.css` | Nebula layout + frosted cards |
+| `portal/themes/theme-ui.css` | Toggle + tune panel styles |
+
+Default theme (navy) is unchanged when Theme B is off. Bake-off nav links (Rookery, Studio) removed from portal.
+
 ## Install / update
 
 ```bash
@@ -76,15 +88,12 @@ sudo bash install/<script>.sh
 
 Core stack: `02` → `03` → `04` → `05` → `10` → `11` → `12`.  
 Inference: `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh` (one engine at a time).  
-UI bake-off: `18-ops-layout.sh` → `17-vllm-studio.sh`.
-
 ## Documentation map
 
 | Doc | Topic |
 |-----|-------|
 | `ROADMAP.md` | Phases and status |
-| `BAKE-OFF.md` | vLLM Studio vs Rookery |
-| `OPS-LAYOUT.md` | `/ops` directory layout |
+| `INFERENCE-STACK.md` | Phase 5 inference control plane spec |
 | `INFERENCE-SMOKE.md` | eugr vLLM smoke |
 | `LLAMACPP-SMOKE.md` | llama.cpp smoke |
 | `MODEL-SHELF.md` | Shelf layout + sync |
@@ -101,6 +110,7 @@ UI bake-off: `18-ops-layout.sh` → `17-vllm-studio.sh`.
 
 ## Changelog
 
+- 2026-06-21: Theme B nebula portal skin (System + Models), iframe theme sync, tuned defaults; bake-off UIs removed (Rookery, vLLM Studio); Phase 5 `INFERENCE-STACK.md` + `recipes/` scaffold; inference-profiles.yaml
 - 2026-06-21: AGENT.md, install renumber, nginx common helper, network tile, model inventory chips
 - 2026-06-21: Shelf API, Spark verify, queued removal, llama.cpp + Gemma 4 catalog
 - 2026-06-21: Initial portal + Netdata

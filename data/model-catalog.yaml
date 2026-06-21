@@ -11,8 +11,9 @@ models:
   - vllm
   - nvfp4
   - agentic
-  why_downloaded: 'Your requested flagship Qwen3.6 MoE (~3B active / 35B total). NVIDIA NVFP4 build is the native Spark/Blackwell
-    vLLM path — primary production inference target.
+  why_downloaded: 'Your requested flagship Qwen3.6 MoE (~3B active / 35B total). NVIDIA
+    NVFP4 build is the native Spark/Blackwell vLLM path — primary production inference
+    target.
 
     '
   variants:
@@ -31,7 +32,8 @@ models:
   - llamacpp
   - gguf
   - agentic
-  why_downloaded: 'Same Qwen3.6 base model for llama.cpp bake-off. Q4_K_M + MXFP4_MOE quants only (full Unsloth repo is ~550GB).
+  why_downloaded: 'Same Qwen3.6 base model for llama.cpp bake-off. Q4_K_M + MXFP4_MOE
+    quants only (full Unsloth repo is ~550GB).
 
     '
   variants:
@@ -52,8 +54,8 @@ models:
   - vllm
   - nvfp4
   - tool-calling
-  why_downloaded: 'Faster MoE sibling for interactive agent loops — lower latency and memory pressure when max intelligence
-    isn''t required.
+  why_downloaded: 'Faster MoE sibling for interactive agent loops — lower latency
+    and memory pressure when max intelligence isn''t required.
 
     '
   variants:
@@ -74,8 +76,9 @@ models:
   - function-calling
   - router
   - hermes-4
-  why_downloaded: Nous Hermes 4 (Aug 2025) — smallest Hermes 4 size (14B Qwen3 base). Hybrid reasoning, tool calling, structured
-    outputs. Replaces Hermes-3-8B as the lightweight Nous agent/router slot on Spark.
+  why_downloaded: Nous Hermes 4 (Aug 2025) — smallest Hermes 4 size (14B Qwen3 base).
+    Hybrid reasoning, tool calling, structured outputs. Replaces Hermes-3-8B as the
+    lightweight Nous agent/router slot on Spark.
   variants:
   - format: hf
     subpath: hf
@@ -92,7 +95,8 @@ models:
   - moe
   - llamacpp
   - gguf
-  why_downloaded: 'DGX Spark forum pick for agentic coding. MoE coder fits 128GB; Q4 + Q5 GGUF for llama.cpp bake-off path.
+  why_downloaded: 'DGX Spark forum pick for agentic coding. MoE coder fits 128GB;
+    Q4 + Q5 GGUF for llama.cpp bake-off path.
 
     '
   variants:
@@ -111,8 +115,8 @@ models:
   - intelligence
   - chain-of-thought
   - vllm
-  why_downloaded: 'Reasoning slot — distilled R1 CoT in 32B dense. Hard planning without 671B MoE complexity. Note: R1 distill
-    lineage; not the newest frontier model.
+  why_downloaded: 'Reasoning slot — distilled R1 CoT in 32B dense. Hard planning without
+    671B MoE complexity. Note: R1 distill lineage; not the newest frontier model.
 
     '
   variants:
@@ -130,8 +134,9 @@ models:
   - fast
   - low-latency
   - vllm
-  why_downloaded: 'Spark community fast-general pick — quick drafts, classification, first-pass before escalating to larger
-    models. Released late 2024; smaller but capable.
+  why_downloaded: 'Spark community fast-general pick — quick drafts, classification,
+    first-pass before escalating to larger models. Released late 2024; smaller but
+    capable.
 
     '
   variants:
@@ -154,8 +159,9 @@ models:
   - vllm
   - llamacpp
   - apache-2.0
-  why_downloaded: 'Best mid-size Gemma 4 for a single Spark: encoder-free unified multimodal (text/image/audio), 256K context,
-    near-26B-MoE quality at ~12B dense. Apache 2.0, not gated. Prefer -it over base.
+  why_downloaded: 'Best mid-size Gemma 4 for a single Spark: encoder-free unified
+    multimodal (text/image/audio), 256K context, near-26B-MoE quality at ~12B dense.
+    Apache 2.0, not gated. Prefer -it over base.
 
     '
   variants:
@@ -182,8 +188,9 @@ models:
   - coding
   - vllm
   - apache-2.0
-  why_downloaded: 'Popular MoE pick (~3.8B active / 26B total) — same efficiency class as Qwen3.6 MoE. 256K context, text+image.
-    Heavier than 12B but fast inference per token.
+  why_downloaded: 'Popular MoE pick (~3.8B active / 26B total) — same efficiency class
+    as Qwen3.6 MoE. 256K context, text+image. Heavier than 12B but fast inference
+    per token.
 
     '
   variants:
@@ -202,8 +209,10 @@ models:
   - llamacpp
   - gguf
   - thinking
-  why_downloaded: 'Community coding fine-tune of Gemma 4 12B — verifiable Python CoT, thinking mode. Q4_K_M ~7.4GB. Niche
-    vs official -it; v2 agentic release exists if you want newer.
+  - testing
+  why_downloaded: 'Community coding fine-tune of Gemma 4 12B — verifiable Python CoT,
+    thinking mode. Q4_K_M ~7.4GB. Niche vs official -it; v2 agentic release exists
+    if you want newer.
 
     '
   variants:

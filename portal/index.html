@@ -4,6 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sparky — Home Lab Portal</title>
+  <link rel="stylesheet" href="/themes/theme-ui.css">
+  <link rel="stylesheet" href="/themes/theme-b.css" id="theme-b-stylesheet" media="not all">
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var fromUrl = p.get('theme');
+      if (fromUrl) localStorage.setItem('sparky-theme', fromUrl);
+      var t = fromUrl || localStorage.getItem('sparky-theme') || 'a';
+      if (t === 'b') {
+        document.documentElement.classList.add('theme-b');
+        document.getElementById('theme-b-stylesheet').media = 'all';
+      }
+    })();
+  </script>
   <style>
     :root { color-scheme: dark; --bg: #0f1117; --card: #1a1d27; --text: #e6e6e6; --muted: #9aa0a6; --accent: #76b900; --border: #2a2f3a; --ok: #6bc46d; --warn: #e8b84a; --down: #c85c5c; --nav-h: 52px; }
     * { box-sizing: border-box; }
@@ -99,16 +113,30 @@
       <a href="/models.html" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
-      <a href="http://sparky:3131/" class="nav-btn experimental" title="Experimental — disqualified in bake-off (see docs/BAKE-OFF.md)" data-src="http://sparky:3131/" data-title="Rookery (experimental)" data-popout="http://sparky:3131/">Rookery</a>
-      <a href="http://sparky:3080/" class="nav-btn" data-src="http://sparky:3080/" data-title="vLLM Studio" data-popout="http://sparky:3080/">Studio</a>
-
     </nav>
     <div class="nav-meta">
+      <button type="button" class="theme-toggle" id="theme-toggle" title="Nebula background" aria-label="Toggle nebula background">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle class="theme-toggle-ring" cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width=".55" stroke-dasharray="3.5 16" fill="none"/>
+          <circle class="theme-toggle-core" cx="12" cy="12" r="1.6" fill="currentColor"/>
+          <g class="theme-toggle-orbit">
+            <circle cx="7.2" cy="9" r="1" fill="currentColor" opacity=".75"/>
+            <circle cx="17" cy="8.2" r="1" fill="currentColor" opacity=".75"/>
+            <circle cx="15.2" cy="16" r=".9" fill="currentColor" opacity=".55"/>
+            <circle cx="8.2" cy="15.4" r=".75" fill="currentColor" opacity=".45"/>
+            <path d="M12 12L7.2 9M12 12L17 8.2M12 12L15.2 16M7.2 9L8.2 15.4" stroke="currentColor" stroke-width=".65" stroke-linecap="round" opacity=".35"/>
+          </g>
+        </svg>
+      </button>
       <span class="live" id="live"><i></i>live</span>
     </div>
   </header>
 
   <div class="shell">
+    <div class="theme-b-nebula-wrap" id="theme-b-nebula-wrap" aria-hidden="true">
+      <canvas id="theme-b-nebula-canvas"></canvas>
+      <div class="scrim"></div>
+    </div>
     <div class="dashboard" id="dashboard">
       <div class="dashboard-inner">
         <div class="card" id="system-card">
@@ -197,6 +225,10 @@
     </div>
   </div>
 
+  <script src="/assets/sparky-theme.js"></script>
+  <script>
+    SparkyTheme.init();
+  </script>
   <script>
     (function () {
       const $ = (id) => document.getElementById(id);
@@ -373,13 +405,19 @@
         const src = btn.dataset.src;
         const title = btn.dataset.title || src;
         const popout = btn.dataset.popout || src;
+        const frameSrc = window.SparkyTheme && SparkyTheme.themedUrl
+          ? SparkyTheme.themedUrl(src)
+          : src;
+        const popoutHref = window.SparkyTheme && SparkyTheme.themedUrl
+          ? SparkyTheme.themedUrl(popout)
+          : popout;
         onSystem = false;
         setActiveNav(btn);
         dashboard.style.display = 'none';
         framePanel.classList.add('open');
         $('frame-title').textContent = title;
-        $('frame-popout').href = popout;
-        if (frame.getAttribute('src') !== src) frame.src = src;
+        $('frame-popout').href = popoutHref;
+        frame.src = frameSrc;
       }
 
       function navModifierClick(e) {

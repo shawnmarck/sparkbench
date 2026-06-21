@@ -1,0 +1,232 @@
+.theme-b-nebula-wrap {
+  display: none;
+}
+
+.theme-toggle {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted, #9aa0a6);
+  padding: .3rem;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: .5;
+  line-height: 0;
+  transition: opacity .15s, color .15s, border-color .15s;
+}
+
+.theme-toggle:hover {
+  opacity: 1;
+  color: var(--text, #e6e6e6);
+  border-color: var(--border, #2a2f3a);
+}
+
+.theme-toggle.is-nebula {
+  opacity: .9;
+  color: #dfb15f;
+}
+
+.theme-toggle.is-nebula:hover {
+  border-color: rgba(223, 181, 95, 0.35);
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  overflow: visible;
+}
+
+.theme-toggle-orbit {
+  transform-origin: 12px 12px;
+  transform-box: fill-box;
+}
+
+.theme-toggle-ring {
+  transform-origin: 12px 12px;
+  transform-box: fill-box;
+  opacity: 0;
+}
+
+.theme-toggle.is-nebula .theme-toggle-orbit {
+  animation: theme-toggle-orbit 18s linear infinite;
+}
+
+.theme-toggle.is-nebula .theme-toggle-ring {
+  opacity: 0.22;
+  animation: theme-toggle-orbit 22s linear infinite reverse;
+}
+
+.theme-toggle.is-nebula .theme-toggle-core {
+  animation: theme-toggle-core-pulse 2.8s ease-in-out infinite;
+}
+
+.theme-toggle.is-nebula:hover .theme-toggle-orbit {
+  animation-duration: 14s;
+}
+
+.theme-toggle.is-nebula:hover .theme-toggle-ring {
+  animation-duration: 17s;
+  opacity: 0.32;
+}
+
+@keyframes theme-toggle-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes theme-toggle-core-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle .theme-toggle-orbit,
+  .theme-toggle .theme-toggle-ring,
+  .theme-toggle .theme-toggle-core {
+    animation: none;
+  }
+}
+
+.theme-toggle-floating {
+  position: fixed;
+  top: .7rem;
+  right: .85rem;
+  z-index: 20;
+}
+
+.nebula-tune-wrap {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .45rem;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  pointer-events: none;
+}
+
+.nebula-tune-wrap > * {
+  pointer-events: auto;
+}
+
+.nebula-tune-gear {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.72);
+  color: #9aa0a6;
+  padding: .38rem;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.nebula-tune-gear:hover {
+  color: #dfb15f;
+  border-color: rgba(223, 181, 95, 0.35);
+}
+
+.nebula-tune-gear svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.nebula-tune-panel {
+  width: min(320px, calc(100vw - 2rem));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: .75rem .85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(4, 4, 6, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #e6e6e6;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+}
+
+.nebula-tune-head {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  margin-bottom: .65rem;
+}
+
+.nebula-tune-head strong {
+  font-size: .82rem;
+  color: #dfb15f;
+  letter-spacing: .03em;
+}
+
+.nebula-tune-hint {
+  font-size: .68rem;
+  color: #9aa0a6;
+}
+
+.nebula-tune-row {
+  display: grid;
+  grid-template-columns: 5.8rem 1fr 2.6rem;
+  gap: .45rem;
+  align-items: center;
+  margin-bottom: .42rem;
+  font-size: .72rem;
+}
+
+.nebula-tune-label {
+  color: #9aa0a6;
+}
+
+.nebula-tune-row input[type=range] {
+  width: 100%;
+  accent-color: #76b900;
+}
+
+.nebula-tune-val {
+  font-family: ui-monospace, monospace;
+  font-size: .68rem;
+  color: #c5cdd8;
+  text-align: right;
+}
+
+.nebula-tune-json {
+  margin: .55rem 0 0;
+  padding: .5rem .55rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: .62rem;
+  line-height: 1.35;
+  color: #8fd400;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 8rem;
+  overflow: auto;
+}
+
+.nebula-tune-actions {
+  display: flex;
+  gap: .4rem;
+  margin-top: .55rem;
+}
+
+.nebula-tune-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.45);
+  color: #c5cdd8;
+  font: inherit;
+  font-size: .7rem;
+  padding: .35rem .55rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nebula-tune-btn:hover {
+  border-color: rgba(118, 185, 0, 0.35);
+  color: #76b900;
+}

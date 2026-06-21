@@ -41,16 +41,6 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 | `13-llama-cpp-smoke.sh` | Build llama.cpp + `spark-llama` |
 | `14-openwebui-dual-backend.sh` | Open WebUI dual backend compose |
 
-## UI bake-off (ops layout)
-
-| Script | Purpose |
-|--------|---------|
-| `18-ops-layout.sh` | `/ops` directory layout |
-| `19-rookery.sh` | Rookery install (**experimental**, disqualified in bake-off) |
-| `17-vllm-studio.sh` | vLLM Studio (primary bake-off UI) |
-| `17b-vllm-studio-node22.sh` | Node 22 fix variant |
-| `17c-vllm-studio-finish.sh` | Finish / enable services |
-
 ## Convenience
 
 | Script | Purpose |
@@ -64,5 +54,4 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 ```
 02 → 03 → 04 → 05 → 10 → 11 → 12
 16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
-17 (vLLM Studio) for bake-off UI
 ```

@@ -1,0 +1,5 @@
+# Enabled inference profiles (Phase 5). spark-inference will read this when implemented.
+profiles:
+  - gemma4-12b-coder-q4
+  # - qwen36-nvfp4      # eugr — /opt/spark/services/eugr-qwen36-local.yaml
+  # - qwen36-q4-llama   # default spark-llama Qwen GGUF

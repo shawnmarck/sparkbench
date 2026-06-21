@@ -2,7 +2,7 @@
 
 **Status: PASSING** (2026-06-21)
 
-Temporary stack to validate vLLM on GB10 before the vLLM Studio vs Rookery bake-off.
+Temporary stack to validate vLLM on GB10 before the Phase 5 inference control plane.
 
 ## Stack
 

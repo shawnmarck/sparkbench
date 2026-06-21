@@ -13,10 +13,13 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 ├── AGENT.md              This file
 ├── README.md             → docs/README.md
 ├── portal/               Static UI (nginx :80)
+│   ├── assets/           sparky-theme.js, oobe-nebula.js, nebula-tune.js
+│   └── themes/           theme-b.css, theme-ui.css
 ├── scripts/              CLIs + APIs (spark-*)
 ├── install/              Idempotent sudo install scripts (see install/INSTALL.md)
-├── data/                 model-catalog.yaml, model-verification.yaml
-├── docs/                 Human docs (ROADMAP, BAKE-OFF, smoke tests)
+├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml
+├── recipes/              Inference profile recipes (Phase 5)
+├── docs/                 Human docs (ROADMAP, smoke tests, INFERENCE-STACK)
 └── services/             compose/yaml for inference UIs
 ```
 
@@ -29,7 +32,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | Doc | Use when |
 |-----|----------|
 | `docs/ROADMAP.md` | Phase status, URLs, what's done |
-| `docs/BAKE-OFF.md` | vLLM Studio vs Rookery (Rookery disqualified) |
+| `docs/INFERENCE-STACK.md` | Phase 5 inference control plane spec |
 | `docs/MODEL-SHELF.md` | `/models` + NAS shelf layout |
 | `docs/INFERENCE-SMOKE.md` | eugr vLLM (`spark-eugr`) |
 | `docs/LLAMACPP-SMOKE.md` | native llama.cpp (`spark-llama`) |
@@ -48,8 +51,16 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | vLLM | http://sparky:8000/v1 |
 | llama.cpp | http://sparky:8081/v1 |
 | Open WebUI | http://sparky:3000 |
-| vLLM Studio | http://sparky:3080 |
 | Netdata | http://sparky:19999/v3/ |
+
+## Portal theme (optional)
+
+**Theme B** — DGX OOBE-style canvas nebula behind System and Models. Opt-in via the constellation button in the nav (persists in `localStorage` key `sparky-theme`, or `?theme=b` on first load). Default theme unchanged.
+
+- JS: `portal/assets/sparky-theme.js` (toggle, iframe sync), `portal/assets/oobe-nebula.js` (canvas)
+- CSS: `portal/themes/theme-b.css`, `portal/themes/theme-ui.css`
+- Dev tuning panel: gear icon (bottom-left) when Theme B is on; hide with `?nebula-tune=0`
+- Models in portal iframe: parent nav toggle syncs theme via `postMessage`; no duplicate floating toggle when embedded
 
 ## Rules agents should know
 
@@ -58,6 +69,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 3. **Shelf APIs are unauthenticated on LAN** — OK for trusted home LAN only; don't expose port 80 WAN-side.
 4. **Inventory build needs venv** — `/opt/spark/venv/bin/python scripts/spark-inventory-build.py` (HF API).
 5. **Model paths** — local `/models`, NAS `/mnt/model-shelf/models`.
+6. **Bake-off UIs removed** — no Rookery / vLLM Studio; Phase 5 is `spark-inference` + `recipes/`.
 
 ## Common commands
 
@@ -84,11 +96,11 @@ sudo bash install/10-portal-gpu-widget.sh
 sudo bash install/11-model-shelf-api.sh
 ```
 
-Inference (pick what you need): `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh`, `17-vllm-studio.sh`.
+Inference (pick what you need): `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh`.
 
 ## Sudo
 
-Passwordless sudo for `install/*.sh` only (via `00-grant-install-sudo.sh`). `spark-vllm-studio` may need sudo for systemctl.
+Passwordless sudo for `install/*.sh` only (via `00-grant-install-sudo.sh`).
 
 ## Threat model (short)
 

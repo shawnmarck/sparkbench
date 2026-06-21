@@ -2,3 +2,11 @@ models:
   nvidia/qwen3.6-35b-a3b:
     spark_status: wip
     updated_at: '2026-06-21T05:47:28.717128+00:00'
+  unsloth/qwen3.6-35b-a3b:
+    spark_status: wip
+    updated_at: '2026-06-21T06:27:06.626251+00:00'
+  yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
+    spark_status: works
+    engine: llamacpp
+    note: Smoke test 2026-06-21 — gemma4-coding-Q4_K_M, ~21 tok/s on GB10
+    updated_at: '2026-06-21T07:10:00+00:00'

@@ -132,6 +132,7 @@
     .inf-msg { margin-top: .5rem; font-size: .76rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-msg.warn { color: var(--warn); }
     .inf-msg.err { color: var(--down); }
+    .inf-msg.ok { color: var(--ok); }
   </style>
 </head>
 <body>
@@ -308,6 +309,8 @@
       let onInference = false;
       let lastInfStatus = null;
       let pendingStartProfile = null;
+      let benchBusy = false;
+      let benchMsgUntil = 0;
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
 
@@ -423,7 +426,8 @@
         ).join('');
       }
 
-      function setInfMsg(text, kind) {
+      function setInfMsg(text, kind, force) {
+        if (!force && (benchBusy || Date.now() < benchMsgUntil)) return;
         const el = $('inf-msg');
         el.textContent = text || '';
         el.className = 'inf-msg' + (kind ? ' ' + kind : '');
@@ -606,7 +610,9 @@
       }
 
       async function infBench() {
-        setInfMsg('Running agent benchmark (3 sessions × 3 turns)…', 'warn');
+        benchBusy = true;
+        benchMsgUntil = 0;
+        setInfMsg('Running agent benchmark (3 sessions × 3 turns, ~45s)…', 'warn', true);
         $('inf-bench').disabled = true;
         try {
           const res = await fetch('/api/inference/bench', {
@@ -616,7 +622,12 @@
           });
           const d = await res.json().catch(() => ({}));
           if (!res.ok) {
-            setInfMsg(d.error || 'benchmark failed', 'err');
+            benchMsgUntil = Date.now() + 60000;
+            let err = d.error || 'benchmark failed';
+            if (res.status === 404) {
+              err = 'Benchmark API missing — restart: sudo systemctl restart spark-inference-api';
+            }
+            setInfMsg(err, 'err', true);
             return;
           }
           let msg = 'Avg ~' + Math.round(d.tok_s) + ' tok/s';
@@ -627,12 +638,17 @@
             msg += ' · ' + d.sessions + '×' + d.turns_per_session + ' turns';
           }
           if (d.completion_tokens) msg += ' · ' + d.completion_tokens + ' tokens';
-          setInfMsg(msg, '');
+          benchMsgUntil = Date.now() + 120000;
+          setInfMsg(msg, 'ok', true);
           infTick();
         } catch (e) {
-          setInfMsg('benchmark request failed', 'err');
+          benchMsgUntil = Date.now() + 60000;
+          setInfMsg('Benchmark request failed (timeout or connection error)', 'err', true);
         } finally {
-          $('inf-bench').disabled = false;
+          benchBusy = false;
+          const switching = lastInfStatus && lastInfStatus.switch && lastInfStatus.switch.running;
+          const ready = lastInfStatus && lastInfStatus.active && lastInfStatus.active.ready;
+          $('inf-bench').disabled = !!switching || !ready;
         }
       }
 

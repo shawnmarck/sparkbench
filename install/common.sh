@@ -41,6 +41,8 @@ server {
     location /api/inference/ {
         proxy_pass http://127.0.0.1:8767/api/inference/;
         proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 10s;
         add_header Cache-Control "no-store";
     }
 

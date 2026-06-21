@@ -83,13 +83,18 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_error(404)
 
+    def _route_path(self) -> str:
+        return self.path.split("?", 1)[0].rstrip("/") or "/"
+
     def do_POST(self) -> None:
         data = self._read_json_body()
         if data is None:
             self._json(400, {"ok": False, "error": "invalid JSON"})
             return
 
-        if self.path == "/api/inference/switch":
+        path = self._route_path()
+
+        if path == "/api/inference/switch":
             if not data.get("confirm"):
                 self._json(400, {"ok": False, "error": "confirmation required"})
                 return
@@ -120,7 +125,7 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
-        if self.path == "/api/inference/bench":
+        if path == "/api/inference/bench":
             try:
                 result = core.run_benchmark()
             except RuntimeError as exc:
@@ -132,7 +137,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True, **result, **core.api_status()})
             return
 
-        if self.path == "/api/inference/down":
+        if path == "/api/inference/down":
             if not data.get("confirm"):
                 self._json(400, {"ok": False, "error": "confirmation required"})
                 return

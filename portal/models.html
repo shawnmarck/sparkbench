@@ -13,37 +13,79 @@
     .top { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1.25rem; }
     h1 { font-size: 1.5rem; margin: 0; }
     .sub { color: var(--muted); font-size: .9rem; margin: .25rem 0 0; }
-    .back { font-size: .85rem; }
-    .controls { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; align-items: center; }
+    .controls { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; align-items: flex-end; }
     .control-group { display: flex; flex-direction: column; gap: .2rem; }
     .control-group label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
     input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; }
-    input[type=search] { min-width: 200px; flex: 1; }
-    select { min-width: 140px; }
+    input[type=search] { min-width: 180px; flex: 1; }
+    .toggle { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: #c5cdd8; cursor: pointer; user-select: none; padding: .38rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); transition: border-color .15s, background .15s, color .15s; }
+    .toggle:hover { border-color: #3a4a2a; }
+    .toggle:has(input:checked) { border-color: #2a4a2a; background: #142014; color: var(--ok); }
+    .toggle input { width: 14px; height: 14px; accent-color: var(--accent); margin: 0; }
     .meta { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
-    .live { display: inline-flex; align-items: center; gap: .35rem; }
     .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-    .grid { display: grid; gap: .85rem; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
-    .card-head { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; justify-content: space-between; }
-    .card h2 { margin: 0; font-size: 1.05rem; }
-    .lab { color: var(--muted); font-size: .85rem; }
-    .badges { display: flex; flex-wrap: wrap; gap: .35rem; margin: .6rem 0; }
-    .badge { font-size: .72rem; padding: .15rem .45rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    .model-list { display: flex; flex-direction: column; gap: .35rem; }
+    .model-row { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .model-row.queued { border-left: 3px solid var(--warn); }
+    .model-row.open { border-color: #3a4a3a; }
+    .row-main { width: 100%; display: grid; grid-template-columns: 1fr auto auto; gap: .5rem 1rem; align-items: center; padding: .65rem .85rem; background: transparent; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+    .row-main:hover { background: #12151c; }
+    .row-title { min-width: 0; }
+    .row-title strong { display: block; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-title code { font-size: .74rem; color: var(--muted); }
+    .row-badges { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: flex-end; }
+    .row-meta { grid-column: 1 / -1; font-size: .76rem; color: var(--muted); font-family: ui-monospace, monospace; display: flex; flex-wrap: wrap; gap: .65rem 1rem; }
+    .row-meta b { color: #c5cdd8; font-weight: 500; }
+    .chevron { color: var(--muted); font-size: .85rem; transition: transform .15s; }
+    .model-row.open .chevron { transform: rotate(90deg); }
+    .row-detail { display: none; padding: 0 .85rem .85rem; border-top: 1px solid var(--border); }
+    .model-row.open .row-detail { display: block; }
+    .badge { font-size: .7rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
     .badge.cap { border-color: #3a4a2a; color: #b8d88a; }
     .badge.status-ready { border-color: #2a4a2a; color: var(--ok); }
     .badge.status-downloading { border-color: #2a3a4a; color: var(--dl); }
-    .badge.status-partial, .badge.status-missing { border-color: #4a402a; color: var(--warn); }
-    .stats { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .82rem; color: var(--muted); margin: .5rem 0; }
-    .stats strong { color: var(--text); font-weight: 600; }
-    .why { font-size: .88rem; line-height: 1.45; color: #c8cdd4; margin: .65rem 0; padding: .6rem .75rem; background: #12151c; border-radius: 8px; border-left: 3px solid var(--accent); }
-    .desc { font-size: .86rem; color: var(--muted); line-height: 1.45; margin: .5rem 0; }
-    .variants { margin-top: .65rem; font-size: .8rem; }
-    .variants table { width: 100%; border-collapse: collapse; }
+    .badge.status-partial, .badge.status-missing, .badge.status-shelf-only { border-color: #4a402a; color: var(--warn); }
+    .badge.spark-unverified { border-color: #3a3a3a; color: var(--muted); }
+    .badge.spark-wip { border-color: #2a3a4a; color: var(--dl); }
+    .badge.spark-works { border-color: #2a4a2a; color: var(--ok); }
+    .badge.spark-failed { border-color: #4a2a2a; color: #e8a0a0; }
+    .badge.queued { border-color: #4a402a; color: var(--warn); }
+    .detail-section { margin-top: .75rem; }
+    .badges { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .storage { display: grid; gap: .45rem; padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
+    .storage-row { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; font-size: .82rem; }
+    .storage-label { color: var(--muted); min-width: 5.5rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+    .loc-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .18rem .5rem; border-radius: 999px; border: 1px solid var(--border); font-family: ui-monospace, monospace; font-size: .78rem; }
+    .loc-badge.on { border-color: #2a4a2a; color: var(--ok); }
+    .loc-badge.off { border-color: #3a3a3a; color: var(--muted); }
+    .loc-badge.warn { border-color: #4a402a; color: var(--warn); }
+    .actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
+    .btn { appearance: none; border: 1px solid var(--border); background: #1a1f2a; color: var(--text); font: inherit; font-size: .8rem; padding: .38rem .7rem; border-radius: 8px; cursor: pointer; }
+    .btn:hover:not(:disabled) { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.primary { border-color: #2a4a5a; color: var(--dl); }
+    .btn.danger { border-color: #4a2a2a; color: #e8a0a0; }
+    .btn.danger.active { border-color: #6a4040; background: #2a1810; color: var(--warn); }
+    .btn.warn-outline { border-color: #4a402a; color: var(--warn); }
+    .btn.busy { border-color: #4a402a; color: var(--warn); }
+    .verify-row { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .verify-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-right: .15rem; }
+    .btn.verify { font-size: .74rem; padding: .28rem .55rem; }
+    .btn.verify.active-works { border-color: #2a4a2a; color: var(--ok); background: #142014; }
+    .btn.verify.active-failed { border-color: #4a2a2a; color: #e8a0a0; background: #241414; }
+    .btn.verify.active-wip { border-color: #2a3a4a; color: var(--dl); background: #141c24; }
+    .btn.verify.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+    .verify-note, .queue-note { font-size: .78rem; color: var(--muted); font-style: italic; margin-top: .35rem; }
+    .why { font-size: .88rem; line-height: 1.45; color: #c8cdd4; padding: .6rem .75rem; background: #12151c; border-radius: 8px; border-left: 3px solid var(--accent); }
+    .desc { font-size: .86rem; color: var(--muted); line-height: 1.45; }
+    .variants table { width: 100%; border-collapse: collapse; font-size: .8rem; }
     .variants th, .variants td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--border); }
     .variants th { color: var(--muted); font-weight: 500; }
     .empty { color: var(--muted); padding: 2rem; text-align: center; }
     code { background: #12151c; padding: .1rem .35rem; border-radius: 4px; font-size: .85em; }
+    .job-banner { display: none; margin-bottom: 1rem; padding: .65rem .85rem; border-radius: 10px; border: 1px solid #2a3a4a; background: #121a24; color: #c5d4e8; font-size: .84rem; font-family: ui-monospace, monospace; }
+    .job-banner.active { display: block; }
+    @media (max-width: 640px) { .row-main { grid-template-columns: 1fr auto; } .row-badges { grid-column: 1 / -1; justify-content: flex-start; } }
   </style>
 </head>
 <body>
@@ -51,214 +93,350 @@
     <div class="top">
       <div>
         <h1>Model inventory</h1>
-        <p class="sub">Auto-refreshed from <code>/models</code> · catalog + Hugging Face</p>
+        <p class="sub">Compact list · expand for actions · removals purge nightly 03:00</p>
       </div>
-      <a class="back" href="/" target="_top">← Portal</a>
+      <a href="/" target="_top">← Portal</a>
     </div>
 
     <div class="controls">
-      <input type="search" id="q" placeholder="Search name, lab, capability…" autocomplete="off" aria-label="Search">
+      <input type="search" id="q" placeholder="Search…" autocomplete="off" aria-label="Search">
       <div class="control-group">
         <label for="lab">Lab</label>
-        <select id="lab"><option value="">All labs</option></select>
+        <select id="lab"><option value="">All</option></select>
       </div>
       <div class="control-group">
         <label for="cap">Capability</label>
-        <select id="cap"><option value="">All capabilities</option></select>
+        <select id="cap"><option value="">All</option></select>
       </div>
       <div class="control-group">
-        <label for="status">Status</label>
-        <select id="status"><option value="">All statuses</option></select>
+        <label for="status">Download</label>
+        <select id="status"><option value="">All</option></select>
       </div>
       <div class="control-group">
         <label for="sort">Sort</label>
         <select id="sort">
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="name-asc">Name A → Z</option>
-          <option value="name-desc">Name Z → A</option>
-          <option value="size-desc">Largest first</option>
-          <option value="lab">Lab A → Z</option>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="name-asc">Name A→Z</option>
+          <option value="name-desc">Name Z→A</option>
+          <option value="size-desc">Largest on disk</option>
+          <option value="size-asc">Smallest on disk</option>
+          <option value="ctx-desc">Max context ↓</option>
+          <option value="ctx-asc">Max context ↑</option>
+          <option value="params-desc">Parameters ↓</option>
+          <option value="params-asc">Parameters ↑</option>
+          <option value="lab">Lab A→Z</option>
         </select>
       </div>
+      <label class="toggle" title="When on, hide everything except models marked Works"><input type="checkbox" id="works-only"> Works on Spark only</label>
+      <label class="toggle" title="When on, show only models queued for nightly removal"><input type="checkbox" id="queued-only"> Queued removal</label>
     </div>
+
+    <div class="job-banner" id="job-banner"></div>
     <div class="meta">
       <span id="summary">Loading…</span>
-      <span class="live"><span class="live-dot"></span> auto-refresh 30s</span>
+      <span id="shelf-meta"></span>
+      <span><span class="live-dot"></span> 30s refresh</span>
     </div>
-    <div class="grid" id="list"></div>
+    <div class="model-list" id="list"></div>
   </main>
   <script>
-    let all = [];
-    let pollTimer = null;
-    const REFRESH_MS = 30000;
+    let all = [], shelfMounted = false, activeJob = { running: false };
+    let expandedId = null, pollTimer = null, jobTimer = null;
+    const REFRESH_MS = 30000, JOB_POLL_MS = 2000, PREFS_KEY = 'spark-models-filters';
+    const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
+    const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
 
-    function fmtDate(iso) {
-      if (!iso) return '—';
-      try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
-      catch { return iso.slice(0, 10); }
-    }
-
-    function fmtTime(iso) {
-      if (!iso) return '';
-      try { return new Date(iso).toLocaleTimeString(); } catch { return ''; }
-    }
-
-    function fmtCtx(n) {
-      if (!n) return '—';
-      return n >= 1000 ? (n / 1000).toFixed(0) + 'K' : String(n);
-    }
-
-    function esc(s) {
-      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
-    function labLabel(lab) {
-      if (!lab) return '';
-      return lab.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    }
-
-    function parseDate(iso) {
-      if (!iso) return 0;
-      const t = Date.parse(iso);
-      return Number.isNaN(t) ? 0 : t;
-    }
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmtDate = (iso) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return iso.slice(0, 10); } };
+    const fmtTime = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString(); } catch { return ''; } };
+    const fmtCtx = (n) => !n ? '—' : n >= 1000 ? (n / 1000).toFixed(0) + 'K' : String(n);
+    const fmtParams = (m) => {
+      if (m.param_active_b && m.param_b) return m.param_active_b + 'B active / ' + m.param_b + 'B';
+      if (m.param_b) return m.param_b + 'B';
+      return '—';
+    };
+    const sparkStatus = (m) => (m.spark_verify && m.spark_verify.spark_status) || 'unverified';
+    const removalPending = (m) => !!(m.spark_verify && m.spark_verify.removal_pending);
+    const parseDate = (iso) => { const t = Date.parse(iso || ''); return Number.isNaN(t) ? 0 : t; };
+    const localSize = (m) => (m.local && m.local.present) ? m.local.size_human : '—';
+    const shelfSize = (m) => (m.shelf && m.shelf.present) ? m.shelf.size_human : '—';
 
     function sortModels(models) {
-      const mode = document.getElementById('sort').value;
+      const mode = $('sort').value;
       const arr = [...models];
+      const n = (v) => v == null ? -1 : Number(v);
       arr.sort((a, b) => {
         switch (mode) {
-          case 'newest':
-            return parseDate(b.release_date) - parseDate(a.release_date) || a.name.localeCompare(b.name);
-          case 'oldest':
-            return parseDate(a.release_date) - parseDate(b.release_date) || a.name.localeCompare(b.name);
-          case 'name-desc':
-            return b.name.localeCompare(a.name);
-          case 'size-desc':
-            return (b.size_bytes || 0) - (a.size_bytes || 0);
-          case 'lab':
-            return a.lab.localeCompare(b.lab) || a.name.localeCompare(b.name);
-          case 'name-asc':
-          default:
-            return a.name.localeCompare(b.name);
+          case 'newest': return parseDate(b.release_date) - parseDate(a.release_date) || a.name.localeCompare(b.name);
+          case 'oldest': return parseDate(a.release_date) - parseDate(b.release_date) || a.name.localeCompare(b.name);
+          case 'name-desc': return b.name.localeCompare(a.name);
+          case 'size-desc': return (b.local && b.local.size_bytes || b.size_bytes || 0) - (a.local && a.local.size_bytes || a.size_bytes || 0);
+          case 'size-asc': return (a.local && a.local.size_bytes || a.size_bytes || 0) - (b.local && b.local.size_bytes || b.size_bytes || 0);
+          case 'ctx-desc': return n(b.max_context) - n(a.max_context) || a.name.localeCompare(b.name);
+          case 'ctx-asc': return n(a.max_context) - n(b.max_context) || a.name.localeCompare(b.name);
+          case 'params-desc': return n(b.param_b) - n(a.param_b) || a.name.localeCompare(b.name);
+          case 'params-asc': return n(a.param_b) - n(b.param_b) || a.name.localeCompare(b.name);
+          case 'lab': return a.lab.localeCompare(b.lab) || a.name.localeCompare(b.name);
+          default: return a.name.localeCompare(b.name);
         }
       });
       return arr;
     }
 
-    function render(models) {
-      const list = document.getElementById('list');
-      if (!models.length) {
-        list.innerHTML = '<div class="empty">No models match filters.</div>';
-        return;
-      }
-      list.innerHTML = models.map(m => {
-        const caps = (m.capabilities || []).map(c => `<span class="badge cap">${esc(c)}</span>`).join('');
-        const stClass = 'status-' + (m.status || 'missing');
-        const hf = m.hf_url ? `<a href="${esc(m.hf_url)}" target="_blank" rel="noopener">Hugging Face ↗</a>` : '';
-        const vars = (m.variants || []).length ? `<div class="variants"><table>
-          <tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th><th>Path</th></tr>
-          ${m.variants.map(v => `<tr>
-            <td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td>
-            <td>${esc(v.status)}</td><td><code>${esc(v.path)}</code></td>
-          </tr>`).join('')}
-        </table></div>` : '';
-        return `<article class="card" data-id="${esc(m.id)}">
-          <div class="card-head">
-            <div><h2>${esc(m.name)}</h2><div class="lab">${esc(labLabel(m.lab))} · ${esc(m.slug)}</div></div>
-            <span class="badge ${stClass}">${esc(m.status)}</span>
-          </div>
-          <div class="badges">${caps}</div>
-          <div class="stats">
-            <span><strong>Size</strong> ${esc(m.size_human)}</span>
-            <span><strong>Context</strong> ${fmtCtx(m.max_context)}</span>
-            <span><strong>Released</strong> ${fmtDate(m.release_date)}</span>
-            <span>${hf}</span>
-          </div>
-          ${m.why_downloaded ? `<div class="why"><strong>Why downloaded</strong> — ${esc(m.why_downloaded)}</div>` : ''}
-          ${m.description ? `<div class="desc">${esc(m.description)}</div>` : ''}
-          ${vars}
-        </article>`;
-      }).join('');
+    function locBadge(label, loc, mounted) {
+      if (!mounted && label === 'NAS') return '<span class="loc-badge warn">NAS offline</span>';
+      if (loc && loc.present) return `<span class="loc-badge on">${esc(loc.size_human)}</span>`;
+      return '<span class="loc-badge off">not present</span>';
     }
 
-    function populateFilters(models, preserve) {
-      const prev = {
-        lab: preserve ? document.getElementById('lab').value : '',
-        cap: preserve ? document.getElementById('cap').value : '',
-        status: preserve ? document.getElementById('status').value : '',
-        sort: preserve ? document.getElementById('sort').value : 'newest',
-        q: preserve ? document.getElementById('q').value : '',
-      };
-      const labs = [...new Set(models.map(m => m.lab))].sort();
-      const caps = [...new Set(models.flatMap(m => m.capabilities || []))].sort();
-      const stats = [...new Set(models.map(m => m.status))].sort();
-      const fill = (elId, items, labelFn, prevVal) => {
-        const el = document.getElementById(elId);
-        const first = el.options[0].outerHTML;
-        el.innerHTML = first;
-        items.forEach(v => {
-          const o = document.createElement('option');
-          o.value = v;
-          o.textContent = labelFn ? labelFn(v) : v;
-          el.appendChild(o);
-        });
-        if (prevVal && [...el.options].some(o => o.value === prevVal)) el.value = prevVal;
-      };
-      fill('lab', labs, labLabel, prev.lab);
-      fill('cap', caps, null, prev.cap);
-      fill('status', stats, null, prev.status);
-      document.getElementById('sort').value = prev.sort || 'newest';
-      document.getElementById('q').value = prev.q || '';
+    function modelBusy(m) { return activeJob.running && activeJob.path === m.rel_path; }
+
+    function renderDetail(m) {
+      const rel = esc(m.rel_path || m.id);
+      const spark = sparkStatus(m);
+      const sv = m.spark_verify || {};
+      const queued = removalPending(m);
+      const busy = modelBusy(m);
+      const verifyBtns = ['unverified', 'wip', 'works', 'failed'].map(s => {
+        const label = s === 'unverified' ? 'Untested' : s === 'wip' ? 'Testing' : s === 'works' ? 'Works' : 'Failed';
+        return `<button type="button" class="btn verify${spark === s ? ' active active-' + s : ''}" data-verify="${s}" data-path="${rel}">${label}</button>`;
+      }).join('');
+      const vars = (m.variants || []).length ? `<div class="variants detail-section"><table>
+        <tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th></tr>
+        ${m.variants.map(v => `<tr><td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td><td>${esc(v.status)}</td></tr>`).join('')}
+      </table></div>` : '';
+      const queueBtn = queued
+        ? `<button type="button" class="btn danger active" data-action="queue-removal" data-pending="0" data-path="${rel}">Cancel removal</button>`
+        : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) ? 'disabled' : ''}>Queue removal</button>`;
+      return `
+        <div class="detail-section badges">${(m.capabilities || []).map(c => `<span class="badge cap">${esc(c)}</span>`).join('')}</div>
+        <div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>
+        ${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}
+        <div class="detail-section storage">
+          <div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>
+          <div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div>
+          <div class="actions">
+            <button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button>
+            <button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>
+            ${queueBtn}
+            <button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete now</button>
+          </div>
+          ${queued ? '<div class="queue-note">Queued for removal — purges daily at 03:00. NAS copy is kept.</div>' : ''}
+        </div>
+        ${m.why_downloaded ? `<div class="detail-section why">${esc(m.why_downloaded)}</div>` : ''}
+        ${m.description ? `<div class="detail-section desc">${esc(m.description)}</div>` : ''}
+        ${m.hf_url ? `<div class="detail-section"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">Hugging Face ↗</a></div>` : ''}
+        ${vars}`;
+    }
+
+    function render(models) {
+      const list = $('list');
+      if (!models.length) { list.innerHTML = '<div class="empty">No models match filters.</div>'; return; }
+      list.innerHTML = models.map(m => {
+        const id = esc(m.id);
+        const open = expandedId === m.id;
+        const spark = sparkStatus(m);
+        const queued = removalPending(m);
+        const badges = [
+          queued ? '<span class="badge queued">queued</span>' : '',
+          `<span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span>`,
+          `<span class="badge status-${m.status || 'missing'}">${esc(m.status)}</span>`,
+        ].join('');
+        return `<article class="model-row${open ? ' open' : ''}${queued ? ' queued' : ''}" data-id="${id}">
+          <button type="button" class="row-main" data-expand="${id}">
+            <div class="row-title"><strong>${esc(m.name)}</strong><code>${esc(m.rel_path || m.id)}</code></div>
+            <div class="row-badges">${badges}</div>
+            <span class="chevron">▸</span>
+            <div class="row-meta">
+              <span><b>Local</b> ${esc(localSize(m))}</span>
+              <span><b>Shelf</b> ${esc(shelfSize(m))}</span>
+              <span><b>Released</b> ${fmtDate(m.release_date)}</span>
+              <span><b>Ctx</b> ${fmtCtx(m.max_context)}</span>
+              <span><b>Params</b> ${fmtParams(m)}</span>
+            </div>
+          </button>
+          <div class="row-detail">${open ? renderDetail(m) : ''}</div>
+        </article>`;
+      }).join('');
+      renderJobBanner();
+    }
+
+    function renderJobBanner() {
+      const el = $('job-banner');
+      if (!activeJob.running) { el.classList.remove('active'); el.textContent = ''; return; }
+      const tail = (activeJob.log_tail || []).slice(-2).join(' · ');
+      el.classList.add('active');
+      el.textContent = `${jobLabels[activeJob.action] || activeJob.action} ${activeJob.path || '…'} (pid ${activeJob.pid})${tail ? ' — ' + tail : ''}`;
+    }
+
+    function readPrefs() {
+      try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
+    }
+
+    function savePrefs() {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        q: $('q').value, lab: $('lab').value, cap: $('cap').value, status: $('status').value,
+        sort: $('sort').value, worksOnly: $('works-only').checked, queuedOnly: $('queued-only').checked,
+      }));
     }
 
     function applyFilters() {
-      const q = document.getElementById('q').value.toLowerCase();
-      const lab = document.getElementById('lab').value;
-      const cap = document.getElementById('cap').value;
-      const status = document.getElementById('status').value;
+      const q = $('q').value.toLowerCase();
+      const lab = $('lab').value, cap = $('cap').value, status = $('status').value;
+      const worksOnly = $('works-only').checked, queuedOnly = $('queued-only').checked;
+      savePrefs();
       let filtered = all.filter(m => {
         if (lab && m.lab !== lab) return false;
         if (cap && !(m.capabilities || []).includes(cap)) return false;
         if (status && m.status !== status) return false;
+        if (worksOnly && sparkStatus(m) !== 'works') return false;
+        if (queuedOnly && !removalPending(m)) return false;
         if (q) {
-          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, ...(m.capabilities||[]), ...(m.tags||[])].join(' ').toLowerCase();
+          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, ...(m.capabilities||[])].join(' ').toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
       });
       filtered = sortModels(filtered);
-      document.getElementById('summary').textContent =
-        `Showing ${filtered.length} of ${all.length} models · data updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
+      $('summary').textContent = `Showing ${filtered.length} of ${all.length} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
       render(filtered);
     }
 
-    ['q','lab','cap','status','sort'].forEach(id => {
-      document.getElementById(id).addEventListener('input', applyFilters);
-      document.getElementById(id).addEventListener('change', applyFilters);
+    function populateFilters(models, preserve) {
+      const stored = readPrefs();
+      const prev = preserve ? {
+        lab: $('lab').value, cap: $('cap').value, status: $('status').value,
+        sort: $('sort').value, q: $('q').value,
+        worksOnly: $('works-only').checked, queuedOnly: $('queued-only').checked,
+      } : { sort: 'newest', ...stored };
+      const fill = (id, key, items, fn) => {
+        const el = $(id), first = el.options[0].outerHTML;
+        el.innerHTML = first;
+        items.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = fn ? fn(v) : v; el.appendChild(o); });
+        if (prev[key] && [...el.options].some(o => o.value === prev[key])) el.value = prev[key];
+      };
+      fill('lab', 'lab', [...new Set(models.map(m => m.lab))].sort(), v => v.split(/[-_]/).map(w => w[0].toUpperCase() + w.slice(1)).join(' '));
+      fill('cap', 'cap', [...new Set(models.flatMap(m => m.capabilities || []))].sort(), null);
+      fill('status', 'status', [...new Set(models.map(m => m.status))].sort(), null);
+      $('sort').value = prev.sort || 'newest';
+      $('q').value = prev.q || '';
+      $('works-only').checked = !!prev.worksOnly;
+      $('queued-only').checked = !!prev.queuedOnly;
+    }
+
+    async function setSparkVerify(path, spark_status, btn) {
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/models/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, spark_status }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        const model = all.find(m => (m.rel_path || m.id) === path);
+        if (model) model.spark_verify = data.spark_verify;
+        applyFilters();
+      } catch (err) { alert(err.message); } finally { btn.disabled = false; }
+    }
+
+    async function setRemovalQueue(path, pending, btn) {
+      if (pending && btn.dataset.shelf === '—') {
+        if (!confirm(`"${btn.dataset.name}" is NOT on NAS shelf.\n\nQueue ${btn.dataset.local} for deletion anyway?`)) return;
+      } else if (pending) {
+        if (!confirm(`Queue "${btn.dataset.name}" (${btn.dataset.local}) for removal?\n\nPurges at 03:00. NAS copy (${btn.dataset.shelf}) kept.`)) return;
+      }
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/models/removal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, pending }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        const model = all.find(m => (m.rel_path || m.id) === path);
+        if (model) model.spark_verify = data.spark_verify;
+        applyFilters();
+      } catch (err) { alert(err.message); } finally { btn.disabled = false; }
+    }
+
+    async function modelAction(action, path, btn, extra) {
+      if (activeJob.running) return;
+      if (action === 'remove-local') {
+        const msg = btn.dataset.shelf && btn.dataset.shelf !== '—'
+          ? `Delete "${btn.dataset.name}" (${btn.dataset.local}) NOW?\n\nNAS copy (${btn.dataset.shelf}) is kept.`
+          : `WARNING: "${btn.dataset.name}" is NOT on NAS.\n\nDelete ${btn.dataset.local} immediately?`;
+        if (!confirm(msg)) return;
+      }
+      btn.disabled = true; btn.classList.add('busy');
+      try {
+        const res = await fetch('/api/shelf/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, confirm: true, ...extra }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        await refreshShelfStatus();
+        startJobPoll();
+      } catch (err) { alert(err.message); btn.disabled = false; btn.classList.remove('busy'); }
+    }
+
+    function startJobPoll() {
+      if (jobTimer) return;
+      jobTimer = setInterval(async () => {
+        await refreshShelfStatus();
+        if (!activeJob.running) { clearInterval(jobTimer); jobTimer = null; loadData(true).catch(() => {}); }
+      }, JOB_POLL_MS);
+    }
+
+    async function refreshShelfStatus() {
+      try {
+        const res = await fetch('/api/shelf/status', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        shelfMounted = !!data.shelf_mounted;
+        activeJob = data.job || { running: false };
+        $('shelf-meta').textContent = shelfMounted ? 'NAS online' : 'NAS offline';
+        renderJobBanner();
+        if (activeJob.running) startJobPoll();
+      } catch (_) {}
+    }
+
+    $('list').addEventListener('click', (e) => {
+      const expand = e.target.closest('[data-expand]');
+      if (expand) {
+        const id = expand.dataset.expand;
+        expandedId = expandedId === id ? null : id;
+        applyFilters();
+        return;
+      }
+      const vbtn = e.target.closest('[data-verify]');
+      if (vbtn) { e.stopPropagation(); setSparkVerify(vbtn.dataset.path, vbtn.dataset.verify, vbtn); return; }
+      const qbtn = e.target.closest('[data-action="queue-removal"]');
+      if (qbtn && !qbtn.disabled) { e.stopPropagation(); setRemovalQueue(qbtn.dataset.path, qbtn.dataset.pending === '1', qbtn); return; }
+      const btn = e.target.closest('[data-action]');
+      if (!btn || btn.disabled) return;
+      e.stopPropagation();
+      const extra = (btn.dataset.action === 'remove-local' && (!btn.dataset.shelf || btn.dataset.shelf === '—')) ? { force: true } : {};
+      modelAction(btn.dataset.action, btn.dataset.path, btn, extra);
     });
 
-    function loadData(preserveFilters) {
+    ['q','lab','cap','status','sort','works-only','queued-only'].forEach(id => {
+      $(id).addEventListener('input', applyFilters);
+      $(id).addEventListener('change', applyFilters);
+    });
+
+    function loadData(preserve) {
       return fetch('models.json?' + Date.now(), { cache: 'no-store' })
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(data => {
           all = data.models || [];
+          shelfMounted = !!data.shelf_mounted;
           window.__generated = data.generated_at;
-          populateFilters(all, preserveFilters);
+          populateFilters(all, preserve);
           applyFilters();
+          refreshShelfStatus();
         });
     }
 
     loadData(false).catch(err => {
-      document.getElementById('summary').textContent = 'Failed to load models.json';
-      document.getElementById('list').innerHTML = `<div class="empty">${esc(String(err))}</div>`;
+      $('summary').textContent = 'Failed to load models.json';
+      $('list').innerHTML = `<div class="empty">${esc(String(err))}</div>`;
     });
-
     pollTimer = setInterval(() => loadData(true).catch(() => {}), REFRESH_MS);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') loadData(true).catch(() => {});
-    });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadData(true).catch(() => {}); });
   </script>
 </body>
 </html>

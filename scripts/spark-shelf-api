@@ -1,0 +1,320 @@
+#!/usr/bin/env python3
+"""Shelf transfer API for the Spark portal (pull/push per model)."""
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+
+PULL_SCRIPT = Path("/opt/spark/scripts/spark-shelf-pull")
+PUSH_SCRIPT = Path("/opt/spark/scripts/spark-shelf-push")
+REMOVE_SCRIPT = Path("/opt/spark/scripts/spark-local-rm")
+VERIFY_SCRIPT = Path("/opt/spark/scripts/spark-model-verify")
+MODELS_ROOT = Path("/models")
+SHELF_ROOT = Path("/mnt/model-shelf/models")
+SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
+RUN_DIR = Path("/opt/spark/run")
+LOG_DIR = Path("/opt/spark/logs")
+PATH_RE = re.compile(r"^[a-zA-Z0-9._-]+(/[a-zA-Z0-9._-]+)+$")
+
+
+def utc_now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def shelf_mounted():
+    return os.path.ismount("/mnt/model-shelf")
+
+
+def tail_log(path: Path, lines: int = 8) -> list[str]:
+    if not path.is_file():
+        return []
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        return content[-lines:]
+    except OSError:
+        return []
+
+
+def read_pid_file(path: Path) -> int | None:
+    if not path.is_file():
+        return None
+    try:
+        pid = int(path.read_text().strip())
+    except (OSError, ValueError):
+        return None
+    if pid > 0 and os.path.exists(f"/proc/{pid}"):
+        return pid
+    return None
+
+
+def active_job():
+    jobs = [
+        ("pull", RUN_DIR / "shelf-pull.pid", LOG_DIR / "shelf-pull-latest.log"),
+        ("push", RUN_DIR / "shelf-push.pid", LOG_DIR / "shelf-push-latest.log"),
+        ("remove-local", RUN_DIR / "local-remove.pid", LOG_DIR / "local-remove-latest.log"),
+    ]
+    for action, pid_file, log_file in jobs:
+        pid = read_pid_file(pid_file)
+        if pid:
+            rel = None
+            for line in reversed(tail_log(log_file, 20)):
+                if "path=" in line:
+                    rel = line.split("path=", 1)[-1].split()[0]
+                    break
+            return {
+                "running": True,
+                "action": action,
+                "pid": pid,
+                "path": rel,
+                "log": log_file.name,
+                "log_tail": tail_log(log_file),
+            }
+    return {"running": False}
+
+
+def validate_path(rel: str) -> str | None:
+    rel = rel.strip().strip("/")
+    if not rel or ".." in rel or not PATH_RE.match(rel):
+        return None
+    return rel
+
+
+def local_present(rel: str) -> bool:
+    return (MODELS_ROOT / rel).is_dir()
+
+
+def shelf_present(rel: str) -> bool:
+    if not shelf_mounted():
+        return False
+    return (SHELF_ROOT / rel).is_dir()
+
+
+def start_job(action: str, rel: str) -> tuple[bool, str, dict]:
+    if active_job().get("running"):
+        return False, "A model file operation is already running", active_job()
+
+    if action == "remove-local":
+        if not REMOVE_SCRIPT.is_file():
+            return False, f"Missing script: {REMOVE_SCRIPT}", {}
+        if not local_present(rel):
+            return False, f"Not present locally: /models/{rel}", {}
+        script = REMOVE_SCRIPT
+    else:
+        if not shelf_mounted():
+            return False, "NAS shelf is not mounted (/mnt/model-shelf)", {}
+        script = PULL_SCRIPT if action == "pull" else PUSH_SCRIPT
+        if not script.is_file():
+            return False, f"Missing script: {script}", {}
+
+    proc = subprocess.run(
+        [str(script), "--background", rel],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        msg = (proc.stderr or proc.stdout or "operation failed").strip()
+        return False, msg, {}
+
+    job = active_job()
+    job["path"] = rel
+    job["started_at"] = utc_now()
+    return True, "started", job
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _cors(self):
+        origin = self.headers.get("Origin", "")
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def _json(self, code: int, payload: dict):
+        body = json.dumps(payload).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self._cors()
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_GET(self):
+        if self.path != "/api/shelf/status":
+            self.send_error(404)
+            return
+        self._json(
+            200,
+            {
+                "shelf_mounted": shelf_mounted(),
+                "shelf_path": "/mnt/model-shelf/models",
+                "local_path": "/models",
+                "job": active_job(),
+            },
+        )
+
+    def _read_json_body(self) -> dict:
+        length = int(self.headers.get("Content-Length", "0") or 0)
+        try:
+            return json.loads(self.rfile.read(length) or b"{}")
+        except json.JSONDecodeError:
+            return {}
+
+    def _handle_verify(self, data: dict):
+        rel = validate_path(str(data.get("path", "")))
+        if not rel:
+            self._json(400, {"ok": False, "error": "invalid path"})
+            return
+
+        spark_status = str(data.get("spark_status", "unverified")).strip().lower()
+        if spark_status not in SPARK_VERIFY_VALID:
+            self._json(400, {"ok": False, "error": "invalid spark_status"})
+            return
+
+        if not VERIFY_SCRIPT.is_file():
+            self._json(500, {"ok": False, "error": "verify script missing"})
+            return
+
+        cmd = [str(VERIFY_SCRIPT), "set", rel, spark_status]
+        engine = data.get("engine")
+        note = data.get("note")
+        if engine:
+            cmd.append(str(engine))
+            if note:
+                cmd.append(str(note))
+        elif note:
+            cmd.extend(["", str(note)])
+
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            msg = (proc.stderr or proc.stdout or "verify update failed").strip()
+            self._json(400, {"ok": False, "error": msg})
+            return
+
+        try:
+            spark_verify = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            spark_verify = {"spark_status": spark_status}
+
+        subprocess.Popen(
+            ["/opt/spark/scripts/spark-inventory-build"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        self._json(200, {"ok": True, "path": rel, "spark_verify": spark_verify})
+
+    def _handle_removal(self, data: dict):
+        rel = validate_path(str(data.get("path", "")))
+        if not rel:
+            self._json(400, {"ok": False, "error": "invalid path"})
+            return
+
+        if not VERIFY_SCRIPT.is_file():
+            self._json(500, {"ok": False, "error": "verify script missing"})
+            return
+
+        pending = bool(data.get("pending"))
+        flag = "on" if pending else "off"
+        proc = subprocess.run(
+            [str(VERIFY_SCRIPT), "removal", rel, flag],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            msg = (proc.stderr or proc.stdout or "removal update failed").strip()
+            self._json(400, {"ok": False, "error": msg})
+            return
+
+        try:
+            spark_verify = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            spark_verify = {"removal_pending": pending}
+
+        subprocess.Popen(
+            ["/opt/spark/scripts/spark-inventory-build"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        self._json(200, {"ok": True, "path": rel, "pending": pending, "spark_verify": spark_verify})
+
+    def _handle_action(self, action: str, data: dict):
+        if not data.get("confirm"):
+            self._json(400, {"ok": False, "error": "confirmation required"})
+            return
+
+        rel = validate_path(str(data.get("path", "")))
+        if not rel:
+            self._json(400, {"ok": False, "error": "invalid path"})
+            return
+
+        if action == "remove-local" and not shelf_present(rel) and not data.get("force"):
+            self._json(
+                409,
+                {
+                    "ok": False,
+                    "error": "not on NAS shelf — pass force:true after explicit confirmation",
+                    "shelf_present": False,
+                    "path": rel,
+                },
+            )
+            return
+
+        ok, message, job = start_job(action, rel)
+        if not ok:
+            code = 409 if "already running" in message or "running" in message else 400
+            self._json(code, {"ok": False, "error": message, "job": job})
+            return
+        self._json(202, {"ok": True, "message": message, "action": action, "path": rel, "job": job})
+
+    def do_POST(self):
+        data = self._read_json_body()
+        if not data and self.path != "/api/models/verify":
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+
+        if self.path == "/api/models/verify":
+            self._handle_verify(data)
+            return
+
+        if self.path == "/api/models/removal":
+            self._handle_removal(data)
+            return
+
+        routes = {
+            "/api/shelf/pull": "pull",
+            "/api/shelf/push": "push",
+            "/api/shelf/remove-local": "remove-local",
+        }
+        action = routes.get(self.path)
+        if not action:
+            self.send_error(404)
+            return
+        if not data:
+            self._json(400, {"ok": False, "error": "invalid JSON"})
+            return
+        self._handle_action(action, data)
+
+    def log_message(self, *_args):
+        return
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--serve":
+        HTTPServer(("127.0.0.1", 8766), Handler).serve_forever()
+        return
+    print(json.dumps({"shelf_mounted": shelf_mounted(), "job": active_job()}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

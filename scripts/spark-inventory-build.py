@@ -15,9 +15,34 @@ except ImportError:
     yaml = None
 
 MODELS_ROOT = Path("/models")
+SHELF_ROOT = Path("/mnt/model-shelf/models")
 CATALOG = Path("/opt/spark/data/model-catalog.yaml")
+VERIFY_FILE = Path("/opt/spark/data/model-verification.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
+SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
 HF = Path("/opt/spark/venv/bin/python")
+
+
+def shelf_mounted() -> bool:
+    return os.path.ismount("/mnt/model-shelf")
+
+
+def location_info(root: Path, lab: str, slug: str) -> dict:
+    path = root / lab / slug
+    if not path.is_dir():
+        return {
+            "present": False,
+            "size_bytes": 0,
+            "size_human": "—",
+            "path": str(path),
+        }
+    size = dir_size(path)
+    return {
+        "present": size > 0,
+        "size_bytes": size,
+        "size_human": human_size(size),
+        "path": str(path),
+    }
 
 
 def dir_size(path: Path) -> int:
@@ -111,6 +136,70 @@ def hf_enrich(repo: str, cache: dict) -> dict:
         info["hf_error"] = str(e)[:120]
     cache[repo] = info
     return info
+
+
+def load_spark_verification() -> dict:
+    if not VERIFY_FILE.is_file():
+        return {}
+    if yaml is None:
+        return {}
+    try:
+        data = yaml.safe_load(VERIFY_FILE.read_text()) or {}
+        models = data.get("models") or {}
+        return models if isinstance(models, dict) else {}
+    except (OSError, yaml.YAMLError):
+        return {}
+
+
+def spark_verify_for(rel: str, store: dict) -> dict:
+    entry = store.get(rel) or {}
+    status = entry.get("spark_status") or "unverified"
+    if status not in SPARK_VERIFY_VALID:
+        status = "unverified"
+    return {
+        "spark_status": status,
+        "engine": entry.get("engine"),
+        "note": entry.get("note"),
+        "updated_at": entry.get("updated_at"),
+        "removal_pending": bool(entry.get("removal_pending")),
+        "removal_queued_at": entry.get("removal_queued_at"),
+    }
+
+
+def parse_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None:
+    cfg = cfg or {}
+    for key in ("num_parameters", "total_params", "n_parameters"):
+        if key in cfg and cfg[key]:
+            try:
+                n = float(cfg[key])
+                return n / 1e9 if n > 1e6 else n
+            except (TypeError, ValueError):
+                pass
+    text = f"{name} {slug}"
+    m = re.search(r"(\d+(?:\.\d+)?)\s*[- ]?[Bb](?:\b|[-/])", text)
+    if m:
+        try:
+            return float(m.group(1))
+        except ValueError:
+            pass
+    return None
+
+
+def parse_active_param_b(name: str, slug: str) -> float | None:
+    text = f"{name} {slug}"
+    m = re.search(r"(\d+(?:\.\d+)?)\s*[- ]?[Bb]\s*[-/]\s*[Aa]?\s*(\d+(?:\.\d+)?)\s*[Bb]", text, re.I)
+    if m:
+        try:
+            return float(m.group(2))
+        except ValueError:
+            pass
+    return None
+
+
+def attach_spark_verify(entries: list, store: dict) -> None:
+    for entry in entries:
+        rel = entry.get("rel_path") or entry.get("id")
+        entry["spark_verify"] = spark_verify_for(rel, store)
 
 
 def load_catalog() -> list:
@@ -214,13 +303,28 @@ def main() -> int:
         if desc:
             desc = re.sub(r"\s+", " ", desc.strip())[:500]
 
+        shelf = location_info(SHELF_ROOT, lab, slug)
+        shelf["mounted"] = shelf_mounted()
+
+        best_cfg: dict = {}
+        for v in m.get("variants", []):
+            c = read_local_config(base / v["subpath"])
+            if c:
+                best_cfg = c
+                break
+        param_b = m.get("param_b") or parse_param_b(m["name"], slug, best_cfg)
+        param_active_b = m.get("param_active_b") or parse_active_param_b(m["name"], slug)
+
         entries.append(
             {
                 "id": m["id"],
                 "lab": lab,
                 "name": m["name"],
                 "slug": slug,
+                "rel_path": f"{lab}/{slug}",
                 "path": str(base),
+                "local": location_info(MODELS_ROOT, lab, slug),
+                "shelf": shelf,
                 "hf_repo": hf_repo,
                 "hf_url": f"https://huggingface.co/{hf_repo}" if hf_repo else None,
                 "capabilities": m.get("capabilities", []),
@@ -228,6 +332,8 @@ def main() -> int:
                 "description": desc or None,
                 "release_date": hf_info.get("release_date"),
                 "max_context": max_ctx,
+                "param_b": param_b,
+                "param_active_b": param_active_b,
                 "pipeline_tag": hf_info.get("pipeline_tag"),
                 "tags": hf_info.get("tags", [])[:12],
                 "status": overall,
@@ -249,13 +355,19 @@ def main() -> int:
                 if any(e["id"] == mid for e in entries):
                     continue
                 size = dir_size(model_dir)
+                shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
+                shelf["mounted"] = shelf_mounted()
+                slug = model_dir.name
                 entries.append(
                     {
                         "id": mid,
                         "lab": lab_dir.name,
                         "name": model_dir.name,
-                        "slug": model_dir.name,
+                        "slug": slug,
+                        "rel_path": mid,
                         "path": str(model_dir),
+                        "local": location_info(MODELS_ROOT, lab_dir.name, model_dir.name),
+                        "shelf": shelf,
                         "hf_repo": None,
                         "hf_url": None,
                         "capabilities": ["untracked"],
@@ -263,6 +375,8 @@ def main() -> int:
                         "description": None,
                         "release_date": None,
                         "max_context": None,
+                        "param_b": parse_param_b(model_dir.name, slug, read_local_config(model_dir)),
+                        "param_active_b": parse_active_param_b(model_dir.name, slug),
                         "status": "ready" if size else "empty",
                         "size_bytes": size,
                         "size_human": human_size(size),
@@ -270,9 +384,55 @@ def main() -> int:
                     }
                 )
 
+    # Shelf-only models (on NAS, not in catalog or local scan above)
+    seen_ids = {e["id"] for e in entries}
+    if shelf_mounted() and SHELF_ROOT.is_dir():
+        for lab_dir in SHELF_ROOT.iterdir():
+            if not lab_dir.is_dir() or lab_dir.name.startswith("_"):
+                continue
+            for model_dir in lab_dir.iterdir():
+                if not model_dir.is_dir():
+                    continue
+                mid = f"{lab_dir.name}/{model_dir.name}"
+                if mid in seen_ids:
+                    continue
+                size = dir_size(model_dir)
+                shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
+                shelf["mounted"] = True
+                entries.append(
+                    {
+                        "id": mid,
+                        "lab": lab_dir.name,
+                        "name": model_dir.name,
+                        "slug": model_dir.name,
+                        "rel_path": mid,
+                        "path": str(MODELS_ROOT / lab_dir.name / model_dir.name),
+                        "local": location_info(MODELS_ROOT, lab_dir.name, model_dir.name),
+                        "shelf": shelf,
+                        "hf_repo": None,
+                        "hf_url": None,
+                        "capabilities": ["shelf-only"],
+                        "why_downloaded": "On NAS shelf only — fetch to Spark to use locally",
+                        "description": None,
+                        "release_date": None,
+                        "max_context": None,
+                        "param_b": parse_param_b(model_dir.name, model_dir.name, {}),
+                        "param_active_b": parse_active_param_b(model_dir.name, model_dir.name),
+                        "status": "shelf-only",
+                        "size_bytes": size,
+                        "size_human": human_size(size),
+                        "variants": [],
+                    }
+                )
+                seen_ids.add(mid)
+
+    attach_spark_verify(entries, load_spark_verification())
+
     payload = {
         "generated_at": now,
-        "spark_root": str(MODELS_ROOT),
+        "local_root": str(MODELS_ROOT),
+        "shelf_root": str(SHELF_ROOT),
+        "shelf_mounted": shelf_mounted(),
         "count": len(entries),
         "models": sorted(entries, key=lambda x: (x["lab"], x["name"])),
     }

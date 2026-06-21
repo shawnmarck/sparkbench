@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Process models flagged removal_pending — delete local copies on Spark.
+set -euo pipefail
+
+LOG_DIR="/opt/spark/logs"
+LOG_FILE="${LOG_DIR}/removal-purge-latest.log"
+VERIFY="/opt/spark/scripts/spark-model-verify"
+RM="/opt/spark/scripts/spark-local-rm"
+DRY_RUN=0
+
+usage() {
+  cat <<EOF
+Usage: spark-removal-purge [--dry-run]
+
+Deletes /models paths flagged removal_pending in model-verification.yaml.
+Typically run nightly via systemd timer.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+mkdir -p "${LOG_DIR}"
+{
+  echo "=== removal purge $(date -Is) dry_run=${DRY_RUN} ==="
+} >>"${LOG_FILE}"
+
+mapfile -t PENDING < <("${VERIFY}" pending | python3 -c "import sys,json; print('\n'.join(json.load(sys.stdin)))")
+
+if [[ ${#PENDING[@]} -eq 0 || -z "${PENDING[0]:-}" ]]; then
+  echo "No models queued for removal" | tee -a "${LOG_FILE}"
+  exit 0
+fi
+
+for rel in "${PENDING[@]}"; do
+  [[ -n "${rel}" ]] || continue
+  echo "==> Purging ${rel}" | tee -a "${LOG_FILE}"
+  if [[ ${DRY_RUN} -eq 1 ]]; then
+    "${RM}" --dry-run "${rel}" 2>&1 | tee -a "${LOG_FILE}" || true
+    continue
+  fi
+  if "${RM}" "${rel}" >>"${LOG_FILE}" 2>&1; then
+    "${VERIFY}" removal "${rel}" off >/dev/null
+    echo "OK: removed ${rel}" | tee -a "${LOG_FILE}"
+  else
+    echo "ERROR: failed ${rel} (flag kept)" | tee -a "${LOG_FILE}" >&2
+  fi
+done
+
+echo "Done $(date -Is)" | tee -a "${LOG_FILE}"

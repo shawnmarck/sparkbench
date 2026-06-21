@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# Remove a model tree from Spark local disk (/models). Does NOT touch NAS shelf.
+set -euo pipefail
+
+MODELS="/models"
+RUN_DIR="/opt/spark/run"
+LOG_DIR="/opt/spark/logs"
+PID_FILE="${RUN_DIR}/local-remove.pid"
+LOG_FILE="${LOG_DIR}/local-remove-latest.log"
+
+BACKGROUND=0
+DRY_RUN=0
+PATHS=()
+
+usage() {
+  cat <<EOF
+Usage: spark-local-rm [OPTIONS] MODEL_PATH
+
+Remove ${MODELS}/MODEL_PATH (lab/slug only). NAS shelf is never modified.
+
+Examples:
+  spark-local-rm nvidia/qwen3.6-35b-a3b
+  spark-local-rm --background google/gemma-4-26b-a4b
+  spark-local-rm --status
+
+Options:
+  --background  Run deletion in background
+  --dry-run     Show what would be removed
+  --status      Show background job status / tail log
+  -h, --help    This help
+EOF
+}
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+cleanup_pid() {
+  rm -f "${PID_FILE}"
+}
+
+validate_rel() {
+  local rel="$1"
+  rel="${rel#/}"
+  rel="${rel%/}"
+  [[ "${rel}" == *".."* ]] && die "invalid path: ${rel}"
+  [[ "${rel}" == _incoming* ]] && die "refusing to remove _incoming"
+  [[ "${rel}" != */* ]] && die "path must be lab/slug (got: ${rel})"
+  echo "${rel}"
+}
+
+remove_one() {
+  local rel="$1"
+  local target="${MODELS}/${rel}"
+  [[ -d "${MODELS}" ]] || die "Missing ${MODELS}"
+  [[ -d "${target}" ]] || die "Not found locally: ${target}"
+  local resolved models_resolved
+  resolved="$(realpath "${target}")"
+  models_resolved="$(realpath "${MODELS}")"
+  [[ "${resolved}" == "${models_resolved}/"* ]] || die "refusing path outside ${MODELS}: ${resolved}"
+  echo "==> Removing local ${rel} (${target})"
+  if [[ ${DRY_RUN} -eq 1 ]]; then
+    du -sh "${target}" 2>/dev/null || true
+    echo "DRY-RUN: would rm -rf ${target}"
+    return 0
+  fi
+  rm -rf "${target}"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --background) BACKGROUND=1; shift ;;
+    --status)
+      if [[ -f "${PID_FILE}" ]]; then
+        pid="$(cat "${PID_FILE}")"
+        if kill -0 "${pid}" 2>/dev/null; then
+          echo "Local remove running (pid ${pid})"
+          echo "Log: ${LOG_FILE}"
+          tail -5 "${LOG_FILE}" 2>/dev/null || true
+          exit 0
+        fi
+        echo "Stale pid file (${pid}); removing"
+        rm -f "${PID_FILE}"
+      fi
+      echo "No local remove running"
+      if [[ -f "${LOG_FILE}" ]]; then
+        echo "Last log: ${LOG_FILE}"
+        tail -5 "${LOG_FILE}" || true
+      fi
+      exit 0
+      ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    -*) die "Unknown option: $1" ;;
+    *) PATHS+=("$1"); shift ;;
+  esac
+done
+
+if [[ ${BACKGROUND} -eq 1 ]]; then
+  [[ ${#PATHS[@]} -eq 1 ]] || die "--background requires exactly one MODEL_PATH"
+  if [[ -f "${PID_FILE}" ]]; then
+    old_pid="$(cat "${PID_FILE}")"
+    kill -0 "${old_pid}" 2>/dev/null && die "Local remove already running (pid ${old_pid}). Check: spark-local-rm --status"
+    rm -f "${PID_FILE}"
+  fi
+  mkdir -p "${RUN_DIR}" "${LOG_DIR}"
+  rel="$(validate_rel "${PATHS[0]}")"
+  bg_args=()
+  [[ ${DRY_RUN} -eq 1 ]] && bg_args+=(--dry-run)
+  bg_args+=("${rel}")
+  {
+    echo "=== local remove started $(date -Is) path=${rel} ==="
+  } >>"${LOG_FILE}"
+  nohup nice -n 10 ionice -c3 "$0" "${bg_args[@]}" >>"${LOG_FILE}" 2>&1 &
+  echo $! >"${PID_FILE}"
+  echo "Started background local remove (pid $(cat "${PID_FILE}"))"
+  echo "  Log: ${LOG_FILE}"
+  echo "  Status: spark-local-rm --status"
+  exit 0
+fi
+
+trap cleanup_pid EXIT
+
+[[ ${#PATHS[@]} -eq 1 ]] || { usage; exit 1; }
+
+rel="$(validate_rel "${PATHS[0]}")"
+remove_one "${rel}"
+echo "OK: removed local copy ($(date -Is))"

@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""Read/write per-model Spark verification and removal queue flags."""
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+VERIFY_FILE = Path("/opt/spark/data/model-verification.yaml")
+VALID = frozenset({"unverified", "wip", "works", "failed"})
+
+
+def load_store() -> dict:
+    if not VERIFY_FILE.is_file():
+        return {"models": {}}
+    try:
+        import yaml
+
+        data = yaml.safe_load(VERIFY_FILE.read_text()) or {}
+    except Exception:
+        return {"models": {}}
+    if not isinstance(data.get("models"), dict):
+        data["models"] = {}
+    return data
+
+
+def save_store(data: dict) -> None:
+    import yaml
+
+    VERIFY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    VERIFY_FILE.write_text(yaml.safe_dump(data, sort_keys=False, default_flow_style=False))
+
+
+def _cleanup_entry(models: dict, rel: str) -> None:
+    entry = models.get(rel)
+    if not entry:
+        return
+    if entry.get("removal_pending"):
+        return
+    if entry.get("spark_status") and entry.get("spark_status") != "unverified":
+        return
+    if entry.get("engine") or entry.get("note"):
+        return
+    models.pop(rel, None)
+
+
+def spark_verify_for(rel: str, store: dict | None = None) -> dict:
+    store = store if store is not None else load_store()
+    entry = (store.get("models") or {}).get(rel) or {}
+    status = entry.get("spark_status") or "unverified"
+    if status not in VALID:
+        status = "unverified"
+    return {
+        "spark_status": status,
+        "engine": entry.get("engine"),
+        "note": entry.get("note"),
+        "updated_at": entry.get("updated_at"),
+        "removal_pending": bool(entry.get("removal_pending")),
+        "removal_queued_at": entry.get("removal_queued_at"),
+    }
+
+
+def set_status(rel: str, spark_status: str, engine: str | None = None, note: str | None = None) -> dict:
+    spark_status = (spark_status or "unverified").strip().lower()
+    if spark_status not in VALID:
+        raise ValueError(f"invalid spark_status: {spark_status}")
+
+    store = load_store()
+    models = store.setdefault("models", {})
+
+    if spark_status == "unverified":
+        if rel in models:
+            entry = models[rel]
+            entry.pop("spark_status", None)
+            entry.pop("engine", None)
+            entry.pop("note", None)
+            entry.pop("updated_at", None)
+            _cleanup_entry(models, rel)
+    else:
+        entry = models.setdefault(rel, {})
+        entry["spark_status"] = spark_status
+        entry["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if engine:
+            entry["engine"] = engine.strip()
+        if note:
+            entry["note"] = note.strip()
+
+    save_store(store)
+    return spark_verify_for(rel, store)
+
+
+def set_removal(rel: str, pending: bool) -> dict:
+    store = load_store()
+    models = store.setdefault("models", {})
+
+    if pending:
+        entry = models.setdefault(rel, {})
+        entry["removal_pending"] = True
+        entry["removal_queued_at"] = datetime.now(timezone.utc).isoformat()
+    elif rel in models:
+        entry = models[rel]
+        entry.pop("removal_pending", None)
+        entry.pop("removal_queued_at", None)
+        _cleanup_entry(models, rel)
+
+    save_store(store)
+    return spark_verify_for(rel, store)
+
+
+def list_pending_removals(store: dict | None = None) -> list[str]:
+    store = store if store is not None else load_store()
+    out = []
+    for rel, entry in (store.get("models") or {}).items():
+        if entry.get("removal_pending"):
+            out.append(rel)
+    return sorted(out)
+
+
+def clear_removal(rel: str) -> None:
+    set_removal(rel, False)
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print(
+            "Usage: spark-model-verify get PATH | set PATH STATUS [engine] [note] | "
+            "removal PATH on|off | pending | list",
+            file=sys.stderr,
+        )
+        return 1
+
+    cmd = sys.argv[1]
+    if cmd == "list":
+        print(json.dumps(load_store(), indent=2))
+        return 0
+
+    if cmd == "pending":
+        print(json.dumps(list_pending_removals(), indent=2))
+        return 0
+
+    if len(sys.argv) < 3:
+        return 1
+
+    rel = sys.argv[2].strip().strip("/")
+
+    if cmd == "get":
+        print(json.dumps(spark_verify_for(rel), indent=2))
+        return 0
+
+    if cmd == "removal" and len(sys.argv) >= 4:
+        flag = sys.argv[3].strip().lower() in ("on", "true", "1", "yes")
+        print(json.dumps(set_removal(rel, flag), indent=2))
+        return 0
+
+    if cmd == "set" and len(sys.argv) >= 4:
+        engine = sys.argv[4] if len(sys.argv) > 4 else None
+        note = sys.argv[5] if len(sys.argv) > 5 else None
+        print(json.dumps(set_status(rel, sys.argv[3], engine=engine, note=note), indent=2))
+        return 0
+
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

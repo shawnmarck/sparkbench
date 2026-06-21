@@ -21,3 +21,10 @@ models:
     tok_s_profile: gemma4-12b-coder-q4
     note: bench 13 tok in 0.7s
     updated_at: '2026-06-21T09:01:17.761172+00:00'
+  google/gemma-4-12b-it:
+    spark_status: works
+    updated_at: '2026-06-21T09:19:11.660595+00:00'
+    tok_s: 21.1
+    tok_s_engine: llamacpp
+    tok_s_profile: google-gemma-4-12b-it-llama
+    note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 109.4s)"

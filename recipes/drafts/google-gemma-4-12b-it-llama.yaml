@@ -1,0 +1,23 @@
+id: google-gemma-4-12b-it-llama
+name: gemma-4-12b-it (llamacpp)
+inventory_path: google/gemma-4-12b-it
+engine: llamacpp
+tier: fast
+lifecycle: testing
+served_name: gemma-4-12b-it
+port: 8081
+tags:
+- lab
+- llamacpp
+notes: Scaffolded 2026-06-21 from /models/google/gemma-4-12b-it. Mark testing, switch,
+  bench, then promote.
+model: /models/google/gemma-4-12b-it/gguf/gemma-4-12b-it-Q4_K_M.gguf
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+updated_at: '2026-06-21T09:11:44.077238+00:00'

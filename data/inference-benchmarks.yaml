@@ -42,3 +42,20 @@ profiles:
     - 48.6
     - 48.6
     note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
+  google-gemma-4-12b-it-llama:
+    tok_s: 21.1
+    engine: llamacpp
+    method: bench-agent
+    measured_at: '2026-06-21T09:16:33.702063+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 885
+    elapsed_s: 109.4
+    tok_s_min: 20.9
+    tok_s_max: 21.1
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 21.1
+    - 21.1
+    - 20.9
+    note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 109.4s)"

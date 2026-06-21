@@ -63,7 +63,7 @@
     .live-stale i { background: var(--warn); box-shadow: none; animation: none; }
     .shell { flex: 1; min-height: 0; position: relative; }
     .dashboard { height: 100%; overflow: auto; padding: 1.25rem 1rem 2rem; }
-    .dashboard-inner { max-width: 800px; margin: 0 auto; transition: max-width .2s ease; }
+    .dashboard-inner { max-width: 920px; margin: 0 auto; transition: max-width .2s ease; }
     body.portal-wide .dashboard-inner { max-width: none; padding-left: 0.5in; padding-right: 0.5in; box-sizing: border-box; }
     .frame-panel { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
     .frame-panel.open { display: flex; }
@@ -131,12 +131,12 @@
     .inf-active-box { padding: .75rem .85rem; background: #12151c; border: 1px solid var(--border); border-radius: 10px; font-size: .82rem; }
     .inf-active-title { font-weight: 600; color: var(--text); margin-bottom: .35rem; }
     .inf-active-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .76rem; line-height: 1.5; }
-    .inf-profile-grid { display: grid; gap: .45rem; margin-top: .35rem; }
-    .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
+    .inf-profile-grid { display: grid; gap: .45rem; margin-top: .35rem; min-width: 0; }
+    .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; min-width: 0; overflow: hidden; }
     .inf-profile.active { border-color: #3a4a2a; background: #141a10; }
-    .inf-profile-row { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; width: 100%; min-width: 0; }
-    .inf-profile .name { color: var(--text); font-weight: 600; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .inf-profile .meta { flex: 0 0 auto; text-align: right; white-space: nowrap; color: #c9b86a; font-family: ui-monospace, monospace; font-size: .74rem; }
+    .inf-profile-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem .75rem; width: 100%; min-width: 0; }
+    .inf-profile .name { color: var(--text); font-weight: 600; flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .inf-profile .meta { flex: 1 1 11rem; min-width: 0; max-width: 100%; text-align: right; margin-left: auto; color: #c9b86a; font-family: ui-monospace, monospace; font-size: .74rem; line-height: 1.45; overflow-wrap: anywhere; }
     .inf-profile .meta.tier-heavy { color: var(--warn); }
     .inf-profile .notes { display: block; width: 100%; margin: 0; color: #7a8088; font-size: .7rem; line-height: 1.35; font-style: italic; }
     .inf-life { display: inline-block; font-size: .68rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: .35rem; }
@@ -435,6 +435,10 @@
         return t.length <= max ? t : t.slice(0, max - 1) + '…';
       }
 
+      function attrEsc(text) {
+        return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      }
+
       function renderNavInference(data) {
         const el = $('nav-inf');
         const text = $('nav-inf-text');
@@ -554,9 +558,11 @@
           const tok = p.tok_s != null ? ' · ' + Math.round(p.tok_s) + ' tok/s' : '';
           const note = p.notes ? '<span class="notes">' + truncateNote(p.notes, 100) + '</span>' : '';
           const switchHint = lc === 'draft' ? ' · not switchable' : '';
-          return '<div class="' + cls + '"><div class="inf-profile-row"><span class="name">' + infLifeBadge(lc) + (p.name || p.id) + '</span>'
-            + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
-            + ' · :' + p.port + tok + ' · ' + state + switchHint + '</span></div>' + note + '</div>';
+          const metaShort = (p.engine || '?') + ' · ' + (p.tier || '?') + ' · :' + (p.port || '?') + tok + ' · ' + state + switchHint;
+          const metaTitle = p.id + ' · ' + metaShort;
+          return '<div class="' + cls + '"><div class="inf-profile-row"><span class="name" title="' + attrEsc(p.name || p.id) + '">'
+            + infLifeBadge(lc) + (p.name || p.id) + '</span>'
+            + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + metaShort + '</span></div>' + note + '</div>';
         }).join('') || '<div class="inf-profile"><span class="name">No recipes yet</span>'
           + '<span class="meta">Create drafts on the <a href="/#models">Models</a> page.</span></div>';
 

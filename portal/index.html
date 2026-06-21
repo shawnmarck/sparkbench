@@ -177,6 +177,9 @@
     .inf-model-group[open] summary::before { transform: rotate(90deg); }
     .inf-model-group-name { color: #c5cdd8; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inf-model-group-count { color: var(--muted); font-size: .66rem; flex-shrink: 0; }
+    .inf-model-group.has-active { border-color: #3a4a2a; }
+    .inf-model-group.has-active summary .inf-model-group-name { color: var(--accent); }
+    .inf-model-group-active-tag { color: var(--ok); font-size: .64rem; font-weight: 600; flex-shrink: 0; }
     .inf-model-group .inf-profile-grid { padding: .25rem .35rem .35rem; gap: .3rem; }
     .inf-profile.compact { padding: .32rem .45rem; font-size: .74rem; gap: .1rem; }
     .inf-profile.compact .inf-life { font-size: .6rem; padding: .06rem .28rem; margin-right: .28rem; }
@@ -210,7 +213,22 @@
     .inf-profile-grid { display: grid; gap: .45rem; margin-top: 0; min-width: 0; }
     .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; min-width: 0; overflow: hidden; cursor: pointer; transition: border-color .12s, background .12s; }
     .inf-profile:hover { border-color: #3a4250; }
-    .inf-profile.active { border-color: #3a4a2a; background: #141a10; cursor: default; }
+    .inf-profile.active {
+      border-color: #3a5a2a; background: #141a10; cursor: default;
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+    .inf-profile.active .name { color: var(--accent); }
+    .inf-profile.active .meta { color: var(--ok); }
+    .inf-active-pill {
+      display: inline-block; font-size: .56rem; font-weight: 700; letter-spacing: .05em;
+      padding: .08rem .34rem; border-radius: 999px; border: 1px solid #2a4a2a;
+      background: #1a2210; color: var(--ok); margin-left: .3rem; vertical-align: middle;
+    }
+    .inf-selected-pill {
+      display: inline-block; font-size: .56rem; font-weight: 600; letter-spacing: .03em;
+      padding: .08rem .34rem; border-radius: 999px; border: 1px solid #2a3a5a;
+      background: #131820; color: #9ec8ff; margin-left: .3rem; vertical-align: middle;
+    }
     .inf-profile.selected:not(.active) { border-color: #3a4a5a; background: #131820; box-shadow: inset 0 0 0 1px #2a3545; }
     .inf-profile.draft { cursor: default; }
     .inf-profile.draft:hover { border-color: var(--border); }
@@ -510,6 +528,9 @@
       const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'fast', 'heavy', 'bench', 'drafts'];
       let infFilterChips = new Set(['switchable']);
       let infFilterQ = '';
+      let lastInfProfilesSnapshot = '';
+      const infModelGroupsOpen = new Set();
+      let suppressInfGroupToggle = false;
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
 
@@ -686,8 +707,30 @@
           .map(([path, items]) => ({ path, items: items.sort(infProfileSort) }));
       }
 
+      function infProfilesSnapshot(data, activeId) {
+        const profiles = data.profiles || [];
+        const parts = profiles.map((p) => [
+          p.id, p.active, p.ready, p.starting, p.tok_s, p.switchable, p.lifecycle,
+        ].join(':'));
+        return [
+          activeId,
+          data.switch && data.switch.running,
+          data.bench && data.bench.running,
+          infFilterQ,
+          [...infFilterChips].sort().join(','),
+          parts.join('|'),
+        ].join(';');
+      }
+
+      function modelGroupShouldOpen(path, multiGroup, hasActive, hasSelected) {
+        if (infModelGroupsOpen.has(path)) return true;
+        if (!multiGroup) return true;
+        return hasActive || hasSelected;
+      }
+
       function rerenderInfProfiles() {
         if (!lastInfStatus) return;
+        lastInfProfilesSnapshot = '';
         const busy = (lastInfStatus.switch && lastInfStatus.switch.running)
           || (lastInfStatus.bench && lastInfStatus.bench.running);
         renderInfProfiles(
@@ -865,9 +908,12 @@
           ? ' data-profile-id="' + attrEsc(p.id) + '" tabindex="0" role="button" title="Select for switch"'
           : '';
         const displayName = p.id;
+        const statusPill = p.active
+          ? '<span class="inf-active-pill">ACTIVE</span>'
+          : (p.id === selectedId ? '<span class="inf-selected-pill">selected</span>' : '');
         return '<div class="' + cls + '"' + pickAttrs + '><div class="inf-profile-row">'
           + '<span class="name" title="' + attrEsc((p.name || p.id) + noteHint) + '">'
-          + infLifeBadge(lc) + escHtml(displayName) + (p.active ? ' ●' : '') + '</span>'
+          + infLifeBadge(lc) + escHtml(displayName) + statusPill + '</span>'
           + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + escHtml(metaShort) + '</span>'
           + '</div></div>';
       }
@@ -909,16 +955,23 @@
             + '<button type="button" class="inf-link-btn" data-inf-clear-filters>Clear filters</button></div>';
         } else {
           const multiGroup = groups.length > 1;
+          suppressInfGroupToggle = true;
           listEl.innerHTML = groups.map((g) => {
             const hasActive = g.items.some((p) => p.active);
             const hasSelected = g.items.some((p) => p.id === selectedId);
-            const open = !multiGroup || hasActive || hasSelected;
+            if (hasActive) infModelGroupsOpen.add(g.path);
+            const open = modelGroupShouldOpen(g.path, multiGroup, hasActive, hasSelected);
             const rows = g.items.map((p) => renderInfProfileRow(p, selectedId)).join('');
-            return '<details class="inf-model-group"' + (open ? ' open' : '') + '>'
+            const groupCls = 'inf-model-group' + (hasActive ? ' has-active' : '');
+            const activeTag = hasActive ? '<span class="inf-model-group-active-tag">● active</span>' : '';
+            return '<details class="' + groupCls + '" data-model-path="' + attrEsc(g.path) + '"'
+              + (open ? ' open' : '') + '>'
               + '<summary><span class="inf-model-group-name">' + escHtml(g.path) + '</span>'
+              + activeTag
               + '<span class="inf-model-group-count">(' + g.items.length + ')</span></summary>'
               + '<div class="inf-profile-grid">' + rows + '</div></details>';
           }).join('');
+          suppressInfGroupToggle = false;
         }
 
         const activeRow = listEl.querySelector('.inf-profile.active');
@@ -998,7 +1051,12 @@
           }
         }
 
-        renderInfProfiles(profiles, active && active.id, switching || benching);
+        const activeId = active && active.id;
+        const profSnap = infProfilesSnapshot(data, activeId);
+        if (profSnap !== lastInfProfilesSnapshot) {
+          lastInfProfilesSnapshot = profSnap;
+          renderInfProfiles(profiles, activeId, switching || benching);
+        }
         $('inf-api-link').href = (data.urls && data.urls.api) || '#';
         $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
         const invPath = active && active.inventory_path;
@@ -1473,6 +1531,14 @@
         sel.value = profileId;
         sel.dispatchEvent(new Event('change', { bubbles: true }));
       }
+
+      $('inf-profiles').addEventListener('toggle', (e) => {
+        if (suppressInfGroupToggle) return;
+        const det = e.target.closest('details.inf-model-group');
+        if (!det || !det.dataset.modelPath || !det.isConnected) return;
+        if (det.open) infModelGroupsOpen.add(det.dataset.modelPath);
+        else infModelGroupsOpen.delete(det.dataset.modelPath);
+      }, true);
 
       $('inf-profiles').addEventListener('click', (e) => {
         if (e.target.closest('[data-inf-clear-filters]')) {

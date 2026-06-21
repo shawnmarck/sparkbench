@@ -373,7 +373,11 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             benchmarks = {}
 
     by_path: dict[str, list[dict]] = {}
-    for recipe_file in sorted(RECIPES_DIR.glob("*.yaml")):
+    recipe_files = sorted(RECIPES_DIR.glob("*.yaml"))
+    drafts_dir = RECIPES_DIR / "drafts"
+    if drafts_dir.is_dir():
+        recipe_files.extend(sorted(drafts_dir.glob("*.yaml")))
+    for recipe_file in recipe_files:
         profile_id = recipe_file.stem
         try:
             recipe = yaml.safe_load(recipe_file.read_text()) or {}
@@ -389,11 +393,15 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         measured = method in BENCH_METHODS
         notes = (recipe.get("notes") or "").strip()
         first_note = notes.split("\n", 1)[0].strip() if notes else None
+        lifecycle = recipe.get("lifecycle")
+        if not lifecycle:
+            lifecycle = "production" if recipe_file.parent == RECIPES_DIR else "draft"
         info = {
             "id": profile_id,
             "name": recipe.get("name"),
             "engine": recipe.get("engine"),
             "tier": recipe.get("tier"),
+            "lifecycle": lifecycle,
             "enabled": profile_id in enabled,
             "tok_s": bench.get("tok_s") if measured else None,
             "bench_method": method if measured else None,

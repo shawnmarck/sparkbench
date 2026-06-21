@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -17,6 +18,9 @@ import yaml
 
 ROOT = Path("/opt/spark")
 RECIPES_DIR = ROOT / "recipes"
+RECIPES_DRAFTS_DIR = RECIPES_DIR / "drafts"
+MODELS_ROOT = Path("/models")
+SERVICES_DIR = ROOT / "services"
 PROFILES_INDEX = ROOT / "data" / "inference-profiles.yaml"
 STATE_FILE = ROOT / "run" / "inference-active.json"
 SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
@@ -30,6 +34,10 @@ SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
 BENCH_METHODS = frozenset({"bench", "bench-agent"})
+LIFECYCLE_DRAFT = "draft"
+LIFECYCLE_TESTING = "testing"
+LIFECYCLE_PRODUCTION = "production"
+LIFECYCLE_VALID = frozenset({LIFECYCLE_DRAFT, LIFECYCLE_TESTING, LIFECYCLE_PRODUCTION})
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -46,19 +54,295 @@ def enabled_profiles() -> list[str]:
     return [p for p in profiles if isinstance(p, str) and p]
 
 
+def save_profiles_index(profiles: list[str]) -> None:
+    PROFILES_INDEX.parent.mkdir(parents=True, exist_ok=True)
+    PROFILES_INDEX.write_text(
+        yaml.safe_dump({"profiles": profiles}, sort_keys=False, default_flow_style=False)
+    )
+
+
+def production_recipe_path(profile_id: str) -> Path:
+    return RECIPES_DIR / f"{profile_id}.yaml"
+
+
+def draft_recipe_path(profile_id: str) -> Path:
+    return RECIPES_DRAFTS_DIR / f"{profile_id}.yaml"
+
+
+def resolve_recipe_path(profile_id: str) -> Path | None:
+    prod = production_recipe_path(profile_id)
+    if prod.is_file():
+        return prod
+    draft = draft_recipe_path(profile_id)
+    if draft.is_file():
+        return draft
+    return None
+
+
+def infer_lifecycle(recipe: dict[str, Any], path: Path) -> str:
+    lifecycle = recipe.get("lifecycle")
+    if lifecycle in LIFECYCLE_VALID:
+        return lifecycle
+    if path.parent == RECIPES_DRAFTS_DIR:
+        return LIFECYCLE_DRAFT
+    return LIFECYCLE_PRODUCTION
+
+
 def load_recipe(profile_id: str) -> dict[str, Any]:
-    path = RECIPES_DIR / f"{profile_id}.yaml"
-    if not path.is_file():
-        raise SystemExit(f"unknown profile: {profile_id} (missing {path})")
+    path = resolve_recipe_path(profile_id)
+    if path is None:
+        raise SystemExit(f"unknown profile: {profile_id}")
     recipe = load_yaml(path)
     if recipe.get("id") and recipe["id"] != profile_id:
         print(f"warning: recipe id {recipe['id']!r} != filename {profile_id!r}", file=sys.stderr)
     recipe.setdefault("id", profile_id)
+    recipe["lifecycle"] = infer_lifecycle(recipe, path)
+    recipe["_path"] = str(path)
     return recipe
 
 
 def recipe_path(profile_id: str) -> Path:
-    return RECIPES_DIR / f"{profile_id}.yaml"
+    path = resolve_recipe_path(profile_id)
+    if path is None:
+        raise SystemExit(f"unknown profile: {profile_id}")
+    return path
+
+
+def list_recipe_ids() -> list[str]:
+    ids: set[str] = set()
+    if RECIPES_DIR.is_dir():
+        for path in RECIPES_DIR.glob("*.yaml"):
+            if path.is_file():
+                ids.add(path.stem)
+    if RECIPES_DRAFTS_DIR.is_dir():
+        for path in RECIPES_DRAFTS_DIR.glob("*.yaml"):
+            if path.is_file():
+                ids.add(path.stem)
+    return sorted(ids)
+
+
+def switchable_profile_ids() -> list[str]:
+    out: list[str] = []
+    for profile_id in list_recipe_ids():
+        try:
+            recipe = load_recipe(profile_id)
+        except SystemExit:
+            continue
+        lifecycle = recipe.get("lifecycle")
+        if lifecycle == LIFECYCLE_PRODUCTION and profile_id in enabled_profiles():
+            out.append(profile_id)
+        elif lifecycle == LIFECYCLE_TESTING:
+            out.append(profile_id)
+    return out
+
+
+def save_recipe_file(path: Path, recipe: dict[str, Any]) -> None:
+    payload = {k: v for k, v in recipe.items() if not str(k).startswith("_")}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(payload, sort_keys=False, default_flow_style=False))
+
+
+def discover_gguf(model_root: Path) -> Path | None:
+    gguf_dir = model_root / "gguf"
+    if gguf_dir.is_dir():
+        ggufs = sorted(gguf_dir.glob("*.gguf"), key=lambda p: p.stat().st_size, reverse=True)
+        if ggufs:
+            return ggufs[0]
+    candidates = sorted(model_root.rglob("*.gguf"), key=lambda p: p.stat().st_size, reverse=True)
+    return candidates[0] if candidates else None
+
+
+def discover_nvfp4_dir(model_root: Path) -> Path | None:
+    nvfp4 = model_root / "nvfp4"
+    if nvfp4.is_dir() and any(nvfp4.iterdir()):
+        return nvfp4
+    return None
+
+
+def make_profile_id(inventory_path: str, engine: str) -> str:
+    lab, slug = inventory_path.split("/", 1)
+    suffix = "llama" if engine == "llamacpp" else "eugr"
+    raw = f"{lab}-{slug.replace('.', '-')}-{suffix}".lower()
+    raw = re.sub(r"[^a-z0-9._-]+", "-", raw).strip("-")
+    base = raw[:56].strip("-") or "profile"
+    candidate = base
+    n = 2
+    while resolve_recipe_path(candidate):
+        candidate = f"{base}-{n}"
+        n += 1
+    return candidate
+
+
+def write_eugr_service(profile_id: str, inventory_path: str, served_name: str) -> Path:
+    model_dir = discover_nvfp4_dir(MODELS_ROOT / inventory_path)
+    if model_dir is None:
+        raise RuntimeError(f"no nvfp4 weights under /models/{inventory_path}")
+    path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
+    content = f"""# Generated by spark-inference recipe scaffold ({profile_id})
+recipe_version: "1"
+name: {profile_id}
+description: eugr vLLM serve for {inventory_path}
+
+model: {served_name}
+container: vllm-node
+
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 65536
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+
+command: |
+  vllm serve {model_dir} \\
+    --host {{host}} \\
+    --port {{port}} \\
+    --served-model-name {served_name} \\
+    --tensor-parallel-size {{tensor_parallel}} \\
+    --trust-remote-code \\
+    --kv-cache-dtype auto \\
+    --attention-backend flashinfer \\
+    --moe-backend marlin \\
+    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+    --max-model-len {{max_model_len}} \\
+    --max-num-seqs {{max_num_seqs}} \\
+    --max-num-batched-tokens {{max_num_batched_tokens}} \\
+    --enable-chunked-prefill \\
+    --enable-prefix-caching \\
+    --load-format fastsafetensors
+"""
+    SERVICES_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return path
+
+
+def scaffold_recipe(
+    inventory_path: str,
+    engine: str,
+    *,
+    name: str | None = None,
+    tier: str | None = None,
+) -> dict[str, Any]:
+    inventory_path = inventory_path.strip().strip("/")
+    if "/" not in inventory_path:
+        raise RuntimeError("inventory_path must be lab/slug")
+    if engine not in {"llamacpp", "eugr"}:
+        raise RuntimeError("engine must be llamacpp or eugr")
+
+    model_root = MODELS_ROOT / inventory_path
+    if not model_root.is_dir():
+        raise RuntimeError(f"model not on disk: /models/{inventory_path}")
+
+    profile_id = make_profile_id(inventory_path, engine)
+    slug = inventory_path.split("/", 1)[1]
+    served_name = re.sub(r"[^a-z0-9._-]+", "-", slug.lower()).strip("-")[:48]
+    display = name or f"{slug} ({engine})"
+
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": display,
+        "inventory_path": inventory_path,
+        "engine": engine,
+        "tier": tier or ("heavy" if engine == "eugr" else "fast"),
+        "lifecycle": LIFECYCLE_DRAFT,
+        "served_name": served_name,
+        "port": 8000 if engine == "eugr" else 8081,
+        "tags": ["lab", engine],
+        "notes": (
+            f"Scaffolded {datetime.now(timezone.utc).date().isoformat()} from "
+            f"/models/{inventory_path}. Mark testing, switch, bench, then promote."
+        ),
+    }
+
+    if engine == "llamacpp":
+        gguf = discover_gguf(model_root)
+        if gguf is None:
+            raise RuntimeError(f"no .gguf under /models/{inventory_path}")
+        recipe["model"] = str(gguf)
+        recipe["llamacpp_args"] = ["-ngl", "999", "-fa", "1", "--no-mmap", "-c", "32768"]
+    else:
+        eugr_path = write_eugr_service(profile_id, inventory_path, served_name)
+        recipe["eugr_recipe"] = str(eugr_path)
+
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    return recipe
+
+
+def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
+    if lifecycle not in LIFECYCLE_VALID:
+        raise RuntimeError(f"invalid lifecycle: {lifecycle}")
+    path = resolve_recipe_path(profile_id)
+    if path is None:
+        raise RuntimeError(f"unknown profile: {profile_id}")
+    if path.parent == RECIPES_DIR and lifecycle != LIFECYCLE_PRODUCTION:
+        raise RuntimeError("production recipes live in recipes/ — use discard to remove")
+    recipe = load_yaml(path)
+    recipe["lifecycle"] = lifecycle
+    recipe["updated_at"] = datetime.now(timezone.utc).isoformat()
+    save_recipe_file(path, recipe)
+    recipe["id"] = profile_id
+    return recipe
+
+
+def promote_recipe(profile_id: str) -> dict[str, Any]:
+    draft_path = draft_recipe_path(profile_id)
+    if not draft_path.is_file():
+        raise RuntimeError(f"no draft recipe: {profile_id}")
+    recipe = load_yaml(draft_path)
+    lifecycle = infer_lifecycle(recipe, draft_path)
+    if lifecycle == LIFECYCLE_DRAFT:
+        raise RuntimeError("mark recipe as testing before promote (bench first)")
+
+    recipe["lifecycle"] = LIFECYCLE_PRODUCTION
+    recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
+    prod_path = production_recipe_path(profile_id)
+    save_recipe_file(prod_path, recipe)
+    draft_path.unlink()
+
+    profiles = enabled_profiles()
+    if profile_id not in profiles:
+        profiles.append(profile_id)
+        save_profiles_index(profiles)
+
+    subprocess.Popen(
+        [str(ROOT / "scripts" / "spark-inventory-build")],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    recipe["id"] = profile_id
+    return recipe
+
+
+def discard_recipe(profile_id: str) -> None:
+    if profile_id in enabled_profiles():
+        raise RuntimeError("cannot discard production profile — remove from inference-profiles.yaml first")
+    draft_path = draft_recipe_path(profile_id)
+    if draft_path.is_file():
+        draft_path.unlink()
+        return
+    prod_path = production_recipe_path(profile_id)
+    if prod_path.is_file():
+        raise RuntimeError("production recipes must be demoted manually")
+    raise RuntimeError(f"no recipe: {profile_id}")
+
+
+def api_recipe_list() -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    production = set(enabled_profiles())
+    for profile_id in list_recipe_ids():
+        try:
+            recipe = load_recipe(profile_id)
+        except SystemExit:
+            continue
+        item = recipe_public(recipe)
+        item["lifecycle"] = recipe.get("lifecycle")
+        item["enabled"] = profile_id in production
+        item["switchable"] = profile_id in switchable_profile_ids()
+        items.append(item)
+    return items
 
 
 def curl_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:
@@ -169,18 +453,22 @@ def run_script(script: Path, *args: str, env: dict[str, str] | None = None) -> N
 def cmd_list() -> int:
     active = detect_active_profile()
     active_id = active["profile"] if active else None
-    print(f"{'PROFILE':<22} {'ENGINE':<10} {'TIER':<12} {'PORT':<6} {'TOK/S':<8} ACTIVE")
-    print("-" * 70)
-    for profile_id in enabled_profiles():
+    print(
+        f"{'PROFILE':<24} {'ENGINE':<10} {'TIER':<8} {'LIFE':<10} "
+        f"{'PORT':<6} {'TOK/S':<8} ACTIVE"
+    )
+    print("-" * 78)
+    for profile_id in list_recipe_ids():
         recipe = load_recipe(profile_id)
         mark = "*" if profile_id == active_id else ""
         bench = benchmark_for_profile(profile_id) or {}
         tok = bench.get("tok_s")
         tok_s = f"{tok:.0f}" if isinstance(tok, (int, float)) else "—"
         print(
-            f"{profile_id:<22} "
+            f"{profile_id:<24} "
             f"{recipe.get('engine', '?'):<10} "
-            f"{recipe.get('tier', '?'):<12} "
+            f"{recipe.get('tier', '?'):<8} "
+            f"{recipe.get('lifecycle', '?'):<10} "
             f"{recipe.get('port', '?'):<6} "
             f"{tok_s:<8} {mark}"
         )
@@ -227,9 +515,9 @@ def cmd_down() -> int:
 
 
 def cmd_up(profile_id: str) -> int:
-    if profile_id not in enabled_profiles():
+    if profile_id not in switchable_profile_ids():
         raise SystemExit(
-            f"profile {profile_id!r} is not enabled — edit {PROFILES_INDEX}"
+            f"profile {profile_id!r} is not switchable — production index or testing draft required"
         )
 
     recipe = load_recipe(profile_id)
@@ -265,7 +553,9 @@ def validate_profile_id(profile_id: str) -> str | None:
     profile_id = profile_id.strip()
     if not profile_id or not PROFILE_ID_RE.match(profile_id):
         return None
-    if profile_id not in enabled_profiles():
+    if profile_id not in switchable_profile_ids():
+        return None
+    if resolve_recipe_path(profile_id) is None:
         return None
     return profile_id
 
@@ -684,9 +974,13 @@ def engine_log_file(recipe: dict[str, Any] | None) -> Path:
 
 def api_profiles(active_id: str | None = None) -> list[dict[str, Any]]:
     profiles = []
-    for profile_id in enabled_profiles():
+    production = set(enabled_profiles())
+    for profile_id in list_recipe_ids():
         recipe = load_recipe(profile_id)
         item = recipe_public(recipe)
+        item["lifecycle"] = recipe.get("lifecycle")
+        item["enabled"] = profile_id in production
+        item["switchable"] = profile_id in switchable_profile_ids()
         item["active"] = profile_id == active_id
         if active_id == profile_id:
             item["ready"] = engine_ready(recipe)
@@ -823,13 +1117,58 @@ def cmd_bench(write_result: bool = False) -> int:
     return 0
 
 
+def cmd_recipe(argv: list[str]) -> int:
+    if len(argv) < 3:
+        raise SystemExit(
+            "usage: spark-inference recipe {list|scaffold|testing|promote|discard} ..."
+        )
+    sub = argv[2]
+    if sub == "list":
+        for item in api_recipe_list():
+            print(
+                f"{item['id']:<24} {item.get('lifecycle', '?'):<10} "
+                f"{item.get('engine', '?'):<10} "
+                f"{'on' if item.get('enabled') else 'off':<4} "
+                f"{item.get('inventory_path') or '—'}"
+            )
+        return 0
+    if sub == "scaffold":
+        if len(argv) < 5:
+            raise SystemExit(
+                "usage: spark-inference recipe scaffold <lab/slug> <llamacpp|eugr>"
+            )
+        recipe = scaffold_recipe(argv[3], argv[4])
+        print(f"Scaffolded draft {recipe['id']} -> {draft_recipe_path(recipe['id'])}")
+        return 0
+    if sub == "testing":
+        if len(argv) < 4:
+            raise SystemExit("usage: spark-inference recipe testing <profile>")
+        recipe = set_recipe_lifecycle(argv[3], LIFECYCLE_TESTING)
+        print(f"Marked testing: {recipe['id']}")
+        return 0
+    if sub == "promote":
+        if len(argv) < 4:
+            raise SystemExit("usage: spark-inference recipe promote <profile>")
+        recipe = promote_recipe(argv[3])
+        print(f"Promoted to production: {recipe['id']}")
+        return 0
+    if sub == "discard":
+        if len(argv) < 4:
+            raise SystemExit("usage: spark-inference recipe discard <profile>")
+        discard_recipe(argv[3])
+        print(f"Discarded draft: {argv[3]}")
+        return 0
+    raise SystemExit(f"unknown recipe subcommand: {sub}")
+
+
 def usage() -> None:
     print(
-        """Usage: spark-inference {list|status|up <profile>|down|logs [profile]|bench}
+        """Usage: spark-inference {list|status|up <profile>|down|logs [profile]|bench|recipe ...}
 
 Recipe-driven inference control (Phase 5). One GPU workload at a time.
 bench — multi-turn agent-style timing on the active profile (avg of 3 sessions).
-Profiles: see data/inference-profiles.yaml and recipes/*.yaml"""
+recipe scaffold <lab/slug> <llamacpp|eugr> — Model Lab draft recipe
+recipe testing|promote|discard <profile> — lifecycle (draft → testing → production)"""
     )
 
 
@@ -853,6 +1192,8 @@ def main(argv: list[str]) -> int:
         return cmd_logs(argv[2] if len(argv) > 2 else None)
     if cmd == "bench":
         return cmd_bench(write_result="--write-result" in argv)
+    if cmd == "recipe":
+        return cmd_recipe(argv)
 
     usage()
     return 1

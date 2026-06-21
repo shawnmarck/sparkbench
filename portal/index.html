@@ -116,6 +116,11 @@
     .inf-profile .meta { color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-profile .tier-heavy { color: var(--warn); }
     .inf-profile .notes { display: block; width: 100%; margin-top: .25rem; color: #9aa0a6; font-size: .72rem; line-height: 1.4; font-style: italic; }
+    .inf-life { display: inline-block; font-size: .68rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: .35rem; }
+    .inf-life.life-testing { border-color: #2a3a4a; color: #8ab4d8; }
+    .inf-life.life-draft { border-color: #3a3a3a; color: var(--muted); opacity: .85; }
+    .inf-life.life-production { border-color: #2a4a2a; color: var(--ok); }
+    .inf-profile.draft { opacity: .72; }
     .inf-tier-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .35rem 0 .15rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-tier-legend b { color: #c5cdd8; font-weight: 600; }
     .inf-switch-banner { margin-top: .5rem; padding: .55rem .65rem; background: #241c10; border: 1px solid #4a402a; border-radius: 8px; font-size: .74rem; color: var(--warn); font-family: ui-monospace, monospace; line-height: 1.45; white-space: pre-wrap; }
@@ -257,10 +262,12 @@
             <div class="inf-switch-banner" id="inf-switch-banner" hidden></div>
           </div>
 
-          <div class="section-title">Profiles</div>
+          <div class="section-title">Recipes</div>
           <div class="inf-tier-legend">
             <span><b>fast</b> — seconds to swap</span>
             <span><b>heavy</b> — minutes to load (confirm before switch)</span>
+            <span><b>draft</b> — Model Lab only (not switchable)</span>
+            <span><b>testing</b> — switchable before promote</span>
           </div>
           <div class="inf-profile-grid" id="inf-profiles"></div>
 
@@ -433,31 +440,52 @@
         el.className = 'inf-msg' + (kind ? ' ' + kind : '');
       }
 
+      function infLifeBadge(lifecycle) {
+        const lc = lifecycle || 'production';
+        return '<span class="inf-life life-' + lc + '">' + lc + '</span>';
+      }
+
+      function infProfileSort(a, b) {
+        const rank = { production: 0, testing: 1, draft: 2 };
+        const ra = rank[a.lifecycle || 'production'] ?? 1;
+        const rb = rank[b.lifecycle || 'production'] ?? 1;
+        if (ra !== rb) return ra - rb;
+        if (!!b.active - !!a.active) return (b.active ? 1 : 0) - (a.active ? 1 : 0);
+        return (a.id || '').localeCompare(b.id || '');
+      }
+
       function renderInfProfiles(profiles, activeId, switching) {
+        const all = (profiles || []).slice().sort(infProfileSort);
+        const switchable = all.filter((p) => p.switchable !== false);
         const sel = $('inf-select');
         const prev = sel.value;
-        sel.innerHTML = (profiles || []).map((p) =>
-          '<option value="' + p.id + '" data-tier="' + (p.tier || '') + '">'
-          + p.id + ' · ' + (p.engine || '') + ' · ' + (p.tier || '') + '</option>'
-        ).join('');
-        if (prev && profiles.some((p) => p.id === prev)) sel.value = prev;
-        else if (activeId) sel.value = activeId;
+        sel.innerHTML = switchable.map((p) => {
+          const lc = p.lifecycle && p.lifecycle !== 'production' ? ' · ' + p.lifecycle : '';
+          return '<option value="' + p.id + '" data-tier="' + (p.tier || '') + '">'
+            + p.id + ' · ' + (p.engine || '') + ' · ' + (p.tier || '') + lc + '</option>';
+        }).join('');
+        if (prev && switchable.some((p) => p.id === prev)) sel.value = prev;
+        else if (activeId && switchable.some((p) => p.id === activeId)) sel.value = activeId;
+        else if (switchable.length) sel.value = switchable[0].id;
 
-        $('inf-profiles').innerHTML = (profiles || []).map((p) => {
-          const cls = p.active ? 'inf-profile active' : 'inf-profile';
+        $('inf-profiles').innerHTML = all.map((p) => {
+          const lc = p.lifecycle || 'production';
+          const cls = 'inf-profile' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '');
           const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
           const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
           const tok = p.tok_s != null ? ' · ' + Math.round(p.tok_s) + ' tok/s' : '';
           const note = p.notes ? '<span class="notes">' + truncateNote(p.notes, 100) + '</span>' : '';
-          return '<div class="' + cls + '"><span class="name">' + p.name + '</span>'
+          const switchHint = lc === 'draft' ? ' · not switchable' : '';
+          return '<div class="' + cls + '"><span class="name">' + infLifeBadge(lc) + (p.name || p.id) + '</span>'
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
-            + ' · :' + p.port + tok + ' · ' + state + '</span>' + note + '</div>';
-        }).join('') || '<div class="inf-profile"><span class="name">No profiles enabled</span></div>';
+            + ' · :' + p.port + tok + ' · ' + state + switchHint + '</span>' + note + '</div>';
+        }).join('') || '<div class="inf-profile"><span class="name">No recipes yet</span>'
+          + '<span class="meta">Create drafts on the <a href="/models.html">Models</a> page.</span></div>';
 
-        $('inf-switch').disabled = !!switching;
+        $('inf-switch').disabled = !!switching || !switchable.length;
         $('inf-down').disabled = !!switching;
         $('inf-bench').disabled = !!switching
-          || !(activeId && profiles.some((p) => p.id === activeId && p.ready));
+          || !(activeId && all.some((p) => p.id === activeId && p.ready));
       }
 
       function renderInferencePanel(data) {
@@ -568,9 +596,9 @@
         if (!pendingStartProfile || !data) return;
         const profile = pendingStartProfile;
         const prof = (data.profiles || []).find((p) => p.id === profile);
-        if (!prof) {
+        if (!prof || prof.switchable === false) {
           pendingStartProfile = null;
-          setInfMsg('Unknown profile: ' + profile, 'err');
+          setInfMsg(prof ? 'Profile not switchable (draft) — mark testing on Models first.' : 'Unknown profile: ' + profile, 'err');
           return;
         }
         if (data.switch && data.switch.running) return;

@@ -58,6 +58,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True, **core.api_status()})
             return
 
+        if self._route_path() == "/api/inference/recipes":
+            self._json(200, {"ok": True, "recipes": core.api_recipe_list()})
+            return
+
         if self.path.startswith("/api/inference/logs"):
             lines = 30
             if "?" in self.path:
@@ -132,6 +136,66 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(code, {"ok": False, "error": message, "bench": job})
                 return
             self._json(202, {"ok": True, "message": message, "bench": job})
+            return
+
+        if path == "/api/inference/recipes/scaffold":
+            if not data.get("confirm"):
+                self._json(400, {"ok": False, "error": "confirmation required"})
+                return
+            inv = str(data.get("inventory_path", "")).strip()
+            engine = str(data.get("engine", "")).strip().lower()
+            try:
+                recipe = core.scaffold_recipe(
+                    inv,
+                    engine,
+                    name=str(data.get("name", "")).strip() or None,
+                    tier=str(data.get("tier", "")).strip() or None,
+                )
+            except RuntimeError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+            pub = core.recipe_public(recipe)
+            pub["lifecycle"] = recipe.get("lifecycle")
+            self._json(201, {"ok": True, "recipe": pub})
+            return
+
+        if path == "/api/inference/recipes/testing":
+            if not data.get("confirm"):
+                self._json(400, {"ok": False, "error": "confirmation required"})
+                return
+            profile = str(data.get("profile", "")).strip()
+            try:
+                recipe = core.set_recipe_lifecycle(profile, core.LIFECYCLE_TESTING)
+            except RuntimeError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+            self._json(200, {"ok": True, "recipe": core.recipe_public(recipe)})
+            return
+
+        if path == "/api/inference/recipes/promote":
+            if not data.get("confirm"):
+                self._json(400, {"ok": False, "error": "confirmation required"})
+                return
+            profile = str(data.get("profile", "")).strip()
+            try:
+                recipe = core.promote_recipe(profile)
+            except RuntimeError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+            self._json(200, {"ok": True, "recipe": core.recipe_public(recipe)})
+            return
+
+        if path == "/api/inference/recipes/discard":
+            if not data.get("confirm"):
+                self._json(400, {"ok": False, "error": "confirmation required"})
+                return
+            profile = str(data.get("profile", "")).strip()
+            try:
+                core.discard_recipe(profile)
+            except RuntimeError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+            self._json(200, {"ok": True, "profile": profile})
             return
 
         if path == "/api/inference/down":

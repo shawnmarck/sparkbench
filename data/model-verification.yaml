@@ -7,9 +7,12 @@ models:
     note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
     updated_at: '2026-06-21T08:53:52.017644+00:00'
   unsloth/qwen3.6-35b-a3b:
-    spark_status: wip
-    note: MoE Q4 GGUF — run spark-inference bench on qwen36-q4-llama profile
-    updated_at: '2026-06-21T08:16:00+00:00'
+    spark_status: works
+    note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
+    updated_at: '2026-06-21T09:01:22.328122+00:00'
+    tok_s: 48.6
+    tok_s_engine: llamacpp
+    tok_s_profile: qwen36-q4-llama
   yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
     spark_status: works
     engine: llamacpp
@@ -17,4 +20,4 @@ models:
     tok_s_engine: llamacpp
     tok_s_profile: gemma4-12b-coder-q4
     note: bench 13 tok in 0.7s
-    updated_at: '2026-06-21T08:28:35.638042+00:00'
+    updated_at: '2026-06-21T09:01:17.761172+00:00'

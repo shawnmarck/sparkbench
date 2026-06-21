@@ -183,6 +183,11 @@
     .badge.inf-active { border-color: #3a4a2a; color: var(--accent); }
     .badge.tok-s { border-color: #2a4a5a; color: #9ec8ff; }
     .badge.tok-s.unbench { border-color: #3a3a3a; color: var(--muted); }
+    .badge.life-draft { border-color: #3a3a3a; color: var(--muted); }
+    .badge.life-testing { border-color: #2a3a4a; color: var(--dl); }
+    .badge.life-production { border-color: #2a4a2a; color: var(--ok); }
+    .recipe-lab-create { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); }
+    .recipe-lab-create select { font-size: .8rem; padding: .35rem .5rem; }
     .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
     .inference-block { padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
     .inference-block h4 { margin: 0 0 .45rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
@@ -483,7 +488,7 @@
     }
 
     function inferenceBadge(m) {
-      const profiles = (m.inference_profiles || []).filter((p) => p.enabled);
+      const profiles = m.inference_profiles || [];
       if (!profiles.length) return '';
       const activeId = activeProfileId();
       const active = profiles.find((p) => p.id === activeId);
@@ -491,41 +496,65 @@
         const state = infStatus.active.ready ? 'active' : 'loading';
         return `<span class="badge inf-active">${esc(active.id)} · ${state}</span>`;
       }
-      return `<span class="badge inf-profile">${profiles.length} profile${profiles.length === 1 ? '' : 's'}</span>`;
+      const testing = profiles.filter((p) => p.lifecycle === 'testing').length;
+      if (testing) return `<span class="badge inf-profile">${testing} testing</span>`;
+      return `<span class="badge inf-profile">${profiles.length} recipe${profiles.length === 1 ? '' : 's'}</span>`;
+    }
+
+    function lifeBadge(lifecycle) {
+      const lc = lifecycle || 'production';
+      return `<span class="badge life-${esc(lc)}">${esc(lc)}</span>`;
     }
 
     function inferenceSection(m) {
+      const rel = m.rel_path || m.id;
+      const onDisk = m.local && m.local.present;
       const profiles = m.inference_profiles || [];
-      if (!profiles.length) {
-        return `<div class="detail-section inference-block"><h4>Inference</h4>`
-          + '<span class="meta-warn">No inference recipe configured for this model.</span></div>';
-      }
       const switching = inferenceSwitching();
       const activeId = activeProfileId();
       const rows = profiles.map((p) => {
+        const lc = p.lifecycle || (p.enabled ? 'production' : 'draft');
         const tier = p.tier === 'heavy' ? '<span class="badge tier-heavy">heavy</span>' : '<span class="badge">fast</span>';
         const tokBadge = p.tok_s != null
           ? `<span class="badge tok-s">${Math.round(p.tok_s)} tok/s</span>`
           : '<span class="badge tok-s unbench">not benchmarked</span>';
         const note = p.notes ? `<div class="verify-note">${esc(p.notes)}</div>` : '';
         let actions = '';
-        if (!p.enabled) {
-          actions = '<span class="badge">disabled</span>';
+        if (lc === 'draft') {
+          actions = `<button type="button" class="btn primary" data-action="recipe-testing" data-profile="${esc(p.id)}">Mark testing</button>`
+            + `<button type="button" class="btn" data-action="recipe-discard" data-profile="${esc(p.id)}">Discard</button>`;
         } else if (p.id === activeId) {
-          const ready = infStatus.active.ready;
+          const ready = infStatus && infStatus.active && infStatus.active.ready;
           actions = ready
             ? '<span class="badge status-ready">active</span><a href="/#inference" target="_top">Inference ↗</a>'
             : '<span class="badge status-downloading">loading…</span><a href="/#inference" target="_top">View progress ↗</a>';
         } else if (switching) {
           actions = '<button type="button" class="btn" disabled>Switch in progress</button>';
+        } else if (lc === 'testing' || p.enabled) {
+          actions = `<button type="button" class="btn primary" data-action="start-profile" data-profile="${esc(p.id)}" data-tier="${esc(p.tier || '')}">Start</button>`
+            + (lc === 'testing'
+              ? `<button type="button" class="btn" data-action="recipe-promote" data-profile="${esc(p.id)}">Promote</button>`
+                + `<button type="button" class="btn" data-action="recipe-discard" data-profile="${esc(p.id)}">Discard</button>`
+              : '');
         } else {
-          actions = `<button type="button" class="btn primary" data-action="start-profile" data-profile="${esc(p.id)}" data-tier="${esc(p.tier || '')}">Start profile</button>`;
+          actions = '<span class="badge">off</span>';
         }
         return `<div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
-          + `<code>${esc(p.id)} · ${esc(p.engine || '')}</code>${note}</div>`
-          + `<div class="inf-profile-actions">${tier}${tokBadge}${actions}</div></div>`;
+          + `<code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div>`
+          + `<div class="inf-profile-actions">${lifeBadge(lc)}${tier}${tokBadge}${actions}</div></div>`;
       }).join('');
-      return `<div class="detail-section inference-block"><h4>Inference profiles</h4>${rows}`
+      const create = onDisk ? `<div class="recipe-lab-create">`
+        + `<span class="verify-label">New recipe</span>`
+        + `<select class="recipe-engine" data-path="${esc(rel)}" aria-label="Engine">`
+        + `<option value="llamacpp">llama.cpp (GGUF)</option>`
+        + `<option value="eugr">eugr vLLM (NVFP4)</option>`
+        + `</select>`
+        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}">Create draft</button>`
+        + `</div>` : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>';
+      return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4>`
+        + `<div class="verify-note">Speeds are per <em>recipe</em> (engine + quant), not the model folder. Draft → testing → bench → promote.</div>`
+        + (rows || '<div class="meta-warn">No recipes yet.</div>')
+        + create
         + '<div class="actions" style="margin-top:.55rem"><a href="/#inference" target="_top">Open Inference tab ↗</a></div></div>';
     }
 
@@ -778,6 +807,29 @@
       } catch (_) {}
     }
 
+    async function recipeApi(path, body, btn) {
+      btn.disabled = true;
+      btn.classList.add('busy');
+      try {
+        const res = await fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm: true, ...body }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        await loadData(true);
+        await refreshInferenceStatus();
+        return data;
+      } catch (err) {
+        alert(err.message);
+        return null;
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('busy');
+      }
+    }
+
     async function startProfile(profileId, tier, btn) {
       if (tier === 'heavy') {
         const ok = confirm('Heavy profile (“' + profileId + '”) may take several minutes to load.\n\nContinue?');
@@ -886,6 +938,35 @@
       if (vbtn) { e.stopPropagation(); setSparkVerify(vbtn.dataset.path, vbtn.dataset.verify, vbtn); return; }
       const qbtn = e.target.closest('[data-action="queue-removal"]');
       if (qbtn && !qbtn.disabled) { e.stopPropagation(); setRemovalQueue(qbtn.dataset.path, qbtn.dataset.pending === '1', qbtn); return; }
+      const scaffoldBtn = e.target.closest('[data-action="recipe-scaffold"]');
+      if (scaffoldBtn && !scaffoldBtn.disabled) {
+        e.stopPropagation();
+        const path = scaffoldBtn.dataset.path;
+        const sel = document.querySelector(`select.recipe-engine[data-path="${CSS.escape(path)}"]`);
+        const engine = sel ? sel.value : 'llamacpp';
+        recipeApi('/api/inference/recipes/scaffold', { inventory_path: path, engine }, scaffoldBtn);
+        return;
+      }
+      const testBtn = e.target.closest('[data-action="recipe-testing"]');
+      if (testBtn && !testBtn.disabled) {
+        e.stopPropagation();
+        recipeApi('/api/inference/recipes/testing', { profile: testBtn.dataset.profile }, testBtn);
+        return;
+      }
+      const promoteBtn = e.target.closest('[data-action="recipe-promote"]');
+      if (promoteBtn && !promoteBtn.disabled) {
+        e.stopPropagation();
+        if (!confirm('Promote recipe “' + promoteBtn.dataset.profile + '” to production?')) return;
+        recipeApi('/api/inference/recipes/promote', { profile: promoteBtn.dataset.profile }, promoteBtn);
+        return;
+      }
+      const discardBtn = e.target.closest('[data-action="recipe-discard"]');
+      if (discardBtn && !discardBtn.disabled) {
+        e.stopPropagation();
+        if (!confirm('Discard draft recipe “' + discardBtn.dataset.profile + '”?')) return;
+        recipeApi('/api/inference/recipes/discard', { profile: discardBtn.dataset.profile }, discardBtn);
+        return;
+      }
       const sbtn = e.target.closest('[data-action="start-profile"]');
       if (sbtn && !sbtn.disabled) {
         e.stopPropagation();

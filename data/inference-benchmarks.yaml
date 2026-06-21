@@ -25,4 +25,20 @@ profiles:
     - 73.6
     - 73.6
     note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
-
+  qwen36-q4-llama:
+    tok_s: 48.6
+    engine: llamacpp
+    method: bench-agent
+    measured_at: '2026-06-21T08:59:13.892448+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 876
+    elapsed_s: 47.37
+    tok_s_min: 48.6
+    tok_s_max: 48.7
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 48.7
+    - 48.6
+    - 48.6
+    note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"

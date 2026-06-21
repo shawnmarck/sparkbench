@@ -3,9 +3,7 @@
 Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, NAS shelf sync, inference tooling.
 
 <p align="center">
-  <video src="docs/assets/portal-nebula-theme.mp4" autoplay muted loop playsinline controls width="100%" style="max-width: 820px; border-radius: 12px;">
-    <a href="docs/assets/portal-nebula-theme.mp4">Portal nebula theme demo (mp4)</a>
-  </video>
+  <img src="docs/assets/portal-nebula-theme.gif" width="820" alt="Portal nebula theme demo — Theme B nebula background with constellation toggle">
 </p>
 
 ## Links

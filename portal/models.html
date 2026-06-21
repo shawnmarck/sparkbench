@@ -369,6 +369,11 @@
     let all = [], shelfMounted = false, activeJob = { running: false };
     let infStatus = null, highlightPath = null;
     let expandedId = null, pollTimer = null, jobTimer = null, infPollTimer = null;
+    let lastInfSnapshot = '';
+    let suppressBenchHistoryToggle = false;
+    const benchHistoryOpen = new Set();
+    const benchHistoryCache = {};
+    let benchNoteDrafts = {};
     const REFRESH_MS = 30000, JOB_POLL_MS = 2000, INF_POLL_MS = 5000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
     const engineLabels = { vllm: 'vLLM', llamacpp: 'GGUF' };
@@ -573,10 +578,11 @@
         const histSummary = runCount
           ? `Benchmark history (${runCount})`
           : 'Benchmark history';
+        const histOpen = benchHistoryOpen.has(p.id) ? ' open' : '';
         return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
           + `<code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div>`
           + `<div class="inf-profile-actions">${lifeBadge(lc)}${tier}${tokBadge}${actions}</div></div>`
-          + `<details class="bench-history" data-profile="${esc(p.id)}"><summary>${histSummary}</summary>`
+          + `<details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary>`
           + `<div class="bench-history-panel"></div></details></div>`;
       }).join('');
       const create = onDisk ? `<div class="recipe-lab-create">`
@@ -647,6 +653,7 @@
     function render(models) {
       const list = $('list');
       if (!models.length) { list.innerHTML = '<div class="empty">No models match filters.</div>'; return; }
+      suppressBenchHistoryToggle = true;
       list.innerHTML = models.map(m => {
         const id = esc(m.id);
         const open = expandedId === m.id;
@@ -680,8 +687,10 @@
           <div class="row-detail">${open ? renderDetail(m) : ''}</div>
         </article>`;
       }).join('');
+      suppressBenchHistoryToggle = false;
       renderJobBanner();
       scrollToHighlight();
+      restoreOpenBenchHistories();
     }
 
     function scrollToHighlight() {
@@ -796,6 +805,7 @@
       const tagPart = filterBits.length ? ` · ${filterBits.join(' · ')}` : '';
       $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${tagPart}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
       if (queuedTotal) $('summary').classList.add('meta-warn'); else $('summary').classList.remove('meta-warn');
+      benchNoteDrafts = captureBenchNoteDrafts();
       render(filtered);
     }
 
@@ -839,37 +849,82 @@
       return String(iso).slice(0, 19).replace('T', ' ');
     }
 
-    async function loadBenchHistory(detailsEl) {
+    function captureBenchNoteDrafts() {
+      const drafts = {};
+      document.querySelectorAll('.bench-note-input').forEach((ta) => {
+        const key = (ta.dataset.profile || '') + ':' + (ta.dataset.runId || '');
+        if (key !== ':') drafts[key] = ta.value;
+      });
+      return drafts;
+    }
+
+    function infStatusSnapshot(data) {
+      if (!data) return '';
+      const a = data.active;
+      const parts = (data.profiles || []).map((p) => [
+        p.id, p.tok_s, !!p.active, !!p.ready, !!p.starting, p.bench_run_count,
+      ].join(':'));
+      return [
+        a && a.id, a && a.ready, a && a.starting,
+        data.switch && data.switch.running,
+        data.bench && data.bench.running,
+        parts.join('|'),
+      ].join(';');
+    }
+
+    function renderBenchHistoryPanel(panel, data, profile) {
+      const runs = data.runs || [];
+      if (!runs.length) {
+        panel.innerHTML = '<div class="meta-warn">No runs yet — bench on Inference tab.</div>';
+        panel.dataset.loaded = '1';
+        return;
+      }
+      const latestId = (data.latest || {}).latest_run_id;
+      const rows = runs.map((run) => {
+        const tok = run.tok_s != null ? Math.round(run.tok_s) + ' tok/s' : '—';
+        const range = (run.tok_s_min != null && run.tok_s_max != null)
+          ? ` (${Math.round(run.tok_s_min)}–${Math.round(run.tok_s_max)})` : '';
+        const sys = run.system_note ? `<div class="verify-note">${esc(run.system_note)}</div>` : '';
+        const cls = run.id === latestId ? 'latest' : '';
+        const draftKey = profile + ':' + run.id;
+        const noteVal = benchNoteDrafts[draftKey] != null ? benchNoteDrafts[draftKey] : (run.note || '');
+        return `<tr class="${cls}"><td>${esc(formatBenchWhen(run.measured_at))}</td>`
+          + `<td>${esc(tok + range)}<br><code>${esc(run.method || '')}</code>${sys}</td>`
+          + `<td><textarea class="bench-note-input" rows="2" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">${esc(noteVal)}</textarea>`
+          + `<button type="button" class="btn bench-note-save" data-action="bench-note-save" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">Save note</button></td></tr>`;
+      }).join('');
+      panel.innerHTML = `<table class="bench-history-table"><thead><tr><th>When</th><th>Speed</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>`;
+      panel.dataset.loaded = '1';
+    }
+
+    async function loadBenchHistory(detailsEl, opts) {
+      opts = opts || {};
       const profile = detailsEl.dataset.profile;
       const panel = detailsEl.querySelector('.bench-history-panel');
-      if (!profile || !panel || panel.dataset.loaded === '1') return;
+      if (!profile || !panel) return;
+      const cached = benchHistoryCache[profile];
+      if (!opts.force && cached) {
+        renderBenchHistoryPanel(panel, cached, profile);
+        return;
+      }
+      panel.dataset.loaded = '0';
       panel.innerHTML = '<div class="meta-warn">Loading…</div>';
       try {
         const res = await fetch('/api/inference/benchmarks/' + encodeURIComponent(profile) + '/history', { cache: 'no-store' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
-        const runs = data.runs || [];
-        panel.dataset.loaded = '1';
-        if (!runs.length) {
-          panel.innerHTML = '<div class="meta-warn">No runs yet — bench on Inference tab.</div>';
-          return;
-        }
-        const latestId = (data.latest || {}).latest_run_id;
-        const rows = runs.map((run) => {
-          const tok = run.tok_s != null ? Math.round(run.tok_s) + ' tok/s' : '—';
-          const range = (run.tok_s_min != null && run.tok_s_max != null)
-            ? ` (${Math.round(run.tok_s_min)}–${Math.round(run.tok_s_max)})` : '';
-          const sys = run.system_note ? `<div class="verify-note">${esc(run.system_note)}</div>` : '';
-          const cls = run.id === latestId ? 'latest' : '';
-          return `<tr class="${cls}"><td>${esc(formatBenchWhen(run.measured_at))}</td>`
-            + `<td>${esc(tok + range)}<br><code>${esc(run.method || '')}</code>${sys}</td>`
-            + `<td><textarea class="bench-note-input" rows="2" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">${esc(run.note || '')}</textarea>`
-            + `<button type="button" class="btn bench-note-save" data-action="bench-note-save" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">Save note</button></td></tr>`;
-        }).join('');
-        panel.innerHTML = `<table class="bench-history-table"><thead><tr><th>When</th><th>Speed</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>`;
+        benchHistoryCache[profile] = data;
+        renderBenchHistoryPanel(panel, data, profile);
       } catch (err) {
+        panel.dataset.loaded = '0';
         panel.innerHTML = `<div class="meta-warn">${esc(err.message)}</div>`;
       }
+    }
+
+    function restoreOpenBenchHistories() {
+      document.querySelectorAll('details.bench-history[open]').forEach((det) => {
+        loadBenchHistory(det);
+      });
     }
 
     async function saveBenchNote(profile, runId, note, btn) {
@@ -885,6 +940,12 @@
         );
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
+        const cache = benchHistoryCache[profile];
+        if (cache && cache.runs) {
+          const run = cache.runs.find((r) => r.id === runId);
+          if (run) run.note = note;
+        }
+        delete benchNoteDrafts[profile + ':' + runId];
         btn.textContent = 'Saved';
         setTimeout(() => { btn.textContent = 'Save note'; }, 1500);
       } catch (err) {
@@ -899,7 +960,12 @@
         const res = await fetch('/api/inference/status', { cache: 'no-store' });
         if (!res.ok) return;
         infStatus = await res.json();
-        if (expandedId || highlightPath) applyFilters();
+        const snap = infStatusSnapshot(infStatus);
+        const prev = lastInfSnapshot;
+        lastInfSnapshot = snap;
+        if (prev && snap !== prev && (expandedId || highlightPath)) {
+          applyFilters();
+        }
       } catch (_) {}
     }
 
@@ -1068,8 +1134,15 @@
     }
 
     $('list').addEventListener('toggle', (e) => {
+      if (suppressBenchHistoryToggle) return;
       const det = e.target.closest('details.bench-history');
-      if (det && det.open) loadBenchHistory(det);
+      if (!det || !det.dataset.profile || !det.isConnected) return;
+      if (det.open) {
+        benchHistoryOpen.add(det.dataset.profile);
+        loadBenchHistory(det, { force: !benchHistoryCache[det.dataset.profile] });
+      } else {
+        benchHistoryOpen.delete(det.dataset.profile);
+      }
     }, true);
 
     $('list').addEventListener('click', (e) => {

@@ -2,8 +2,9 @@
 # Auto-refresh model inventory: systemd timer + inotify + nginx no-cache
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
 
 echo "==> Sync portal + scripts"
 cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/"
@@ -17,29 +18,8 @@ chmod 1777 "${SPARK_ROOT}/run"
 install -m 755 "${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" /usr/local/bin/spark-inventory-refresh
 install -m 755 "${STAGING}/scripts/spark-inventory-build" /usr/local/bin/spark-inventory-build
 
-echo "==> nginx: no-cache for models.json"
-cat > /etc/nginx/sites-available/spark-portal <<'NGINX'
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name sparky 192.168.0.101 _;
-
-    root /opt/spark/portal;
-    index index.html;
-
-    location = /models.json {
-        add_header Cache-Control "no-store, no-cache, must-revalidate";
-        add_header Pragma "no-cache";
-        try_files $uri =404;
-    }
-
-    location / {
-        try_files $uri $uri/ =404;
-    }
-}
-NGINX
-nginx -t
-systemctl reload nginx
+echo "==> nginx: portal + API proxies (via common.sh)"
+write_nginx_portal_site
 
 echo "==> Install inotify-tools (optional watcher)"
 export DEBIAN_FRONTEND=noninteractive

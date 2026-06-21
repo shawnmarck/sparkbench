@@ -2,7 +2,10 @@
 # Shelf transfer API for model inventory (fetch/push per model from portal).
 set -euo pipefail
 
-TARGET="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+TARGET="${SPARK_ROOT}"
 UNIT="/etc/systemd/system/spark-shelf-api.service"
 
 chmod +x "${TARGET}/scripts/spark-shelf-api"
@@ -31,29 +34,7 @@ systemctl daemon-reload
 systemctl enable spark-shelf-api.service
 systemctl restart spark-shelf-api.service
 
-NGINX_SITE="/etc/nginx/sites-available/spark-portal"
-if ! grep -q 'location /api/shelf' "${NGINX_SITE}"; then
-  sed -i '/location \/api\/gpu {/i\
-    location /api/shelf/ {\
-        proxy_pass http://127.0.0.1:8766/api/shelf/;\
-        proxy_http_version 1.1;\
-        add_header Cache-Control "no-store";\
-    }\
-' "${NGINX_SITE}"
-fi
-
-if ! grep -q 'location /api/models' "${NGINX_SITE}"; then
-  sed -i '/location \/api\/gpu {/i\
-    location /api/models/ {\
-        proxy_pass http://127.0.0.1:8766/api/models/;\
-        proxy_http_version 1.1;\
-        add_header Cache-Control "no-store";\
-    }\
-' "${NGINX_SITE}"
-fi
-
-nginx -t
-systemctl reload nginx
+write_nginx_portal_site
 
 "${TARGET}/scripts/spark-inventory-build" || "${TARGET}/venv/bin/python" "${TARGET}/scripts/spark-inventory-build.py"
 

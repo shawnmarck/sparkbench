@@ -433,17 +433,28 @@ def append_history(metrics):
     return {k: list(v) for k, v in _HISTORY.items()}
 
 
+def read_gpu_util():
+    try:
+        gpu_out = subprocess.check_output(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        name, gpu_util_s = [part.strip() for part in gpu_out.split(",", 1)]
+        return name, float(gpu_util_s)
+    except (subprocess.CalledProcessError, ValueError, OSError):
+        return None, None
+
+
 def read_metrics():
-    gpu_out = subprocess.check_output(
-        [
-            "nvidia-smi",
-            "--query-gpu=name,utilization.gpu",
-            "--format=csv,noheader,nounits",
-        ],
-        text=True,
-    ).strip()
-    name, gpu_util = [part.strip() for part in gpu_out.split(",", 1)]
-    gpu_util = float(gpu_util)
+    gpu_name, gpu_util = read_gpu_util()
+    if gpu_util is None:
+        gpu_name = gpu_name or "GPU unavailable"
+        gpu_util = 0.0
 
     mem = {}
     with open("/proc/meminfo", encoding="utf-8") as fh:
@@ -457,8 +468,9 @@ def read_metrics():
     used_pct = round((used_mb / total_mb) * 100, 1) if total_mb else 0.0
 
     metrics = {
-        "gpu_name": name,
+        "gpu_name": gpu_name,
         "gpu_util_pct": round(gpu_util, 1),
+        "gpu_available": gpu_name != "GPU unavailable",
         "memory_used_mb": used_mb,
         "memory_total_mb": total_mb,
         "memory_used_pct": used_pct,

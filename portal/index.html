@@ -18,6 +18,8 @@
     .nav-btn:hover { color: var(--text); border-color: var(--border); background: var(--card); }
     .nav-btn.active { color: var(--accent); border-color: #3a4a2a; background: #1a2210; }
     .nav-btn .ext { opacity: .45; font-size: .7rem; margin-left: .2rem; }
+    .nav-btn.experimental { opacity: .55; }
+    .nav-btn.experimental::after { content: 'exp'; font-size: .58rem; margin-left: .25rem; color: var(--warn); vertical-align: super; }
     .nav-meta { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
     .live { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s ease-in-out infinite; }
@@ -97,7 +99,7 @@
       <a href="/models.html" class="nav-btn" data-src="/models.html" data-title="Model inventory">Models</a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
-      <a href="http://sparky:3131/" class="nav-btn" data-src="http://sparky:3131/" data-title="Rookery" data-popout="http://sparky:3131/">Rookery</a>
+      <a href="http://sparky:3131/" class="nav-btn experimental" title="Experimental — disqualified in bake-off (see docs/BAKE-OFF.md)" data-src="http://sparky:3131/" data-title="Rookery (experimental)" data-popout="http://sparky:3131/">Rookery</a>
       <a href="http://sparky:3080/" class="nav-btn" data-src="http://sparky:3080/" data-title="vLLM Studio" data-popout="http://sparky:3080/">Studio</a>
 
     </nav>

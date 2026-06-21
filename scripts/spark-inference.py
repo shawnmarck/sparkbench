@@ -32,6 +32,8 @@ BENCHMARKS_FILE = ROOT / "data" / "inference-benchmarks.yaml"
 VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
+VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
+INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
 BENCH_METHODS = frozenset({"bench", "bench-agent"})
 LIFECYCLE_DRAFT = "draft"
@@ -59,6 +61,42 @@ def save_profiles_index(profiles: list[str]) -> None:
     PROFILES_INDEX.write_text(
         yaml.safe_dump({"profiles": profiles}, sort_keys=False, default_flow_style=False)
     )
+
+
+def trigger_inventory_rebuild() -> None:
+    if not INVENTORY_BUILD.is_file():
+        return
+    subprocess.Popen(
+        [str(INVENTORY_BUILD)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def sync_spark_status_for_testing(recipe: dict[str, Any]) -> None:
+    """Align model Spark row with recipe testing (skip if already wip/works/failed)."""
+    inv_path = recipe.get("inventory_path") or recipe.get("catalog_id")
+    if not inv_path or not VERIFY_SCRIPT.is_file():
+        return
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(VERIFY_SCRIPT), "get", str(inv_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        current = json.loads(proc.stdout).get("spark_status", "unverified")
+    except (subprocess.CalledProcessError, json.JSONDecodeError, OSError):
+        current = "unverified"
+    if current in ("wip", "works", "failed"):
+        return
+    engine = str(recipe.get("engine") or "").strip()
+    note = f"Model Lab: {recipe.get('id', 'recipe')} testing"
+    args = [sys.executable, str(VERIFY_SCRIPT), "set", str(inv_path), "wip"]
+    if engine:
+        args.append(engine)
+    args.append(note)
+    subprocess.run(args, capture_output=True, check=False)
 
 
 def production_recipe_path(profile_id: str) -> Path:
@@ -268,6 +306,7 @@ def scaffold_recipe(
 
     path = draft_recipe_path(profile_id)
     save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
     return recipe
 
 
@@ -284,6 +323,9 @@ def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
     recipe["updated_at"] = datetime.now(timezone.utc).isoformat()
     save_recipe_file(path, recipe)
     recipe["id"] = profile_id
+    if lifecycle == LIFECYCLE_TESTING:
+        sync_spark_status_for_testing(recipe)
+    trigger_inventory_rebuild()
     return recipe
 
 
@@ -307,11 +349,7 @@ def promote_recipe(profile_id: str) -> dict[str, Any]:
         profiles.append(profile_id)
         save_profiles_index(profiles)
 
-    subprocess.Popen(
-        [str(ROOT / "scripts" / "spark-inventory-build")],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    trigger_inventory_rebuild()
     recipe["id"] = profile_id
     return recipe
 
@@ -322,6 +360,7 @@ def discard_recipe(profile_id: str) -> None:
     draft_path = draft_recipe_path(profile_id)
     if draft_path.is_file():
         draft_path.unlink()
+        trigger_inventory_rebuild()
         return
     prod_path = production_recipe_path(profile_id)
     if prod_path.is_file():
@@ -665,11 +704,7 @@ def record_benchmark(
             yaml.safe_dump(store, sort_keys=False, default_flow_style=False)
         )
 
-    subprocess.Popen(
-        [str(ROOT / "scripts" / "spark-inventory-build")],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    trigger_inventory_rebuild()
     return entry
 
 

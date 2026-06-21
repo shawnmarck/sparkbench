@@ -563,7 +563,7 @@
         + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}">Create draft</button>`
         + `</div>` : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>';
       return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4>`
-        + `<div class="verify-note">Speeds are per <em>recipe</em> (engine + quant), not the model folder. Draft → testing → bench → promote.</div>`
+        + `<div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote. Spark status syncs on mark testing.</div>`
         + (rows || '<div class="meta-warn">No recipes yet.</div>')
         + create
         + '<div class="actions" style="margin-top:.55rem"><a href="/#inference" target="_top">Open Inference tab ↗</a></div></div>';
@@ -818,6 +818,48 @@
       } catch (_) {}
     }
 
+    function patchRecipeOnModel(recipe) {
+      if (!recipe || !recipe.id) return;
+      const inv = recipe.inventory_path;
+      if (!inv) return;
+      const model = all.find((m) => (m.rel_path || m.id) === inv);
+      if (!model) return;
+      const profiles = [...(model.inference_profiles || [])];
+      const i = profiles.findIndex((p) => p.id === recipe.id);
+      const base = i >= 0 ? profiles[i] : {
+        id: recipe.id,
+        name: recipe.name,
+        engine: recipe.engine,
+        tier: recipe.tier,
+      };
+      const updated = {
+        ...base,
+        lifecycle: recipe.lifecycle,
+        enabled: recipe.lifecycle === 'production',
+      };
+      if (i >= 0) profiles[i] = updated;
+      else profiles.push(updated);
+      model.inference_profiles = profiles;
+      if (recipe.lifecycle === 'testing') {
+        const sv = model.spark_verify || {};
+        const st = sv.spark_status || 'unverified';
+        if (st === 'unverified') {
+          model.spark_verify = { ...sv, spark_status: 'wip' };
+        }
+      }
+      applyFilters();
+    }
+
+    function removeRecipeFromModel(profileId) {
+      for (const model of all) {
+        const profiles = model.inference_profiles;
+        if (!profiles || !profiles.some((p) => p.id === profileId)) continue;
+        model.inference_profiles = profiles.filter((p) => p.id !== profileId);
+        applyFilters();
+        return;
+      }
+    }
+
     async function recipeApi(path, body, btn) {
       btn.disabled = true;
       btn.classList.add('busy');
@@ -829,8 +871,11 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
-        await loadData(true);
+        if (data.recipe) patchRecipeOnModel(data.recipe);
+        else if (path.includes('/discard') && body.profile) removeRecipeFromModel(body.profile);
         await refreshInferenceStatus();
+        loadData(true).catch(() => {});
+        setTimeout(() => loadData(true).catch(() => {}), 2000);
         return data;
       } catch (err) {
         alert(err.message);

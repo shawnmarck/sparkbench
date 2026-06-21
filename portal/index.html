@@ -165,6 +165,11 @@
     .inf-chip.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
     .inf-chip.active[data-inf-chip="bench"] { border-color: #2a3a5a; background: #141820; color: #9ec8ff; }
     .inf-chip.active[data-inf-chip="drafts"] { border-color: #4a402a; background: #241c10; color: var(--warn); }
+    .inf-group-actions {
+      display: flex; align-items: center; gap: .35rem; font-size: .68rem;
+      font-family: ui-monospace, monospace; color: var(--muted);
+    }
+    .inf-group-actions-sep { opacity: .45; }
     .inf-model-groups { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
     .inf-model-group { border: 1px solid var(--border); border-radius: 8px; background: #0a0c10; overflow: hidden; }
     .inf-model-group summary {
@@ -176,7 +181,8 @@
     .inf-model-group summary::before { content: '▸'; color: var(--accent); font-size: .62rem; transition: transform .12s; }
     .inf-model-group[open] summary::before { transform: rotate(90deg); }
     .inf-model-group-name { color: #c5cdd8; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .inf-model-group-count { color: var(--muted); font-size: .66rem; flex-shrink: 0; }
+    .inf-model-group-count { color: var(--muted); font-size: .66rem; flex-shrink: 0; margin-left: auto; }
+    .inf-model-group-shelves { color: var(--muted); font-size: .64rem; flex-shrink: 0; opacity: .85; }
     .inf-model-group.has-active { border-color: #3a4a2a; }
     .inf-model-group.has-active summary .inf-model-group-name { color: var(--accent); }
     .inf-model-group-active-tag { color: var(--ok); font-size: .64rem; font-weight: 600; flex-shrink: 0; }
@@ -456,6 +462,11 @@
                   <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
                   <button type="button" class="inf-chip" data-inf-chip="drafts">Drafts</button>
                 </div>
+                <div class="inf-group-actions">
+                  <button type="button" class="inf-link-btn" id="inf-expand-all">Expand all</button>
+                  <span class="inf-group-actions-sep">·</span>
+                  <button type="button" class="inf-link-btn" id="inf-collapse-all">Collapse all</button>
+                </div>
               </div>
               <div class="inf-recipes-scroll" id="inf-recipes-scroll">
                 <div class="inf-model-groups" id="inf-profiles"></div>
@@ -662,8 +673,12 @@
 
       function profileSearchHay(p) {
         return [
-          p.id, p.name, p.inventory_path, p.engine, p.tier, p.port, p.served_name, p.notes, p.lifecycle,
+          p.id, p.name, p.model_family, p.inventory_path, p.engine, p.tier, p.port, p.served_name, p.notes, p.lifecycle,
         ].filter(Boolean).join(' ').toLowerCase();
+      }
+
+      function profileModelFamily(p) {
+        return p.model_family || p.inventory_path || p.id || 'Other';
       }
 
       function profileMatchesInfFilters(p, activeId) {
@@ -698,13 +713,35 @@
       function groupInfProfiles(profiles) {
         const groups = new Map();
         profiles.forEach((p) => {
-          const key = p.inventory_path || p.id || 'unknown';
+          const key = profileModelFamily(p);
           if (!groups.has(key)) groups.set(key, []);
           groups.get(key).push(p);
         });
         return [...groups.entries()]
           .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([path, items]) => ({ path, items: items.sort(infProfileSort) }));
+          .map(([family, items]) => ({ family, items: items.sort(infProfileSort) }));
+      }
+
+      function activeModelFamily() {
+        if (!lastInfStatus || !lastInfStatus.active) return null;
+        const p = (lastInfStatus.profiles || []).find((x) => x.id === lastInfStatus.active.id);
+        return p ? profileModelFamily(p) : null;
+      }
+
+      function expandAllInfGroups() {
+        document.querySelectorAll('#inf-profiles details.inf-model-group').forEach((det) => {
+          const key = det.dataset.modelGroup;
+          if (!key) return;
+          infModelGroupsOpen.add(key);
+          det.open = true;
+        });
+      }
+
+      function collapseAllInfGroups() {
+        const keep = activeModelFamily();
+        infModelGroupsOpen.clear();
+        if (keep) infModelGroupsOpen.add(keep);
+        rerenderInfProfiles();
       }
 
       function infProfilesSnapshot(data, activeId) {
@@ -722,8 +759,8 @@
         ].join(';');
       }
 
-      function modelGroupShouldOpen(path, multiGroup, hasActive, hasSelected) {
-        if (infModelGroupsOpen.has(path)) return true;
+      function modelGroupShouldOpen(family, multiGroup, hasActive, hasSelected) {
+        if (infModelGroupsOpen.has(family)) return true;
         if (!multiGroup) return true;
         return hasActive || hasSelected;
       }
@@ -898,7 +935,10 @@
         const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
         const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
         const tok = p.tok_s != null ? Math.round(p.tok_s) + ' tok/s' : null;
-        const metaParts = [p.engine || '?', p.tier || '?'];
+        const shelf = p.inventory_path ? String(p.inventory_path).split('/').pop() : '';
+        const metaParts = [];
+        if (shelf) metaParts.push(shelf);
+        metaParts.push(p.engine || '?', p.tier || '?');
         if (tok) metaParts.push(tok);
         metaParts.push(state);
         const metaShort = metaParts.join(' · ');
@@ -959,15 +999,18 @@
           listEl.innerHTML = groups.map((g) => {
             const hasActive = g.items.some((p) => p.active);
             const hasSelected = g.items.some((p) => p.id === selectedId);
-            if (hasActive) infModelGroupsOpen.add(g.path);
-            const open = modelGroupShouldOpen(g.path, multiGroup, hasActive, hasSelected);
+            if (hasActive) infModelGroupsOpen.add(g.family);
+            const open = modelGroupShouldOpen(g.family, multiGroup, hasActive, hasSelected);
             const rows = g.items.map((p) => renderInfProfileRow(p, selectedId)).join('');
             const groupCls = 'inf-model-group' + (hasActive ? ' has-active' : '');
             const activeTag = hasActive ? '<span class="inf-model-group-active-tag">● active</span>' : '';
-            return '<details class="' + groupCls + '" data-model-path="' + attrEsc(g.path) + '"'
+            const shelfCount = new Set(g.items.map((p) => p.inventory_path).filter(Boolean)).size;
+            const shelfHint = shelfCount > 1
+              ? '<span class="inf-model-group-shelves">' + shelfCount + ' shelves</span>' : '';
+            return '<details class="' + groupCls + '" data-model-group="' + attrEsc(g.family) + '"'
               + (open ? ' open' : '') + '>'
-              + '<summary><span class="inf-model-group-name">' + escHtml(g.path) + '</span>'
-              + activeTag
+              + '<summary><span class="inf-model-group-name">' + escHtml(g.family) + '</span>'
+              + activeTag + shelfHint
               + '<span class="inf-model-group-count">(' + g.items.length + ')</span></summary>'
               + '<div class="inf-profile-grid">' + rows + '</div></details>';
           }).join('');
@@ -1535,9 +1578,9 @@
       $('inf-profiles').addEventListener('toggle', (e) => {
         if (suppressInfGroupToggle) return;
         const det = e.target.closest('details.inf-model-group');
-        if (!det || !det.dataset.modelPath || !det.isConnected) return;
-        if (det.open) infModelGroupsOpen.add(det.dataset.modelPath);
-        else infModelGroupsOpen.delete(det.dataset.modelPath);
+        if (!det || !det.dataset.modelGroup || !det.isConnected) return;
+        if (det.open) infModelGroupsOpen.add(det.dataset.modelGroup);
+        else infModelGroupsOpen.delete(det.dataset.modelGroup);
       }, true);
 
       $('inf-profiles').addEventListener('click', (e) => {
@@ -1567,6 +1610,8 @@
         if (!chip) return;
         toggleInfChip(chip.dataset.infChip);
       });
+      $('inf-expand-all').addEventListener('click', expandAllInfGroups);
+      $('inf-collapse-all').addEventListener('click', collapseAllInfGroups);
 
       $('inference-status').addEventListener('click', (e) => {
         const link = e.target.closest('[data-goto-inference]');

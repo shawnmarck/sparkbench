@@ -919,6 +919,49 @@ def validate_history_profile(profile_id: str) -> str | None:
     return profile_id
 
 
+_MODEL_FAMILY_RULES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"qwen3[\.\-_]?coder[\.\-_]?next|qwen[\.\-_]?coder[\.\-_]?next", re.I), "Qwen3 Coder Next"),
+    (re.compile(r"qwen3[\.\-_]?coder|qwen[\.\-_]?coder", re.I), "Qwen3 Coder"),
+    (re.compile(r"qwen3[\.\-_]?6|qwen36|qwen3-6", re.I), "Qwen3.6"),
+    (re.compile(r"qwen3[\.\-_]?5|qwen35", re.I), "Qwen3.5"),
+    (re.compile(r"qwen3[\.\-_]?30|qwen3-30", re.I), "Qwen3 30B"),
+    (re.compile(r"gemma[\.\-_]?4", re.I), "Gemma 4"),
+    (re.compile(r"hermes[\.\-_]?4", re.I), "Hermes 4"),
+    (re.compile(r"deepseek[\.\-_]?r1", re.I), "DeepSeek R1"),
+    (re.compile(r"deepseek[\.\-_]?v4", re.I), "DeepSeek V4"),
+    (re.compile(r"phi[\.\-_]?4", re.I), "Phi-4"),
+    (re.compile(r"step[\.\-_]?3[\.\-_]?7", re.I), "Step 3.7"),
+    (re.compile(r"nemotron[\.\-_]?3", re.I), "Nemotron 3"),
+    (re.compile(r"minimax[\.\-_]?m2", re.I), "MiniMax M2"),
+    (re.compile(r"gpt[\.\-_]?oss", re.I), "GPT-OSS"),
+    (re.compile(r"glm[\.\-_]?4", re.I), "GLM 4"),
+]
+
+
+def _family_haystack(recipe: dict[str, Any]) -> str:
+    parts = [
+        recipe.get("name"),
+        recipe.get("id"),
+        recipe.get("inventory_path"),
+        recipe.get("catalog_id"),
+        recipe.get("served_name"),
+    ]
+    return " ".join(str(p) for p in parts if p).lower()
+
+
+def infer_model_family(recipe: dict[str, Any]) -> str:
+    explicit = str(recipe.get("model_family") or "").strip()
+    if explicit:
+        return explicit
+    hay = _family_haystack(recipe)
+    for pattern, label in _MODEL_FAMILY_RULES:
+        if pattern.search(hay):
+            return label
+    inv = str(recipe.get("inventory_path") or recipe.get("catalog_id") or "").strip()
+    slug = inv.split("/", 1)[1] if "/" in inv else (inv or str(recipe.get("id") or "Other"))
+    return slug.replace("-", " ").replace("_", " ").title()
+
+
 def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
     profile_id = recipe.get("id")
     bench = benchmark_for_profile(profile_id) if profile_id else None
@@ -930,6 +973,7 @@ def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
         "port": recipe.get("port"),
         "served_name": recipe.get("served_name"),
         "inventory_path": recipe.get("inventory_path") or recipe.get("catalog_id"),
+        "model_family": infer_model_family(recipe),
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
     }

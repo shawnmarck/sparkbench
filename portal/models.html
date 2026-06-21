@@ -527,13 +527,33 @@
       return !!(infStatus && infStatus.switch && infStatus.switch.running);
     }
 
+    function parseStartedAt(iso) {
+      if (!iso) return null;
+      const t = Date.parse(iso);
+      return Number.isNaN(t) ? null : t;
+    }
+
+    function formatLoadingElapsed(startedAtMs) {
+      if (!startedAtMs) return '';
+      const s = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      if (s < 60) return ' (' + s + 's)';
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return ' (' + m + 'm ' + r + 's)';
+    }
+
     function inferenceLoadingInfo() {
       if (!infStatus) return null;
       if (infStatus.loading && infStatus.loading.profile) return infStatus.loading;
       const sw = infStatus.switch;
       if (sw && sw.running && sw.profile) {
         const prof = (infStatus.profiles || []).find((p) => p.id === sw.profile);
-        return { phase: 'switch', profile: sw.profile, name: (prof && prof.name) || sw.profile };
+        return {
+          phase: 'switch',
+          profile: sw.profile,
+          name: (prof && prof.name) || sw.profile,
+          started_at: sw.started_at,
+        };
       }
       const active = infStatus.active;
       if (active && !active.ready) {
@@ -541,9 +561,16 @@
           phase: active.starting ? 'model' : 'waiting',
           profile: active.id,
           name: active.name || active.id,
+          started_at: active.started_at,
         };
       }
       return null;
+    }
+
+    function inferenceLoadingLabel(info) {
+      const name = (info && (info.name || info.profile)) || '…';
+      const elapsed = formatLoadingElapsed(parseStartedAt(info && info.started_at));
+      return 'loading: ' + name + elapsed;
     }
 
     function activeProfileId() {
@@ -557,8 +584,7 @@
       if (loading && loading.profile) {
         const match = profiles.find((p) => p.id === loading.profile);
         if (match) {
-          const label = loading.name || loading.profile;
-          return `<span class="badge inf-loading">loading: ${esc(label)}</span>`;
+          return `<span class="badge inf-loading">${esc(inferenceLoadingLabel(loading))}</span>`;
         }
       }
       const activeId = activeProfileId();
@@ -597,10 +623,14 @@
           const ready = infStatus && infStatus.active && infStatus.active.ready;
           actions = ready
             ? '<span class="badge status-ready">active</span><a href="/#inference" target="_top">Inference ↗</a>'
-            : '<span class="badge inf-loading">loading: ' + esc(p.name || p.id) + '</span>'
+            : '<span class="badge inf-loading">' + esc(inferenceLoadingLabel({
+              profile: p.id, name: p.name || p.id, started_at: infStatus.active && infStatus.active.started_at,
+            })) + '</span>'
               + '<a href="/#inference" target="_top">View progress ↗</a>';
         } else if (switching && infStatus.switch && infStatus.switch.profile === p.id) {
-          actions = '<span class="badge inf-loading">loading: ' + esc(p.name || p.id) + '</span>'
+          actions = '<span class="badge inf-loading">' + esc(inferenceLoadingLabel({
+            profile: p.id, name: p.name || p.id, started_at: infStatus.switch.started_at,
+          })) + '</span>'
             + '<a href="/#inference" target="_top">View progress ↗</a>';
         } else if (switching) {
           actions = '<button type="button" class="btn" disabled>Switch in progress</button>';

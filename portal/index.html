@@ -201,6 +201,35 @@
     .inf-msg.warn { color: var(--warn); }
     .inf-msg.err { color: var(--down); }
     .inf-msg.ok { color: var(--ok); }
+    .inf-log-overlay { position: fixed; inset: var(--nav-h) 0 0 0; z-index: 50; }
+    .inf-log-overlay[hidden] { display: none !important; }
+    .inf-log-overlay-backdrop { position: absolute; inset: 0; background: rgba(8, 10, 14, 0.78); cursor: pointer; }
+    .inf-log-overlay-panel {
+      position: absolute; inset: 1rem; z-index: 1; display: flex; flex-direction: column; min-height: 0;
+      background: var(--card); border: 1px solid #4a402a; border-radius: 12px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5); overflow: hidden;
+    }
+    .inf-log-overlay-close {
+      position: absolute; top: .45rem; right: .45rem; z-index: 2; appearance: none;
+      width: 2rem; height: 2rem; border: 1px solid var(--border); border-radius: 8px;
+      background: #12151c; color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer;
+    }
+    .inf-log-overlay-close:hover { color: var(--text); border-color: #4a402a; background: #1a1d27; }
+    .inf-log-overlay-head {
+      flex-shrink: 0; padding: .85rem 3rem .55rem 1rem; border-bottom: 1px solid var(--border);
+      background: #241c10;
+    }
+    .inf-log-overlay-title { font-size: .88rem; font-weight: 600; color: var(--warn); font-family: ui-monospace, monospace; }
+    .inf-log-overlay-meta { margin-top: .25rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .inf-log-overlay-log {
+      flex: 1; min-height: 0; max-height: none; margin: 0; border: none; border-radius: 0;
+      padding: .85rem 1rem 1rem; font-size: .74rem; line-height: 1.45;
+    }
+    .inf-log-overlay-hint {
+      flex-shrink: 0; padding: .45rem 1rem; border-top: 1px solid var(--border);
+      font-size: .68rem; color: var(--muted); font-family: ui-monospace, monospace; text-align: center;
+    }
+    body.inf-log-overlay-open { overflow: hidden; }
   </style>
 </head>
 <body>
@@ -391,6 +420,19 @@
     </div>
   </div>
 
+  <div class="inf-log-overlay" id="inf-log-overlay" hidden>
+    <div class="inf-log-overlay-backdrop" data-inf-log-close></div>
+    <div class="inf-log-overlay-panel" id="inf-log-overlay-panel">
+      <button type="button" class="inf-log-overlay-close" id="inf-log-overlay-close" aria-label="Close expanded log">×</button>
+      <div class="inf-log-overlay-head">
+        <div class="inf-log-overlay-title" id="inf-log-overlay-title">Loading</div>
+        <div class="inf-log-overlay-meta" id="inf-log-overlay-meta"></div>
+      </div>
+      <pre class="inf-log inf-log-overlay-log" id="inf-log-overlay-log">—</pre>
+      <div class="inf-log-overlay-hint">Click outside or × to return to Inference</div>
+    </div>
+  </div>
+
   <div class="portal-dock" id="portal-dock">
     <button type="button" class="portal-dock-btn" id="wide-toggle" title="Wide layout off" aria-label="Toggle wide layout" aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M18 15.5 21 17.5 18 19.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -416,6 +458,7 @@
       let pendingStartProfile = null;
       let benchBusy = false;
       let benchMsgUntil = 0;
+      let infLogOverlayOpen = false;
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
 
@@ -492,15 +535,37 @@
         return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
       }
 
+      function parseStartedAt(iso) {
+        if (!iso) return null;
+        const t = Date.parse(iso);
+        return Number.isNaN(t) ? null : t;
+      }
+
+      function formatLoadingElapsed(startedAtMs) {
+        if (!startedAtMs) return '';
+        const s = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+        if (s < 60) return ' (' + s + 's)';
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return ' (' + m + 'm ' + r + 's)';
+      }
+
       function inferenceLoadingInfo(data) {
         if (!data) return null;
         if (data.loading && data.loading.profile) return data.loading;
         const sw = data.switch;
         if (sw && sw.running) {
           const id = sw.profile;
-          if (!id) return { phase: 'switch', profile: null, name: null };
+          if (!id) {
+            return { phase: 'switch', profile: null, name: null, started_at: sw.started_at };
+          }
           const prof = (data.profiles || []).find((p) => p.id === id);
-          return { phase: 'switch', profile: id, name: (prof && prof.name) || id };
+          return {
+            phase: 'switch',
+            profile: id,
+            name: (prof && prof.name) || id,
+            started_at: sw.started_at,
+          };
         }
         const active = data.active;
         if (active && !active.ready) {
@@ -508,6 +573,7 @@
             phase: active.starting ? 'model' : 'waiting',
             profile: active.id,
             name: active.name || active.id,
+            started_at: active.started_at,
           };
         }
         return null;
@@ -515,7 +581,8 @@
 
       function inferenceLoadingLabel(info) {
         const name = (info && (info.name || info.profile)) || '…';
-        return 'loading: ' + name;
+        const elapsed = formatLoadingElapsed(parseStartedAt(info && info.started_at));
+        return 'loading: ' + name + elapsed;
       }
 
       function inferenceLoadingTitle(info) {
@@ -567,10 +634,10 @@
         const pills = [];
 
         if (loading) {
-          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
-            + '<span class="pill-dot"></span>' + inferenceLoadingLabel(loading) + '</a>');
-          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
-            + '<span class="pill-dot"></span>View progress →</a>');
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference data-inf-log-focus="1">'
+            + '<span class="pill-dot"></span><span class="inf-loading-pill-text">' + inferenceLoadingLabel(loading) + '</span></a>');
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference data-inf-log-focus="1">'
+            + '<span class="pill-dot"></span>View log →</a>');
         } else if (active && active.ready) {
           const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
           pills.push('<a href="#inference" class="pill up inf-pill-link" data-goto-inference>'
@@ -749,16 +816,56 @@
         $('inf-models-link').textContent = invPath ? 'View model in inventory' : 'Model inventory';
       }
 
+      function formatInfLogText(d) {
+        const lines = (d.lines || []).join('\n');
+        const sw = d.switch && d.switch.running
+          ? '\n[switch running]\n' + (d.switch.log_tail || []).join('\n') : '';
+        return (lines || sw || '—').trim() || '—';
+      }
+
       async function fetchInfLogs() {
+        const lineCount = infLogOverlayOpen ? 120 : 40;
         try {
-          const res = await fetch('/api/inference/logs?lines=40', { cache: 'no-store' });
+          const res = await fetch('/api/inference/logs?lines=' + lineCount, { cache: 'no-store' });
           if (!res.ok) return;
           const d = await res.json();
-          const lines = (d.lines || []).join('\n');
-          const sw = d.switch && d.switch.running ? '\n[switch running]\n' + (d.switch.log_tail || []).join('\n') : '';
-          $('inf-log').textContent = (lines || sw || '—').trim() || '—';
+          const text = formatInfLogText(d);
+          $('inf-log').textContent = text;
+          if (infLogOverlayOpen) $('inf-log-overlay-log').textContent = text;
         } catch (e) {
-          $('inf-log').textContent = 'log unavailable';
+          const msg = 'log unavailable';
+          $('inf-log').textContent = msg;
+          if (infLogOverlayOpen) $('inf-log-overlay-log').textContent = msg;
+        }
+      }
+
+      function updateInfLogOverlayChrome() {
+        const info = lastInfStatus && inferenceLoadingInfo(lastInfStatus);
+        $('inf-log-overlay-title').textContent = info
+          ? inferenceLoadingLabel(info) : 'Inference log';
+        $('inf-log-overlay-meta').textContent = info
+          ? inferenceLoadingTitle(info) : 'Engine output';
+      }
+
+      function openInfLogOverlay() {
+        infLogOverlayOpen = true;
+        $('inf-log-overlay').hidden = false;
+        document.body.classList.add('inf-log-overlay-open');
+        updateInfLogOverlayChrome();
+        fetchInfLogs();
+      }
+
+      function closeInfLogOverlay() {
+        if (!infLogOverlayOpen) return;
+        infLogOverlayOpen = false;
+        $('inf-log-overlay').hidden = true;
+        document.body.classList.remove('inf-log-overlay-open');
+        fetchInfLogs();
+      }
+
+      function maybeCloseInfLogOverlay(data) {
+        if (infLogOverlayOpen && data && !inferenceLoadingInfo(data)) {
+          closeInfLogOverlay();
         }
       }
 
@@ -779,7 +886,9 @@
         const d = await fetchInferenceStatus();
         if (d) {
           renderInferencePanel(d);
+          maybeCloseInfLogOverlay(d);
           await fetchInfLogs();
+          if (infLogOverlayOpen) updateInfLogOverlayChrome();
           $('live').classList.remove('live-stale');
           $('live').lastChild.textContent = 'live';
           maybeAutoStartProfile(d);
@@ -978,6 +1087,11 @@
 
           updateNavMetrics(d);
           renderNavInference(infData);
+          maybeCloseInfLogOverlay(infData);
+          if (infLogOverlayOpen) {
+            updateInfLogOverlayChrome();
+            fetchInfLogs();
+          }
           if (!onSystem) {
             $('live').classList.remove('live-stale');
             $('live').lastChild.textContent = 'live';
@@ -1039,6 +1153,7 @@
       }
 
       function showSystem(btn) {
+        closeInfLogOverlay();
         onSystem = true;
         onInference = false;
         document.body.classList.remove('inf-view');
@@ -1065,6 +1180,7 @@
       }
 
       function showFrame(btn) {
+        closeInfLogOverlay();
         document.body.classList.remove('inf-view');
         const src = btn.dataset.src;
         const title = btn.dataset.title || src;
@@ -1137,8 +1253,10 @@
         if (!link || navModifierClick(e)) return;
         e.preventDefault();
         if (link.id === 'nav-inf') {
+          const loading = lastInfStatus && inferenceLoadingInfo(lastInfStatus);
           showInference(nav.querySelector('[data-view="inference"]'));
           history.replaceState(null, '', '#inference');
+          if (loading) openInfLogOverlay();
           return;
         }
         showSystem(nav.querySelector('[data-view="system"]'));
@@ -1187,6 +1305,16 @@
         e.preventDefault();
         showInference(nav.querySelector('[data-view="inference"]'));
         history.replaceState(null, '', '#inference');
+        if (link.dataset.infLogFocus === '1') openInfLogOverlay();
+      });
+
+      document.querySelectorAll('[data-inf-log-close]').forEach((el) => {
+        el.addEventListener('click', closeInfLogOverlay);
+      });
+      $('inf-log-overlay-panel').addEventListener('click', (e) => e.stopPropagation());
+      $('inf-log-overlay-close').addEventListener('click', closeInfLogOverlay);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && infLogOverlayOpen) closeInfLogOverlay();
       });
 
       const urlParams = new URLSearchParams(location.search);

@@ -1395,18 +1395,25 @@ def api_loading_state(
     recipe: dict[str, Any] | None = None,
     ready: bool = False,
     starting: bool = False,
+    active_started_at: str | None = None,
 ) -> dict[str, Any] | None:
     switch_job = switch_job if switch_job is not None else active_switch_job()
     if switch_job.get("running"):
+        started_at = switch_job.get("started_at")
         profile_id = switch_job.get("profile")
         if not profile_id:
-            return {"phase": "switch", "profile": None, "name": None}
+            return {"phase": "switch", "profile": None, "name": None, "started_at": started_at}
         try:
             target = load_recipe(profile_id)
             name = target.get("name") or profile_id
         except SystemExit:
             name = profile_id
-        return {"phase": "switch", "profile": profile_id, "name": name}
+        return {
+            "phase": "switch",
+            "profile": profile_id,
+            "name": name,
+            "started_at": started_at,
+        }
 
     if active_id and recipe and not ready:
         phase = "model" if starting else "waiting"
@@ -1414,6 +1421,7 @@ def api_loading_state(
             "phase": phase,
             "profile": active_id,
             "name": recipe.get("name") or active_id,
+            "started_at": active_started_at,
         }
     return None
 
@@ -1456,12 +1464,14 @@ def api_status() -> dict[str, Any]:
         bench = benchmark_for_profile(active_id)
         if bench:
             payload["active"]["benchmark"] = bench
+    active_started_at = (active.get("state") or {}).get("started_at") if active else None
     payload["loading"] = api_loading_state(
         switch_job=switch_job,
         active_id=active_id,
         recipe=recipe,
         ready=ready,
         starting=bool(payload.get("active") and payload["active"].get("starting")),
+        active_started_at=active_started_at,
     )
 
     payload["benchmarks"] = load_benchmarks()

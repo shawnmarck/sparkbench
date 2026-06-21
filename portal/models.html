@@ -238,8 +238,10 @@
     .btn.verify.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
     .verify-note, .queue-note { font-size: .78rem; color: var(--muted); font-style: italic; margin-top: .35rem; }
     .badge.tok-s { border-color: #2a3a4a; color: #8ec8ff; }
-    .why { font-size: .88rem; line-height: 1.45; color: #c8cdd4; padding: .6rem .75rem; background: #12151c; border-radius: 8px; border-left: 3px solid var(--accent); }
-    .desc { font-size: .86rem; color: var(--muted); line-height: 1.45; }
+    .model-about h4 { margin: 0 0 .45rem; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .model-summary { max-height: 9rem; overflow-y: auto; font-size: .88rem; line-height: 1.5; color: #c8cdd4; padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); white-space: pre-wrap; }
+    .model-summary::-webkit-scrollbar { width: 8px; }
+    .model-summary::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 4px; }
     .variants table { width: 100%; border-collapse: collapse; font-size: .8rem; }
     .variants th, .variants td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--border); }
     .variants th { color: var(--muted); font-weight: 500; }
@@ -423,6 +425,12 @@
       return est ? `<span class="release-est" title="Estimated from local files">~${text}</span>` : text;
     };
     const fmtRelease = (m) => fmtDate(m.release_date, m.release_date_source === 'local_earliest');
+    const modelSummary = (m) => m.summary || m.description || '';
+    const summaryBlock = (m) => {
+      const text = modelSummary(m);
+      if (!text) return '';
+      return `<div class="detail-section model-about"><h4>About</h4><div class="model-summary">${esc(text)}</div></div>`;
+    };
     const modelEngines = (m) => {
       if (m.engines && m.engines.length) return m.engines;
       return [...new Set((m.variants || []).map(v => v.engine).filter(Boolean))];
@@ -662,6 +670,7 @@
         </div>` : '';
       return `
         ${tagBlock}
+        ${summaryBlock(m)}
         ${inferenceSection(m)}
         <div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>
         ${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}
@@ -676,8 +685,6 @@
           </div>
           ${queued ? '<div class="queue-note">Queued for removal — purges daily at 03:00. NAS copy is kept.</div>' : ''}
         </div>
-        ${m.why_downloaded ? `<div class="detail-section why">${esc(m.why_downloaded)}</div>` : ''}
-        ${m.description ? `<div class="detail-section desc">${esc(m.description)}</div>` : ''}
         ${vars}`;
     }
 
@@ -822,7 +829,7 @@
         if (status && m.status !== status) return false;
         if (!modelMatchesSparkFilter(m)) return false;
         if (q) {
-          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, m.pipeline_tag, ...catalogCapabilities(m), ...notableHfTags(m)].join(' ').toLowerCase();
+          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, modelSummary(m), m.pipeline_tag, ...catalogCapabilities(m), ...notableHfTags(m)].join(' ').toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;

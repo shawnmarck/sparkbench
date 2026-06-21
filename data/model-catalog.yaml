@@ -1,4 +1,178 @@
 models:
+- id: unsloth/qwen3.6-27b
+  lab: unsloth
+  name: Qwen3.6-27B
+  slug: qwen3.6-27b
+  hf_repo: Qwen/Qwen3.6-27B
+  param_b: 27
+  capabilities:
+  - general
+  - dense
+  - vllm
+  - llamacpp
+  - nvfp4
+  - gguf
+  - agentic
+  why_downloaded: 'Dense 27B Qwen3.6 line for Spark bake-off — NVFP4 (eugr vLLM), GGUF
+    (llama.cpp), and MTP GGUF variants.
+
+    '
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: unsloth/Qwen3.6-27B-NVFP4
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: unsloth/Qwen3.6-27B-GGUF
+    note: Q4_K_XL + Q5_K_XL
+  - format: gguf
+    subpath: mtp-gguf
+    engine: llamacpp
+    hf_repo: unsloth/Qwen3.6-27B-MTP-GGUF
+- id: qwen/qwen3.6-27b
+  lab: qwen
+  name: Qwen3.6-27B (FP8)
+  slug: qwen3.6-27b
+  hf_repo: Qwen/Qwen3.6-27B
+  param_b: 27
+  capabilities:
+  - general
+  - dense
+  - vllm
+  - fp8
+  why_downloaded: 'Official Qwen FP8 checkpoint — reference vLLM path for the dense
+    27B base model.
+
+    '
+  variants:
+  - format: fp8
+    subpath: fp8
+    engine: vllm
+    hf_repo: Qwen/Qwen3.6-27B-FP8
+- id: rdtand/qwen3.6-27b
+  lab: rdtand
+  name: Qwen3.6-27B (PrismaQuant)
+  slug: qwen3.6-27b
+  hf_repo: Qwen/Qwen3.6-27B
+  param_b: 27
+  capabilities:
+  - general
+  - dense
+  - vllm
+  - experimental
+  why_downloaded: 'Community PrismaQuant 5.5-bit vLLM quant for Qwen3.6-27B — Spark
+    A/B vs NVFP4/FP8.
+
+    '
+  variants:
+  - format: prismaquant
+    subpath: prismaquant
+    engine: vllm
+    hf_repo: rdtand/Qwen3.6-27B-PrismaQuant-5.5bit-vllm
+- id: z-lab/qwen3.6-27b
+  lab: z-lab
+  name: Qwen3.6-27B (DFlash)
+  slug: qwen3.6-27b
+  hf_repo: Qwen/Qwen3.6-27B
+  param_b: 27
+  capabilities:
+  - general
+  - dense
+  - vllm
+  - dflash
+  - speculative
+  why_downloaded: 'DFlash drafter for Qwen3.6-27B — speculative decoding experiments
+    on Spark.
+
+    '
+  variants:
+  - format: dflash
+    subpath: dflash
+    engine: vllm
+    hf_repo: z-lab/Qwen3.6-27B-DFlash
+- id: 0xsero/deepseek-v4-flash-spark
+  lab: 0xsero
+  name: DeepSeek V4 Flash Spark
+  slug: deepseek-v4-flash-spark
+  hf_repo: deepseek-ai/DeepSeek-V4-Flash
+  param_b: 180
+  capabilities:
+  - reasoning
+  - coding
+  - agentic
+  - moe
+  - llamacpp
+  - gguf
+  - experimental
+  - long-context
+  summary: 'GGUF build of 0xSero''s DeepSeek V4 Flash Spark line — REAP-pruned MoE checkpoints
+    quantized with DS4/DwarfStar REAP (Q3 Dynamic REAP) for single DGX Spark (128 GB).
+    REAP (arXiv:2510.13999) one-shot expert pruning from Cerebras research; 0xSero
+    validates long-context profiles up to 200K tokens. Upstream Spark runtime uses
+    vLLM Studio with thinking, tool calling, and FP8 MLA KV (github.com/0xSero/deepseek-spark);
+    this GGUF slot is the llama.cpp bake-off path.
+
+    '
+  why_downloaded: 'Community REAP GGUF for GB10 — Q3-Dynamic-REAP-ds4 via llama.cpp. From
+    0xSero / Sybil Solutions DGX Spark recipes.
+
+    '
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: 0xSero/DeepSeek-V4-Flash-Spark-GGUF
+    note: Q3-Dynamic-REAP-ds4
+- id: stepfun-ai/step-3.7-flash
+  lab: stepfun-ai
+  name: Step-3.7-Flash
+  slug: step-3.7-flash
+  hf_repo: stepfun-ai/Step-3.7-Flash
+  param_b: 198
+  param_active_b: 11
+  capabilities:
+  - general
+  - moe
+  - multimodal
+  - vision
+  - agentic
+  - tool-calling
+  - llamacpp
+  - gguf
+  - long-context
+  why_downloaded: 'StepFun frontier VLM MoE for Spark — IQ4_XS GGUF (~105 GB) + mmproj
+    for llama.cpp. NVIDIA blog + StepFun benches validated on DGX Spark 128 GB.
+
+    '
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: stepfun-ai/Step-3.7-Flash-GGUF
+    note: IQ4_XS shards + mmproj
+- id: kaitchup/qwen3.6-27b
+  lab: kaitchup
+  name: Qwen3.6-27B (MoQ GGUF)
+  slug: qwen3.6-27b
+  hf_repo: Qwen/Qwen3.6-27B
+  param_b: 27
+  capabilities:
+  - general
+  - dense
+  - llamacpp
+  - gguf
+  - experimental
+  why_downloaded: 'Kaitchup MoQ GGUF tiers (4.0/4.5/5.0) for llama.cpp quality/size
+    experiments on Qwen3.6-27B.
+
+    '
+  variants:
+  - format: gguf
+    subpath: moq
+    engine: llamacpp
+    hf_repo: kaitchup/Qwen3.6-27B-GGUF-MoQ
 - id: nvidia/qwen3.6-35b-a3b-nvfp4
   lab: nvidia
   name: Qwen3.6-35B-A3B (NVFP4)

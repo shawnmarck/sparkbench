@@ -21,10 +21,12 @@ VERIFY_FILE = Path("/opt/spark/data/model-verification.yaml")
 RECIPES_DIR = Path("/opt/spark/recipes")
 INFERENCE_PROFILES = Path("/opt/spark/data/inference-profiles.yaml")
 BENCHMARKS_FILE = Path("/opt/spark/data/inference-benchmarks.yaml")
-BENCHMARK_HISTORY_FILE = Path("/opt/spark/data/inference-benchmark-history.yaml")
+BENCHMARK_HISTORY_FILE = Path("/opt/spark/run/inference-benchmark-history.yaml")
+BENCHMARK_HISTORY_LEGACY = Path("/opt/spark/data/inference-benchmark-history.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
 HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
+README_SUMMARY_VERSION = 6
 SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
 BENCH_METHODS = frozenset({"bench", "bench-agent"})
 HF = Path("/opt/spark/venv/bin/python")
@@ -106,40 +108,80 @@ def max_context_from_config(cfg: dict) -> int | None:
     return None
 
 
-def infer_hf_repo_from_path(model_dir: Path) -> str | None:
-    for sub in ("hf", "nvfp4", "gguf", "."):
-        base = model_dir if sub == "." else model_dir / sub
-        cfg = read_local_config(base)
-        for key in ("_name_or_path", "name_or_path"):
-            val = cfg.get(key)
-            if val and isinstance(val, str) and "/" in val and "://" not in val:
-                return val.strip().strip("/")
+def _normalize_hf_repo(repo: str | None) -> str | None:
+    if not repo:
+        return None
+    repo = repo.strip().strip("/").strip("'\"")
+    if "/" not in repo or "://" in repo:
+        return None
+    org, name = repo.split("/", 1)
+    return f"{org}/{name.split('/')[0]}"
+
+
+def _add_hf_repo(repos: list[str], seen: set[str], repo: str | None) -> None:
+    repo = _normalize_hf_repo(repo)
+    if not repo or repo in seen:
+        return
+    seen.add(repo)
+    repos.append(repo)
+
+
+def _repos_from_config(base: Path, repos: list[str], seen: set[str]) -> None:
+    cfg = read_local_config(base)
+    for key in ("_name_or_path", "name_or_path"):
+        val = cfg.get(key)
+        if val and isinstance(val, str):
+            _add_hf_repo(repos, seen, val)
+
+
+def _repos_from_readme(readme: Path, repos: list[str], seen: set[str]) -> None:
+    try:
+        text = readme.read_text(errors="ignore")[:12000]
+    except OSError:
+        return
+    fm = re.match(r"---\s*\n(.*?)\n---", text, re.DOTALL)
+    block = fm.group(1) if fm else text[:2000]
+    for match in re.finditer(r"huggingface\.co/([^\s)\]\"']+)", block):
+        _add_hf_repo(repos, seen, match.group(1).rstrip("/"))
+    if not fm:
+        return
+    for match in re.finditer(r"base_model:\s*['\"]?([^'\"\n]+)['\"]?", block):
+        _add_hf_repo(repos, seen, match.group(1).strip())
+    in_base = False
+    for line in block.splitlines():
+        if re.match(r"base_model:\s*$", line.strip()):
+            in_base = True
+            continue
+        if in_base:
+            item = re.match(r"\s*-\s+['\"]?([^'\"\n]+)['\"]?", line)
+            if item:
+                _add_hf_repo(repos, seen, item.group(1).strip())
+            elif line.strip() and not line.startswith(" "):
+                in_base = False
+
+
+def discover_hf_repos(model_dir: Path) -> list[str]:
+    repos: list[str] = []
+    seen: set[str] = set()
+    if not model_dir.is_dir():
+        return repos
+    _repos_from_config(model_dir, repos, seen)
     readme = model_dir / "README.md"
     if readme.is_file():
-        try:
-            text = readme.read_text(errors="ignore")[:8000]
-        except OSError:
-            text = ""
-        match = re.search(r"huggingface\.co/([^\s)\]\"']+)", text)
-        if match:
-            return match.group(1).rstrip("/")
-    return None
+        _repos_from_readme(readme, repos, seen)
+    for sub in sorted(model_dir.iterdir()):
+        if not sub.is_dir() or sub.name.startswith("."):
+            continue
+        _repos_from_config(sub, repos, seen)
+        sub_readme = sub / "README.md"
+        if sub_readme.is_file():
+            _repos_from_readme(sub_readme, repos, seen)
+    return repos
 
 
-def fallback_release_date(path: Path) -> str | None:
-    try:
-        mtimes = [path.stat().st_mtime]
-        for root, _dirs, files in os.walk(path):
-            for fname in files[:300]:
-                try:
-                    mtimes.append((Path(root) / fname).stat().st_mtime)
-                except OSError:
-                    pass
-        if mtimes:
-            return datetime.fromtimestamp(min(mtimes), timezone.utc).isoformat()
-    except OSError:
-        pass
-    return None
+def infer_hf_repo_from_path(model_dir: Path) -> str | None:
+    repos = discover_hf_repos(model_dir)
+    return repos[0] if repos else None
 
 
 def collect_hf_repos(hf_repo: str | None, variants: list) -> list[str]:
@@ -160,18 +202,16 @@ def resolve_release_date(
     hf_cache: dict,
 ) -> tuple[str | None, str | None]:
     repos = collect_hf_repos(hf_repo, variants)
+    if not repos:
+        repos = discover_hf_repos(model_path)
+    best_date: str | None = None
     for repo in repos:
         info = hf_enrich(repo, hf_cache)
-        if info.get("release_date"):
-            return info["release_date"], "huggingface"
-    inferred = infer_hf_repo_from_path(model_path)
-    if inferred and inferred not in repos:
-        info = hf_enrich(inferred, hf_cache)
-        if info.get("release_date"):
-            return info["release_date"], "huggingface"
-    local = fallback_release_date(model_path)
-    if local:
-        return local, "local_earliest"
+        release_date = info.get("release_date")
+        if release_date and (best_date is None or release_date < best_date):
+            best_date = release_date
+    if best_date:
+        return best_date, "huggingface"
     return None, None
 
 
@@ -255,6 +295,201 @@ def hf_enrich(repo: str, cache: dict) -> dict:
     return info
 
 
+def _strip_inline_html(line: str) -> str:
+    return re.sub(r"<[^>]+>", " ", line).strip()
+
+
+def _looks_like_code(line: str) -> bool:
+    low = line.lower()
+    if line.count("`") >= 4:
+        return True
+    if re.match(r"^(bash|sh|python|curl|git |cmake|apt-get|export |\./|pip )", low):
+        return True
+    if re.search(r"\b(cmake|llama-server|llama\.cpp/build|git clone|pip install)\b", low):
+        return True
+    return False
+
+
+def extract_readme_summary(text: str, max_len: int = 700) -> str | None:
+    body = text
+    if text.lstrip().startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) >= 3:
+            body = parts[2]
+    lines: list[str] = []
+    in_code = False
+    for line in body.splitlines():
+        stripped = _strip_inline_html(line.strip())
+        if stripped.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
+        if not stripped:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+        if stripped.startswith(("![", "[!", "| ", "|-", "|:", ">")):
+            continue
+        if stripped.startswith("[") and "](" in stripped:
+            continue
+        if _looks_like_code(stripped):
+            continue
+        if re.match(r"^([^|]{1,40} \| ){2,}[^|]{1,60}$", stripped):
+            continue
+        if stripped.startswith("#"):
+            heading = re.sub(r"^#+\s*", "", stripped)
+            heading = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", heading)
+            heading = re.sub(r"[*_`]", "", heading).strip()
+            if len(heading) > 3 and not heading.startswith("http"):
+                lines.append(heading + ".")
+            continue
+        line = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", stripped)
+        line = re.sub(r"[*_`]", "", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+    paras: list[str] = []
+    buf: list[str] = []
+    for line in lines:
+        if line == "":
+            if buf:
+                paras.append(" ".join(buf))
+                buf = []
+        else:
+            buf.append(line)
+    if buf:
+        paras.append(" ".join(buf))
+    good: list[str] = []
+    for para in paras:
+        low = para.lower()
+        if len(para) < 40:
+            continue
+        if low.startswith(("table of contents", "bibtex", "citation", "license")):
+            continue
+        if para.count("http") > 2:
+            continue
+        if _looks_like_code(para) or "src=" in para:
+            continue
+        good.append(para)
+        if len(good) >= 3:
+            break
+    summary = " ".join(good)
+    summary = re.sub(r"\s+", " ", summary).strip()
+    summary = re.sub(
+        r"\\u([0-9a-fA-F]{4})",
+        lambda m: chr(int(m.group(1), 16)),
+        summary,
+    )
+    if not summary:
+        return None
+    if len(summary) > max_len:
+        summary = summary[: max_len - 1].rsplit(" ", 1)[0] + "…"
+    return summary
+
+
+def hf_readme_summary(repo: str, cache: dict) -> str | None:
+    entry = cache.get(repo) or {}
+    if (
+        entry.get("readme_summary")
+        and entry.get("readme_summary_version") == README_SUMMARY_VERSION
+        and hf_cache_entry_fresh(entry)
+    ):
+        return entry.get("readme_summary")
+    summary = None
+    try:
+        from huggingface_hub import hf_hub_download
+
+        path = hf_hub_download(repo, "README.md")
+        summary = extract_readme_summary(Path(path).read_text(errors="ignore"))
+    except Exception:
+        pass
+    if repo not in cache or not isinstance(cache.get(repo), dict):
+        cache[repo] = {}
+    cache[repo]["readme_summary"] = summary
+    cache[repo]["readme_summary_version"] = README_SUMMARY_VERSION
+    cache[repo]["_fetched_at"] = datetime.now(timezone.utc).isoformat()
+    return summary
+
+
+def local_readme_summary(model_path: Path, subpath: str | None = None) -> str | None:
+    bases: list[Path] = []
+    if subpath:
+        bases.append(model_path / subpath)
+    bases.append(model_path)
+    for base in bases:
+        readme = base / "README.md"
+        if readme.is_file():
+            text = extract_readme_summary(readme.read_text(errors="ignore"))
+            if text:
+                return text
+    return None
+
+
+SPARK_WHY_SKIP_PREFIXES = (
+    "not in catalog",
+    "on nas shelf only",
+)
+
+
+def build_model_summary(
+    hf_repo: str | None,
+    variants: list,
+    why_downloaded: str,
+    model_path: Path | None,
+    hf_cache: dict,
+    catalog_summary: str | None = None,
+) -> str | None:
+    parts: list[str] = []
+    seen: set[str] = set()
+
+    def add_summary(label: str | None, text: str | None) -> None:
+        if not text or text in seen:
+            return
+        seen.add(text)
+        parts.append(f"{label}: {text}" if label else text)
+
+    variant_entries = variants or []
+    if variant_entries:
+        for variant in variant_entries:
+            repo = variant.get("hf_repo")
+            subpath = variant.get("subpath")
+            text = None
+            if model_path and subpath:
+                text = local_readme_summary(model_path, subpath)
+            if not text and repo:
+                text = hf_readme_summary(repo, hf_cache)
+            if not text:
+                continue
+            label = None
+            if len(variant_entries) > 1:
+                label = (variant.get("subpath") or variant.get("format") or "").upper()
+                if variant.get("note"):
+                    label = f"{label} ({variant['note']})" if label else variant["note"]
+            add_summary(label or None, text)
+    else:
+        text = local_readme_summary(model_path) if model_path else None
+        if not text and hf_repo:
+            text = hf_readme_summary(hf_repo, hf_cache)
+        if not text and model_path:
+            for repo in discover_hf_repos(model_path):
+                if repo == hf_repo:
+                    continue
+                text = hf_readme_summary(repo, hf_cache)
+                if text:
+                    break
+        add_summary(None, text)
+
+    if not parts and catalog_summary:
+        add_summary(None, re.sub(r"\s+", " ", catalog_summary.strip()))
+
+    why = re.sub(r"\s+", " ", (why_downloaded or "").strip())
+    if why and not any(why.lower().startswith(p) for p in SPARK_WHY_SKIP_PREFIXES):
+        parts.append(f"On Spark: {why}")
+
+    return "\n\n".join(parts) if parts else None
+
+
 def load_spark_verification() -> dict:
     if not VERIFY_FILE.is_file():
         return {}
@@ -316,11 +551,20 @@ def parse_active_param_b(name: str, slug: str) -> float | None:
     return None
 
 
+def _bench_history_path() -> Path | None:
+    if BENCHMARK_HISTORY_FILE.is_file():
+        return BENCHMARK_HISTORY_FILE
+    if BENCHMARK_HISTORY_LEGACY.is_file():
+        return BENCHMARK_HISTORY_LEGACY
+    return None
+
+
 def load_bench_history_counts() -> dict[str, int]:
-    if yaml is None or not BENCHMARK_HISTORY_FILE.is_file():
+    path = _bench_history_path()
+    if yaml is None or path is None:
         return {}
     try:
-        data = yaml.safe_load(BENCHMARK_HISTORY_FILE.read_text()) or {}
+        data = yaml.safe_load(path.read_text()) or {}
         profiles = data.get("profiles") or {}
         if not isinstance(profiles, dict):
             return {}
@@ -544,9 +788,14 @@ def main() -> int:
         else:
             overall = "partial"
 
-        desc = hf_info.get("description") or ""
-        if desc:
-            desc = re.sub(r"\s+", " ", desc.strip())[:500]
+        summary = build_model_summary(
+            hf_repo or None,
+            m.get("variants", []),
+            (m.get("why_downloaded") or "").strip(),
+            base,
+            hf_cache,
+            catalog_summary=(m.get("summary") or "").strip() or None,
+        )
 
         release_date, release_date_source = resolve_release_date(
             hf_repo or None,
@@ -584,7 +833,7 @@ def main() -> int:
                 "hf_url": f"https://huggingface.co/{hf_repo}" if hf_repo else None,
                 "capabilities": m.get("capabilities", []),
                 "why_downloaded": (m.get("why_downloaded") or "").strip(),
-                "description": desc or None,
+                "summary": summary,
                 "release_date": release_date,
                 "release_date_source": release_date_source,
                 "max_context": max_ctx,
@@ -623,6 +872,14 @@ def main() -> int:
                     model_dir,
                     hf_cache,
                 )
+                untracked_why = "Not in catalog — add to model-catalog.yaml"
+                untracked_summary = build_model_summary(
+                    inferred_repo,
+                    untracked_variants,
+                    untracked_why,
+                    model_dir,
+                    hf_cache,
+                )
                 entries.append(
                     {
                         "id": mid,
@@ -636,8 +893,8 @@ def main() -> int:
                         "hf_repo": inferred_repo,
                         "hf_url": f"https://huggingface.co/{inferred_repo}" if inferred_repo else None,
                         "capabilities": ["untracked"],
-                        "why_downloaded": "Not in catalog — add to model-catalog.yaml",
-                        "description": None,
+                        "why_downloaded": untracked_why,
+                        "summary": untracked_summary,
                         "release_date": untracked_release,
                         "release_date_source": untracked_source,
                         "max_context": max_context_from_config(read_local_config(model_dir)),
@@ -675,6 +932,14 @@ def main() -> int:
                     model_dir,
                     hf_cache,
                 )
+                shelf_why = "On NAS shelf only — fetch to Spark to use locally"
+                shelf_summary = build_model_summary(
+                    inferred_repo,
+                    shelf_variants,
+                    shelf_why,
+                    model_dir,
+                    hf_cache,
+                )
                 entries.append(
                     {
                         "id": mid,
@@ -688,8 +953,8 @@ def main() -> int:
                         "hf_repo": inferred_repo,
                         "hf_url": f"https://huggingface.co/{inferred_repo}" if inferred_repo else None,
                         "capabilities": ["shelf-only"],
-                        "why_downloaded": "On NAS shelf only — fetch to Spark to use locally",
-                        "description": None,
+                        "why_downloaded": shelf_why,
+                        "summary": shelf_summary,
                         "release_date": shelf_release,
                         "release_date_source": shelf_source,
                         "max_context": max_context_from_config(read_local_config(model_dir)),

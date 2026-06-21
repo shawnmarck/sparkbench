@@ -76,8 +76,11 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 ## Common commands
 
 ```bash
-spark-eugr status          # vLLM NVFP4 stack
-spark-llama status         # llama.cpp server
+spark-inference list       # enabled profiles
+spark-inference status     # active profile + engine health
+spark-inference up <id>    # switch profile (evicts current)
+spark-eugr status          # vLLM NVFP4 stack (direct)
+spark-llama status         # llama.cpp server (direct)
 spark-shelf-push --help    # NAS backup
 spark-shelf-pull           # fetch from NAS
 spark-inventory-build      # regenerate portal/models.json

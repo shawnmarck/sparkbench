@@ -1,0 +1,21 @@
+id: qwen36-q4-llama
+name: Qwen3.6 35B Q4 (llama.cpp)
+catalog_id: unsloth/qwen3.6-35b-a3b-gguf
+engine: llamacpp
+tier: heavy
+model: /models/unsloth/qwen3.6-35b-a3b/gguf/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf
+served_name: qwen3.6-35b-a3b-q4
+port: 8081
+tags:
+  - reasoning
+  - gguf
+  - llamacpp
+llamacpp_args:
+  - -ngl 999
+  - -fa 1
+  - --no-mmap
+  - -c 32768
+notes: |
+  Same Qwen3.6 MoE base as NVFP4 tier, GGUF Q4_K_M via llama-server.
+  Lighter to cold-start than eugr NVFP4 but still a heavy slot on GB10.
+  Stop eugr vLLM before switching: spark-inference down

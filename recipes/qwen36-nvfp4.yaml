@@ -1,0 +1,16 @@
+id: qwen36-nvfp4
+name: Qwen3.6 35B NVFP4
+catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
+engine: eugr
+tier: heavy
+eugr_recipe: /opt/spark/services/eugr-qwen36-local.yaml
+served_name: qwen3.6-35b-a3b-nvfp4
+port: 8000
+tags:
+  - reasoning
+  - nvfp4
+  - eugr
+notes: |
+  Primary reasoning model via eugr spark-vllm-docker. ~3–5 min cold start.
+  Tool/reasoning parsers enabled in eugr recipe command block.
+  Stop llama.cpp before switching: spark-inference down

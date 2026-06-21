@@ -46,8 +46,8 @@ spark-eugr (:8000)  │  spark-llama (:8081)
 | eugr vLLM (`spark-eugr`) | ✅ Proven; **stopped** right now |
 | llama.cpp (`spark-llama`) | ✅ Proven; **running** Gemma 4 12B Coder Q4 (`gemma4-12b-coder-q4`) on `:8081` |
 | Open WebUI | ✅ `:3000` |
-| Recipes | 🟡 Started — `recipes/gemma4-12b-coder-q4.yaml` only |
-| `spark-inference` control plane | ❌ Not built (old name wraps legacy compose) |
+| Recipes | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4` |
+| `spark-inference` control plane | 🟡 CLI (`list/status/up/down/logs`); API + portal tab next |
 | Hermes Agent | ❌ Not installed |
 
 ---
@@ -121,8 +121,8 @@ Spec detail: [`reference/inference-stack.md`](reference/inference-stack.md)
 
 ### Build order
 
-1. [ ] Expand `recipes/` — Qwen NVFP4, Qwen Q4, Hermes fast tier (alongside Gemma coder)
-2. [ ] **`spark-inference`** CLI — `status`, `list`, `up <profile>`, `down`, `logs` (wrap `spark-eugr` + `spark-llama`)
+1. [x] Expand `recipes/` — Qwen NVFP4, Qwen Q4 (Hermes fast tier when GGUF on disk)
+2. [x] **`spark-inference`** CLI — `status`, `list`, `up <profile>`, `down`, `logs` (wrap `spark-eugr` + `spark-llama`)
 3. [ ] **HTTP API** — `GET /api/inference/status`, `POST /api/inference/switch` (for your gateway)
 4. [ ] **Portal Inference tab** — active profile, switch, log link (no recipe editor v1)
 5. [ ] **Hermes Agent** — install, point at fast local tier
@@ -131,8 +131,9 @@ Spec detail: [`reference/inference-stack.md`](reference/inference-stack.md)
 
 ### Already started
 
-- [x] `recipes/gemma4-12b-coder-q4.yaml`
+- [x] `recipes/gemma4-12b-coder-q4.yaml`, `qwen36-q4-llama.yaml`, `qwen36-nvfp4.yaml`
 - [x] `data/inference-profiles.yaml` (profile index)
+- [x] `scripts/spark-inference.py` — profile switch CLI
 
 ---
 

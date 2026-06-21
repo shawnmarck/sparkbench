@@ -2,7 +2,7 @@
 # Manage eugr spark-vllm-docker Qwen3.6 NVFP4 stack
 set -euo pipefail
 REPO="/opt/spark/vendor/spark-vllm-docker"
-RECIPE="/opt/spark/services/eugr-qwen36-local.yaml"
+RECIPE="${SPARK_EUGR_RECIPE:-/opt/spark/services/eugr-qwen36-local.yaml}"
 EXTRA="-v /models:/models:ro"
 cmd="${1:-status}"
 

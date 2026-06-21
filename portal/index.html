@@ -145,6 +145,51 @@
     }
     .inf-recipes-head .section-title { margin: 0; }
     .inf-recipes-count { font-family: ui-monospace, monospace; font-size: .7rem; color: var(--muted); }
+    .inf-recipes-toolbar {
+      flex-shrink: 0; display: flex; flex-direction: column; gap: .4rem;
+      padding: .45rem .55rem; border-bottom: 1px solid var(--border);
+    }
+    .inf-recipes-toolbar input[type="search"] {
+      width: 100%; box-sizing: border-box; appearance: none;
+      background: #12151c; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+      padding: .38rem .55rem; font: inherit; font-size: .78rem;
+    }
+    .inf-recipes-toolbar input[type="search"]:focus { outline: none; border-color: #3a4a2a; }
+    .inf-chip-row { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+    .inf-chip {
+      appearance: none; border: 1px solid var(--border); background: #12151c; color: #c5cdd8;
+      font: inherit; font-size: .68rem; padding: .22rem .5rem; border-radius: 999px; cursor: pointer;
+      transition: border-color .12s, background .12s, color .12s;
+    }
+    .inf-chip:hover { border-color: #3a4250; }
+    .inf-chip.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+    .inf-chip.active[data-inf-chip="bench"] { border-color: #2a3a5a; background: #141820; color: #9ec8ff; }
+    .inf-chip.active[data-inf-chip="drafts"] { border-color: #4a402a; background: #241c10; color: var(--warn); }
+    .inf-model-groups { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+    .inf-model-group { border: 1px solid var(--border); border-radius: 8px; background: #0a0c10; overflow: hidden; }
+    .inf-model-group summary {
+      cursor: pointer; list-style: none; display: flex; align-items: center; gap: .4rem;
+      padding: .32rem .5rem; font-size: .7rem; color: var(--muted); font-family: ui-monospace, monospace;
+      user-select: none;
+    }
+    .inf-model-group summary::-webkit-details-marker { display: none; }
+    .inf-model-group summary::before { content: '▸'; color: var(--accent); font-size: .62rem; transition: transform .12s; }
+    .inf-model-group[open] summary::before { transform: rotate(90deg); }
+    .inf-model-group-name { color: #c5cdd8; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .inf-model-group-count { color: var(--muted); font-size: .66rem; flex-shrink: 0; }
+    .inf-model-group .inf-profile-grid { padding: .25rem .35rem .35rem; gap: .3rem; }
+    .inf-profile.compact { padding: .32rem .45rem; font-size: .74rem; gap: .1rem; }
+    .inf-profile.compact .inf-life { font-size: .6rem; padding: .06rem .28rem; margin-right: .28rem; }
+    .inf-profile.compact .name { font-size: .74rem; }
+    .inf-profile.compact .meta { font-size: .68rem; line-height: 1.35; }
+    .inf-empty-filter {
+      padding: .85rem .65rem; text-align: center; font-size: .76rem; color: var(--muted);
+      font-family: ui-monospace, monospace;
+    }
+    .inf-link-btn {
+      appearance: none; border: none; background: none; color: var(--accent); font: inherit;
+      font-size: inherit; cursor: pointer; text-decoration: underline; padding: 0;
+    }
     .inf-recipes-scroll {
       flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
       padding: .4rem .45rem .5rem; overscroll-behavior: contain;
@@ -152,11 +197,7 @@
     }
     .inf-recipes-scroll::-webkit-scrollbar { width: 8px; }
     .inf-recipes-scroll::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 4px; }
-    .inf-recipes-panel > .inf-tier-legend.compact {
-      flex-shrink: 0; margin: 0; padding: .35rem .6rem; gap: .35rem .75rem; font-size: .68rem; line-height: 1.35;
-      border-bottom: 1px solid var(--border);
-    }
-    .inf-tier-legend.compact span { white-space: nowrap; }
+
     .inf-log-wrap { flex-shrink: 0; margin-top: .75rem; }
     .inf-log-wrap .section-title { margin-top: 0; }
     body.inf-view .dashboard { overflow: hidden; display: flex; flex-direction: column; }
@@ -386,14 +427,20 @@
                 <div class="section-title">Recipes</div>
                 <span class="inf-recipes-count" id="inf-recipes-count">0 profiles</span>
               </div>
-              <div class="inf-tier-legend compact">
-                <span><b>fast</b> — quick swap</span>
-                <span><b>heavy</b> — minutes</span>
-                <span><b>testing</b> — switchable</span>
-                <span><b>draft</b> — Models only</span>
+              <div class="inf-recipes-toolbar">
+                <input type="search" id="inf-q" placeholder="Search recipes… (/)" autocomplete="off" aria-label="Search recipes">
+                <div class="inf-chip-row" id="inf-filter-chips">
+                  <button type="button" class="inf-chip active" data-inf-chip="switchable">Switchable</button>
+                  <button type="button" class="inf-chip" data-inf-chip="eugr">eugr</button>
+                  <button type="button" class="inf-chip" data-inf-chip="llamacpp">GGUF</button>
+                  <button type="button" class="inf-chip" data-inf-chip="fast">fast</button>
+                  <button type="button" class="inf-chip" data-inf-chip="heavy">heavy</button>
+                  <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
+                  <button type="button" class="inf-chip" data-inf-chip="drafts">Drafts</button>
+                </div>
               </div>
               <div class="inf-recipes-scroll" id="inf-recipes-scroll">
-                <div class="inf-profile-grid" id="inf-profiles"></div>
+                <div class="inf-model-groups" id="inf-profiles"></div>
               </div>
             </div>
 
@@ -459,6 +506,10 @@
       let benchBusy = false;
       let benchMsgUntil = 0;
       let infLogOverlayOpen = false;
+      const INF_PREFS_KEY = 'spark-inference-filters';
+      const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'fast', 'heavy', 'bench', 'drafts'];
+      let infFilterChips = new Set(['switchable']);
+      let infFilterQ = '';
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
 
@@ -533,6 +584,117 @@
 
       function attrEsc(text) {
         return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      }
+
+      function escHtml(text) {
+        return String(text || '').replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+      }
+
+      function readInfPrefs() {
+        try { return JSON.parse(localStorage.getItem(INF_PREFS_KEY) || '{}'); } catch { return {}; }
+      }
+
+      function saveInfPrefs() {
+        localStorage.setItem(INF_PREFS_KEY, JSON.stringify({
+          q: infFilterQ,
+          chips: [...infFilterChips],
+        }));
+      }
+
+      function loadInfPrefs() {
+        const stored = readInfPrefs();
+        infFilterQ = stored.q || '';
+        const chips = Array.isArray(stored.chips)
+          ? stored.chips.filter((c) => INF_CHIP_OPTS.includes(c)) : [];
+        infFilterChips = new Set(chips.length ? chips : ['switchable']);
+        const qEl = $('inf-q');
+        if (qEl) qEl.value = infFilterQ;
+        syncInfFilterChips();
+      }
+
+      function syncInfFilterChips() {
+        document.querySelectorAll('#inf-filter-chips .inf-chip').forEach((chip) => {
+          const val = chip.dataset.infChip;
+          chip.classList.toggle('active', infFilterChips.has(val));
+        });
+      }
+
+      function toggleInfChip(name) {
+        if (!INF_CHIP_OPTS.includes(name)) return;
+        if (infFilterChips.has(name)) infFilterChips.delete(name);
+        else infFilterChips.add(name);
+        syncInfFilterChips();
+        saveInfPrefs();
+        rerenderInfProfiles();
+      }
+
+      function clearInfFilters() {
+        infFilterQ = '';
+        infFilterChips = new Set(['switchable']);
+        if ($('inf-q')) $('inf-q').value = '';
+        syncInfFilterChips();
+        saveInfPrefs();
+        rerenderInfProfiles();
+      }
+
+      function profileSearchHay(p) {
+        return [
+          p.id, p.name, p.inventory_path, p.engine, p.tier, p.port, p.served_name, p.notes, p.lifecycle,
+        ].filter(Boolean).join(' ').toLowerCase();
+      }
+
+      function profileMatchesInfFilters(p, activeId) {
+        if (p.active || p.id === activeId) return true;
+        const chips = infFilterChips;
+        const q = infFilterQ.trim().toLowerCase();
+        if ((p.lifecycle || 'production') === 'draft' && !chips.has('drafts')) return false;
+        if (chips.has('switchable') && p.switchable === false) return false;
+        const engineOn = chips.has('eugr') || chips.has('llamacpp');
+        if (engineOn) {
+          const eng = p.engine || '';
+          const engineMatch = (chips.has('eugr') && eng === 'eugr')
+            || (chips.has('llamacpp') && eng === 'llamacpp');
+          if (!engineMatch) return false;
+        }
+        const tierOn = chips.has('fast') || chips.has('heavy');
+        if (tierOn) {
+          const tier = p.tier || '';
+          const tierMatch = (chips.has('fast') && tier === 'fast')
+            || (chips.has('heavy') && tier === 'heavy');
+          if (!tierMatch) return false;
+        }
+        if (chips.has('bench') && (p.tok_s == null || Number.isNaN(Number(p.tok_s)))) return false;
+        if (q && !profileSearchHay(p).includes(q)) return false;
+        return true;
+      }
+
+      function filterInfProfiles(profiles, activeId) {
+        return (profiles || []).filter((p) => profileMatchesInfFilters(p, activeId));
+      }
+
+      function groupInfProfiles(profiles) {
+        const groups = new Map();
+        profiles.forEach((p) => {
+          const key = p.inventory_path || p.id || 'unknown';
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(p);
+        });
+        return [...groups.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([path, items]) => ({ path, items: items.sort(infProfileSort) }));
+      }
+
+      function rerenderInfProfiles() {
+        if (!lastInfStatus) return;
+        const busy = (lastInfStatus.switch && lastInfStatus.switch.running)
+          || (lastInfStatus.bench && lastInfStatus.bench.running);
+        renderInfProfiles(
+          lastInfStatus.profiles || [],
+          lastInfStatus.active && lastInfStatus.active.id,
+          busy
+        );
       }
 
       function parseStartedAt(iso) {
@@ -684,15 +846,44 @@
         return (a.id || '').localeCompare(b.id || '');
       }
 
+      function renderInfProfileRow(p, selectedId) {
+        const lc = p.lifecycle || 'production';
+        const canPick = p.switchable !== false && lc !== 'draft';
+        const cls = 'inf-profile compact' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '')
+          + (p.id === selectedId && !p.active ? ' selected' : '')
+          + (canPick ? ' pickable' : '');
+        const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
+        const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
+        const tok = p.tok_s != null ? Math.round(p.tok_s) + ' tok/s' : null;
+        const metaParts = [p.engine || '?', p.tier || '?'];
+        if (tok) metaParts.push(tok);
+        metaParts.push(state);
+        const metaShort = metaParts.join(' · ');
+        const noteHint = p.notes ? ' — ' + truncateNote(p.notes, 80) : '';
+        const metaTitle = p.id + ' · :' + (p.port || '?') + ' · ' + metaShort + noteHint;
+        const pickAttrs = canPick
+          ? ' data-profile-id="' + attrEsc(p.id) + '" tabindex="0" role="button" title="Select for switch"'
+          : '';
+        const displayName = p.id;
+        return '<div class="' + cls + '"' + pickAttrs + '><div class="inf-profile-row">'
+          + '<span class="name" title="' + attrEsc((p.name || p.id) + noteHint) + '">'
+          + infLifeBadge(lc) + escHtml(displayName) + (p.active ? ' ●' : '') + '</span>'
+          + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + escHtml(metaShort) + '</span>'
+          + '</div></div>';
+      }
+
       function renderInfProfiles(profiles, activeId, switching) {
-        const all = (profiles || []).slice().sort(infProfileSort);
+        const all = (profiles || []).slice();
         const switchable = all.filter((p) => p.switchable !== false);
+        const filtered = filterInfProfiles(all, activeId);
+        const groups = groupInfProfiles(filtered);
+
         const sel = $('inf-select');
         const prev = sel.value;
         sel.innerHTML = switchable.map((p) => {
           const lc = p.lifecycle && p.lifecycle !== 'production' ? ' · ' + p.lifecycle : '';
-          return '<option value="' + p.id + '" data-tier="' + (p.tier || '') + '">'
-            + p.id + ' · ' + (p.engine || '') + ' · ' + (p.tier || '') + lc + '</option>';
+          return '<option value="' + attrEsc(p.id) + '" data-tier="' + attrEsc(p.tier || '') + '">'
+            + escHtml(p.id + ' · ' + (p.engine || '') + ' · ' + (p.tier || '') + lc) + '</option>';
         }).join('');
         if (prev && switchable.some((p) => p.id === prev)) sel.value = prev;
         else if (activeId && switchable.some((p) => p.id === activeId)) sel.value = activeId;
@@ -700,36 +891,37 @@
 
         const countEl = $('inf-recipes-count');
         if (countEl) {
-          const n = all.length;
+          const n = filtered.length;
+          const total = all.length;
           const sw = switchable.length;
-          countEl.textContent = n + ' profile' + (n === 1 ? '' : 's')
-            + (sw !== n ? ' · ' + sw + ' switchable' : '');
+          let text = 'Showing ' + n + ' of ' + total;
+          if (sw !== total) text += ' · ' + sw + ' switchable';
+          countEl.textContent = text;
         }
 
         const selectedId = sel.value;
-        $('inf-profiles').innerHTML = all.map((p) => {
-          const lc = p.lifecycle || 'production';
-          const canPick = p.switchable !== false && lc !== 'draft';
-          const cls = 'inf-profile' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '')
-            + (p.id === selectedId && !p.active ? ' selected' : '')
-            + (canPick ? ' pickable' : '');
-          const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
-          const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
-          const tok = p.tok_s != null ? ' · ' + Math.round(p.tok_s) + ' tok/s' : '';
-          const note = p.notes ? '<span class="notes">' + truncateNote(p.notes, 100) + '</span>' : '';
-          const switchHint = lc === 'draft' ? ' · not switchable' : '';
-          const metaShort = (p.engine || '?') + ' · ' + (p.tier || '?') + ' · :' + (p.port || '?') + tok + ' · ' + state + switchHint;
-          const metaTitle = p.id + ' · ' + metaShort;
-          const pickAttrs = canPick
-            ? ' data-profile-id="' + attrEsc(p.id) + '" tabindex="0" role="button" title="Select for switch"'
-            : '';
-          return '<div class="' + cls + '"' + pickAttrs + '><div class="inf-profile-row"><span class="name" title="' + attrEsc(p.name || p.id) + '">'
-            + infLifeBadge(lc) + (p.name || p.id) + '</span>'
-            + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + metaShort + '</span></div>' + note + '</div>';
-        }).join('') || '<div class="inf-profile"><span class="name">No recipes yet</span>'
-          + '<span class="meta">Create drafts on the <a href="/#models">Models</a> page.</span></div>';
+        const listEl = $('inf-profiles');
+        if (!all.length) {
+          listEl.innerHTML = '<div class="inf-empty-filter">No recipes yet — create drafts on the '
+            + '<a href="/#models">Models</a> page.</div>';
+        } else if (!filtered.length) {
+          listEl.innerHTML = '<div class="inf-empty-filter">No recipes match — '
+            + '<button type="button" class="inf-link-btn" data-inf-clear-filters>Clear filters</button></div>';
+        } else {
+          const multiGroup = groups.length > 1;
+          listEl.innerHTML = groups.map((g) => {
+            const hasActive = g.items.some((p) => p.active);
+            const hasSelected = g.items.some((p) => p.id === selectedId);
+            const open = !multiGroup || hasActive || hasSelected;
+            const rows = g.items.map((p) => renderInfProfileRow(p, selectedId)).join('');
+            return '<details class="inf-model-group"' + (open ? ' open' : '') + '>'
+              + '<summary><span class="inf-model-group-name">' + escHtml(g.path) + '</span>'
+              + '<span class="inf-model-group-count">(' + g.items.length + ')</span></summary>'
+              + '<div class="inf-profile-grid">' + rows + '</div></details>';
+          }).join('');
+        }
 
-        const activeRow = $('inf-profiles').querySelector('.inf-profile.active');
+        const activeRow = listEl.querySelector('.inf-profile.active');
         if (activeRow && activeRow.scrollIntoView) {
           requestAnimationFrame(() => activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
         }
@@ -1176,6 +1368,12 @@
         inferenceCard.hidden = false;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
+        const qParam = new URLSearchParams(location.search).get('q');
+        if (qParam) {
+          infFilterQ = qParam;
+          if ($('inf-q')) $('inf-q').value = qParam;
+          saveInfPrefs();
+        }
         infTick();
       }
 
@@ -1277,6 +1475,10 @@
       }
 
       $('inf-profiles').addEventListener('click', (e) => {
+        if (e.target.closest('[data-inf-clear-filters]')) {
+          clearInfFilters();
+          return;
+        }
         const row = e.target.closest('.inf-profile.pickable[data-profile-id]');
         if (!row) return;
         pickInfProfile(row.dataset.profileId);
@@ -1288,15 +1490,16 @@
         e.preventDefault();
         pickInfProfile(row.dataset.profileId);
       });
-      $('inf-select').addEventListener('change', () => {
-        if (!lastInfStatus) return;
-        const busy = (lastInfStatus.switch && lastInfStatus.switch.running)
-          || (lastInfStatus.bench && lastInfStatus.bench.running);
-        renderInfProfiles(
-          lastInfStatus.profiles || [],
-          lastInfStatus.active && lastInfStatus.active.id,
-          busy
-        );
+      $('inf-select').addEventListener('change', rerenderInfProfiles);
+      $('inf-q').addEventListener('input', (e) => {
+        infFilterQ = e.target.value;
+        saveInfPrefs();
+        rerenderInfProfiles();
+      });
+      $('inf-filter-chips').addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-inf-chip]');
+        if (!chip) return;
+        toggleInfChip(chip.dataset.infChip);
       });
 
       $('inference-status').addEventListener('click', (e) => {
@@ -1315,10 +1518,23 @@
       $('inf-log-overlay-close').addEventListener('click', closeInfLogOverlay);
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && infLogOverlayOpen) closeInfLogOverlay();
+        if (e.key === '/' && onInference) {
+          const t = e.target;
+          if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+          e.preventDefault();
+          const qEl = $('inf-q');
+          if (qEl) qEl.focus();
+        }
       });
 
+      loadInfPrefs();
       const urlParams = new URLSearchParams(location.search);
       pendingStartProfile = urlParams.get('start');
+      if (urlParams.get('q')) {
+        infFilterQ = urlParams.get('q');
+        if ($('inf-q')) $('inf-q').value = infFilterQ;
+        saveInfPrefs();
+      }
 
       const hash = location.hash.replace('#', '');
       if (hash === 'inference' || pendingStartProfile) {

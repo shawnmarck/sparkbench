@@ -46,7 +46,16 @@
     .nav-metric-bar > i { display: block; height: 100%; width: 0%; border-radius: 999px; transition: width .35s ease; }
     .nav-metric.gpu .nav-metric-bar > i { background: linear-gradient(90deg, #5a9200, var(--accent)); }
     .nav-metric.mem .nav-metric-bar > i { background: linear-gradient(90deg, #7a5ab0, #c5a3ff); }
-    @media (max-width: 640px) { .nav-metric-bar { display: none; } .nav-metric-label { display: none; } }
+    .nav-metric.inf { min-width: auto; max-width: 12rem; gap: .35rem; }
+    .nav-metric.inf .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; opacity: .9; }
+    .nav-metric.inf .nav-metric-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 10rem; font-size: .68rem; }
+    .nav-metric.inf.up { color: var(--ok); border-color: #2a4a2a; }
+    .nav-metric.inf.up .nav-metric-val { color: var(--ok); }
+    .nav-metric.inf.warn { color: var(--warn); border-color: #4a402a; }
+    .nav-metric.inf.warn .nav-metric-val { color: var(--warn); }
+    .nav-metric.inf.down { color: var(--down); border-color: #4a2a2a; }
+    .nav-metric.inf.down .nav-metric-val { color: #c5cdd8; }
+    @media (max-width: 640px) { .nav-metric-bar { display: none; } .nav-metric-label { display: none; } .nav-metric.inf { max-width: 7.5rem; } }
     .live { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
@@ -164,6 +173,10 @@
     </nav>
     <div class="nav-meta">
       <div class="nav-metrics" id="nav-metrics">
+        <a href="#inference" class="nav-metric inf down" id="nav-inf" title="Active inference profile">
+          <span class="pill-dot" aria-hidden="true"></span>
+          <span class="nav-metric-val" id="nav-inf-text">offline</span>
+        </a>
         <a href="#system" class="nav-metric gpu" id="nav-gpu" title="GPU utilization">
           <span class="nav-metric-label">GPU</span>
           <span class="nav-metric-val"><span id="nav-gpu-util">—</span>%</span>
@@ -414,7 +427,40 @@
         return t.length <= max ? t : t.slice(0, max - 1) + '…';
       }
 
+      function renderNavInference(data) {
+        const el = $('nav-inf');
+        const text = $('nav-inf-text');
+        if (!data) {
+          el.className = 'nav-metric inf down';
+          text.textContent = 'API offline';
+          el.title = 'Inference API offline';
+          return;
+        }
+        const switching = data.switch && data.switch.running;
+        const active = data.active;
+        if (switching) {
+          const prof = data.switch.profile || '…';
+          el.className = 'nav-metric inf warn';
+          text.textContent = '↻ ' + prof;
+          el.title = 'Switching to ' + prof;
+          return;
+        }
+        if (active) {
+          const cls = active.ready ? 'up' : (active.starting ? 'warn' : 'down');
+          const state = active.ready ? 'ready' : (active.starting ? 'loading' : 'waiting');
+          el.className = 'nav-metric inf ' + cls;
+          text.textContent = active.id + ' · ' + state;
+          const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
+          el.title = (active.name || active.id) + ' · ' + state + tok;
+          return;
+        }
+        el.className = 'nav-metric inf down';
+        text.textContent = 'offline';
+        el.title = 'No active profile — click to switch';
+      }
+
       function renderInferencePills(data) {
+        renderNavInference(data);
         const el = $('inference-status');
         if (!data) {
           el.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Inference · API offline</span>';
@@ -796,13 +842,14 @@
         try {
           const [gpuRes, infData] = await Promise.all([
             fetch('/api/gpu', { cache: 'no-store' }),
-            onSystem ? fetchInferenceStatus() : Promise.resolve(null),
+            fetchInferenceStatus(),
           ]);
           if (!gpuRes.ok) throw new Error('bad status');
           const d = await gpuRes.json();
           const hist = d.history || {};
 
           updateNavMetrics(d);
+          renderNavInference(infData);
           if (!onSystem) {
             $('live').classList.remove('live-stale');
             $('live').lastChild.textContent = 'live';
@@ -958,6 +1005,11 @@
         const link = e.target.closest('.nav-metric');
         if (!link || navModifierClick(e)) return;
         e.preventDefault();
+        if (link.id === 'nav-inf') {
+          showInference(nav.querySelector('[data-view="inference"]'));
+          history.replaceState(null, '', '#inference');
+          return;
+        }
         showSystem(nav.querySelector('[data-view="system"]'));
         history.replaceState(null, '', '#system');
       });

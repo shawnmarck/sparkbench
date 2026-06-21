@@ -254,6 +254,7 @@
           <div class="inf-actions">
             <select id="inf-select" aria-label="Inference profile"></select>
             <button type="button" class="inf-btn" id="inf-switch">Switch</button>
+            <button type="button" class="inf-btn" id="inf-bench">Benchmark</button>
             <button type="button" class="inf-btn danger" id="inf-down">Stop</button>
           </div>
           <div class="inf-msg" id="inf-msg"></div>
@@ -406,9 +407,10 @@
           const cls = p.active ? 'inf-profile active' : 'inf-profile';
           const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
           const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
+          const tok = p.tok_s != null ? ' · ~' + Math.round(p.tok_s) + ' tok/s' : '';
           return '<div class="' + cls + '"><span class="name">' + p.name + '</span>'
             + '<span class="meta' + tierCls + '">' + p.id + ' · ' + p.engine + ' · ' + p.tier
-            + ' · :' + p.port + ' · ' + state + '</span></div>';
+            + ' · :' + p.port + tok + ' · ' + state + '</span></div>';
         }).join('') || '<div class="inf-profile"><span class="name">No profiles enabled</span></div>';
 
         $('inf-switch').disabled = !!switching;
@@ -430,8 +432,9 @@
           $('inf-head-meta').textContent = active.engine + ' · :' + active.port;
           $('inf-active-title').textContent = active.name || active.id;
           const ready = active.ready ? 'ready' : (active.starting ? 'starting (model loading)' : 'waiting');
+          const tok = active.tok_s != null ? ' · ~' + Math.round(active.tok_s) + ' tok/s' : '';
           $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
-            + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
+            + tok + ' · ' + ready + (active.started_at ? ' · since ' + active.started_at : '');
           setInfMsg(active.ready ? '' : 'Waiting for /v1/models — heavy profiles can take minutes.', active.ready ? '' : 'warn');
         } else {
           $('inf-head-meta').textContent = 'no active profile';
@@ -506,6 +509,29 @@
           infTick();
         } catch (e) {
           setInfMsg('switch request failed', 'err');
+        }
+      }
+
+      async function infBench() {
+        setInfMsg('Running benchmark…', 'warn');
+        $('inf-bench').disabled = true;
+        try {
+          const res = await fetch('/api/inference/bench', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setInfMsg(d.error || 'benchmark failed', 'err');
+            return;
+          }
+          setInfMsg('Measured ~' + Math.round(d.tok_s) + ' tok/s (' + d.completion_tokens + ' tokens)', '');
+          infTick();
+        } catch (e) {
+          setInfMsg('benchmark request failed', 'err');
+        } finally {
+          $('inf-bench').disabled = false;
         }
       }
 
@@ -680,6 +706,7 @@
       });
 
       $('inf-switch').addEventListener('click', infSwitch);
+      $('inf-bench').addEventListener('click', infBench);
       $('inf-down').addEventListener('click', infDown);
 
       const hash = location.hash.replace('#', '');

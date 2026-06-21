@@ -1,12 +1,23 @@
 models:
   nvidia/qwen3.6-35b-a3b:
     spark_status: wip
-    updated_at: '2026-06-21T05:47:28.717128+00:00'
+    tok_s: 70
+    tok_s_engine: eugr
+    tok_s_profile: qwen36-nvfp4
+    note: "MoE ~3B active/token \u2014 NVFP4 eugr, operator-reported ~70 tok/s"
+    updated_at: '2026-06-21T08:00:00+00:00'
   unsloth/qwen3.6-35b-a3b:
     spark_status: wip
-    updated_at: '2026-06-21T06:27:06.626251+00:00'
+    tok_s: 20
+    tok_s_engine: llamacpp
+    tok_s_profile: qwen36-q4-llama
+    note: "MoE Q4 GGUF \u2014 ~20 tok/s llama.cpp session 2026-06-21"
+    updated_at: '2026-06-21T08:16:00+00:00'
   yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
     spark_status: works
     engine: llamacpp
-    note: Smoke test 2026-06-21 — gemma4-coding-Q4_K_M, ~21 tok/s on GB10
-    updated_at: '2026-06-21T07:10:00+00:00'
+    tok_s: 18.6
+    tok_s_engine: llamacpp
+    tok_s_profile: gemma4-12b-coder-q4
+    note: bench 13 tok in 0.7s
+    updated_at: '2026-06-21T08:28:35.638042+00:00'

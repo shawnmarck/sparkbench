@@ -80,6 +80,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 spark-inference list       # enabled profiles
 spark-inference status     # active profile + engine health
 spark-inference up <id>    # switch profile (evicts current)
+spark-inference bench      # measure tok/s on active profile
 curl http://sparky/api/inference/status   # JSON for portal/gateway
 spark-eugr status          # vLLM NVFP4 stack (direct)
 spark-llama status         # llama.cpp server (direct)

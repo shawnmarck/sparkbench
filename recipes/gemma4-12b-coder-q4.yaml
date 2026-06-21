@@ -1,6 +1,7 @@
 id: gemma4-12b-coder-q4
 name: Gemma 4 12B Coder (Fable5×Composer2.5) Q4
 catalog_id: yuxinlu1/gemma-4-12b-coder-gguf
+inventory_path: yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1
 engine: llamacpp
 tier: fast
 model: /models/yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1/gguf/gemma4-coding-Q4_K_M.gguf

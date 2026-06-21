@@ -120,6 +120,18 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
+        if self.path == "/api/inference/bench":
+            try:
+                result = core.run_benchmark()
+            except RuntimeError as exc:
+                self._json(409, {"ok": False, "error": str(exc)})
+                return
+            except Exception as exc:
+                self._json(500, {"ok": False, "error": str(exc)})
+                return
+            self._json(200, {"ok": True, **result, **core.api_status()})
+            return
+
         if self.path == "/api/inference/down":
             if not data.get("confirm"):
                 self._json(400, {"ok": False, "error": "confirmation required"})

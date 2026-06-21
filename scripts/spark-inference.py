@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import yaml
 
@@ -22,6 +22,8 @@ STATE_FILE = ROOT / "run" / "inference-active.json"
 SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
 SWITCH_LOG_FILE = ROOT / "logs" / "inference-switch-latest.log"
 LOG_DIR = ROOT / "logs"
+BENCHMARKS_FILE = ROOT / "data" / "inference-benchmarks.yaml"
+VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
@@ -164,16 +166,20 @@ def run_script(script: Path, *args: str, env: dict[str, str] | None = None) -> N
 def cmd_list() -> int:
     active = detect_active_profile()
     active_id = active["profile"] if active else None
-    print(f"{'PROFILE':<22} {'ENGINE':<10} {'TIER':<12} {'PORT':<6} ACTIVE")
-    print("-" * 60)
+    print(f"{'PROFILE':<22} {'ENGINE':<10} {'TIER':<12} {'PORT':<6} {'TOK/S':<8} ACTIVE")
+    print("-" * 70)
     for profile_id in enabled_profiles():
         recipe = load_recipe(profile_id)
         mark = "*" if profile_id == active_id else ""
+        bench = benchmark_for_profile(profile_id) or {}
+        tok = bench.get("tok_s")
+        tok_s = f"{tok:.0f}" if isinstance(tok, (int, float)) else "—"
         print(
             f"{profile_id:<22} "
             f"{recipe.get('engine', '?'):<10} "
             f"{recipe.get('tier', '?'):<12} "
-            f"{recipe.get('port', '?'):<6} {mark}"
+            f"{recipe.get('port', '?'):<6} "
+            f"{tok_s:<8} {mark}"
         )
     return 0
 
@@ -261,9 +267,31 @@ def validate_profile_id(profile_id: str) -> str | None:
     return profile_id
 
 
+def load_benchmarks() -> dict[str, Any]:
+    if not BENCHMARKS_FILE.is_file():
+        return {}
+    data = load_yaml(BENCHMARKS_FILE)
+    profiles = data.get("profiles") or {}
+    return profiles if isinstance(profiles, dict) else {}
+
+
+def save_benchmarks(profiles: dict[str, Any]) -> None:
+    BENCHMARKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    BENCHMARKS_FILE.write_text(
+        yaml.safe_dump({"profiles": profiles}, sort_keys=False, default_flow_style=False)
+    )
+
+
+def benchmark_for_profile(profile_id: str) -> dict[str, Any] | None:
+    entry = load_benchmarks().get(profile_id)
+    return entry if isinstance(entry, dict) else None
+
+
 def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "id": recipe.get("id"),
+    profile_id = recipe.get("id")
+    bench = benchmark_for_profile(profile_id) if profile_id else None
+    out = {
+        "id": profile_id,
         "name": recipe.get("name"),
         "engine": recipe.get("engine"),
         "tier": recipe.get("tier"),
@@ -271,6 +299,126 @@ def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
         "served_name": recipe.get("served_name"),
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
+    }
+    if bench and bench.get("tok_s") is not None:
+        out["tok_s"] = bench.get("tok_s")
+        out["tok_s_method"] = bench.get("method")
+        out["tok_s_measured_at"] = bench.get("measured_at")
+    return out
+
+
+def record_benchmark(
+    profile_id: str,
+    recipe: dict[str, Any],
+    tok_s: float,
+    *,
+    method: str,
+    completion_tokens: int | None = None,
+    prompt_tokens: int | None = None,
+    elapsed_s: float | None = None,
+    note: str | None = None,
+) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    engine = recipe.get("engine")
+    profiles = load_benchmarks()
+    entry = {
+        "tok_s": round(float(tok_s), 1),
+        "engine": engine,
+        "method": method,
+        "measured_at": now,
+    }
+    if completion_tokens is not None:
+        entry["completion_tokens"] = completion_tokens
+    if prompt_tokens is not None:
+        entry["prompt_tokens"] = prompt_tokens
+    if elapsed_s is not None:
+        entry["elapsed_s"] = round(elapsed_s, 2)
+    if note:
+        entry["note"] = note
+    profiles[profile_id] = entry
+    save_benchmarks(profiles)
+
+    inv_path = recipe.get("inventory_path") or recipe.get("catalog_id")
+    if inv_path:
+        if VERIFY_FILE.is_file():
+            store = load_yaml(VERIFY_FILE)
+        else:
+            store = {"models": {}}
+        models = store.setdefault("models", {})
+        model_entry = models.setdefault(str(inv_path), {})
+        model_entry["tok_s"] = entry["tok_s"]
+        model_entry["tok_s_engine"] = engine
+        model_entry["tok_s_profile"] = profile_id
+        model_entry["updated_at"] = now
+        if note:
+            model_entry["note"] = note
+        VERIFY_FILE.write_text(
+            yaml.safe_dump(store, sort_keys=False, default_flow_style=False)
+        )
+
+    subprocess.Popen(
+        [str(ROOT / "scripts" / "spark-inventory-build")],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return entry
+
+
+def run_benchmark(max_tokens: int = 64) -> dict[str, Any]:
+    active = detect_active_profile()
+    if not active:
+        raise RuntimeError("no active profile")
+    recipe = active["recipe"]
+    profile_id = active["profile"]
+    if not engine_ready(recipe):
+        raise RuntimeError("active profile not ready — wait for /v1/models")
+
+    port = int(recipe.get("port") or 0)
+    served = recipe.get("served_name")
+    body = json.dumps(
+        {
+            "model": served,
+            "prompt": "Reply with one short sentence listing three colors.",
+            "max_tokens": max_tokens,
+            "temperature": 0.2,
+        }
+    ).encode()
+    req = Request(
+        f"http://127.0.0.1:{port}/v1/completions",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    start = time.perf_counter()
+    with urlopen(req, timeout=180) as resp:
+        payload = json.loads(resp.read().decode())
+    elapsed = time.perf_counter() - start
+
+    usage = payload.get("usage") or {}
+    completion_tokens = usage.get("completion_tokens")
+    if completion_tokens is None:
+        text = ((payload.get("choices") or [{}])[0]).get("text") or ""
+        completion_tokens = max(1, len(text.split()))
+
+    tok_s = completion_tokens / elapsed if elapsed > 0 else 0.0
+    bench = record_benchmark(
+        profile_id,
+        recipe,
+        tok_s,
+        method="bench",
+        completion_tokens=int(completion_tokens),
+        prompt_tokens=usage.get("prompt_tokens"),
+        elapsed_s=elapsed,
+        note=f"bench {int(completion_tokens)} tok in {elapsed:.1f}s",
+    )
+    return {
+        "profile": profile_id,
+        "served_name": served,
+        "tok_s": bench["tok_s"],
+        "completion_tokens": completion_tokens,
+        "prompt_tokens": usage.get("prompt_tokens"),
+        "elapsed_s": round(elapsed, 2),
+        "benchmark": bench,
     }
 
 
@@ -379,7 +527,11 @@ def api_status() -> dict[str, Any]:
             "log_file": engine_log_file(recipe).name,
         }
         payload["urls"]["api"] = payload["active"]["api_url"]
+        bench = benchmark_for_profile(active_id)
+        if bench:
+            payload["active"]["benchmark"] = bench
 
+    payload["benchmarks"] = load_benchmarks()
     return payload
 
 
@@ -433,11 +585,24 @@ def cmd_logs(profile_id: str | None) -> int:
     return 0
 
 
+def cmd_bench() -> int:
+    try:
+        result = run_benchmark()
+    except (RuntimeError, URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+        raise SystemExit(str(exc)) from exc
+    print(
+        f"Benchmark {result['profile']}: {result['tok_s']:.1f} tok/s "
+        f"({result['completion_tokens']} tokens in {result['elapsed_s']:.1f}s)"
+    )
+    return 0
+
+
 def usage() -> None:
     print(
-        """Usage: spark-inference {list|status|up <profile>|down|logs [profile]}
+        """Usage: spark-inference {list|status|up <profile>|down|logs [profile]|bench}
 
 Recipe-driven inference control (Phase 5). One GPU workload at a time.
+bench — quick /v1/completions timing on the active profile (updates tok/s).
 Profiles: see data/inference-profiles.yaml and recipes/*.yaml"""
     )
 
@@ -460,6 +625,8 @@ def main(argv: list[str]) -> int:
         return cmd_up(argv[2])
     if cmd == "logs":
         return cmd_logs(argv[2] if len(argv) > 2 else None)
+    if cmd == "bench":
+        return cmd_bench()
 
     usage()
     return 1

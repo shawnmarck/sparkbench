@@ -206,6 +206,7 @@
     .btn.verify.active-wip { border-color: #2a3a4a; color: var(--dl); background: #141c24; }
     .btn.verify.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
     .verify-note, .queue-note { font-size: .78rem; color: var(--muted); font-style: italic; margin-top: .35rem; }
+    .badge.tok-s { border-color: #2a3a4a; color: #8ec8ff; }
     .why { font-size: .88rem; line-height: 1.45; color: #c8cdd4; padding: .6rem .75rem; background: #12151c; border-radius: 8px; border-left: 3px solid var(--accent); }
     .desc { font-size: .86rem; color: var(--muted); line-height: 1.45; }
     .variants table { width: 100%; border-collapse: collapse; font-size: .8rem; }
@@ -481,8 +482,11 @@
         const open = expandedId === m.id;
         const spark = sparkStatus(m);
         const queued = removalPending(m);
+        const svRow = m.spark_verify || {};
+        const tokS = svRow.tok_s != null ? `<span class="badge tok-s">~${Math.round(svRow.tok_s)} tok/s</span>` : '';
         const badges = [
           engineBadgeHtml(m),
+          tokS,
           queued ? '<span class="badge queued">queued</span>' : '',
           `<span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span>`,
           `<span class="badge status-${m.status || 'missing'}">${esc(m.status)}</span>`,

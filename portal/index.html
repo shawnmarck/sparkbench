@@ -456,12 +456,14 @@
 
         $('inf-switch').disabled = !!switching;
         $('inf-down').disabled = !!switching;
-        $('inf-bench').disabled = !!switching || !(activeId && profiles.some((p) => p.id === activeId && p.ready));
+        $('inf-bench').disabled = !!switching
+          || !(activeId && profiles.some((p) => p.id === activeId && p.ready));
       }
 
       function renderInferencePanel(data) {
         const active = data.active;
         const switching = data.switch && data.switch.running;
+        const benching = data.bench && data.bench.running;
         const profiles = data.profiles || [];
         const switchBanner = $('inf-switch-banner');
 
@@ -481,6 +483,15 @@
             switchBanner.textContent = '';
           }
           setInfMsg('Profile switch running — API may be unavailable until ready.', 'warn');
+        } else if (benching) {
+          switchBanner.hidden = true;
+          switchBanner.textContent = '';
+          $('inf-head-meta').textContent = 'benchmark running… pid ' + (data.bench.pid || '—');
+          $('inf-active-title').textContent = 'Throughput benchmark';
+          $('inf-active-meta').textContent = '3 sessions × 3 turns (~45s) — dashboard stays live';
+          if (!benchBusy) {
+            setInfMsg('Benchmark in progress — status updates every 2s.', 'warn');
+          }
         } else {
           switchBanner.hidden = true;
           switchBanner.textContent = '';
@@ -502,7 +513,7 @@
           }
         }
 
-        renderInfProfiles(profiles, active && active.id, switching);
+        renderInfProfiles(profiles, active && active.id, switching || benching);
         $('inf-api-link').href = (data.urls && data.urls.api) || '#';
         $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
         const invPath = active && active.inventory_path;
@@ -609,10 +620,47 @@
         }
       }
 
+      function showBenchResult(d) {
+        let msg = 'Avg ~' + Math.round(d.tok_s) + ' tok/s';
+        if (d.tok_s_min != null && d.tok_s_max != null) {
+          msg += ' (' + Math.round(d.tok_s_min) + '–' + Math.round(d.tok_s_max) + ')';
+        }
+        if (d.sessions && d.turns_per_session) {
+          msg += ' · ' + d.sessions + '×' + d.turns_per_session + ' turns';
+        }
+        if (d.completion_tokens) msg += ' · ' + d.completion_tokens + ' tokens';
+        benchMsgUntil = Date.now() + 120000;
+        setInfMsg(msg, 'ok', true);
+        infTick();
+      }
+
+      async function pollBenchJob() {
+        setInfMsg('Running agent benchmark (3 sessions × 3 turns, ~45s)…', 'warn', true);
+        for (let i = 0; i < 90; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const d = await fetchInferenceStatus();
+          if (!d) continue;
+          renderInferencePanel(d);
+          const bench = d.bench || {};
+          if (bench.running) continue;
+          const result = bench.result || {};
+          if (result.ok !== false && result.tok_s != null) {
+            showBenchResult(result);
+            return;
+          }
+          benchMsgUntil = Date.now() + 60000;
+          setInfMsg(bench.error || result.error || 'benchmark failed', 'err', true);
+          return;
+        }
+        benchMsgUntil = Date.now() + 60000;
+        setInfMsg('Benchmark timed out waiting for result', 'err', true);
+      }
+
       async function infBench() {
+        if (benchBusy) return;
         benchBusy = true;
         benchMsgUntil = 0;
-        setInfMsg('Running agent benchmark (3 sessions × 3 turns, ~45s)…', 'warn', true);
+        setInfMsg('Starting benchmark…', 'warn', true);
         $('inf-bench').disabled = true;
         try {
           const res = await fetch('/api/inference/bench', {
@@ -630,25 +678,25 @@
             setInfMsg(err, 'err', true);
             return;
           }
-          let msg = 'Avg ~' + Math.round(d.tok_s) + ' tok/s';
-          if (d.tok_s_min != null && d.tok_s_max != null) {
-            msg += ' (' + Math.round(d.tok_s_min) + '–' + Math.round(d.tok_s_max) + ')';
+          if (res.status === 202 || (d.bench && d.bench.running)) {
+            await pollBenchJob();
+            return;
           }
-          if (d.sessions && d.turns_per_session) {
-            msg += ' · ' + d.sessions + '×' + d.turns_per_session + ' turns';
+          if (d.tok_s != null) {
+            showBenchResult(d);
+            return;
           }
-          if (d.completion_tokens) msg += ' · ' + d.completion_tokens + ' tokens';
-          benchMsgUntil = Date.now() + 120000;
-          setInfMsg(msg, 'ok', true);
-          infTick();
+          benchMsgUntil = Date.now() + 60000;
+          setInfMsg('Unexpected benchmark response', 'err', true);
         } catch (e) {
           benchMsgUntil = Date.now() + 60000;
-          setInfMsg('Benchmark request failed (timeout or connection error)', 'err', true);
+          setInfMsg('Benchmark request failed', 'err', true);
         } finally {
           benchBusy = false;
           const switching = lastInfStatus && lastInfStatus.switch && lastInfStatus.switch.running;
+          const benching = lastInfStatus && lastInfStatus.bench && lastInfStatus.bench.running;
           const ready = lastInfStatus && lastInfStatus.active && lastInfStatus.active.ready;
-          $('inf-bench').disabled = !!switching || !ready;
+          $('inf-bench').disabled = !!switching || !!benching || !ready;
         }
       }
 

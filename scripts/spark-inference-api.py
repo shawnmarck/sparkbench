@@ -126,15 +126,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/inference/bench":
-            try:
-                result = core.run_benchmark()
-            except RuntimeError as exc:
-                self._json(409, {"ok": False, "error": str(exc)})
+            ok, message, job = core.start_bench_job()
+            if not ok:
+                code = 409 if "already" in message or "progress" in message else 400
+                self._json(code, {"ok": False, "error": message, "bench": job})
                 return
-            except Exception as exc:
-                self._json(500, {"ok": False, "error": str(exc)})
-                return
-            self._json(200, {"ok": True, **result, **core.api_status()})
+            self._json(202, {"ok": True, "message": message, "bench": job})
             return
 
         if path == "/api/inference/down":

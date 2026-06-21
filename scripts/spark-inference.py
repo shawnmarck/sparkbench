@@ -21,6 +21,8 @@ PROFILES_INDEX = ROOT / "data" / "inference-profiles.yaml"
 STATE_FILE = ROOT / "run" / "inference-active.json"
 SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
 SWITCH_LOG_FILE = ROOT / "logs" / "inference-switch-latest.log"
+BENCH_PID_FILE = ROOT / "run" / "inference-bench.pid"
+BENCH_RESULT_FILE = ROOT / "run" / "inference-bench-result.json"
 LOG_DIR = ROOT / "logs"
 BENCHMARKS_FILE = ROOT / "data" / "inference-benchmarks.yaml"
 VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
@@ -616,6 +618,61 @@ def active_switch_job() -> dict[str, Any]:
     }
 
 
+def _read_bench_result() -> dict[str, Any] | None:
+    if not BENCH_RESULT_FILE.is_file():
+        return None
+    try:
+        data = json.loads(BENCH_RESULT_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _write_bench_result(payload: dict[str, Any]) -> None:
+    BENCH_RESULT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    BENCH_RESULT_FILE.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def active_bench_job() -> dict[str, Any]:
+    pid = read_pid_file(BENCH_PID_FILE)
+    if pid:
+        return {"running": True, "pid": pid}
+    BENCH_PID_FILE.unlink(missing_ok=True)
+    result = _read_bench_result()
+    if not result:
+        return {"running": False}
+    out: dict[str, Any] = {"running": False, "result": result}
+    if not result.get("ok", True):
+        out["error"] = result.get("error") or "benchmark failed"
+    return out
+
+
+def start_bench_job() -> tuple[bool, str, dict[str, Any]]:
+    if active_switch_job().get("running"):
+        return False, "profile switch in progress", active_switch_job()
+
+    job = active_bench_job()
+    if job.get("running"):
+        return False, "benchmark already running", job
+
+    active = detect_active_profile()
+    if not active:
+        return False, "no active profile", {}
+    if not engine_ready(active["recipe"]):
+        return False, "active profile not ready — wait for /v1/models", {}
+
+    BENCH_RESULT_FILE.unlink(missing_ok=True)
+    BENCH_PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+    proc = subprocess.Popen(
+        [sys.executable, str(ROOT / "scripts" / "spark-inference.py"), "bench", "--write-result"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    BENCH_PID_FILE.write_text(str(proc.pid))
+    return True, "started", {"running": True, "pid": proc.pid}
+
+
 def engine_log_file(recipe: dict[str, Any] | None) -> Path:
     if not recipe:
         return LOG_DIR / "llama-server.log"
@@ -655,6 +712,7 @@ def api_status() -> dict[str, Any]:
         "profiles": api_profiles(active_id),
         "engines": {"eugr": eugr_running(), "llamacpp": llama_running()},
         "switch": active_switch_job(),
+        "bench": active_bench_job(),
         "urls": {
             "openwebui": "http://sparky:3000",
             "portal": "http://sparky/",
@@ -691,6 +749,9 @@ def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
     if active_switch_job().get("running"):
         return False, "profile switch already running", active_switch_job()
 
+    if active_bench_job().get("running"):
+        return False, "benchmark running", active_bench_job()
+
     active = detect_active_profile()
     if active and active["profile"] == profile_id and engine_ready(active["recipe"]):
         return False, "profile already active", api_status()
@@ -715,6 +776,8 @@ def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
 def api_down() -> dict[str, Any]:
     if active_switch_job().get("running"):
         raise RuntimeError("profile switch in progress")
+    if active_bench_job().get("running"):
+        raise RuntimeError("benchmark in progress")
     cmd_down()
     return api_status()
 
@@ -733,11 +796,17 @@ def cmd_logs(profile_id: str | None) -> int:
     return 0
 
 
-def cmd_bench() -> int:
+def cmd_bench(write_result: bool = False) -> int:
     try:
         result = run_benchmark()
     except (RuntimeError, URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+        if write_result:
+            _write_bench_result({"ok": False, "error": str(exc)})
+            BENCH_PID_FILE.unlink(missing_ok=True)
         raise SystemExit(str(exc)) from exc
+    if write_result:
+        _write_bench_result({"ok": True, **result})
+        BENCH_PID_FILE.unlink(missing_ok=True)
     runs = ", ".join(f"{v:.1f}" for v in result.get("run_tok_s") or [])
     print(
         f"Benchmark {result['profile']}: {result['tok_s']:.1f} tok/s avg "
@@ -782,7 +851,7 @@ def main(argv: list[str]) -> int:
     if cmd == "logs":
         return cmd_logs(argv[2] if len(argv) > 2 else None)
     if cmd == "bench":
-        return cmd_bench()
+        return cmd_bench(write_result="--write-result" in argv)
 
     usage()
     return 1

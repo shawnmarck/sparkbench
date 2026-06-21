@@ -15,13 +15,13 @@ cp "${STAGING}/scripts/spark-download-models.sh" "${SPARK_ROOT}/scripts/" 2>/dev
 chown -R techno:techno "${SPARK_ROOT}"
 
 chmod +x "${SPARK_ROOT}/scripts/spark-inventory-build" "${SPARK_ROOT}/scripts/spark-inventory-build.py"
-install -m 755 "${SPARK_ROOT}/scripts/spark-inventory-build" /usr/local/bin/spark-inventory-build
+# CLI: install/20-spark-cli.sh → spark models inventory
 
 echo "==> Python deps"
 /opt/spark/venv/bin/pip install -q pyyaml
 
 echo "==> Build inventory JSON"
-spark-inventory-build
+"${SPARK_ROOT}/scripts/spark-inventory-build"
 
 echo
 echo "Done."

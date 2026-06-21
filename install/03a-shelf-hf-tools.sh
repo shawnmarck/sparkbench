@@ -15,13 +15,11 @@ mkdir -p "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
 chown techno:techno "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
 
 echo "==> Install CLI tools"
-install -m 755 "${SPARK_ROOT}/scripts/spark-shelf-push" /usr/local/bin/spark-shelf-push
-install -m 755 "${SPARK_ROOT}/scripts/spark-shelf-pull" /usr/local/bin/spark-shelf-pull
-install -m 755 "${SPARK_ROOT}/scripts/spark-hf-login" /usr/local/bin/spark-hf-login
+# CLI: install/20-spark-cli.sh → spark shelf / spark hf
 cat >/usr/local/bin/hf <<'EOF'
 #!/usr/bin/env bash
 exec /opt/spark/venv/bin/hf "$@"
 EOF
 chmod 755 /usr/local/bin/hf
 
-echo "Done. Try: spark-shelf-push --help | spark-hf-login --whoami"
+echo "Done. Try: spark shelf push --help | spark hf login --whoami"

@@ -41,11 +41,11 @@ Canonical organization for models on **Spark** and **QNAP shelf**. Same tree on 
 2. **Smoke test** on GB10 (CLI / inference UI)
 3. **Back up to shelf** (Spark → NAS):
    ```bash
-   spark-shelf-push google/gemma-4-26b-a4b
+   spark shelf push google/gemma-4-26b-a4b
    ```
 4. **Restore from shelf** when needed:
    ```bash
-   spark-shelf-pull google/gemma-4-26b-a4b
+   spark shelf pull google/gemma-4-26b-a4b
    ```
 
 Default sync direction: **Spark → shelf**. Pull from shelf only when restoring or fetching a model not on local disk.
@@ -86,9 +86,9 @@ Large backups can run in the background without saturating the LAN:
 
 ```bash
 # ~200 Mbps cap, low CPU/IO priority, logs to /opt/spark/logs/shelf-push-latest.log
-spark-shelf-push --all --background --bwlimit 200
+spark shelf push --all --background --bwlimit 200
 
-spark-shelf-push --status    # running? tail of log
+spark shelf push --status    # running? tail of log
 ```
 
 `--bwlimit` is megabits/sec (rsync KiB/s under the hood). Omit for unlimited.
@@ -97,9 +97,9 @@ spark-shelf-push --status    # running? tail of log
 
 | Command | Purpose |
 |---------|---------|
-| `spark-shelf-push MODEL` | Backup one model to NAS |
-| `spark-shelf-push --all` | Push all models (excludes `_incoming`) |
-| `spark-shelf-pull MODEL` | Restore one model from NAS |
+| `spark shelf push MODEL` | Backup one model to NAS |
+| `spark shelf push --all` | Push all models (excludes `_incoming`) |
+| `spark shelf pull MODEL` | Restore one model from NAS |
 | `--dry-run` | Preview rsync on either command |
 
 ## Related

@@ -23,15 +23,16 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 |--------|---------|
 | `02-model-shelf-mount.sh` | CIFS mount `/mnt/model-shelf` |
 | `03-model-shelf-layout.sh` | `/models` + shelf directory skeleton |
-| `03a-shelf-hf-tools.sh` | `spark-shelf-push/pull`, `spark-hf-login`, `hf` CLI |
+| `03a-shelf-hf-tools.sh` | `spark shelf push/pull`, `spark hf login`, `hf` CLI |
 | `04-model-inventory.sh` | Catalog, inventory builder, portal pages |
 | `05-model-inventory-auto-refresh.sh` | Timer + inotify refresh; nginx (via `common.sh`) |
-| `10-portal-gpu-widget.sh` | `spark-gpu-metrics` API + nginx |
+| `10-portal-gpu-widget.sh` | `spark gpu` API + nginx |
 | `11-model-shelf-api.sh` | Shelf/model APIs + removal cron deps |
 | `12-model-removal-cron.sh` | Nightly queued local model purge |
 | `17-inference-api.sh` | Inference control API + nginx route |
 | `18-inference-api-watch.sh` | Restart API when inference scripts change |
 | `19-inference-api-restart.sh` | Restart inference API only (agent-friendly) |
+| `20-spark-cli.sh` | **Unified `spark` CLI** — removes legacy `/usr/local/bin/spark-*` |
 
 ## Inference engines
 
@@ -39,9 +40,9 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 |--------|---------|
 | `15-vllm-openwebui-smoke.sh` | Stock vLLM compose smoke (legacy) |
 | `15b-sync-inference-compose.sh` | Sync compose files to `/opt/spark/services` |
-| `16-eugr-vllm-qwen36.sh` | eugr vLLM NVFP4 (`spark-eugr`) |
+| `16-eugr-vllm-qwen36.sh` | eugr vLLM NVFP4 (`spark engine eugr`) |
 | `16b-fix-spark-eugr.sh` | eugr stack fixes |
-| `13-llama-cpp-smoke.sh` | Build llama.cpp + `spark-llama` |
+| `13-llama-cpp-smoke.sh` | Build llama.cpp + `spark engine llama` |
 | `14-openwebui-dual-backend.sh` | Open WebUI dual backend compose |
 
 ## Convenience
@@ -57,4 +58,5 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 ```
 02 → 03 → 04 → 05 → 10 → 11 → 12
 16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
+20 (unified `spark` CLI — run once, or chained from 17)
 ```

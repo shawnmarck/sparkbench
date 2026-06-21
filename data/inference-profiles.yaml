@@ -1,4 +1,4 @@
-# Enabled inference profiles (Phase 5). spark-inference reads this list.
+# Enabled inference profiles (Phase 5). spark inference reads this list.
 profiles:
   - gemma4-12b-coder-q4
   - qwen36-q4-llama

@@ -22,4 +22,4 @@ llamacpp_args:
 notes: |
   Same Qwen3.6 MoE base as NVFP4 tier, GGUF Q4_K_M via llama-server.
   Lighter to cold-start than eugr NVFP4 but still a heavy slot on GB10.
-  Stop eugr vLLM before switching: spark-inference down
+  Stop eugr vLLM before switching: spark inference down

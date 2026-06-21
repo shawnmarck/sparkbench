@@ -33,7 +33,7 @@ Power users who want **many model names without manual docker**:
 - **[llama-swap](https://github.com/mudler/llama-swap)** — on-demand container/process swap (used in community stacks like [dgx-spark_lite-llm_llama-swap](https://github.com/mARTin-B78/dgx-spark_lite-llm_llama-swap_vllm_llama-cpp_ollama))
 - Often paired with a gateway (LiteLLM or custom) in front
 
-We skip LiteLLM here (your product already routes). We borrow the **swap idea** inside `spark-inference`.
+We skip LiteLLM here (your product already routes). We borrow the **swap idea** inside `spark inference`.
 
 ## Architecture
 
@@ -43,7 +43,7 @@ Consumers
         │
         │  many model IDs
         ▼
-  spark-inference API (thin)          ← Phase 5
+  spark inference API (thin)          ← Phase 5
   GET  /api/inference/status
   POST /api/inference/switch { "profile": "qwen36-nvfp4" }
         │
@@ -98,20 +98,20 @@ Registry index: `/opt/spark/data/inference-profiles.yaml` (generated or hand-cur
 ## CLI (wraps today’s scripts)
 
 ```bash
-spark-inference status              # active profile, GPU, port, uptime
-spark-inference list                # recipes + tier + engine
-spark-inference up <profile>        # switch (evict current if needed)
-spark-inference down
-spark-inference logs <profile>
+spark inference status              # active profile, GPU, port, uptime
+spark inference list                # recipes + tier + engine
+spark inference up <profile>        # switch (evict current if needed)
+spark inference down
+spark inference logs <profile>
 ```
 
-Implementation: refactor `spark-eugr`, `spark-llama`, eugr launch wrapper into profile-driven dispatch — not a new engine.
+Implementation: profile-driven dispatch over existing engine scripts (`scripts/spark-eugr`, `scripts/spark-llama`) — not a new engine.
 
 ## Switch semantics (for gateway + agents)
 
 1. Client calls gateway with `model: hermes-4-14b`.
 2. Gateway maps alias → profile `hermes-14b-q4`.
-3. If not active, gateway (or spark-inference API) calls `switch`.
+3. If not active, gateway (or inference API) calls `switch`.
 4. Until ready: **503 + Retry-After** or queue (gateway policy).
 5. When `/v1/models` lists the model, traffic flows.
 
@@ -142,8 +142,8 @@ Bake-off UIs (Rookery, vLLM Studio) were removed from sparky. Phase 5 is this sp
 
 ## Implementation order
 
-1. `recipes/` + `spark-inference list|status` (read-only)
-2. `spark-inference up|down` unified switch
+1. `recipes/` + `spark inference list|status` (read-only)
+2. `spark inference up|down` unified switch
 3. HTTP API for gateway integration
 4. Portal Inference tab
 5. Hermes Agent install → point at `hermes-14b-q4` (or gateway)

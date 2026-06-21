@@ -27,6 +27,6 @@ done
 
 echo
 echo "Done. Open WebUI: http://sparky:3000"
-echo "  vLLM API:  http://host.docker.internal:8000/v1  (spark-eugr up)"
-echo "  llama API: http://host.docker.internal:8081/v1  (spark-llama up)"
+echo "  vLLM API:  http://host.docker.internal:8000/v1  (spark engine eugr up)"
+echo "  llama API: http://host.docker.internal:8081/v1  (spark engine llama up)"
 echo "Pick model qwen3.6-35b-a3b-q4 when llama.cpp is running."

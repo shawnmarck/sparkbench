@@ -23,4 +23,4 @@ notes: |
   Community Gemma 4 12B coding fine-tune (yuxinlu1). Q4_K_M ~6.9GB.
   Smoke tested 2026-06-21 on GB10: ~21 tok/s, 32k ctx loaded.
   Thinking-style output — prompt "output ONLY code" for clean content field.
-  Start: SPARK_LLAMA_MODEL=<model> SPARK_LLAMA_NAME=gemma4-12b-coder-q4 spark-llama up
+  Start: SPARK_LLAMA_MODEL=<model> SPARK_LLAMA_NAME=gemma4-12b-coder-q4 spark engine llama up

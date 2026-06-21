@@ -35,8 +35,8 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | `README.md` | Repo homepage + doc index |
 | `docs/guides/model-shelf.md` | `/models` + NAS shelf layout |
 | `docs/guides/model-picks.md` | Why each model is in the catalog |
-| `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark-eugr`) |
-| `docs/runbooks/smoke-llamacpp.md` | llama.cpp validation (`spark-llama`) |
+| `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark engine eugr`) |
+| `docs/runbooks/smoke-llamacpp.md` | llama.cpp validation (`spark engine llama`) |
 | `docs/reference/inference-stack.md` | Phase 5 technical spec |
 | `install/INSTALL.md` | Install script index + order |
 
@@ -67,28 +67,31 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 
 ## Rules agents should know
 
-1. **One GPU engine at a time** — `spark-eugr down` before `spark-llama up` (and vice versa).
+1. **One GPU engine at a time** — `spark engine eugr down` before `spark engine llama up` (and vice versa).
 2. **Do not re-run `install/05` blindly** — it writes nginx via `common.sh` (safe now), but always prefer `install/common.sh` helper.
 3. **Shelf APIs are unauthenticated on LAN** — OK for trusted home LAN only; don't expose port 80 WAN-side.
 4. **Inventory build needs venv** — `/opt/spark/venv/bin/python scripts/spark-inventory-build.py` (HF API).
 5. **Model paths** — local `/models`, NAS `/mnt/model-shelf/models`.
-6. **Bake-off UIs removed** — no Rookery / vLLM Studio; Phase 5 is `spark-inference` + `recipes/`.
+6. **Bake-off UIs removed** — no Rookery / vLLM Studio; Phase 5 is `spark inference` + `recipes/`.
 
 ## Common commands
 
+Single CLI: **`spark`** (`install/20-spark-cli.sh`). Legacy `spark-*` names are not on PATH — see `scripts/legacy/README.md`.
+
 ```bash
-spark-inference list       # enabled profiles
-spark-inference status     # active profile + engine health
-spark-inference up <id>    # switch profile (evicts current)
-spark-inference bench      # measure tok/s on active profile
+spark status
+spark inference list       # enabled profiles
+spark inference status     # active profile + engine health
+spark inference up <id>    # switch profile (evicts current)
+spark inference bench      # measure tok/s on active profile
+spark recipe list          # Model Lab recipes (draft/testing/production)
+spark models inventory     # regenerate portal/models.json
+spark models verify set <lab/slug> works
+spark shelf pull <lab/slug>
+spark engine eugr status   # low-level vLLM (direct)
+spark engine llama status  # low-level llama.cpp (direct)
+spark gpu                  # one-shot metrics JSON
 curl http://sparky/api/inference/status   # JSON for portal/gateway
-spark-eugr status          # vLLM NVFP4 stack (direct)
-spark-llama status         # llama.cpp server (direct)
-spark-shelf-push --help    # NAS backup
-spark-shelf-pull           # fetch from NAS
-spark-inventory-build      # regenerate portal/models.json
-spark-model-verify         # CLI verify / removal flags
-spark-gpu-metrics          # one-shot metrics JSON
 ```
 
 ## Install (typical order)

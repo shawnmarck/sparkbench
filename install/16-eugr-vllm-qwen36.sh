@@ -12,7 +12,7 @@ mkdir -p "${SPARK_ROOT}/vendor" "${SPARK_ROOT}/services"
 cp "${STAGING}/services/eugr-qwen36-local.yaml" "${SPARK_ROOT}/services/"
 cp "${STAGING}/scripts/spark-eugr" "${SPARK_ROOT}/scripts/"
 chmod +x "${SPARK_ROOT}/scripts/spark-eugr"
-install -m 755 "${SPARK_ROOT}/scripts/spark-eugr" /usr/local/bin/spark-eugr
+# CLI: install/20-spark-cli.sh → spark engine eugr
 
 echo "==> Stop stock vLLM container (if running)"
 docker stop spark-vllm-qwen36 2>/dev/null || true
@@ -32,11 +32,11 @@ echo "==> Build vllm-node image (downloads prebuilt wheels when available)"
 sudo -u techno bash -lc "cd  && ./build-and-copy.sh"
 
 echo "==> Start Qwen3.6 NVFP4 via eugr recipe (daemon)"
-sudo -u techno spark-eugr up
+sudo -u techno "${SPARK_ROOT}/scripts/spark-eugr" up
 
 echo
 echo "Done."
-echo "  Build/run logs: spark-eugr logs"
-echo "  Status:         spark-eugr status"
+echo "  Build/run logs: spark engine eugr logs"
+echo "  Status:         spark engine eugr status"
 echo "  Chat UI:        http://sparky:3000"
 echo "  vLLM API:       http://sparky:8000/v1"

@@ -12,7 +12,7 @@ cp "${STAGING}/portal/index.html" "${SPARK_ROOT}/portal/"
 cp "${STAGING}/services/qwen36-nvfp4/compose.yaml" "${SPARK_ROOT}/services/qwen36-nvfp4/"
 cp "${STAGING}/scripts/spark-inference" "${SPARK_ROOT}/scripts/"
 chmod +x "${SPARK_ROOT}/scripts/spark-inference"
-install -m 755 "${SPARK_ROOT}/scripts/spark-inference" /usr/local/bin/spark-inference
+# CLI: install/20-spark-cli.sh → spark inference
 
 echo "==> Docker: add techno to docker group"
 usermod -aG docker techno
@@ -32,7 +32,7 @@ echo
 echo "Done."
 echo "  Chat UI:  http://sparky:3000"
 echo "  vLLM API: http://sparky:8000/v1"
-echo "  Logs:     spark-inference logs"
-echo "  Status:   spark-inference status"
+echo "  Logs:     spark inference logs"
+echo "  Status:   spark inference status"
 echo
 echo "First vLLM boot may take 5–15 minutes (CUDA graph compile)."

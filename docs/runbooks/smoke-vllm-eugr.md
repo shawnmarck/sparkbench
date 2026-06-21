@@ -34,19 +34,19 @@ MoE NVFP4 scale tensors aren't handled by the stock ModelOpt loader on Spark. Th
 
 ```bash
 # Start (build once via install/16-eugr-vllm-qwen36.sh)
-spark-eugr up
+spark engine eugr up
 
 # Logs (first boot may take 5–15 min for CUDA graph compile)
-spark-eugr logs
+spark engine eugr logs
 
 # Status + /v1/models
-spark-eugr status
+spark engine eugr status
 
 # Stop (required before llama.cpp smoke — one GPU workload at a time)
-spark-eugr down
+spark engine eugr down
 ```
 
-Legacy `spark-inference` / stock compose is stopped; use `spark-eugr` only.
+Legacy stock compose is stopped; use `spark engine eugr` (or `spark inference up qwen36-nvfp4` for profile-driven control).
 
 ## First chat in Open WebUI
 
@@ -70,16 +70,16 @@ curl http://sparky:8000/v1/chat/completions \
 |------|------|
 | Vendor | `/opt/spark/vendor/spark-vllm-docker` |
 | Recipe | `/opt/spark/services/eugr-qwen36-local.yaml` |
-| CLI | `/usr/local/bin/spark-eugr` |
+| CLI | `spark engine eugr` (`/usr/local/bin/spark`) |
 | Container | `vllm_node` |
 
 Launch uses `VLLM_SPARK_EXTRA_DOCKER_ARGS="-v /models:/models:ro"` and `--solo --daemon --apply-mod mods/fix-qwen3.6-chat-template`.
 
 ## Troubleshooting
 
-- **Open WebUI shows no models** — vLLM still loading; `spark-eugr logs` or `curl http://sparky:8000/v1/models`
+- **Open WebUI shows no models** — vLLM still loading; `spark engine eugr logs` or `curl http://sparky:8000/v1/models`
 - **OOM** — lower gpu-memory-utilization in eugr recipe
-- **Switching to llama.cpp** — `spark-eugr down` first
+- **Switching to llama.cpp** — `spark engine eugr down` first
 
 ## Next
 

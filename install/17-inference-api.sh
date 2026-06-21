@@ -15,7 +15,7 @@ chmod +x "${TARGET}/scripts/spark-inference.py"
 chmod +x "${TARGET}/scripts/spark-eugr"
 chmod +x "${TARGET}/scripts/spark-llama"
 
-install -m 755 "${TARGET}/scripts/spark-inference" /usr/local/bin/spark-inference 2>/dev/null || true
+# CLI: install/20-spark-cli.sh (single spark binary on PATH)
 
 cat > "${UNIT}" <<EOF
 [Unit]
@@ -46,3 +46,4 @@ curl -fsS "http://127.0.0.1/api/inference/status" >/dev/null
 echo "OK: inference API at http://sparky/api/inference/status"
 
 bash "${SCRIPT_DIR}/18-inference-api-watch.sh"
+bash "${SCRIPT_DIR}/20-spark-cli.sh"

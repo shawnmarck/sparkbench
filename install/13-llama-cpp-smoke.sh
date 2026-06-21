@@ -63,13 +63,13 @@ LOG_FILE="${LOG_DIR}/llama-server.log"
 
 usage() {
   cat <<EOF
-Usage: spark-llama {up|down|status|logs}
+Usage: spark engine llama {up|down|status|logs}
 
 GGUF inference via llama-server (Phase 3b).
 Default model: ${MODEL}
 API: http://sparky:${PORT}/v1
 
-Stop vLLM first: spark-eugr down
+Stop vLLM first: spark engine eugr down
 EOF
 }
 
@@ -83,7 +83,7 @@ case "${cmd}" in
     [[ -x "${BIN}" ]] || die "Missing ${BIN} — run install/13-llama-cpp-smoke.sh"
     [[ -f "${MODEL}" ]] || die "Missing model: ${MODEL}"
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx vllm_node; then
-      echo "WARNING: vllm_node is running — stop with: spark-eugr down"
+      echo "WARNING: vllm_node is running — stop with: spark engine eugr down"
     fi
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
     if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
@@ -134,7 +134,7 @@ esac
 SCRIPT
 
 chmod 755 "${SPARK_ROOT}/scripts/spark-llama"
-install -m 755 "${SPARK_ROOT}/scripts/spark-llama" /usr/local/bin/spark-llama
+# CLI: install/20-spark-cli.sh → spark engine llama
 chown techno:techno "${SPARK_ROOT}/scripts/spark-llama"
 
 mkdir -p /opt/spark/run /opt/spark/logs
@@ -143,9 +143,9 @@ chown techno:techno /opt/spark/run /opt/spark/logs
 echo
 echo "Done. llama-server -> ${BIN_DIR}/llama-server"
 echo "Smoke:"
-echo "  spark-eugr down"
-echo "  spark-llama up"
-echo "  spark-llama status"
+echo "  spark engine eugr down"
+echo "  spark engine llama up"
+echo "  spark engine llama status"
 if [[ -f "${MODEL_Q4}" ]]; then
   echo "  Model ready: ${MODEL_Q4}"
 else

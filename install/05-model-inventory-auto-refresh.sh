@@ -15,8 +15,7 @@ chmod +x "${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" "${SPARK_ROOT}/scrip
 echo "==> Runtime dir + CLI"
 mkdir -p "${SPARK_ROOT}/run"
 chmod 1777 "${SPARK_ROOT}/run"
-install -m 755 "${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" /usr/local/bin/spark-inventory-refresh
-install -m 755 "${STAGING}/scripts/spark-inventory-build" /usr/local/bin/spark-inventory-build
+# CLI: install/20-spark-cli.sh → spark models inventory
 
 echo "==> nginx: portal + API proxies (via common.sh)"
 write_nginx_portal_site

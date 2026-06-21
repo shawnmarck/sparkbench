@@ -25,10 +25,10 @@ Homelab control plane for **sparky** (`192.168.0.101`, DGX Spark / GB10):
 Hermes agents │ Open WebUI │ Your gateway
         │ many model IDs
         ▼
-spark-inference (Phase 5)     status + switch API
+spark inference (Phase 5)       status + switch API
         │ one GPU profile at a time
         ▼
-spark-eugr (:8000)  │  spark-llama (:8081)
+spark engine eugr (:8000)  │  spark engine llama (:8081)
         ▼
 /opt/spark portal + inventory + recipes/
 ```
@@ -45,11 +45,11 @@ spark-eugr (:8000)  │  spark-llama (:8081)
 |-------|--------|
 | Portal, Netdata, GPU widget, inventory | ✅ Running |
 | NAS shelf mount + push/pull | ✅ |
-| eugr vLLM (`spark-eugr`) | ✅ Proven |
-| llama.cpp (`spark-llama`) | ✅ Proven |
+| eugr vLLM (`spark engine eugr`) | ✅ Proven |
+| llama.cpp (`spark engine llama`) | ✅ Proven |
 | Open WebUI | ✅ `:3000` |
 | Recipes (production) | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4` |
-| `spark-inference` control plane | 🟡 CLI + API + portal Inference tab + async bench |
+| `spark inference` control plane | 🟡 CLI + API + portal Inference tab + async bench |
 | Model Lab (recipe lifecycle) | ✅ Phase 5b — scaffold, test, promote |
 | HF Explorer | ❌ Phase 5c |
 | Hermes Agent | ❌ Phase 5 step 5 (deferred) |
@@ -71,11 +71,11 @@ spark-eugr (:8000)  │  spark-llama (:8081)
 
 - [x] SMB mount `/mnt/model-shelf` (QNAP `192.168.0.99`)
 - [x] Canonical tree `/models` (mirrors shelf)
-- [x] `spark-shelf-push` / `spark-shelf-pull`
+- [x] `spark shelf push` / `spark shelf pull`
 - [x] Inventory dashboard http://sparky/models.html
-- [x] Auto-refresh (`spark-inventory-refresh` + inotify)
+- [x] Auto-refresh (`spark models inventory` + inotify)
 - [x] First full shelf push (background)
-- [x] `spark-hf-login` for Hugging Face
+- [x] `spark hf login` for Hugging Face
 - [ ] Second shelf push for Gemma 4 trees (after downloads)
 
 Deferred: LRU cache at `/var/lib/spark-model-cache` — not needed with 4 TB local NVMe.
@@ -109,7 +109,7 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 ### 5.0 — Runtime control plane ✅
 
 1. [x] Expand `recipes/` — Qwen NVFP4, Qwen Q4, Gemma Q4
-2. [x] **`spark-inference`** CLI — `status`, `list`, `up`, `down`, `logs`, `bench`
+2. [x] **`spark inference`** CLI — `status`, `list`, `up`, `down`, `logs`, `bench`
 3. [x] **HTTP API** — status, switch, down, bench (async background job)
 4. [x] **Portal Inference tab** — switch, stop, benchmark, log tail
 5. [x] **Portal UX** — nav order, unified pills, Models↔Inference bridge
@@ -130,7 +130,7 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 ### Build order (5b → 5c → 5d)
 
 1. [x] `recipes/drafts/` + `lifecycle` field (`draft` → `testing` → `production`)
-2. [x] **`spark-inference recipe`** — `scaffold`, `list`, `promote`, `discard`, `testing`
+2. [x] **`spark recipe`** — `scaffold`, `list`, `promote`, `discard`, `testing`
 3. [x] **HTTP API** — `GET/POST /api/inference/recipes/*`
 4. [x] **Portal Models** — Create recipe, mark testing, switch, bench, promote
 5. [x] Testing recipes switchable; production = `data/inference-profiles.yaml`
@@ -189,13 +189,13 @@ Deferred until desk setup is stable.
 | Service | URL | Command |
 |---------|-----|---------|
 | Portal | http://sparky/ | nginx |
-| Models | http://sparky/models.html | `spark-inventory-build` |
-| Inference API | http://sparky/api/inference/status | `spark-inference` |
-| vLLM | http://sparky:8000/v1 | `spark-eugr up/down/status` |
-| llama.cpp | http://sparky:8081/v1 | `spark-llama up/down/status` |
+| Models | http://sparky/models.html | `spark models inventory` |
+| Inference API | http://sparky/api/inference/status | `spark inference status` |
+| vLLM | http://sparky:8000/v1 | `spark engine eugr up/down/status` |
+| llama.cpp | http://sparky:8081/v1 | `spark engine llama up/down/status` |
 | Open WebUI | http://sparky:3000 | docker |
 | Netdata | http://sparky:19999/v3/ | — |
-| Shelf | — | `spark-shelf-push`, `spark-shelf-pull` |
+| Shelf | — | `spark shelf push`, `spark shelf pull` |
 
 ---
 
@@ -205,7 +205,7 @@ Deferred until desk setup is stable.
 /opt/spark/
 ├── AGENT.md
 ├── portal/
-├── scripts/           spark-* CLIs
+├── scripts/           spark CLI + implementation scripts
 ├── install/
 ├── data/              catalog, verification, inference-profiles.yaml
 ├── recipes/           production inference profiles

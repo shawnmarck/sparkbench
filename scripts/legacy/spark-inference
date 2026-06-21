@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "deprecated: use 'spark inference' (see scripts/legacy/README.md)" >&2
+exec /opt/spark/scripts/spark inference "$@"

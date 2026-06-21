@@ -40,7 +40,7 @@ Primary download and inference path on this machine. Layout mirrors the NAS shel
 
 **Flow:** download here first → smoke test → push to shelf:
 ```bash
-spark-shelf-push google/gemma-4-26b-a4b
+spark shelf push google/gemma-4-26b-a4b
 ```
 
 Docs: /opt/spark/docs/MODEL-SHELF.md
@@ -60,7 +60,7 @@ Hermes or manual drops for later: use `_incoming/`, then promote into the tree.
 
 Restore to Spark:
 ```bash
-spark-shelf-pull google/gemma-4-26b-a4b
+spark shelf pull google/gemma-4-26b-a4b
 ```
 EOF
   chown "${TECHNO}:${TECHNO}" "${SHELF_MODELS}/README.md" 2>/dev/null || true
@@ -69,9 +69,8 @@ else
   echo "WARN: /mnt/model-shelf not mounted; shelf dirs skipped"
 fi
 
-echo "==> Installing spark-shelf-push / spark-shelf-pull"
-install -m 755 "${SPARK_ROOT}/scripts/spark-shelf-push" /usr/local/bin/spark-shelf-push
-install -m 755 "${SPARK_ROOT}/scripts/spark-shelf-pull" /usr/local/bin/spark-shelf-pull
+echo "==> Shelf CLI via install/20-spark-cli.sh (spark shelf push|pull)"
+# CLI: install/20-spark-cli.sh → spark shelf pull|push
 
 echo
 echo "Done."

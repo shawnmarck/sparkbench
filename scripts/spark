@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# spark — unified Sparky homelab CLI (git/docker-style groups).
+set -euo pipefail
+
+ROOT="${SPARK_ROOT:-/opt/spark}"
+LIB="${ROOT}/scripts"
+PY="${ROOT}/venv/bin/python"
+
+usage() {
+  cat <<'EOF'
+spark — Sparky homelab control
+
+Usage: spark <group> <command> [args]
+
+Groups:
+  status                 GPU + inference overview
+  inference list|status|up|down|logs|bench
+  recipe list|scaffold|testing|promote|discard   (Model Lab)
+  models verify|removal|inventory
+  shelf pull|push|rm|status
+  engine eugr|llama <up|down|logs|status|build>
+  gpu                    Metrics JSON (same as /api/gpu)
+  hf login               Hugging Face token setup
+
+Examples:
+  spark status
+  spark inference up qwen36-nvfp4
+  spark recipe scaffold google/gemma-4-12b-it llamacpp
+  spark models verify set google/gemma-4-12b-it works
+  spark shelf pull nvidia/qwen3.6-35b-a3b
+  spark engine llama status
+
+Run spark <group> without a command for group-specific help.
+EOF
+}
+
+die() { echo "spark: $*" >&2; exit 1; }
+
+run() {
+  local target="$1"
+  shift
+  [[ -x "$target" || -f "$target" ]] || die "missing implementation: $target"
+  exec "$target" "$@"
+}
+
+run_py() {
+  local script="$1"
+  shift
+  [[ -f "$script" ]] || die "missing implementation: $script"
+  exec "$PY" "$script" "$@"
+}
+
+cmd_status() {
+  echo "=== GPU ==="
+  if [[ -x "${LIB}/spark-gpu-metrics" ]]; then
+    "${PY}" "${LIB}/spark-gpu-metrics" 2>/dev/null | "${PY}" -c "
+import json, sys
+d = json.load(sys.stdin)
+print(f\"  {d.get('gpu_name', '?')}: {d.get('gpu_util_pct', '?')}% GPU · {d.get('memory_used_pct', '?')}% MEM\")
+inf = d.get('inference') or {}
+if inf.get('model'):
+    print(f\"  engine probe: {inf.get('engine', '?')} · {inf.get('model')}\")
+" 2>/dev/null || "${PY}" "${LIB}/spark-gpu-metrics" 2>/dev/null | head -c 400
+  else
+    echo "  (spark-gpu-metrics not found)"
+  fi
+  echo ""
+  echo "=== Inference ==="
+  run_py "${LIB}/spark-inference.py" status
+}
+
+cmd_inference() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || {
+    cat <<'EOF'
+spark inference — recipe-driven profile control
+
+  list | status | up <profile> | down | logs [profile] | bench
+EOF
+    exit 0
+  }
+  shift
+  run_py "${LIB}/spark-inference.py" "$sub" "$@"
+}
+
+cmd_recipe() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || {
+    cat <<'EOF'
+spark recipe — Model Lab lifecycle
+
+  list | scaffold <lab/slug> <llamacpp|eugr> | testing <id>
+  promote <id> | discard <id>
+EOF
+    exit 0
+  }
+  shift
+  run_py "${LIB}/spark-inference.py" recipe "$sub" "$@"
+}
+
+cmd_models() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || {
+    cat <<'EOF'
+spark models — inventory verification
+
+  verify get|set|list|pending <args...>
+  removal <lab/slug> on|off
+  inventory              Rebuild portal/models.json
+EOF
+    exit 0
+  }
+  shift
+  case "$sub" in
+    verify)
+      local action="${1:-}"
+      [[ -n "$action" ]] || die "usage: spark models verify {get|set|list|pending} ..."
+      shift
+      run_py "${LIB}/spark-model-verify" "$action" "$@"
+      ;;
+    removal)
+      local path="${1:-}"
+      local flag="${2:-}"
+      [[ -n "$path" && -n "$flag" ]] || die "usage: spark models removal <lab/slug> on|off"
+      shift 2
+      run_py "${LIB}/spark-model-verify" removal "$path" "$flag" "$@"
+      ;;
+    inventory)
+      run "${LIB}/spark-inventory-build" "$@"
+      ;;
+    *)
+      die "unknown models command: $sub (try: verify, removal, inventory)"
+      ;;
+  esac
+}
+
+cmd_shelf() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || {
+    cat <<'EOF'
+spark shelf — local disk ↔ NAS model shelf
+
+  pull <lab/slug> [lab/slug...]   Fetch from NAS to /models
+  push <lab/slug> [lab/slug...]   Backup local to NAS
+  rm <lab/slug>                   Delete local tree (NAS kept)
+  status                          Shelf API + mount status
+EOF
+    exit 0
+  }
+  shift
+  case "$sub" in
+    pull) run "${LIB}/spark-shelf-pull" "$@" ;;
+    push) run "${LIB}/spark-shelf-push" "$@" ;;
+    rm) run "${LIB}/spark-local-rm" "$@" ;;
+    status)
+      if command -v curl >/dev/null 2>&1; then
+        curl -fsS "http://127.0.0.1/api/shelf/status" 2>/dev/null | "${PY}" -m json.tool 2>/dev/null \
+          || curl -fsS "http://127.0.0.1/api/shelf/status" 2>/dev/null \
+          || die "shelf API unavailable — run install/11-model-shelf-api.sh"
+      else
+        die "curl required for spark shelf status"
+      fi
+      ;;
+    *)
+      die "unknown shelf command: $sub (try: pull, push, rm, status)"
+      ;;
+  esac
+}
+
+cmd_engine() {
+  local engine="${1:-}"
+  [[ -n "$engine" ]] || {
+    cat <<'EOF'
+spark engine — low-level inference engines (bypass profile switcher)
+
+  eugr  up | down | logs | status | build
+  llama up | down | logs | status
+EOF
+    exit 0
+  }
+  shift
+  case "$engine" in
+    eugr|vllm) run "${LIB}/spark-eugr" "$@" ;;
+    llama|llamacpp) run "${LIB}/spark-llama" "$@" ;;
+    *)
+      die "unknown engine: $engine (try: eugr, llama)"
+      ;;
+  esac
+}
+
+cmd_gpu() {
+  run_py "${LIB}/spark-gpu-metrics" "$@"
+}
+
+cmd_hf() {
+  local sub="${1:-login}"
+  shift
+  case "$sub" in
+    login) run "${LIB}/spark-hf-login" "$@" ;;
+    *)
+      die "unknown hf command: $sub (try: login)"
+      ;;
+  esac
+}
+
+main() {
+  local cmd="${1:-}"
+  [[ -n "$cmd" ]] || { usage; exit 0; }
+  case "$cmd" in
+    -h|--help|help) usage ;;
+    status) shift; cmd_status "$@" ;;
+    inference) shift; cmd_inference "$@" ;;
+    recipe) shift; cmd_recipe "$@" ;;
+    models) shift; cmd_models "$@" ;;
+    shelf) shift; cmd_shelf "$@" ;;
+    engine) shift; cmd_engine "$@" ;;
+    gpu) shift; cmd_gpu "$@" ;;
+    hf) shift; cmd_hf "$@" ;;
+    *)
+      die "unknown group: $cmd (run spark --help)"
+      ;;
+  esac
+}
+
+main "$@"

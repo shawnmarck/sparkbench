@@ -1,0 +1,38 @@
+#compdef spark
+# zsh completion for spark
+
+_spark() {
+  local -a groups inference recipe models_verify models shelf engine eugr llama hf
+  groups=(status inference recipe models shelf engine gpu hf help)
+  inference=(list status up down logs bench)
+  recipe=(list scaffold testing promote discard)
+  models_verify=(get set list pending)
+  shelf=(pull push rm status)
+  eugr=(up down logs status build)
+  llama=(up down logs status)
+  hf=(login)
+
+  case $CURRENT in
+    2)
+      _describe -t groups 'spark group' groups
+      ;;
+    3)
+      case $words[2] in
+        inference) _describe 'inference command' inference ;;
+        recipe) _describe 'recipe command' recipe ;;
+        models) _describe 'models command' models_verify ;;
+        shelf) _describe 'shelf command' shelf ;;
+        engine) _describe 'engine' eugr llama ;;
+        hf) _describe 'hf command' hf ;;
+      esac
+      ;;
+    4)
+      case $words[2]:$words[3] in
+        engine:eugr) _describe 'eugr command' eugr ;;
+        engine:llama) _describe 'llama command' llama ;;
+      esac
+      ;;
+  esac
+}
+
+compdef _spark spark

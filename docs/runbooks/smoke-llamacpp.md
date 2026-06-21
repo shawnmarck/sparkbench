@@ -11,7 +11,7 @@ Goal: run the same Qwen3.6 family via **GGUF** on GB10 for comparison with NVFP4
 - GGUF on disk: `/models/unsloth/qwen3.6-35b-a3b/gguf/`
   - Start with: `Qwen3.6-35B-A3B-UD-Q4_K_M.gguf` (~21 GB)
   - Later: `Qwen3.6-35B-A3B-MXFP4_MOE.gguf` (needs `121a` build + newer llama.cpp)
-- **Stop vLLM first:** `spark-eugr down` (single GPU workload)
+- **Stop vLLM first:** `spark engine eugr down` (single GPU workload)
 
 ## Install
 
@@ -19,14 +19,14 @@ Goal: run the same Qwen3.6 family via **GGUF** on GB10 for comparison with NVFP4
 sudo /opt/spark/install/13-llama-cpp-smoke.sh
 ```
 
-Builds from source into `/opt/spark/vendor/llama.cpp` with `CMAKE_CUDA_ARCHITECTURES=121` (GB10). Installs `spark-llama` CLI.
+Builds from source into `/opt/spark/vendor/llama.cpp` with `CMAKE_CUDA_ARCHITECTURES=121` (GB10). Wires `spark engine llama` (via unified `spark` CLI).
 
 ## Smoke test
 
 ```bash
-spark-eugr down                    # free GPU
-spark-llama up                     # Q4_K_M on :8081
-spark-llama status
+spark engine eugr down             # free GPU
+spark engine llama up              # Q4_K_M on :8081
+spark engine llama status
 curl http://sparky:8081/v1/models
 
 curl http://sparky:8081/v1/chat/completions \
@@ -49,10 +49,10 @@ From community DGX Spark guides:
 
 | Command | Purpose |
 |---------|---------|
-| `spark-llama up` | Start server (default Q4_K_M) |
-| `spark-llama down` | Stop server |
-| `spark-llama status` | PID + health |
-| `spark-llama logs` | Tail server log |
+| `spark engine llama up` | Start server (default Q4_K_M) |
+| `spark engine llama down` | Stop server |
+| `spark engine llama status` | PID + health |
+| `spark engine llama logs` | Tail server log |
 
 ## Compare with vLLM
 
@@ -60,7 +60,7 @@ From community DGX Spark guides:
 |--|------------|------------------|
 | Path | `nvidia/.../nvfp4` | `unsloth/.../gguf` |
 | Port | 8000 | 8081 |
-| CLI | `spark-eugr` | `spark-llama` |
+| CLI | `spark engine eugr` | `spark engine llama` |
 
 Subjective feel + tok/s (manual or `llama-bench`) — no portal TPS widget yet.
 
@@ -83,8 +83,8 @@ Open WebUI is wired for **both** backends (install `14-openwebui-dual-backend.sh
 
 | Backend | URL | When |
 |---------|-----|------|
-| vLLM | `http://host.docker.internal:8000/v1` | `spark-eugr up` |
-| llama.cpp | `http://host.docker.internal:8081/v1` | `spark-llama up` |
+| vLLM | `http://host.docker.internal:8000/v1` | `spark engine eugr up` |
+| llama.cpp | `http://host.docker.internal:8081/v1` | `spark engine llama up` |
 
 1. Open http://sparky:3000 (same account as before — volume preserved)
 2. New chat → model picker → **`qwen3.6-35b-a3b-q4`** (llama) or **`qwen3.6-35b-a3b-nvfp4`** (vLLM)

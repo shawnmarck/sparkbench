@@ -14,4 +14,4 @@ tags:
 notes: |
   Primary reasoning model via eugr spark-vllm-docker. ~3–5 min cold start.
   Tool/reasoning parsers enabled in eugr recipe command block.
-  Stop llama.cpp before switching: spark-inference down
+  Stop llama.cpp before switching: spark inference down

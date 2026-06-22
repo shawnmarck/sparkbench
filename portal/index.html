@@ -34,6 +34,9 @@
     .nav-btn .ext { opacity: .45; font-size: .7rem; margin-left: .2rem; }
     .nav-btn.experimental { opacity: .55; }
     .nav-btn.experimental::after { content: 'exp'; font-size: .58rem; margin-left: .25rem; color: var(--warn); vertical-align: super; }
+    .nav-btn .svc-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: .35rem; vertical-align: 1px; background: var(--muted); opacity: .45; }
+    .nav-btn .svc-dot.up { background: var(--ok); opacity: 1; }
+    .nav-btn .svc-dot.down { background: var(--down); opacity: .9; }
     .nav-meta { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
     .nav-metrics { display: flex; align-items: center; gap: .4rem; }
     .nav-metric { display: inline-flex; align-items: center; gap: .3rem; padding: .22rem .45rem .22rem .4rem; border-radius: 8px; border: 1px solid var(--border); background: #0c0e14; font-family: ui-monospace, monospace; font-size: .68rem; color: var(--muted); text-decoration: none; min-width: 4.6rem; }
@@ -503,6 +506,7 @@
       <a href="/#models" class="nav-btn" data-src="/models.html" data-title="Model inventory" data-popout="/#models">Models</a>
       <a href="#explore" class="nav-btn" data-view="explore">Explore</a>
       <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
+      <a href="http://sparky:9119/" class="nav-btn" id="nav-hermes" data-src="http://sparky:9119/" data-title="Hermes" data-popout="http://sparky:9119/">Hermes<span class="svc-dot down" id="nav-hermes-dot" aria-hidden="true"></span></a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
     </nav>
@@ -1717,6 +1721,29 @@
         }
       }
 
+      function renderNavHermes(h, containers) {
+        const dot = $('nav-hermes-dot');
+        const link = $('nav-hermes');
+        if (!dot || !link) return;
+        let online = false;
+        if (h) {
+          online = !!h.online;
+        } else if (containers) {
+          const c = containers.find((x) => x.name === 'spark-bot');
+          online = !!(c && c.up);
+        }
+        dot.className = 'svc-dot ' + (online ? 'up' : 'down');
+        if (h) {
+          if (online) link.title = 'Hermes · online';
+          else if (h.container && !h.service) link.title = 'Hermes · container up, dashboard not responding';
+          else link.title = 'Hermes · offline';
+        } else if (online) {
+          link.title = 'Hermes · container running';
+        } else {
+          link.title = 'Hermes · offline';
+        }
+      }
+
       function updateNavMetrics(d) {
         $('nav-gpu-util').textContent = d.gpu_util_pct != null ? Math.round(d.gpu_util_pct) : '—';
         $('nav-mem-util').textContent = d.memory_used_pct != null ? Math.round(d.memory_used_pct) : '—';
@@ -1757,6 +1784,7 @@
           const hist = d.history || {};
 
           updateNavMetrics(d);
+          renderNavHermes(d.hermes, d.containers);
           renderNavInference(infData);
           maybeCloseInfLogOverlay(infData);
           if (infLogOverlayOpen) {

@@ -392,6 +392,44 @@ def read_docker():
     return containers
 
 
+HERMES_CONTAINER = "spark-bot"
+HERMES_URL = "http://127.0.0.1:9119/"
+HERMES_PROBE_INTERVAL = 20.0
+_HERMES_PROBE_AT = 0.0
+_HERMES_SERVICE_UP = False
+
+
+def read_hermes_status(containers):
+    """Cached HTTP probe for Hermes dashboard (spark-bot). Container checked every poll."""
+    global _HERMES_PROBE_AT, _HERMES_SERVICE_UP
+    container_up = any(
+        c.get("name") == HERMES_CONTAINER and c.get("up") for c in containers
+    )
+    if not container_up:
+        return {"online": False, "container": False, "service": False}
+    now = time.time()
+    if now - _HERMES_PROBE_AT >= HERMES_PROBE_INTERVAL:
+        _HERMES_PROBE_AT = now
+        service_up = False
+        try:
+            req = urllib.request.Request(
+                HERMES_URL,
+                headers={"User-Agent": "spark-portal-probe/1"},
+            )
+            with urllib.request.urlopen(req, timeout=1.0):
+                service_up = True
+        except urllib.error.HTTPError:
+            service_up = True
+        except (urllib.error.URLError, OSError, ValueError, TimeoutError):
+            service_up = False
+        _HERMES_SERVICE_UP = service_up
+    return {
+        "online": container_up and _HERMES_SERVICE_UP,
+        "container": container_up,
+        "service": _HERMES_SERVICE_UP,
+    }
+
+
 def probe_openai_models(url, timeout=1.5):
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -486,6 +524,8 @@ def read_metrics():
         metrics["net_tx_mbps"] = network["tx_mbps"]
     metrics["storage"] = read_storage()
     metrics["containers"] = read_docker()
+    containers = metrics["containers"]
+    metrics["hermes"] = read_hermes_status(containers)
     metrics["inference"] = read_inference()
     metrics["history"] = append_history(metrics)
     return metrics

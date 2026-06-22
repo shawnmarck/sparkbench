@@ -4,6 +4,8 @@ set -euo pipefail
 REPO="/opt/spark/vendor/spark-vllm-docker"
 RECIPE="${SPARK_EUGR_RECIPE:-/opt/spark/services/eugr-qwen36-local.yaml}"
 EXTRA="-v /models:/models:ro"
+PY="${SPARK_PYTHON:-/opt/spark/venv/bin/python3}"
+CHECK="${SPARK_EUGR_CHECK:-/opt/spark/scripts/spark-eugr-check.py}"
 cmd="${1:-status}"
 
 run_recipe() {
@@ -35,8 +37,14 @@ case "$cmd" in
     cd "$REPO"
     ./build-and-copy.sh
     ;;
+  check)
+    exec "$PY" "$CHECK" check "${@:2}"
+    ;;
+  record)
+    exec "$PY" "$CHECK" record "${@:2}"
+    ;;
   *)
-    echo "Usage: spark-eugr {up|down|logs|status|build}" >&2
+    echo "Usage: spark-eugr {up|down|logs|status|build|check|record}" >&2
     exit 1
     ;;
 esac

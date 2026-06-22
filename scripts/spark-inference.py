@@ -2,11 +2,13 @@
 """Phase 5 inference control plane — recipe-driven profile switch."""
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -44,6 +46,7 @@ BENCH_HISTORY_LIST_RE = re.compile(
 _history_migrated = False
 VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
+SPARK_EUGR_CHECK = ROOT / "scripts" / "spark-eugr-check.py"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
 INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
@@ -194,21 +197,12 @@ def save_recipe_file(path: Path, recipe: dict[str, Any]) -> None:
 
 
 def discover_gguf(model_root: Path) -> Path | None:
-    def pick(candidates: list[Path]) -> Path | None:
-        if not candidates:
-            return None
-        for pref in ("Q4_K_M", "Q4_K_XL", "Q4"):
-            for p in candidates:
-                if pref in p.name:
-                    return p
-        return sorted(candidates, key=lambda p: p.stat().st_size)[0]
+    run_dir = ROOT / "run"
+    if str(run_dir) not in sys.path:
+        sys.path.insert(0, str(run_dir))
+    from gguf_pick import pick_main_gguf_for_inventory
 
-    gguf_dir = model_root / "gguf"
-    if gguf_dir.is_dir():
-        picked = pick(list(gguf_dir.glob("*.gguf")))
-        if picked:
-            return picked
-    return pick(list(model_root.rglob("*.gguf")))
+    return pick_main_gguf_for_inventory(model_root)
 
 
 def discover_nvfp4_dir(model_root: Path) -> Path | None:
@@ -257,6 +251,81 @@ def is_multimodal_model(model_dir: Path) -> bool:
     return False
 
 
+def is_qwen36_family(model_dir: Path) -> bool:
+    cfg_path = model_dir / "config.json"
+    if not cfg_path.is_file():
+        return False
+    try:
+        cfg = json.loads(cfg_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    archs = [str(a).lower() for a in (cfg.get("architectures") or [])]
+    model_type = str(cfg.get("model_type", "")).lower()
+    return any("qwen3" in a for a in archs) or "qwen3" in model_type
+
+
+def eugr_nvfp4_env_yaml() -> str:
+    return """
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: "1"
+"""
+
+
+def eugr_load_format(model_dir: Path, weight_format: str) -> str:
+    if weight_format == "nvfp4":
+        return "fastsafetensors"
+    return "auto" if is_multimodal_model(model_dir) else "fastsafetensors"
+
+
+def is_moe_model(model_dir: Path) -> bool:
+    cfg_path = model_dir / "config.json"
+    if not cfg_path.is_file():
+        return False
+    try:
+        cfg = json.loads(cfg_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    model_type = str(cfg.get("model_type", "")).lower()
+    if "moe" in model_type:
+        return True
+    archs = cfg.get("architectures") or []
+    return any("Moe" in str(a) for a in archs)
+
+
+VLLM_DFLASH_WEIGHT_ORDER = ("fp8", "hf", "prismaquant", "nvfp4")
+
+
+def discover_dflash_target_weights(slug: str) -> tuple[str, Path, str] | None:
+    """Best eugr target for a DFlash sidecar: inventory_path, model_dir, weight_format."""
+    candidates: list[tuple[tuple[int, int], str, Path, str]] = []
+    for lab_dir in sorted(MODELS_ROOT.iterdir()):
+        if not lab_dir.is_dir() or lab_dir.name in ("z-lab", ".cache"):
+            continue
+        inv = f"{lab_dir.name}/{slug}"
+        root = MODELS_ROOT / inv
+        for fmt_idx, sub in enumerate(VLLM_DFLASH_WEIGHT_ORDER):
+            model_dir = root / sub
+            if not model_dir.is_dir() or not (model_dir / "config.json").is_file():
+                continue
+            lab_pref = 0 if lab_dir.name == "qwen" else 1
+            candidates.append(((lab_pref, fmt_idx), inv, model_dir, sub))
+            break
+    if not candidates:
+        return None
+    candidates.sort(key=lambda x: x[0])
+    _key, inv, model_dir, weight_format = candidates[0]
+    return inv, model_dir, weight_format
+
+
+def assess_dflash_pair(model_dir: Path, weight_format: str) -> tuple[bool, str | None]:
+    if weight_format == "nvfp4" and is_moe_model(model_dir):
+        return False, (
+            "DFlash + NVFP4 MoE hits KV cache page-size mismatch in current vLLM; "
+            "download FP8/HF target weights or wait for a vLLM fix"
+        )
+    return True, None
+
+
 def infer_max_model_len(model_dir: Path, weight_format: str) -> int:
     default = 65536 if weight_format == "nvfp4" else 16384
     cfg_path = model_dir / "config.json"
@@ -303,7 +372,8 @@ def write_eugr_service(profile_id: str, inventory_path: str, served_name: str) -
     attn_line = ""
     if not is_multimodal_model(model_dir):
         attn_line = "    --attention-backend flashinfer \\\n"
-    load_fmt = "auto" if is_multimodal_model(model_dir) else "fastsafetensors"
+    load_fmt = eugr_load_format(model_dir, weight_format)
+    env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
     max_len = infer_max_model_len(model_dir, weight_format)
     path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
     content = f"""# Generated by spark-inference recipe scaffold ({profile_id})
@@ -313,7 +383,7 @@ description: eugr vLLM serve for {inventory_path}
 
 model: {served_name}
 container: vllm-node
-
+{env_block}
 defaults:
   port: 8000
   host: 0.0.0.0
@@ -342,6 +412,205 @@ command: |
     SERVICES_DIR.mkdir(parents=True, exist_ok=True)
     path.write_text(content)
     return path
+
+
+def discover_dflash_sidecar(slug: str) -> Path | None:
+    path = MODELS_ROOT / "z-lab" / slug / "dflash"
+    if not path.is_dir():
+        return None
+    if (path / "config.json").is_file() or any(path.glob("*.safetensors")):
+        return path
+    return None
+
+
+def find_dflash_target_inventory(slug: str) -> str | None:
+    found = discover_dflash_target_weights(slug)
+    if found is None:
+        return None
+    inv, _model_dir, _weight_format = found
+    return inv
+
+
+def find_existing_dflash_profile(target_inventory: str) -> str | None:
+    for base in (RECIPES_DRAFTS_DIR, RECIPES_DIR):
+        if not base.is_dir():
+            continue
+        for path in sorted(base.glob("*.yaml")):
+            try:
+                data = load_yaml(path)
+            except SystemExit:
+                continue
+            spec = data.get("speculative") or {}
+            if (
+                data.get("inventory_path") == target_inventory
+                and spec.get("method") == "dflash"
+                and data.get("id")
+            ):
+                return str(data["id"])
+    return None
+
+
+def make_dflash_profile_id(inventory_path: str) -> str:
+    existing = find_existing_dflash_profile(inventory_path)
+    if existing:
+        return existing
+    lab, slug = inventory_path.split("/", 1)
+    raw = f"{lab}-{slug.replace('.', '-')}-dflash-eugr".lower()
+    raw = re.sub(r"[^a-z0-9._-]+", "-", raw).strip("-")
+    base = raw[:56].strip("-") or "dflash-profile"
+    candidate = base
+    n = 2
+    while resolve_recipe_path(candidate):
+        candidate = f"{base}-{n}"
+        n += 1
+    return candidate
+
+
+def write_eugr_dflash_service(
+    profile_id: str,
+    target_inventory: str,
+    served_name: str,
+    dflash_path: Path,
+) -> Path:
+    found = discover_vllm_weights_dir(MODELS_ROOT / target_inventory)
+    if found is None:
+        raise RuntimeError(
+            f"no vLLM weights under /models/{target_inventory}"
+        )
+    model_dir, weight_format = found
+    max_len = infer_max_model_len(model_dir, weight_format)
+    load_fmt = eugr_load_format(model_dir, weight_format)
+    moe_line = "    --moe-backend marlin \\\n" if weight_format == "nvfp4" else ""
+    qwen36 = is_qwen36_family(model_dir)
+    parser_lines = ""
+    if qwen36:
+        parser_lines = (
+            "    --enable-auto-tool-choice \\\n"
+            "    --tool-call-parser qwen3_xml \\\n"
+            "    --reasoning-parser qwen3 \\\n"
+            "    --chat-template fixed_chat_template.jinja \\\n"
+        )
+    env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
+    gpu_mem = 0.80 if weight_format == "nvfp4" else 0.85
+    batched_tokens = 16384 if weight_format == "nvfp4" else 32768
+    spec_json = (
+        f'{{{{"method": "dflash", "model": "{dflash_path}", '
+        f'"num_speculative_tokens": 15}}}}'
+    )
+    path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
+    content = f"""# Generated by spark-inference DFlash sidecar scaffold ({profile_id})
+recipe_version: "1"
+name: {profile_id}
+description: eugr vLLM DFlash speculative serve for {target_inventory}
+
+model: {served_name}
+container: vllm-node
+{env_block}
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: {gpu_mem}
+  max_model_len: {max_len}
+  max_num_seqs: 4
+  max_num_batched_tokens: {batched_tokens}
+
+command: |
+  vllm serve {model_dir} \\
+    --host {{host}} \\
+    --port {{port}} \\
+    --served-model-name {served_name} \\
+    --tensor-parallel-size {{tensor_parallel}} \\
+    --trust-remote-code \\
+    --kv-cache-dtype auto \\
+    --attention-backend flash_attn \\
+{moe_line}{parser_lines}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+    --max-model-len {{max_model_len}} \\
+    --max-num-seqs {{max_num_seqs}} \\
+    --max-num-batched-tokens {{max_num_batched_tokens}} \\
+    --enable-chunked-prefill \\
+    --load-format {load_fmt} \\
+    --speculative-config '{spec_json}'
+"""
+    SERVICES_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return path
+
+
+def scaffold_dflash_recipe(target_inventory_path: str) -> dict[str, Any]:
+    target_inventory_path = target_inventory_path.strip().strip("/")
+    if "/" not in target_inventory_path:
+        raise RuntimeError("inventory_path must be lab/slug")
+
+    slug = target_inventory_path.split("/", 1)[1]
+    if target_inventory_path.startswith("z-lab/"):
+        resolved = find_dflash_target_inventory(slug)
+        if resolved is None:
+            raise RuntimeError(
+                f"no vLLM target weights for DFlash sidecar z-lab/{slug}"
+            )
+        target_inventory_path = resolved
+
+    target_weights = discover_dflash_target_weights(slug)
+    if target_weights is None:
+        raise RuntimeError(
+            f"no vLLM target weights at /models/{target_inventory_path}"
+        )
+    target_inventory_path, model_dir, weight_format = target_weights
+
+    dflash_path = discover_dflash_sidecar(slug)
+    if dflash_path is None:
+        raise RuntimeError(
+            f"no DFlash sidecar at /models/z-lab/{slug}/dflash"
+        )
+
+    supported, block_reason = assess_dflash_pair(model_dir, weight_format)
+    profile_id = make_dflash_profile_id(target_inventory_path)
+    base_served = re.sub(r"[^a-z0-9._-]+", "-", slug.lower()).strip("-")[:40]
+    served_name = f"{base_served}-dflash"
+    sidecar_inv = f"z-lab/{slug}"
+    eugr_path = write_eugr_dflash_service(
+        profile_id, target_inventory_path, served_name, dflash_path
+    )
+
+    existing_path = resolve_recipe_path(profile_id)
+    lifecycle = LIFECYCLE_DRAFT
+    if existing_path and existing_path.is_file():
+        try:
+            prev = load_yaml(existing_path)
+            lifecycle = prev.get("lifecycle") or lifecycle
+        except SystemExit:
+            pass
+
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": f"{slug} DFlash (eugr)",
+        "inventory_path": target_inventory_path,
+        "engine": "eugr",
+        "tier": "heavy",
+        "lifecycle": lifecycle,
+        "served_name": served_name,
+        "port": 8000,
+        "tags": ["lab", "eugr", "dflash", "sidecar"],
+        "speculative": {
+            "method": "dflash",
+            "sidecar_inventory": sidecar_inv,
+            "sidecar_path": str(dflash_path),
+            "num_speculative_tokens": 15,
+            "target_weight_format": weight_format,
+            **({"blocked": True, "blocked_reason": block_reason} if not supported else {}),
+        },
+        "eugr_recipe": str(eugr_path),
+        "notes": (
+            f"DFlash sidecar scaffold {datetime.now(timezone.utc).date().isoformat()}: "
+            f"target /models/{target_inventory_path}, drafter {dflash_path}. "
+            "No prefix caching. Bench vs baseline before promote."
+        ),
+    }
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
+    return recipe
 
 
 def scaffold_recipe(
@@ -387,6 +656,11 @@ def scaffold_recipe(
         if gguf is None:
             raise RuntimeError(f"no .gguf under /models/{inventory_path}")
         recipe["model"] = str(gguf)
+        try:
+            if gguf.stat().st_size >= 40 * 1024**3:
+                recipe["tier"] = "heavy"
+        except OSError:
+            pass
         recipe["llamacpp_args"] = ["-ngl", "999", "-fa", "1", "--no-mmap", "-c", "32768"]
     else:
         eugr_path = write_eugr_service(profile_id, inventory_path, served_name)
@@ -687,12 +961,22 @@ def validate_profile_id(profile_id: str) -> str | None:
     return profile_id
 
 
+_BENCHMARKS_CACHE: tuple[float, dict[str, Any]] | None = None
+
+
 def load_benchmarks() -> dict[str, Any]:
+    global _BENCHMARKS_CACHE
+    mtime = BENCHMARKS_FILE.stat().st_mtime if BENCHMARKS_FILE.is_file() else 0.0
+    if _BENCHMARKS_CACHE is not None and _BENCHMARKS_CACHE[0] == mtime:
+        return _BENCHMARKS_CACHE[1]
     if not BENCHMARKS_FILE.is_file():
-        return {}
-    data = load_yaml(BENCHMARKS_FILE)
-    profiles = data.get("profiles") or {}
-    return profiles if isinstance(profiles, dict) else {}
+        profiles: dict[str, Any] = {}
+    else:
+        data = load_yaml(BENCHMARKS_FILE)
+        raw = data.get("profiles") or {}
+        profiles = raw if isinstance(raw, dict) else {}
+    _BENCHMARKS_CACHE = (mtime, profiles)
+    return profiles
 
 
 def save_benchmarks(profiles: dict[str, Any]) -> None:
@@ -734,16 +1018,30 @@ def _ensure_benchmark_history_file() -> None:
         _chown_benchmark_history_if_root(BENCHMARK_HISTORY_FILE)
 
 
+_BENCH_HISTORY_CACHE: tuple[float, dict[str, Any]] | None = None
+
+
 def load_benchmark_history_store() -> dict[str, Any]:
+    global _BENCH_HISTORY_CACHE
     _ensure_benchmark_history_file()
     ensure_benchmark_history_migrated()
+    mtime = (
+        BENCHMARK_HISTORY_FILE.stat().st_mtime
+        if BENCHMARK_HISTORY_FILE.is_file()
+        else 0.0
+    )
+    if _BENCH_HISTORY_CACHE is not None and _BENCH_HISTORY_CACHE[0] == mtime:
+        return _BENCH_HISTORY_CACHE[1]
     if not BENCHMARK_HISTORY_FILE.is_file():
-        return {"profiles": {}}
-    data = load_yaml(BENCHMARK_HISTORY_FILE)
-    profiles = data.get("profiles") or {}
-    if not isinstance(profiles, dict):
-        profiles = {}
-    return {"profiles": profiles, "_meta": data.get("_meta") or {}}
+        store: dict[str, Any] = {"profiles": {}}
+    else:
+        data = load_yaml(BENCHMARK_HISTORY_FILE)
+        profiles = data.get("profiles") or {}
+        if not isinstance(profiles, dict):
+            profiles = {}
+        store = {"profiles": profiles, "_meta": data.get("_meta") or {}}
+    _BENCH_HISTORY_CACHE = (mtime, store)
+    return store
 
 
 def save_benchmark_history_store(store: dict[str, Any]) -> None:
@@ -962,9 +1260,18 @@ def infer_model_family(recipe: dict[str, Any]) -> str:
     return slug.replace("-", " ").replace("_", " ").title()
 
 
-def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
+def recipe_public(
+    recipe: dict[str, Any],
+    *,
+    benchmarks: dict[str, Any] | None = None,
+    history_profiles: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     profile_id = recipe.get("id")
-    bench = benchmark_for_profile(profile_id) if profile_id else None
+    if benchmarks is None:
+        bench = benchmark_for_profile(profile_id) if profile_id else None
+    else:
+        entry = benchmarks.get(profile_id) if profile_id else None
+        bench = entry if isinstance(entry, dict) else None
     out = {
         "id": profile_id,
         "name": recipe.get("name"),
@@ -983,7 +1290,13 @@ def recipe_public(recipe: dict[str, Any]) -> dict[str, Any]:
         out["tok_s_measured_at"] = bench.get("measured_at")
         if bench.get("latest_run_id"):
             out["latest_run_id"] = bench.get("latest_run_id")
-        out["bench_run_count"] = bench_history_count(profile_id) if profile_id else 0
+        if profile_id:
+            if history_profiles is not None:
+                prof = history_profiles.get(profile_id) or {}
+                runs = prof.get("runs") or []
+                out["bench_run_count"] = len(runs) if isinstance(runs, list) else 0
+            else:
+                out["bench_run_count"] = bench_history_count(profile_id)
     return out
 
 
@@ -1398,6 +1711,7 @@ def start_bench_job() -> tuple[bool, str, dict[str, Any]]:
         start_new_session=True,
     )
     BENCH_PID_FILE.write_text(str(proc.pid))
+    _invalidate_status_cache()
     return True, "started", {"running": True, "pid": proc.pid}
 
 
@@ -1409,27 +1723,128 @@ def engine_log_file(recipe: dict[str, Any] | None) -> Path:
     return LOG_DIR / "llama-server.log"
 
 
-def api_profiles(active_id: str | None = None) -> list[dict[str, Any]]:
+def api_profiles(
+    active_id: str | None = None,
+    *,
+    benchmarks: dict[str, Any] | None = None,
+    history_profiles: dict[str, Any] | None = None,
+    eugr_up: bool | None = None,
+    llama_up: bool | None = None,
+) -> list[dict[str, Any]]:
+    if benchmarks is None:
+        benchmarks = load_benchmarks()
+    if history_profiles is None:
+        history_profiles = load_benchmark_history_store().get("profiles") or {}
+    if eugr_up is None:
+        eugr_up = eugr_running()
+    if llama_up is None:
+        llama_up = llama_running()
     profiles = []
     production = set(enabled_profiles())
+    switchable = switchable_profile_ids()
     for profile_id in list_recipe_ids():
         recipe = load_recipe(profile_id)
-        item = recipe_public(recipe)
+        item = recipe_public(
+            recipe,
+            benchmarks=benchmarks,
+            history_profiles=history_profiles,
+        )
         item["lifecycle"] = recipe.get("lifecycle")
         item["enabled"] = profile_id in production
-        item["switchable"] = profile_id in switchable_profile_ids()
+        item["switchable"] = profile_id in switchable
         item["active"] = profile_id == active_id
         if active_id == profile_id:
             item["ready"] = engine_ready(recipe)
             item["starting"] = not item["ready"] and (
-                (recipe.get("engine") == "llamacpp" and llama_running())
-                or (recipe.get("engine") == "eugr" and eugr_running())
+                (recipe.get("engine") == "llamacpp" and llama_up)
+                or (recipe.get("engine") == "eugr" and eugr_up)
             )
         else:
             item["ready"] = False
             item["starting"] = False
         profiles.append(item)
     return profiles
+
+
+LOADING_PHASE_COPY: dict[str, tuple[str, str]] = {
+    "switch": ("Switching", "Stopping previous engine and launching new profile"),
+    "waiting": ("Waiting for engine", "Profile selected — engine not up yet"),
+    "starting": (
+        "Engine starting",
+        "Engine up · API not ready yet (weights, compile, warmup)",
+    ),
+}
+
+TIER_EXPECT_HINTS: dict[tuple[str, str], tuple[int, int, str]] = {
+    ("heavy", "eugr"): (
+        300,
+        720,
+        "Heavy vLLM profiles (eugr build) on Spark often take 5–12 min (weights, compile, warmup).",
+    ),
+    ("heavy", "llamacpp"): (120, 360, "Large GGUF loads on Spark often take 2–6 min."),
+    ("fast", "eugr"): (30, 120, "Fast vLLM profiles (eugr build) usually ready within 30s–2 min."),
+    ("fast", "llamacpp"): (15, 90, "Fast GGUF profiles usually ready within 15s–90s."),
+}
+
+DEFAULT_TIER_EXPECT = (60, 300, "First ready can take a few minutes depending on model size.")
+
+
+def loading_elapsed_s(started_at: str | None) -> int | None:
+    if not started_at:
+        return None
+    try:
+        ts = datetime.fromisoformat(started_at)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return max(0, int((datetime.now(timezone.utc) - ts).total_seconds()))
+    except (TypeError, ValueError):
+        return None
+
+
+def tier_expect(tier: str | None, engine: str | None) -> dict[str, Any]:
+    tier_key = (tier or "fast").strip().lower()
+    engine_key = (engine or "eugr").strip().lower()
+    min_s, max_s, hint = TIER_EXPECT_HINTS.get(
+        (tier_key, engine_key),
+        DEFAULT_TIER_EXPECT,
+    )
+    return {
+        "tier": tier_key,
+        "typical_min_s": min_s,
+        "typical_max_s": max_s,
+        "hint": hint,
+    }
+
+
+def enrich_loading_state(
+    loading: dict[str, Any],
+    recipe: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    phase = loading.get("phase") or ""
+    if phase == "model":
+        phase = "starting"
+        loading["phase"] = "starting"
+    label, detail = LOADING_PHASE_COPY.get(phase, ("Loading", ""))
+    loading["phase_label"] = label
+    loading["detail"] = detail
+    elapsed = loading_elapsed_s(loading.get("started_at"))
+    if elapsed is not None:
+        loading["elapsed_s"] = elapsed
+    if recipe:
+        loading["engine"] = recipe.get("engine")
+        loading["tier"] = recipe.get("tier")
+    if phase in {"starting", "waiting", "switch"}:
+        expect = tier_expect(
+            recipe.get("tier") if recipe else loading.get("tier"),
+            recipe.get("engine") if recipe else loading.get("engine"),
+        )
+        if phase == "switch":
+            expect = {
+                **expect,
+                "hint": "Switching profile, then engine startup. " + expect["hint"],
+            }
+        loading["expect"] = expect
+    return loading
 
 
 def api_loading_state(
@@ -1445,32 +1860,97 @@ def api_loading_state(
     if switch_job.get("running"):
         started_at = switch_job.get("started_at")
         profile_id = switch_job.get("profile")
+        target_recipe: dict[str, Any] | None = None
         if not profile_id:
-            return {"phase": "switch", "profile": None, "name": None, "started_at": started_at}
+            return enrich_loading_state(
+                {
+                    "phase": "switch",
+                    "profile": None,
+                    "name": None,
+                    "started_at": started_at,
+                }
+            )
         try:
-            target = load_recipe(profile_id)
-            name = target.get("name") or profile_id
+            target_recipe = load_recipe(profile_id)
+            name = target_recipe.get("name") or profile_id
         except SystemExit:
             name = profile_id
-        return {
-            "phase": "switch",
-            "profile": profile_id,
-            "name": name,
-            "started_at": started_at,
-        }
+        return enrich_loading_state(
+            {
+                "phase": "switch",
+                "profile": profile_id,
+                "name": name,
+                "started_at": started_at,
+            },
+            target_recipe,
+        )
 
     if active_id and recipe and not ready:
-        phase = "model" if starting else "waiting"
-        return {
-            "phase": phase,
-            "profile": active_id,
-            "name": recipe.get("name") or active_id,
-            "started_at": active_started_at,
-        }
+        phase = "starting" if starting else "waiting"
+        return enrich_loading_state(
+            {
+                "phase": phase,
+                "profile": active_id,
+                "name": recipe.get("name") or active_id,
+                "started_at": active_started_at,
+            },
+            recipe,
+        )
     return None
 
 
-def api_status() -> dict[str, Any]:
+_EUGR_STACK_CACHE: dict[str, Any] | None = None
+_EUGR_STACK_CACHE_AT: float = 0.0
+_EUGR_STACK_TTL_S = 3600.0
+
+
+def api_eugr_stack(*, force: bool = False) -> dict[str, Any] | None:
+    """Cached eugr upstream check — avoid subprocess spawn on every status poll."""
+    global _EUGR_STACK_CACHE, _EUGR_STACK_CACHE_AT
+    if not SPARK_EUGR_CHECK.is_file():
+        return None
+    now = time.time()
+    if (
+        not force
+        and _EUGR_STACK_CACHE is not None
+        and (now - _EUGR_STACK_CACHE_AT) < _EUGR_STACK_TTL_S
+    ):
+        return _EUGR_STACK_CACHE
+    try:
+        spec = importlib.util.spec_from_file_location("spark_eugr_check", SPARK_EUGR_CHECK)
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        payload = mod.build_check_payload(force=force)
+        if not isinstance(payload, dict):
+            return None
+        _EUGR_STACK_CACHE = payload
+        _EUGR_STACK_CACHE_AT = now
+        return payload
+    except Exception:
+        return _EUGR_STACK_CACHE
+
+
+_STATUS_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_STATUS_CACHE_LOCK = threading.Lock()
+_STATUS_CACHE_TTL_S = 1.0
+
+
+def _invalidate_status_cache() -> None:
+    with _STATUS_CACHE_LOCK:
+        _STATUS_CACHE.clear()
+
+
+def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
+    benchmarks = load_benchmarks()
+    history_profiles = (
+        {}
+        if lite
+        else (load_benchmark_history_store().get("profiles") or {})
+    )
+    eugr_up = eugr_running()
+    llama_up = llama_running()
     active = detect_active_profile()
     active_id = active["profile"] if active else None
     recipe = active["recipe"] if active else None
@@ -1481,8 +1961,18 @@ def api_status() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "active": None,
         "loading": None,
-        "profiles": api_profiles(active_id),
-        "engines": {"eugr": eugr_running(), "llamacpp": llama_running()},
+        "profiles": (
+            []
+            if lite
+            else api_profiles(
+                active_id,
+                benchmarks=benchmarks,
+                history_profiles=history_profiles,
+                eugr_up=eugr_up,
+                llama_up=llama_up,
+            )
+        ),
+        "engines": {"eugr": eugr_up, "llamacpp": llama_up},
         "switch": switch_job,
         "bench": active_bench_job(),
         "urls": {
@@ -1493,11 +1983,15 @@ def api_status() -> dict[str, Any]:
 
     if active and recipe:
         starting = not ready and (
-            (recipe.get("engine") == "llamacpp" and llama_running())
-            or (recipe.get("engine") == "eugr" and eugr_running())
+            (recipe.get("engine") == "llamacpp" and llama_up)
+            or (recipe.get("engine") == "eugr" and eugr_up)
         )
         payload["active"] = {
-            **recipe_public(recipe),
+            **recipe_public(
+                recipe,
+                benchmarks=benchmarks,
+                history_profiles=history_profiles,
+            ),
             "started_at": (active.get("state") or {}).get("started_at"),
             "ready": ready,
             "starting": starting,
@@ -1505,8 +1999,8 @@ def api_status() -> dict[str, Any]:
             "log_file": engine_log_file(recipe).name,
         }
         payload["urls"]["api"] = payload["active"]["api_url"]
-        bench = benchmark_for_profile(active_id)
-        if bench:
+        bench = benchmarks.get(active_id) if active_id else None
+        if isinstance(bench, dict) and bench:
             payload["active"]["benchmark"] = bench
     active_started_at = (active.get("state") or {}).get("started_at") if active else None
     payload["loading"] = api_loading_state(
@@ -1518,7 +2012,26 @@ def api_status() -> dict[str, Any]:
         active_started_at=active_started_at,
     )
 
-    payload["benchmarks"] = load_benchmarks()
+    if not lite:
+        payload["benchmarks"] = benchmarks
+    eugr_stack = api_eugr_stack()
+    if eugr_stack is not None:
+        payload["eugr_stack"] = eugr_stack
+    return payload
+
+
+def api_status(*, lite: bool = False, force: bool = False) -> dict[str, Any]:
+    """Status snapshot; lite skips profiles/benchmarks/eugr_stack for nav polls."""
+    cache_key = "lite" if lite else "full"
+    now = time.time()
+    if not force:
+        with _STATUS_CACHE_LOCK:
+            entry = _STATUS_CACHE.get(cache_key)
+            if entry and (now - entry[0]) < _STATUS_CACHE_TTL_S:
+                return entry[1]
+    payload = _build_api_status(lite=lite)
+    with _STATUS_CACHE_LOCK:
+        _STATUS_CACHE[cache_key] = (now, payload)
     return payload
 
 
@@ -1549,6 +2062,7 @@ def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
             start_new_session=True,
         )
     SWITCH_PID_FILE.write_text(str(proc.pid))
+    _invalidate_status_cache()
     job = active_switch_job()
     job["profile"] = profile_id
     job["started_at"] = datetime.now(timezone.utc).isoformat()
@@ -1561,11 +2075,23 @@ def api_down() -> dict[str, Any]:
     if active_bench_job().get("running"):
         raise RuntimeError("benchmark in progress")
     cmd_down()
-    return api_status()
+    _invalidate_status_cache()
+    return api_status(force=True)
 
 
 def api_route_path(path: str) -> str:
     return path.split("?", 1)[0].rstrip("/") or "/"
+
+
+def api_query_flags(path: str) -> dict[str, bool]:
+    flags = {"lite": False}
+    if "?" not in path:
+        return flags
+    for part in path.split("?", 1)[1].split("&"):
+        key, _, value = part.partition("=")
+        if key == "lite" and value.lower() in {"1", "true", "yes"}:
+            flags["lite"] = True
+    return flags
 
 
 def api_dispatch(
@@ -1577,7 +2103,8 @@ def api_dispatch(
 
     if method == "GET":
         if route == "/api/inference/status":
-            return 200, {"ok": True, **api_status()}
+            lite = api_query_flags(path)["lite"]
+            return 200, {"ok": True, **api_status(lite=lite)}
         if route == "/api/inference/recipes":
             return 200, {"ok": True, "recipes": api_recipe_list()}
         hist_match = BENCH_HISTORY_LIST_RE.match(route)
@@ -1910,6 +2437,17 @@ def cmd_recipe(argv: list[str]) -> int:
         recipe = scaffold_recipe(argv[3], argv[4])
         print(f"Scaffolded draft {recipe['id']} -> {draft_recipe_path(recipe['id'])}")
         return 0
+    if sub == "scaffold-dflash":
+        if len(argv) < 4:
+            raise SystemExit(
+                "usage: spark-inference recipe scaffold-dflash <lab/slug>"
+            )
+        recipe = scaffold_dflash_recipe(argv[3])
+        print(
+            f"Scaffolded DFlash draft {recipe['id']} -> "
+            f"{draft_recipe_path(recipe['id'])}"
+        )
+        return 0
     if sub == "testing":
         if len(argv) < 4:
             raise SystemExit("usage: spark-inference recipe testing <profile>")
@@ -1938,6 +2476,7 @@ def usage() -> None:
 Recipe-driven inference control (Phase 5). One GPU workload at a time.
 bench — multi-turn agent-style timing on the active profile (avg of 3 sessions).
 recipe scaffold <lab/slug> <llamacpp|eugr> — Model Lab draft recipe
+recipe scaffold-dflash <lab/slug> — DFlash sidecar + target eugr draft
 recipe testing|promote|discard <profile> — lifecycle (draft → testing → production)"""
     )
 

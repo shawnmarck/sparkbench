@@ -210,7 +210,7 @@
     .inf-log-wrap { flex-shrink: 0; margin-top: .75rem; }
     .inf-log-wrap .section-title { margin-top: 0; }
     body.inf-view .dashboard { overflow: hidden; display: flex; flex-direction: column; }
-    body.inf-view .dashboard-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; max-width: none; }
+    body.inf-view .dashboard-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     body.inf-view #inference-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
     body.inf-view #inference-card .card-head { flex-shrink: 0; }
     body.inf-view .inf-card-body { flex: 1; min-height: 0; }
@@ -304,7 +304,7 @@
 
     .exp-card-body { display: flex; flex-direction: column; gap: 0; min-height: 0; }
     body.exp-view .dashboard { overflow: hidden; display: flex; flex-direction: column; }
-    body.exp-view .dashboard-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; max-width: none; }
+    body.exp-view .dashboard-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     body.exp-view #explore-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
     body.exp-view #explore-card .card-head { flex-shrink: 0; }
     body.exp-view .exp-card-body { flex: 1; min-height: 0; }
@@ -340,10 +340,9 @@
     }
     .exp-chip.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
     .exp-chip.active[data-exp-chip="nvfp4"] { border-color: #2a3a5a; color: #9ec8ff; }
-    .exp-main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr min(340px, 34%); gap: .55rem; }
-    @media (max-width: 900px) { .exp-main { grid-template-columns: 1fr; } }
+    .exp-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .55rem; }
     .exp-results-panel {
-      min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--border);
+      flex: 1; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--border);
       border-radius: 10px; background: #0c0e14; overflow: hidden;
     }
     .exp-results-head {
@@ -360,33 +359,85 @@
     }
     .exp-model:hover, .exp-model:focus-visible { border-color: #3a4250; outline: none; }
     .exp-model.selected { border-color: #3a5a2a; background: #141a10; box-shadow: inset 3px 0 0 var(--accent); }
-    .exp-model-head { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
-    .exp-model-repo { font-size: .78rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .exp-model-dl { font-size: .68rem; color: var(--muted); font-family: ui-monospace, monospace; flex-shrink: 0; }
-    .exp-model-badges { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .3rem; }
+    .exp-model-head { display: flex; justify-content: space-between; gap: .65rem; align-items: flex-start; }
+    .exp-model-repo { font-size: .78rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+    .exp-model-stats { display: flex; flex-direction: column; align-items: flex-end; gap: .12rem; flex-shrink: 0; }
+    .exp-model-dl { font-size: .68rem; color: var(--muted); font-family: ui-monospace, monospace; white-space: nowrap; }
+    .exp-model-date { font-size: .62rem; color: var(--muted); font-family: ui-monospace, monospace; opacity: .85; white-space: nowrap; }
+    .exp-model-badges { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
+    /* Explore chips — one hue each (format → cool, architecture → warm/mid, modality → vivid)
+       GGUF lime · NVFP4 blue · MoE orange · Dense teal · MTP violet · Vision cyan · Diffusion rose */
     .exp-badge {
       font-size: .6rem; font-weight: 600; letter-spacing: .04em; padding: .08rem .34rem;
       border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
+      background: #12151c;
     }
-    .exp-badge.gguf { border-color: #2a4a2a; color: var(--ok); }
-    .exp-badge.nvfp4 { border-color: #2a3a5a; color: #9ec8ff; }
-    .exp-badge.moe { border-color: #4a402a; color: var(--warn); }
-    .exp-model-tags { margin-top: .28rem; display: flex; flex-wrap: wrap; gap: .2rem; }
-    .exp-tag { font-size: .62rem; color: var(--muted); font-family: ui-monospace, monospace; }
-    .exp-side { min-height: 0; display: flex; flex-direction: column; gap: .45rem; }
+    .exp-badge.gguf { border-color: #3a5a20; color: #8fd400; background: #141a0c; }
+    .exp-badge.nvfp4 { border-color: #2a4568; color: #7eb8ff; background: #101820; }
+    .exp-badge.moe { border-color: #6a4020; color: #f0a060; background: #1a140c; }
+    .exp-badge.dense { border-color: #2a5858; color: #70b8b0; background: #0c1818; }
+    .exp-badge.mtp { border-color: #4a2a6a; color: #c49cff; background: #140c1a; }
+    .exp-badge.vision { border-color: #1a5870; color: #58d8f0; background: #0c161a; }
+    .exp-badge.diffusion { border-color: #6a2a48; color: #f090b8; background: #1a0c14; }
+    .exp-chip-legend {
+      display: flex; flex-wrap: wrap; gap: .28rem; align-items: center;
+      padding-top: .15rem; border-top: 1px solid #1a1f28; margin-top: .1rem;
+    }
+    .exp-chip-legend-label {
+      font-size: .6rem; color: var(--muted); font-family: ui-monospace, monospace;
+      margin-right: .15rem; opacity: .8;
+    }
+    .exp-chip-legend .exp-badge { cursor: default; pointer-events: none; opacity: .92; }
     .exp-detail {
-      flex-shrink: 0; border: 1px solid var(--border); border-radius: 10px; background: #12151c;
-      padding: .65rem .7rem; font-size: .76rem;
+      flex-shrink: 0; width: 100%; box-sizing: border-box; border: 1px solid var(--border);
+      border-radius: 10px; background: #12151c; padding: .65rem .7rem; font-size: .76rem;
     }
     .exp-detail[hidden] { display: none !important; }
     .exp-detail-title { font-weight: 600; color: var(--accent); font-size: .82rem; margin-bottom: .35rem; word-break: break-all; }
     .exp-detail-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .7rem; line-height: 1.45; margin-bottom: .45rem; }
-    .exp-detail-plan { padding: .45rem .5rem; background: #0c0e14; border: 1px solid var(--border); border-radius: 8px; font-family: ui-monospace, monospace; font-size: .68rem; color: #aeb6c2; margin-bottom: .5rem; white-space: pre-wrap; }
-    .exp-detail-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
-    .exp-detail-actions select {
-      appearance: none; background: #0c0e14; color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: .38rem .55rem; font: inherit; font-size: .74rem; min-width: 8rem;
+    .exp-detail-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; }
+    .exp-variants-wrap {
+      margin-top: .45rem; border: 1px solid var(--border); border-radius: 10px; background: #0c0e14;
+      overflow: hidden;
     }
+    .exp-variants-head {
+      padding: .42rem .55rem; border-bottom: 1px solid var(--border); font-size: .7rem;
+      color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .exp-variants-scroll { max-height: min(320px, 38vh); overflow: auto; }
+    .exp-variants-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
+    .exp-variants-table th {
+      position: sticky; top: 0; z-index: 1; text-align: left; padding: .38rem .5rem;
+      background: #12151c; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border);
+      font-size: .66rem; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .exp-variants-table td {
+      padding: .42rem .5rem; border-bottom: 1px solid #1a1f28; vertical-align: top; color: #c5cdd8;
+    }
+    .exp-variants-table tr:last-child td { border-bottom: none; }
+    .exp-variants-table tr:hover td { background: #10141c; }
+    .exp-variants-table tr.selected td { background: #141a10; }
+    .exp-var-label { font-weight: 600; color: var(--text); font-family: ui-monospace, monospace; }
+    .exp-var-engine { color: var(--muted); font-family: ui-monospace, monospace; white-space: nowrap; }
+    .exp-var-size { font-family: ui-monospace, monospace; white-space: nowrap; }
+    .exp-var-note { color: var(--muted); font-size: .68rem; line-height: 1.4; max-width: 22rem; }
+    .exp-spark-badge {
+      display: inline-flex; align-items: center; gap: .2rem; font-size: .62rem; font-weight: 700;
+      letter-spacing: .03em; padding: .12rem .38rem; border-radius: 999px; border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    /* Spark fit (variants table only) — separate from model chips: green · gray · yellow · red */
+    .exp-spark-badge.recommended { border-color: #2a4a2a; color: #6bc46d; background: #141a10; }
+    .exp-spark-badge.ok { border-color: #3a4250; color: #a8b0c0; background: #12151c; }
+    .exp-spark-badge.tight { border-color: #5a5520; color: #d8c868; background: #181610; }
+    .exp-spark-badge.too_large, .exp-spark-badge.not_recommended { border-color: #5a2a2a; color: #e87878; background: #1a1010; }
+    .exp-var-dl {
+      appearance: none; border: 1px solid var(--border); background: #1a2210; color: var(--accent);
+      font: inherit; font-size: .66rem; padding: .28rem .5rem; border-radius: 6px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .exp-var-dl:hover { border-color: #3a4a2a; }
+    .exp-var-dl:disabled { opacity: .4; cursor: not-allowed; }
     .exp-queues { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-top: .55rem; }
     @media (max-width: 720px) { .exp-queues { grid-template-columns: 1fr; } }
     .exp-queue-panel {
@@ -565,6 +616,16 @@
                 <button type="button" class="exp-chip" data-exp-chip="moe">MoE</button>
                 <button type="button" class="exp-chip active" data-exp-chip="fits_spark">Fits Spark</button>
               </div>
+              <div class="exp-chip-legend" aria-label="Model card chip colors">
+                <span class="exp-chip-legend-label">Cards</span>
+                <span class="exp-badge gguf">GGUF</span>
+                <span class="exp-badge nvfp4">NVFP4</span>
+                <span class="exp-badge moe">MoE</span>
+                <span class="exp-badge dense">Dense</span>
+                <span class="exp-badge mtp">MTP</span>
+                <span class="exp-badge vision">Vision</span>
+                <span class="exp-badge diffusion">Diffusion</span>
+              </div>
             </div>
             <div class="exp-main">
               <div class="exp-results-panel">
@@ -576,26 +637,34 @@
                   <div class="exp-empty">Loading…</div>
                 </div>
               </div>
-              <div class="exp-side">
-                <div class="exp-detail" id="exp-detail" hidden>
-                  <div class="exp-detail-title" id="exp-detail-title">—</div>
-                  <div class="exp-detail-meta" id="exp-detail-meta">—</div>
-                  <pre class="exp-detail-plan" id="exp-detail-plan">—</pre>
-                  <div class="exp-detail-actions">
-                    <select id="exp-intent" aria-label="Download format">
-                      <option value="gguf_q4">GGUF Q4</option>
-                      <option value="gguf_q5">GGUF Q5</option>
-                      <option value="gguf_best">GGUF best</option>
-                      <option value="nvfp4">NVFP4 weights</option>
-                      <option value="fp8">FP8 weights</option>
-                      <option value="hf_weights">HF safetensors</option>
-                    </select>
-                    <button type="button" class="inf-btn" id="exp-download">Download</button>
-                    <button type="button" class="inf-btn" id="exp-save-explore">Save</button>
-                    <a href="#" id="exp-hf-link" target="_blank" rel="noopener">HF ↗</a>
+              <div class="exp-detail" id="exp-detail" hidden>
+                <div class="exp-detail-title" id="exp-detail-title">—</div>
+                <div class="exp-detail-meta" id="exp-detail-meta">—</div>
+                <div class="exp-variants-wrap">
+                  <div class="exp-variants-head">Download options · single DGX Spark (128GB)</div>
+                  <div class="exp-variants-scroll">
+                    <table class="exp-variants-table">
+                      <thead>
+                        <tr>
+                          <th>Variant</th>
+                          <th>Engine</th>
+                          <th>Size</th>
+                          <th>Spark</th>
+                          <th>Notes</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="exp-variants-body">
+                        <tr><td colspan="6" class="exp-empty">Select a model</td></tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <div class="exp-msg" id="exp-detail-msg"></div>
                 </div>
+                <div class="exp-detail-actions">
+                  <button type="button" class="inf-btn" id="exp-save-explore">Save to explore queue</button>
+                  <a href="#" id="exp-hf-link" target="_blank" rel="noopener">Open on Hugging Face ↗</a>
+                </div>
+                <div class="exp-msg" id="exp-detail-msg"></div>
               </div>
             </div>
             <div class="exp-queues">
@@ -725,10 +794,15 @@
       let expFilterChips = new Set(['fits_spark']);
       let expResults = [];
       let expSelectedRepo = null;
+      let expVariants = [];
+      let expSelectedVariantId = null;
       let expStatus = null;
       let expBrowseBusy = false;
       let expSearchTimer = null;
       let lastInfStatus = null;
+      let lastInfNavStatus = null;
+      let lastInfNavFetchAt = 0;
+      const INF_NAV_POLL_MS = 5000;
       let pendingStartProfile = null;
       let benchBusy = false;
       let benchMsgUntil = 0;
@@ -1358,10 +1432,11 @@
       }
 
       function formatInfLogText(d) {
+        const header = d.file ? '# ' + d.file + '\n' : '';
         const lines = (d.lines || []).join('\n');
         const sw = d.switch && d.switch.running
           ? '\n[switch running]\n' + (d.switch.log_tail || []).join('\n') : '';
-        return (lines || sw || '—').trim() || '—';
+        return (header + (lines || sw || '—')).trim() || '—';
       }
 
       async function fetchInfLogs() {
@@ -1410,14 +1485,17 @@
         }
       }
 
-      async function fetchInferenceStatus() {
+      async function fetchInferenceStatus(opts) {
+        opts = opts || {};
         try {
-          const res = await fetch('/api/inference/status', { cache: 'no-store' });
+          const url = opts.lite ? '/api/inference/status?lite=1' : '/api/inference/status';
+          const res = await fetch(url, { cache: 'no-store' });
           if (!res.ok) throw new Error('bad status');
-          lastInfStatus = await res.json();
-          return lastInfStatus;
+          const data = await res.json();
+          if (!opts.lite) lastInfStatus = data;
+          return data;
         } catch (e) {
-          lastInfStatus = null;
+          if (!opts.lite) lastInfStatus = null;
           return null;
         }
       }
@@ -1618,9 +1696,19 @@
 
       async function gpuPoll() {
         try {
+          const now = Date.now();
+          const infPromise = (now - lastInfNavFetchAt >= INF_NAV_POLL_MS)
+            ? fetchInferenceStatus({ lite: true }).then((d) => {
+                if (d) {
+                  lastInfNavFetchAt = Date.now();
+                  lastInfNavStatus = d;
+                }
+                return d;
+              })
+            : Promise.resolve(lastInfNavStatus);
           const [gpuRes, infData] = await Promise.all([
             fetch('/api/gpu', { cache: 'no-store' }),
-            fetchInferenceStatus(),
+            infPromise,
           ]);
           if (!gpuRes.ok) throw new Error('bad status');
           const d = await gpuRes.json();
@@ -1693,6 +1781,29 @@
         if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
         if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
         return String(n);
+      }
+
+      function fmtExpDate(iso) {
+        if (!iso) return '';
+        try {
+          return new Date(iso).toLocaleDateString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+          });
+        } catch {
+          return '';
+        }
+      }
+
+      function expBadgeHtml(m) {
+        const badges = [];
+        if (m.has_gguf) badges.push('<span class="exp-badge gguf">GGUF</span>');
+        if (m.has_nvfp4) badges.push('<span class="exp-badge nvfp4">NVFP4</span>');
+        if (m.has_moe) badges.push('<span class="exp-badge moe">MoE</span>');
+        else if (m.has_dense) badges.push('<span class="exp-badge dense">Dense</span>');
+        if (m.has_mtp) badges.push('<span class="exp-badge mtp">MTP</span>');
+        if (m.has_vision) badges.push('<span class="exp-badge vision">Vision</span>');
+        if (m.has_diffusion) badges.push('<span class="exp-badge diffusion">Diffusion</span>');
+        return badges;
       }
 
       function expFilterQuery() {
@@ -1783,43 +1894,57 @@
         $('exp-results-count').textContent = String(models.length);
         el.innerHTML = models.map((m) => {
           const repo = m.repo || '';
-          const badges = [];
-          if (m.has_gguf) badges.push('<span class="exp-badge gguf">GGUF</span>');
-          if (m.has_nvfp4) badges.push('<span class="exp-badge nvfp4">NVFP4</span>');
-          if (m.has_moe) badges.push('<span class="exp-badge moe">MoE</span>');
-          const tags = (m.tags || []).slice(0, 5).map((t) => '<span class="exp-tag">' + escHtml(t) + '</span>').join('');
+          const badges = expBadgeHtml(m);
+          const released = fmtExpDate(m.release_date);
           const sel = repo === expSelectedRepo ? ' selected' : '';
           return '<article class="exp-model' + sel + '" data-repo="' + attrEsc(repo) + '" tabindex="0" role="button">'
             + '<div class="exp-model-head"><span class="exp-model-repo">' + escHtml(repo) + '</span>'
-            + '<span class="exp-model-dl">↓ ' + escHtml(fmtDownloads(m.downloads)) + '</span></div>'
-            + '<div class="exp-model-badges">' + badges.join('') + '</div>'
-            + '<div class="exp-model-tags">' + tags + '</div></article>';
+            + '<span class="exp-model-stats"><span class="exp-model-dl">↓ ' + escHtml(fmtDownloads(m.downloads)) + '</span>'
+            + (released ? '<span class="exp-model-date">' + escHtml(released) + '</span>' : '')
+            + '</span></div>'
+            + '<div class="exp-model-badges">' + badges.join('') + '</div></article>';
         }).join('');
       }
 
-      function guessExpIntent(model) {
-        if (!model) return 'gguf_best';
-        if (model.has_nvfp4) return 'nvfp4';
-        if (model.has_gguf) return 'gguf_q4';
-        if (model.has_safetensors) return 'hf_weights';
-        return 'gguf_best';
+      function sparkBadgeHtml(v) {
+        const fit = v.spark_fit || 'ok';
+        const label = v.spark_fit_label || 'OK';
+        const star = fit === 'recommended' ? '★ ' : '';
+        return '<span class="exp-spark-badge ' + escHtml(fit) + '">' + star + escHtml(label) + '</span>';
       }
 
-      function syncExpIntentOptions(model) {
-        const sel = $('exp-intent');
-        if (!sel) return;
-        Array.from(sel.options).forEach((o) => { o.hidden = false; o.disabled = false; });
-        if (model && model.has_gguf === false) {
-          ['gguf_q4', 'gguf_q5', 'gguf_best'].forEach((v) => {
-            const o = sel.querySelector('option[value="' + v + '"]');
-            if (o) o.disabled = true;
-          });
+      function engineLabel(engine, format) {
+        if (engine === 'llamacpp' || format === 'gguf') return 'llama.cpp';
+        if (format === 'nvfp4') return 'vLLM · NVFP4';
+        if (format === 'fp8') return 'vLLM · FP8';
+        return 'vLLM · HF';
+      }
+
+      function renderExpVariants(variants) {
+        const body = $('exp-variants-body');
+        if (!body) return;
+        expVariants = variants || [];
+        if (!expVariants.length) {
+          body.innerHTML = '<tr><td colspan="6" class="exp-empty">No downloadable variants found in this repo</td></tr>';
+          expSelectedVariantId = null;
+          return;
         }
-        if (model && model.has_nvfp4 === false) {
-          const o = sel.querySelector('option[value="nvfp4"]');
-          if (o) o.disabled = true;
+        const firstPick = expVariants.find((v) => v.spark_fit === 'recommended') || expVariants[0];
+        if (!expSelectedVariantId || !expVariants.some((v) => v.id === expSelectedVariantId)) {
+          expSelectedVariantId = firstPick.id;
         }
-        sel.value = guessExpIntent(model);
+        body.innerHTML = expVariants.map((v) => {
+          const sel = v.id === expSelectedVariantId ? ' selected' : '';
+          const disabled = (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') ? ' disabled' : '';
+          return '<tr class="exp-variant-row' + sel + '" data-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
+            + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
+            + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
+            + '<td class="exp-var-size">' + escHtml(v.size_human || '—') + '</td>'
+            + '<td>' + sparkBadgeHtml(v) + '</td>'
+            + '<td class="exp-var-note">' + escHtml(v.explanation || '') + '</td>'
+            + '<td><button type="button" class="exp-var-dl" data-variant-dl="' + attrEsc(v.id) + '"' + disabled
+            + '>Download</button></td></tr>';
+        }).join('');
       }
 
       async function expShowDetail(repo) {
@@ -1831,33 +1956,71 @@
         if (!panel || !repo) { if (panel) panel.hidden = true; return; }
         panel.hidden = false;
         $('exp-detail-title').textContent = repo;
-        $('exp-detail-meta').textContent = 'Loading…';
-        $('exp-detail-plan').textContent = '—';
+        $('exp-detail-meta').textContent = 'Loading variants…';
         $('exp-hf-link').href = 'https://huggingface.co/' + repo;
         setExpDetailMsg('');
+        expSelectedVariantId = null;
+        renderExpVariants([]);
         try {
-          const intent = $('exp-intent').value || 'gguf_best';
           const repoPath = repo.split('/').map(encodeURIComponent).join('/');
-          const res = await fetch('/api/hf/model/' + repoPath + '?intent=' + encodeURIComponent(intent), { cache: 'no-store' });
+          const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
           const d = await res.json();
           if (!res.ok) throw new Error(d.error || 'model fetch failed');
           const m = d.model || {};
-          syncExpIntentOptions(m);
+          const arch = [];
+          if (m.has_moe) arch.push('MoE');
+          else if (m.has_dense) arch.push('Dense');
+          if (m.has_mtp) arch.push('MTP');
+          if (m.has_vision) arch.push('Vision');
+          if (m.has_diffusion) arch.push('Diffusion');
           const lines = [];
-          if (m.pipeline_tag) lines.push('pipeline: ' + m.pipeline_tag);
-          if (m.downloads != null) lines.push('downloads: ' + fmtDownloads(m.downloads));
-          if (m.gated) lines.push('gated — accept license on HF before download');
-          if (!m.accessible) lines.push('access: restricted');
+          if (arch.length) lines.push(arch.join(' · '));
+          if (m.release_date) lines.push('released ' + fmtExpDate(m.release_date));
+          if (m.downloads != null) lines.push('↓ ' + fmtDownloads(m.downloads));
+          if (m.gated) lines.push('gated — accept license on HF first');
+          if (!m.accessible) lines.push('access restricted');
           $('exp-detail-meta').textContent = lines.join(' · ') || '—';
-          const plan = d.default_plan;
-          if (plan) {
-            $('exp-detail-plan').textContent = plan.file_count + ' file(s) · ' + (plan.size_human || '?') + '\n'
-              + plan.dest + '\n' + (plan.files || []).join('\n');
-          } else {
-            $('exp-detail-plan').textContent = 'No plan for current intent — try another format';
+          renderExpVariants(d.variants || []);
+          const picks = (d.variants || []).filter((v) => v.spark_fit === 'recommended').length;
+          if (picks) {
+            setExpDetailMsg(picks + ' Spark pick' + (picks === 1 ? '' : 's') + ' — ★ rows are good defaults for 128GB', 'ok');
           }
         } catch (e) {
           $('exp-detail-meta').textContent = 'Failed to load model';
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function expVariantById(id) {
+        return expVariants.find((v) => v.id === id) || null;
+      }
+
+      async function expQueueVariant(variantId) {
+        const v = expVariantById(variantId);
+        if (!v || !expSelectedRepo) return;
+        if (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') {
+          setExpDetailMsg('This variant is not recommended for Spark', 'warn');
+          return;
+        }
+        setExpDetailMsg('Queueing ' + v.label + '…', 'warn');
+        try {
+          const body = {
+            repo: expSelectedRepo,
+            intent: v.intent || 'files',
+            files: v.files,
+            inventory_path: v.inventory_path,
+          };
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'queue failed');
+          setExpDetailMsg('Queued ' + v.label + ' → ' + (v.dest || '').replace('/models/', '/models/'), 'ok');
+          setExpMsg('Download queued: ' + v.label);
+          expTick();
+        } catch (e) {
           setExpDetailMsg(String(e.message || e), 'err');
         }
       }
@@ -1918,29 +2081,10 @@
         }
       }
 
-      async function expQueueDownload() {
-        if (!expSelectedRepo) return;
-        const intent = $('exp-intent').value || 'gguf_best';
-        setExpDetailMsg('Queueing…', 'warn');
-        try {
-          const res = await fetch('/api/hf/queue', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repo: expSelectedRepo, intent: intent }),
-          });
-          const d = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(d.error || 'queue failed');
-          setExpDetailMsg('Queued — ' + (d.item && d.item.state || 'queued'), 'ok');
-          setExpMsg('Download queued for ' + expSelectedRepo);
-          expTick();
-        } catch (e) {
-          setExpDetailMsg(String(e.message || e), 'err');
-        }
-      }
-
       async function expSaveExplore() {
         if (!expSelectedRepo) return;
-        const intent = $('exp-intent').value || 'gguf_best';
+        const v = expVariantById(expSelectedVariantId) || expVariants[0];
+        const intent = (v && v.intent) || 'gguf_best';
         try {
           const res = await fetch('/api/hf/queue', {
             method: 'POST',
@@ -2223,10 +2367,30 @@
         e.preventDefault();
         expShowDetail(card.dataset.repo);
       });
-      $('exp-intent').addEventListener('change', () => {
-        if (expSelectedRepo) expShowDetail(expSelectedRepo);
+      $('exp-variants-body').addEventListener('click', (e) => {
+        const dl = e.target.closest('[data-variant-dl]');
+        if (dl) {
+          e.stopPropagation();
+          expQueueVariant(dl.dataset.variantDl);
+          return;
+        }
+        const row = e.target.closest('.exp-variant-row[data-variant-id]');
+        if (!row) return;
+        expSelectedVariantId = row.dataset.variantId;
+        document.querySelectorAll('.exp-variant-row').forEach((r) => {
+          r.classList.toggle('selected', r.dataset.variantId === expSelectedVariantId);
+        });
       });
-      $('exp-download').addEventListener('click', expQueueDownload);
+      $('exp-variants-body').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const row = e.target.closest('.exp-variant-row[data-variant-id]');
+        if (!row) return;
+        e.preventDefault();
+        expSelectedVariantId = row.dataset.variantId;
+        document.querySelectorAll('.exp-variant-row').forEach((r) => {
+          r.classList.toggle('selected', r.dataset.variantId === expSelectedVariantId);
+        });
+      });
       $('exp-save-explore').addEventListener('click', expSaveExplore);
       $('exp-download-queue').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-exp-recheck]');

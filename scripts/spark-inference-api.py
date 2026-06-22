@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -97,7 +97,7 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--serve":
         get_core()
-        HTTPServer(("127.0.0.1", 8767), Handler).serve_forever()
+        ThreadingHTTPServer(("127.0.0.1", 8767), Handler).serve_forever()
         return 0
     print(json.dumps({"ok": True, **get_core().api_status()}, indent=2))
     return 0

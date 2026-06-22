@@ -64,6 +64,14 @@ curl http://sparky:8000/v1/chat/completions \
   -d '{"model":"qwen3.6-35b-a3b-nvfp4","messages":[{"role":"user","content":"Hello!"}],"max_tokens":64}'
 ```
 
+## Stack upgrades
+
+Upstream publishes nightly prebuilt wheels. Spark shows a portal banner when a newer stack is available (no auto-upgrade). Agent workflow: [eugr-vllm-upgrade.md](./eugr-vllm-upgrade.md).
+
+```bash
+spark engine eugr check    # compare deployed vs upstream
+```
+
 ## Key paths
 
 | Item | Path |

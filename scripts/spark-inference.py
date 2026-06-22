@@ -2143,8 +2143,60 @@ def start_bench_job() -> tuple[bool, str, dict[str, Any]]:
     return True, "started", {"running": True, "pid": proc.pid}
 
 
+
+
+def resolve_log_recipe() -> dict[str, Any] | None:
+    """Recipe whose engine log the portal should tail (active or in-flight switch)."""
+    active = detect_active_profile()
+    if active:
+        return active["recipe"]
+
+    switch_job = active_switch_job()
+    profile_id = switch_job.get("profile") if switch_job.get("running") else None
+    if not profile_id:
+        profile_id = _read_switch_meta().get("profile")
+    if isinstance(profile_id, str) and profile_id.strip():
+        try:
+            return load_recipe(profile_id.strip())
+        except SystemExit:
+            return None
+    return None
+
+
+def api_inference_logs(lines: int = 30) -> dict[str, Any]:
+    switch_job = active_switch_job()
+    recipe = resolve_log_recipe()
+    engine_path = engine_log_file(recipe)
+    sections: list[dict[str, Any]] = []
+    if switch_job.get("running"):
+        sections.append(
+            {
+                "file": SWITCH_LOG_FILE.name,
+                "lines": tail_log(SWITCH_LOG_FILE, min(lines, 24)),
+                "kind": "switch",
+            }
+        )
+    sections.append(
+        {
+            "file": engine_path.name,
+            "lines": tail_log(engine_path, lines),
+            "kind": "engine",
+            "engine": (recipe or {}).get("engine"),
+        }
+    )
+    return {
+        "ok": True,
+        "file": engine_path.name,
+        "engine": (recipe or {}).get("engine"),
+        "lines": tail_log(engine_path, lines),
+        "sections": sections,
+        "switch": switch_job,
+    }
+
 def engine_log_file(recipe: dict[str, Any] | None) -> Path:
     if not recipe:
+        if active_switch_job().get("running"):
+            return SWITCH_LOG_FILE
         return LOG_DIR / "llama-server.log"
     engine = recipe.get("engine")
     if engine == "eugr":
@@ -2586,15 +2638,7 @@ def api_dispatch(
                             lines = max(5, min(200, int(part.split("=", 1)[1])))
                         except ValueError:
                             pass
-            active = detect_active_profile()
-            recipe = active["recipe"] if active else None
-            log_path = engine_log_file(recipe)
-            return 200, {
-                "ok": True,
-                "file": log_path.name,
-                "lines": tail_log(log_path, lines),
-                "switch": active_switch_job(),
-            }
+            return 200, api_inference_logs(lines)
         return None
 
     if method == "PATCH":

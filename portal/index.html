@@ -1340,7 +1340,7 @@
         sel.innerHTML = switchable.map((p) => {
           const lc = p.lifecycle && p.lifecycle !== 'production' && p.lifecycle !== 'works'
             ? ' · ' + p.lifecycle : '';
-          return '<option value="' + attrEsc(p.id) + '" data-tier="' + attrEsc(p.tier || '') + '">'
+          return '<option value="' + attrEsc(p.id) + '" data-tier="' + attrEsc(p.tier || '') + '" data-engine="' + attrEsc(p.engine || '') + '">'
             + escHtml(p.id + ' · ' + engineDisplayMeta(p.engine) + ' · ' + (p.tier || '') + lc) + '</option>';
         }).join('');
         if (prev && switchable.some((p) => p.id === prev)) sel.value = prev;
@@ -1482,8 +1482,21 @@
         $('inf-models-link').textContent = invPath ? 'View model in inventory' : 'Model inventory';
       }
 
+      let lastInfLogMeta = { file: '', engine: '' };
+
       function formatInfLogText(d) {
-        const header = d.file ? '# ' + d.file + '\n' : '';
+        if (d.file) lastInfLogMeta.file = d.file;
+        if (d.engine) lastInfLogMeta.engine = d.engine;
+        if (d.sections && d.sections.length) {
+          return d.sections.map((s) => {
+            const head = s.kind === 'switch'
+              ? '[switch] ' + s.file
+              : '# ' + s.file + (s.engine ? ' (' + engineDisplayMeta(s.engine) + ')' : '');
+            const body = (s.lines || []).join('\n');
+            return head + '\n' + (body || '—');
+          }).join('\n\n').trim() || '—';
+        }
+        const header = d.file ? '# ' + d.file + (d.engine ? ' (' + engineDisplayMeta(d.engine) + ')' : '') + '\n' : '';
         const lines = (d.lines || []).join('\n');
         const sw = d.switch && d.switch.running
           ? '\n[switch running]\n' + (d.switch.log_tail || []).join('\n') : '';
@@ -1510,8 +1523,12 @@
         const info = lastInfStatus && inferenceLoadingInfo(lastInfStatus);
         $('inf-log-overlay-title').textContent = info
           ? inferenceLoadingLabel(info) : 'Inference log';
+        const eng = (info && info.engine) || lastInfLogMeta.engine;
+        const logHint = lastInfLogMeta.file ? lastInfLogMeta.file : 'engine log';
+        const engHint = eng ? engineDisplayMeta(eng) + ' · ' : '';
         $('inf-log-overlay-meta').textContent = info
-          ? inferenceLoadingTitle(info) : 'Engine output';
+          ? (inferenceLoadingTitle(info) + '\n' + engHint + logHint)
+          : (engHint + logHint);
       }
 
       function openInfLogOverlay() {
@@ -1619,6 +1636,8 @@
             return;
           }
           setInfMsg('Switch started for ' + profile, 'warn');
+          const eng = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.engine;
+          if (tier === 'heavy' || eng === 'ds4') openInfLogOverlay();
           infTick();
         } catch (e) {
           setInfMsg('switch request failed', 'err');

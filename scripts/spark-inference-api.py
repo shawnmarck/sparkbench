@@ -67,18 +67,7 @@ class Handler(BaseHTTPRequestHandler):
                             lines = max(5, min(200, int(part.split("=", 1)[1])))
                         except ValueError:
                             pass
-            active = core.detect_active_profile()
-            recipe = active["recipe"] if active else None
-            log_path = core.engine_log_file(recipe)
-            self._json(
-                200,
-                {
-                    "ok": True,
-                    "file": log_path.name,
-                    "lines": core.tail_log(log_path, lines),
-                    "switch": core.active_switch_job(),
-                },
-            )
+            self._json(200, core.api_inference_logs(lines))
             return
 
         self.send_error(404)

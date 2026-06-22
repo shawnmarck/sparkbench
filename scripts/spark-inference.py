@@ -1998,6 +1998,18 @@ def engine_ready(recipe: dict[str, Any]) -> bool:
     return served == recipe.get("served_name")
 
 
+def _pid_alive_not_zombie(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    try:
+        state = Path(f"/proc/{pid}/stat").read_text().split()[2]
+    except OSError:
+        return False
+    return state != "Z"
+
+
 def read_pid_file(path: Path) -> int | None:
     if not path.is_file():
         return None
@@ -2068,9 +2080,21 @@ def _switch_target_profile() -> str | None:
 
 def active_switch_job() -> dict[str, Any]:
     pid = read_pid_file(SWITCH_PID_FILE)
+    if pid and not _pid_alive_not_zombie(pid):
+        SWITCH_PID_FILE.unlink(missing_ok=True)
+        meta = _read_switch_meta()
+        target = meta.get("profile") if isinstance(meta.get("profile"), str) else None
+        if target:
+            active = detect_active_profile()
+            if active and active.get("profile") == target and engine_ready(active.get("recipe", {})):
+                _clear_switch_meta()
+        pid = None
     if not pid:
         SWITCH_PID_FILE.unlink(missing_ok=True)
-        _clear_switch_meta()
+        if not read_pid_file(SWITCH_PID_FILE):
+            pass
+        if not SWITCH_PID_FILE.is_file():
+            _clear_switch_meta()
         return {"running": False}
     job: dict[str, Any] = {
         "running": True,

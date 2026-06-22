@@ -1,0 +1,36 @@
+# DwarfStar (ds4) — pinned for future Spark control-plane integration.
+# Control plane wiring deferred; weights download queued separately.
+
+engine: ds4
+display_name: DwarfStar
+status: pending
+
+source:
+  repo: https://github.com/Entrpi/ds4.git
+  ref: decode-perf-tuning
+  commit: 5625a99d03d4210b44554708ea3fdb083677a2dc
+  upstream: https://github.com/antirez/ds4
+  note: >
+    GB10-tuned CUDA branch via Entrpi/ds4-on-spark (~28 tok/s roofline on Spark).
+    Revert to antirez/ds4 main once decode-perf-tuning lands upstream.
+
+model:
+  hf_repo: antirez/deepseek-v4-gguf
+  gguf_file: DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf
+  inventory_path: antirez/deepseek-v4-flash
+  served_name: deepseek-v4-flash
+  dest: /models/antirez/deepseek-v4-flash/gguf
+  size_bytes: 86720111488
+
+build:
+  make_target: cuda-spark
+  cuda_arch: sm_121
+  binaries:
+    - ds4-server
+    - ds4
+    - ds4-bench
+
+runtime:
+  port: 8000
+  default_ctx: 32768
+  api: openai_v1

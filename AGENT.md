@@ -17,7 +17,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 │   └── themes/           theme-b.css, theme-ui.css
 ├── scripts/              spark CLI + implementation scripts
 ├── install/              Idempotent sudo install scripts (see install/INSTALL.md)
-├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml
+├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml, ds4-dwarfstar.yaml
 ├── recipes/              Inference profile recipes (Phase 5)
 ├── docs/                 ROADMAP + guides/ runbooks/ reference/ examples/
 └── services/             compose/yaml for inference UIs
@@ -73,6 +73,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 4. **Inventory build needs venv** — `/opt/spark/venv/bin/python scripts/spark-inventory-build.py` (HF API).
 5. **Model paths** — local `/models`, NAS `/mnt/model-shelf/models`.
 6. **Bake-off UIs removed** — no Rookery / vLLM Studio; Phase 5 is `spark inference` + `recipes/`.
+7. **Recipes are auto-scaffolded** — after download, `spark-hf` queue worker calls `scaffold_recipe` / specialized scaffolds in `spark-inference.py`. Do not hand-write recipe YAML unless scaffold cannot route the architecture (MoE, multimodal, DFlash, ds4, MTP). Extend the scaffold router in code + catalog `engine`/`capabilities` when adding new engine types. Failed scaffolds surface as `scaffold_error` on queue items — fix routing, don't bypass with manual YAML.
 
 ## `spark` CLI (humans + agents)
 

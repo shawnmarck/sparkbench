@@ -1,7 +1,7 @@
 # Spark setup roadmap
 
 **This is the plan.** Status, phases, URLs, and what to build next.  
-Last updated: 2026-06-21
+Last updated: 2026-06-22
 
 ---
 
@@ -28,7 +28,7 @@ Hermes agents │ Open WebUI │ Your gateway
 spark inference (Phase 5)       status + switch API
         │ one GPU profile at a time
         ▼
-spark engine eugr (:8000)  │  spark engine llama (:8081)
+spark engine eugr (:8000)  │  spark engine llama (:8081)  │  spark engine ds4 (:8000, deferred)
         ▼
 /opt/spark portal + inventory + recipes/
 ```
@@ -48,10 +48,13 @@ spark engine eugr (:8000)  │  spark engine llama (:8081)
 | eugr vLLM (`spark engine eugr`) | ✅ Proven |
 | llama.cpp (`spark engine llama`) | ✅ Proven |
 | Open WebUI | ✅ `:3000` |
-| Recipes (production) | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4` |
-| `spark inference` control plane | 🟡 CLI + API + portal Inference tab + async bench |
+| Recipes (production) | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4` (+ many testing drafts) |
+| `spark inference` control plane | ✅ CLI + API + portal Inference tab + async bench |
 | Model Lab (recipe lifecycle) | ✅ Phase 5b — scaffold, test, promote |
-| HF Explorer | ❌ Phase 5c |
+| HF Explorer | ✅ Phase 5c — Explore tab, search/trending, download queue |
+| Inference API perf (lite status, YAML cache) | ✅ 2026-06-22 — models page no longer hangs on poll |
+| eugr stack upgrade notice | ✅ `spark engine eugr check` + portal banner (manual upgrade) |
+| DwarfStar / ds4 engine | 🟡 Prep only — weights on disk; control plane **deferred** |
 | Hermes Agent | ❌ Phase 5 step 5 (deferred) |
 | Gateway integration | ❌ Phase 5 step 6 |
 
@@ -92,6 +95,29 @@ Runbook: [`runbooks/smoke-vllm-eugr.md`](runbooks/smoke-vllm-eugr.md)
 
 Runbook: [`runbooks/smoke-llamacpp.md`](runbooks/smoke-llamacpp.md)
 
+### 3c — DwarfStar / ds4 (DeepSeek V4 Flash) ⏸ deferred
+
+**Goal:** Third inference engine for native DeepSeek V4 Flash (antirez [ds4](https://github.com/antirez/ds4)), OpenAI `/v1`, separate from eugr vLLM and llama.cpp.
+
+**Prep done (2026-06-22)** — implementation paused until explicitly requested:
+
+| Item | Status |
+|------|--------|
+| Pin file | [`data/ds4-dwarfstar.yaml`](../data/ds4-dwarfstar.yaml) — Entrpi `decode-perf-tuning` @ `5625a99d`, GB10 CUDA build |
+| Catalog | `antirez/deepseek-v4-flash` in `model-catalog.yaml` |
+| Weights | ✅ `DeepSeek-V4-Flash-IQ2XXS-…-imatrix.gguf` (~81 GB) under `/models/antirez/deepseek-v4-flash/gguf/` |
+| 0xSero REAP GGUF | ✅ Unchanged — stays on **llama.cpp** (`0xsero/deepseek-v4-flash-spark`) |
+
+**Not built yet** (agreed plan — resume when you say go):
+
+1. [ ] `spark engine ds4` — `up` / `down` / `status` / `logs` (build `cuda-spark`, run `ds4-server`)
+2. [ ] `engine: ds4` in recipes + `spark inference` switch path (same one-GPU rule; port 8000 like eugr)
+3. [ ] `install/…-ds4-dwarfstar.sh` + smoke runbook
+4. [ ] Portal labels (engine badge “DwarfStar”, Inference tab)
+5. [ ] Draft recipe + Model Lab scaffold for ds4 (queue currently skips eugr/llama scaffold)
+
+**Note:** No separate design doc was written; the pin YAML + table above are the source of truth. Session investigation covered ds4 vs REAP, port collision with eugr, and Entrpi fork rationale.
+
 ---
 
 ## Phase 4 — Orchestrator UI bake-off ✅ closed
@@ -115,9 +141,11 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 5. [x] **Portal UX** — nav order, unified pills, Models↔Inference bridge
 6. [x] **Benchmarks** — multi-turn agent bench, recipe-level tok/s, speed sort
 7. [x] **API auto-reload** — `install/18-inference-api-watch.sh` (systemd path unit)
-8. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
-9. [ ] **Gateway integration** — model aliases → profiles, cold-start 503/retry
-10. [ ] Later: idle eviction, MCP ops agent
+8. [x] **Status API perf** — YAML mtime caches, 1s TTL snapshot, `?lite=1` for nav/models polls, `ThreadingHTTPServer` (`2026-06-22`)
+9. [x] **eugr upgrade detection** — `spark engine eugr check` / `record`, portal banner, runbook [`eugr-vllm-upgrade.md`](runbooks/eugr-vllm-upgrade.md)
+10. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
+11. [ ] **Gateway integration** — model aliases → profiles, cold-start 503/retry
+12. [ ] Later: idle eviction, MCP ops agent
 
 ---
 
@@ -147,18 +175,20 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 
 ---
 
-## Phase 5c — HF Explorer 🔜 (next)
+## Phase 5c — HF Explorer ✅
 
 **Goal:** Own HF discovery inside the portal — search, trending, download.
 
-1. [ ] `GET /api/hf/search`, `/trending`, `/model/{id}` (Hub API + cache)
-2. [ ] Portal **Explore** tab — search, filters (GGUF, NVFP4, MoE)
-3. [ ] `POST /api/hf/download` — background job → `/models/{lab}/{slug}/`
-4. [ ] On complete → add to catalog + scaffold draft recipe
+1. [x] `GET /api/hf/search`, `/trending`, `/new`, `/model/{id}`, `/queue` — `spark-hf-api` (`install/21-hf-api.sh`)
+2. [x] Portal **Explore** tab — search, mode chips (trending/new), format/architecture filters
+3. [x] `POST /api/hf/queue` — background download → `/models/{lab}/{slug}/`
+4. [x] On complete → merge catalog + scaffold draft recipe (eugr/llama engines)
+
+**Next (5c polish):** Explore → Model Lab handoff UX, queue visibility on Models page, ds4-aware scaffold when Phase 3c ships.
 
 ---
 
-## Phase 5d — Experimental recipes (MTP, speculative) ⏳
+## Phase 5d — Experimental recipes (MTP, speculative) 🔜 (next)
 
 **Goal:** Recipe passthrough for eugr/llama flags; bench compare A vs B.
 
@@ -177,10 +207,12 @@ Deferred until desk setup is stable.
 
 ## Deferred / later
 
+- **DwarfStar control plane** — see Phase 3c (prep on disk; say go to implement)
 - Tailscale remote access
 - Portal TPS / vLLM `/metrics` scrape
 - Netdata vLLM integration
 - Always-on small + on-demand heavy (only if VRAM headroom proven)
+- Status cache hardening — YAML cache locks, single-flight coalesce, deepcopy on cache hit (review follow-ups)
 
 ---
 
@@ -193,7 +225,10 @@ CLI guide (humans + agents): [`reference/spark-cli.md`](reference/spark-cli.md)
 | Portal | http://sparky/ | nginx |
 | Models | http://sparky/models.html | `spark models inventory` |
 | Inference API | http://sparky/api/inference/status | `spark inference status` |
+| Inference API (lite) | http://sparky/api/inference/status?lite=1 | nav/models polls only |
+| HF Explorer API | http://sparky/api/hf/status | Explore tab |
 | vLLM | http://sparky:8000/v1 | `spark engine eugr up/down/status` |
+| eugr stack check | — | `spark engine eugr check` |
 | llama.cpp | http://sparky:8081/v1 | `spark engine llama up/down/status` |
 | Open WebUI | http://sparky:3000 | docker |
 | Netdata | http://sparky:19999/v3/ | — |
@@ -209,7 +244,7 @@ CLI guide (humans + agents): [`reference/spark-cli.md`](reference/spark-cli.md)
 ├── portal/
 ├── scripts/           spark CLI + implementation scripts
 ├── install/
-├── data/              catalog, verification, inference-profiles.yaml
+├── data/              catalog, verification, inference-profiles.yaml, ds4-dwarfstar.yaml (pin)
 ├── recipes/           production inference profiles
 │   └── drafts/        Model Lab draft/testing recipes (Phase 5b)
 ├── docs/

@@ -375,15 +375,49 @@ def check_repo_access(repo_id: str) -> dict[str, Any]:
     }
 
 
+GGUF_SHARD_RE = re.compile(r"-(\d{5})-of-(\d{5})\.gguf$", re.I)
+
+
+def _is_auxiliary_gguf(filename: str) -> bool:
+    base = filename.split("/")[-1].lower()
+    return base.startswith("mmproj") or base.startswith("mmp_")
+
+
+def _gguf_shard_sort_key(fname: str) -> tuple[int, int, str]:
+    m = GGUF_SHARD_RE.search(fname)
+    if m:
+        return (0, int(m.group(1)), fname)
+    return (1, 0, fname)
+
+
+def _gguf_group_key(filename: str) -> str:
+    if GGUF_SHARD_RE.search(filename):
+        return GGUF_SHARD_RE.sub("", filename)
+    return filename
+
+
+def _expand_gguf_shards(names: list[str], pick: str) -> list[str]:
+    """Return every shard in the set when pick is a multi-part GGUF."""
+    if not GGUF_SHARD_RE.search(pick):
+        return [pick]
+    key = _gguf_group_key(pick)
+    siblings = [n for n in names if n.endswith(".gguf") and _gguf_group_key(n) == key]
+    return sorted(siblings, key=_gguf_shard_sort_key)
+
+
 def _pick_gguf(names: list[str], preference: tuple[str, ...]) -> list[str]:
-    ggufs = [n for n in names if n.endswith(".gguf")]
+    ggufs = [
+        n for n in names if n.endswith(".gguf") and not _is_auxiliary_gguf(n)
+    ]
     if not ggufs:
         return []
     for pref in preference:
         matches = [g for g in ggufs if pref in g]
         if matches:
-            return [sorted(matches, key=lambda x: (len(x), x))[0]]
-    return [sorted(ggufs, key=lambda x: (len(x), x))[0]]
+            pick = sorted(matches, key=lambda x: (len(x), x))[0]
+            return _expand_gguf_shards(ggufs, pick)
+    pick = sorted(ggufs, key=lambda x: (len(x), x))[0]
+    return _expand_gguf_shards(ggufs, pick)
 
 
 def _weights_files(siblings: list[Any]) -> list[str]:
@@ -506,6 +540,15 @@ def _human_size(n: int) -> str:
 GGUF_QUANT_PATTERNS = (
     "UD-Q4_K_M",
     "UD-Q4_K_XL",
+    "UD-Q3_K_M",
+    "UD-Q3_K_XL",
+    "UD-Q2_K_XL",
+    "UD-Q8_K_XL",
+    "UD-IQ4_XS",
+    "UD-IQ3_S",
+    "UD-IQ2_XXS",
+    "UD-IQ2_M",
+    "UD-IQ1_M",
     "Q4_K_XL",
     "Q4_K_M",
     "Q4_K_S",
@@ -550,6 +593,7 @@ SPARK_FIT_ORDER = {
 
 def _gguf_quant_label(filename: str) -> str:
     base = filename.replace(".gguf", "")
+    base = GGUF_SHARD_RE.sub("", base)
     for pat in GGUF_QUANT_PATTERNS:
         if pat in base:
             return pat
@@ -648,26 +692,47 @@ def discover_model_variants(repo_id: str) -> list[dict[str, Any]]:
     meta = repo_meta(repo_id)
     variants: list[dict[str, Any]] = []
 
-    ggufs = [s for s in siblings if s.rfilename.endswith(".gguf")]
-    for s in sorted(ggufs, key=lambda x: -_sibling_size(x.rfilename, x, sizes)):
-        fname = s.rfilename
-        label = _gguf_quant_label(fname)
-        size = _sibling_size(fname, s, sizes)
-        fit, fit_label, explanation = _spark_fit(size, "gguf", label, repo_id)
+    ggufs = [
+        s
+        for s in siblings
+        if s.rfilename.endswith(".gguf") and not _is_auxiliary_gguf(s.rfilename)
+    ]
+    groups: dict[str, list[Any]] = {}
+    for s in ggufs:
+        key = _gguf_group_key(s.rfilename)
+        groups.setdefault(key, []).append(s)
+
+    for group_key, group in groups.items():
+        files = sorted(
+            [s.rfilename for s in group],
+            key=_gguf_shard_sort_key,
+        )
+        total_size = sum(
+            _sibling_size(fname, by_name[fname], sizes)
+            for fname in files
+            if fname in by_name
+        )
+        label = _gguf_quant_label(files[0])
+        shard_count = len(files)
+        display_label = f"{label} ({shard_count} shards)" if shard_count > 1 else label
+        fit, fit_label, explanation = _spark_fit(total_size, "gguf", label, repo_id)
+        if shard_count > 1:
+            explanation = f"{shard_count} shard files — " + explanation
         dest = MODELS_ROOT / inv / "gguf"
         variants.append(
             {
-                "id": f"gguf:{fname}",
-                "label": label,
+                "id": f"gguf:{group_key}",
+                "label": display_label,
                 "format": "gguf",
                 "engine": "llamacpp",
                 "intent": "files",
-                "files": [fname],
+                "files": files,
                 "inventory_path": inv,
                 "subpath": "gguf",
                 "dest": str(dest),
-                "size_bytes": size,
-                "size_human": _human_size(size),
+                "size_bytes": total_size,
+                "size_human": _human_size(total_size),
+                "shard_count": shard_count if shard_count > 1 else None,
                 "explanation": explanation,
                 "spark_fit": fit,
                 "spark_fit_label": fit_label,

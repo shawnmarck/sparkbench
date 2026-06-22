@@ -261,6 +261,20 @@
     .inf-profile.draft { opacity: .72; }
     .inf-tier-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .35rem 0 .15rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-tier-legend b { color: #c5cdd8; font-weight: 600; }
+
+    .inf-ctx-panel { margin-top: .55rem; padding: .55rem .65rem; background: #10141a; border: 1px solid var(--border); border-radius: 8px; font-size: .74rem; }
+    .inf-ctx-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .35rem .75rem; margin-bottom: .45rem; color: var(--muted); }
+    .inf-ctx-title { font-weight: 600; color: var(--text); }
+    .inf-ctx-native { font-family: ui-monospace, monospace; font-size: .72rem; }
+    .inf-ctx-presets { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .45rem; }
+    .inf-ctx-preset { padding: .22rem .5rem; border-radius: 6px; border: 1px solid #2a3340; background: #151920; color: var(--text); cursor: pointer; font-size: .72rem; font-family: ui-monospace, monospace; }
+    .inf-ctx-preset:hover { border-color: #3a4555; }
+    .inf-ctx-preset.active { border-color: var(--accent); color: var(--accent); background: #141c28; }
+    .inf-ctx-preset.rec { border-color: #3a5030; }
+    .inf-ctx-row { display: flex; flex-wrap: wrap; gap: .65rem 1rem; align-items: center; margin-bottom: .35rem; }
+    .inf-ctx-row label { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: .72rem; }
+    .inf-ctx-row input, .inf-ctx-row select { background: #0e1116; border: 1px solid #2a3340; color: var(--text); border-radius: 6px; padding: .2rem .4rem; font-size: .72rem; font-family: ui-monospace, monospace; min-width: 5.5rem; }
+    .inf-ctx-hint { color: #8a9098; font-size: .7rem; line-height: 1.4; font-style: italic; }
     .inf-switch-banner { margin-top: .5rem; padding: .55rem .65rem; background: #241c10; border: 1px solid #4a402a; border-radius: 8px; font-size: .74rem; color: var(--warn); font-family: ui-monospace, monospace; line-height: 1.45; white-space: pre-wrap; }
     .inf-update-banner {
       margin-top: .5rem; padding: .55rem .65rem; border-radius: 8px; border: 1px solid #4a402a;
@@ -735,6 +749,19 @@
                 <button type="button" class="inf-btn" id="inf-bench">Benchmark</button>
                 <button type="button" class="inf-btn danger" id="inf-down">Stop</button>
               </div>
+
+              <div class="inf-ctx-panel" id="inf-ctx-panel" hidden>
+                <div class="inf-ctx-head">
+                  <span class="inf-ctx-title">Context window</span>
+                  <span class="inf-ctx-native" id="inf-ctx-native"></span>
+                </div>
+                <div class="inf-ctx-presets" id="inf-ctx-presets"></div>
+                <div class="inf-ctx-row">
+                  <label>Custom <input type="number" id="inf-ctx-custom" min="4096" step="1024" placeholder="65536"></label>
+                  <label>KV cache <select id="inf-ctx-kv"><option value="auto">auto</option><option value="fp8">fp8 (vLLM)</option><option value="q8_0">q8_0 (GGUF)</option><option value="q4_0">q4_0 (GGUF)</option><option value="f16">f16</option></select></label>
+                </div>
+                <div class="inf-ctx-hint" id="inf-ctx-hint"></div>
+              </div>
               <div class="inf-msg" id="inf-msg"></div>
             </div>
 
@@ -855,6 +882,9 @@
         return engineDisplay(engine);
       };
       let infFilterChips = new Set(['switchable']);
+      let infCtxPlan = null;
+      let infCtxSelection = { preset: 'default', ctx: null, kv: null };
+
       let infFilterQ = '';
       let lastInfProfilesSnapshot = '';
       const infModelGroupsOpen = new Set();
@@ -1298,6 +1328,103 @@
         return (a.id || '').localeCompare(b.id || '');
       }
 
+
+      function fmtCtx(n) {
+        if (n == null || n === '' || Number.isNaN(Number(n))) return '—';
+        const v = Number(n);
+        if (v >= 1024 && v % 1024 === 0) return (v / 1024) + 'k';
+        if (v >= 1024) return (v / 1024).toFixed(1) + 'k';
+        return String(v);
+      }
+
+      function kvOptionsForEngine(engine) {
+        if (engine === 'eugr') return ['auto', 'fp8'];
+        if (engine === 'llamacpp') return ['auto', 'q8_0', 'q4_0', 'f16'];
+        return ['auto', 'fp8', 'q8_0', 'q4_0'];
+      }
+
+      function profileCtxLabel(p) {
+        const c = p && p.context;
+        if (!c) return null;
+        const eff = c.effective != null ? c.effective : c.default;
+        const kv = c.kv_effective || c.kv_default || 'auto';
+        if (eff == null) return null;
+        return fmtCtx(eff) + (kv && kv !== 'auto' ? ' · kv ' + kv : '');
+      }
+
+      async function loadInfContextPanel(profileId) {
+        const panel = $('inf-ctx-panel');
+        if (!profileId) {
+          panel.hidden = true;
+          infCtxPlan = null;
+          return;
+        }
+        try {
+          const res = await fetch('/api/inference/context?profile=' + encodeURIComponent(profileId));
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            panel.hidden = true;
+            return;
+          }
+          infCtxPlan = d;
+          renderInfContextPanel();
+        } catch (_) {
+          panel.hidden = true;
+        }
+      }
+
+      function renderInfContextPanel() {
+        const panel = $('inf-ctx-panel');
+        const d = infCtxPlan;
+        if (!d || !d.context) {
+          panel.hidden = true;
+          return;
+        }
+        panel.hidden = false;
+        const c = d.context;
+        const native = c.native ? ('native ' + fmtCtx(c.native)) : 'native unknown';
+        const def = c.default ? (' · default ' + fmtCtx(c.default)) : '';
+        $('inf-ctx-native').textContent = native + def;
+
+        const recBal = (c.recommendations || []).find((r) => r.label === 'balanced');
+        const presetsEl = $('inf-ctx-presets');
+        presetsEl.innerHTML = (c.presets || []).map((p) => {
+          const active = infCtxSelection.preset === p.id ? ' active' : '';
+          const rec = recBal && recBal.ctx === p.ctx ? ' rec' : '';
+          const title = p.label + ' · ' + fmtCtx(p.ctx) + (p.kv && p.kv !== 'auto' ? ' kv ' + p.kv : '');
+          return '<button type="button" class="inf-ctx-preset' + active + rec + '" data-ctx-preset="' + attrEsc(p.id)
+            + '" data-ctx-val="' + p.ctx + '" data-ctx-kv="' + attrEsc(p.kv || 'auto') + '" title="' + attrEsc(title) + '">'
+            + escHtml(p.label) + ' ' + escHtml(fmtCtx(p.ctx)) + '</button>';
+        }).join('');
+
+        const kvSel = $('inf-ctx-kv');
+        const allowed = new Set(kvOptionsForEngine(d.engine));
+        Array.from(kvSel.options).forEach((opt) => {
+          opt.hidden = !allowed.has(opt.value);
+        });
+        const selKv = infCtxSelection.kv || (infCtxSelection.preset && (c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).kv || c.kv_default || 'auto';
+        kvSel.value = allowed.has(selKv) ? selKv : 'auto';
+
+        const selCtx = infCtxSelection.ctx != null ? infCtxSelection.ctx
+          : ((c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).ctx || c.default;
+        $('inf-ctx-custom').value = selCtx != null ? selCtx : '';
+
+        const recLines = (c.recommendations || []).map((r) => r.label + ': ' + fmtCtx(r.ctx) + ' — ' + r.reason).join(' ');
+        const mem = c.mem_avail_gb != null && c.weight_gb != null
+          ? (' ~' + Math.round(c.weight_gb) + ' GB weights · ' + c.mem_avail_gb + ' GB free.') : '';
+        $('inf-ctx-hint').textContent = recLines + mem;
+      }
+
+      function infLaunchContextPayload() {
+        const custom = parseInt($('inf-ctx-custom').value, 10);
+        const kv = $('inf-ctx-kv').value || 'auto';
+        const body = {};
+        if (!Number.isNaN(custom) && custom > 0) body.ctx = custom;
+        if (kv && kv !== 'auto') body.kv = kv;
+        if (infCtxSelection.preset) body.preset = infCtxSelection.preset;
+        return body;
+      }
+
       function renderInfProfileRow(p, selectedId) {
         const lc = p.lifecycle || 'works';
         const canPick = p.switchable !== false && lc !== 'draft';
@@ -1312,6 +1439,8 @@
         if (shelf) metaParts.push(shelf);
         metaParts.push(engineDisplayMeta(p.engine), p.tier || '?');
         if (tok) metaParts.push(tok);
+        const ctxLbl = profileCtxLabel(p);
+        if (ctxLbl) metaParts.push('ctx ' + ctxLbl);
         metaParts.push(state);
         const metaShort = metaParts.join(' · ');
         const noteHint = p.notes ? ' — ' + truncateNote(p.notes, 80) : '';
@@ -1397,6 +1526,8 @@
 
         $('inf-switch').disabled = !!switching || !switchable.length;
         $('inf-down').disabled = !!switching;
+        const _ctxProf = $('inf-select').value;
+        if (_ctxProf && (!infCtxPlan || infCtxPlan.profile !== _ctxProf)) loadInfContextPanel(_ctxProf);
         $('inf-bench').disabled = !!switching
           || !(activeId && all.some((p) => p.id === activeId && p.ready));
       }
@@ -1457,7 +1588,9 @@
             const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
             const owuiHint = active.engine === 'ds4'
               ? ' · Open WebUI: backend :8002/v1 (thinking off)' : '';
+            const actCtx = profileCtxLabel(active);
             $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
+              + (actCtx ? ' · ctx ' + actCtx : '')
               + tok + ' · ready' + owuiHint + (active.started_at ? ' · since ' + active.started_at : '');
             setInfMsg('');
           } else {
@@ -1605,6 +1738,8 @@
         }
         pendingStartProfile = null;
         $('inf-select').value = profile;
+        infCtxSelection = { preset: 'default', ctx: null, kv: null };
+        loadInfContextPanel(profile);
         if (prof.tier === 'heavy') {
           setInfMsg('Confirm heavy profile switch using the Switch button.', 'warn');
           return;
@@ -1626,7 +1761,7 @@
         setInfMsg('Starting switch…', 'warn');
         $('inf-switch').disabled = true;
         try {
-          const body = { profile: profile, confirm: true };
+          const body = { profile: profile, confirm: true, ...infLaunchContextPayload() };
           if (tier === 'heavy') body.confirm_heavy = true;
           const res = await fetch('/api/inference/switch', {
             method: 'POST',
@@ -2576,6 +2711,27 @@
         history.replaceState(null, '', '#system');
       });
 
+
+      $('inf-ctx-presets').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-ctx-preset]');
+        if (!btn) return;
+        infCtxSelection = {
+          preset: btn.getAttribute('data-ctx-preset'),
+          ctx: parseInt(btn.getAttribute('data-ctx-val'), 10),
+          kv: btn.getAttribute('data-ctx-kv') || 'auto',
+        };
+        renderInfContextPanel();
+      });
+      $('inf-ctx-custom').addEventListener('input', () => {
+        infCtxSelection.preset = null;
+        const v = parseInt($('inf-ctx-custom').value, 10);
+        infCtxSelection.ctx = Number.isNaN(v) ? null : v;
+      });
+      $('inf-ctx-kv').addEventListener('change', () => {
+        infCtxSelection.kv = $('inf-ctx-kv').value;
+        infCtxSelection.preset = null;
+      });
+
       $('inf-switch').addEventListener('click', infSwitch);
       $('inf-bench').addEventListener('click', infBench);
       $('inf-down').addEventListener('click', infDown);
@@ -2613,7 +2769,11 @@
         e.preventDefault();
         pickInfProfile(row.dataset.profileId);
       });
-      $('inf-select').addEventListener('change', rerenderInfProfiles);
+      $('inf-select').addEventListener('change', () => {
+        infCtxSelection = { preset: 'default', ctx: null, kv: null };
+        loadInfContextPanel($('inf-select').value);
+        rerenderInfProfiles();
+      });
       $('inf-q').addEventListener('input', (e) => {
         infFilterQ = e.target.value;
         saveInfPrefs();

@@ -68,6 +68,22 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True, **core.api_status(lite=lite)})
             return
 
+        if self.path.startswith("/api/inference/context"):
+            prof = ""
+            if "?" in self.path:
+                for part in self.path.split("?", 1)[1].split("&"):
+                    k, _, v = part.partition("=")
+                    if k == "profile":
+                        prof = v.strip()
+            if not prof:
+                self._json(400, {"ok": False, "error": "profile query required"})
+                return
+            try:
+                self._json(200, {"ok": True, **core.api_context_plan(prof)})
+            except ValueError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+            return
+
         if self.path.startswith("/api/inference/logs"):
             lines = 30
             if "?" in self.path:
@@ -108,7 +124,13 @@ class Handler(BaseHTTPRequestHandler):
                     },
                 )
                 return
-            ok, message, job = core.start_switch_job(profile)
+            ctx = data.get("ctx")
+            kv = data.get("kv")
+            preset = data.get("preset")
+            ctx_i = int(ctx) if ctx is not None else None
+            ok, message, job = core.start_switch_job(
+                profile, ctx=ctx_i, kv=str(kv) if kv else None, preset=str(preset) if preset else None
+            )
             if not ok:
                 code = 409 if "already" in message else 400
                 self._json(code, {"ok": False, "error": message, "job": job})

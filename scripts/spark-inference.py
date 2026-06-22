@@ -20,6 +20,16 @@ from urllib.request import Request, urlopen
 import yaml
 
 ROOT = Path("/opt/spark")
+
+import importlib.util
+
+_CTX_SPEC = importlib.util.spec_from_file_location(
+    "spark_inference_context", ROOT / "scripts" / "spark-inference-context.py"
+)
+ctxmod = importlib.util.module_from_spec(_CTX_SPEC)
+assert _CTX_SPEC.loader is not None
+_CTX_SPEC.loader.exec_module(ctxmod)
+
 RECIPES_DIR = ROOT / "recipes"
 RECIPES_DRAFTS_DIR = RECIPES_DIR / "drafts"
 MODELS_ROOT = Path("/models")
@@ -1327,7 +1337,13 @@ def cmd_down() -> int:
     return errors
 
 
-def cmd_up(profile_id: str) -> int:
+def cmd_up(
+    profile_id: str,
+    *,
+    ctx: int | None = None,
+    kv: str | None = None,
+    preset: str | None = None,
+) -> int:
     if profile_id not in switchable_profile_ids():
         raise SystemExit(
             f"profile {profile_id!r} is not switchable — production index or testing draft required"
@@ -1344,18 +1360,19 @@ def cmd_up(profile_id: str) -> int:
 
     path = str(recipe_path(profile_id))
     engine = recipe.get("engine")
-    print(f"Starting {profile_id} ({engine})...")
+    launch_env = ctxmod.prepare_launch(recipe, profile_id, ctx=ctx, kv=kv, preset=preset)
+    ctx_i, kv_s = ctxmod.resolve_launch_ctx_kv(recipe, ctx=ctx, kv=kv, preset=preset)
+    print(f"Starting {profile_id} ({engine}) ctx={ctx_i} kv={kv_s}...")
 
     if engine == "eugr":
-        run_script(
-            SPARK_EUGR,
-            "up",
-            env={"SPARK_EUGR_RECIPE": recipe.get("eugr_recipe", "")},
-        )
+        env = {"SPARK_EUGR_RECIPE": launch_env.get("SPARK_EUGR_RECIPE", recipe.get("eugr_recipe", ""))}
+        run_script(SPARK_EUGR, "up", env=env)
     elif engine == "llamacpp":
-        run_script(SPARK_LLAMA, "up", env={"SPARK_LLAMA_RECIPE": path})
+        env = {"SPARK_LLAMA_RECIPE": launch_env.get("SPARK_LLAMA_RECIPE", path)}
+        run_script(SPARK_LLAMA, "up", env=env)
     elif engine == "ds4":
-        run_script(SPARK_DS4, "up", env={"SPARK_DS4_RECIPE": path})
+        env = {"SPARK_DS4_RECIPE": launch_env.get("SPARK_DS4_RECIPE", path)}
+        run_script(SPARK_DS4, "up", env=env)
     else:
         raise SystemExit(f"unsupported engine: {engine!r}")
 
@@ -1698,6 +1715,7 @@ def recipe_public(
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
     }
+    out["context"] = ctxmod.context_public(recipe)
     spec = recipe.get("speculative")
     if isinstance(spec, dict) and spec:
         out["speculative"] = spec
@@ -2501,12 +2519,17 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
             or (recipe.get("engine") == "eugr" and eugr_up)
             or (recipe.get("engine") == "ds4" and ds4_up)
         )
-        payload["active"] = {
-            **recipe_public(
+        active_pub = recipe_public(
                 recipe,
                 benchmarks=benchmarks,
                 history_profiles=history_profiles,
-            ),
+            )
+        launch = ctxmod.read_launch_overrides()
+        if launch.get("profile") == active_id:
+            active_pub.setdefault("context", {})["effective"] = launch.get("ctx")
+            active_pub.setdefault("context", {})["kv_effective"] = launch.get("kv")
+        payload["active"] = {
+            **active_pub,
             "started_at": (active.get("state") or {}).get("started_at"),
             "ready": ready,
             "starting": starting,
@@ -2550,7 +2573,7 @@ def api_status(*, lite: bool = False, force: bool = False) -> dict[str, Any]:
     return payload
 
 
-def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
+def start_switch_job(profile_id: str, *, ctx: int | None = None, kv: str | None = None, preset: str | None = None) -> tuple[bool, str, dict[str, Any]]:
     profile_id = validate_profile_id(profile_id)
     if not profile_id:
         return False, "unknown or disabled profile", {}
@@ -2570,8 +2593,15 @@ def start_switch_job(profile_id: str) -> tuple[bool, str, dict[str, Any]]:
     _write_switch_meta(profile_id)
     with SWITCH_LOG_FILE.open("w", encoding="utf-8") as log:
         log.write(f"==> switch to {profile_id} {datetime.now(timezone.utc).isoformat()}\n")
+        up_cmd = [sys.executable, str(ROOT / "scripts" / "spark-inference.py"), "up", profile_id]
+        if ctx is not None:
+            up_cmd.extend(["--ctx", str(int(ctx))])
+        if kv:
+            up_cmd.extend(["--kv", str(kv)])
+        if preset:
+            up_cmd.extend(["--preset", str(preset)])
         proc = subprocess.Popen(
-            [sys.executable, str(ROOT / "scripts" / "spark-inference.py"), "up", profile_id],
+            up_cmd,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -2609,7 +2639,30 @@ def api_query_flags(path: str) -> dict[str, bool]:
     return flags
 
 
+
+
+def api_context_plan(profile_id: str) -> dict[str, Any]:
+    profile_id = validate_profile_id(profile_id)
+    if not profile_id:
+        raise ValueError("unknown or disabled profile")
+    recipe = load_recipe(profile_id)
+    active = detect_active_profile()
+    active_id = active.get("profile") if active else None
+    ctx = ctxmod.context_public(recipe)
+    if active_id == profile_id:
+        launch = ctxmod.read_launch_overrides()
+        if launch.get("profile") == profile_id:
+            ctx["effective"] = launch.get("ctx")
+            ctx["kv_effective"] = launch.get("kv")
+    return {
+        "profile": profile_id,
+        "engine": recipe.get("engine"),
+        "context": ctx,
+    }
+
+
 def api_dispatch(
+
     method: str, path: str, body: dict[str, Any] | None = None
 ) -> tuple[int, dict[str, Any]] | None:
     """HTTP route table for spark-inference-api (hot-reloaded with this module)."""
@@ -2617,6 +2670,19 @@ def api_dispatch(
     route = api_route_path(path)
 
     if method == "GET":
+        if route.startswith("/api/inference/context"):
+            q = path.split("?", 1)[1] if "?" in path else ""
+            prof = ""
+            for part in q.split("&"):
+                k, _, v = part.partition("=")
+                if k == "profile":
+                    prof = v.strip()
+            if not prof:
+                return 400, {"ok": False, "error": "profile query required"}
+            try:
+                return 200, api_context_plan(prof)
+            except ValueError as exc:
+                return 400, {"ok": False, "error": str(exc)}
         if route == "/api/inference/status":
             lite = api_query_flags(path)["lite"]
             return 200, {"ok": True, **api_status(lite=lite)}
@@ -3019,8 +3085,23 @@ def main(argv: list[str]) -> int:
         return cmd_down()
     if cmd == "up":
         if len(argv) < 3:
-            raise SystemExit("usage: spark-inference up <profile>")
-        return cmd_up(argv[2])
+            raise SystemExit("usage: spark-inference up <profile> [--ctx N] [--kv TYPE] [--preset ID]")
+        profile_id = argv[2]
+        ctx = kv = preset = None
+        i = 3
+        while i < len(argv):
+            if argv[i] == "--ctx" and i + 1 < len(argv):
+                ctx = int(argv[i + 1])
+                i += 2
+            elif argv[i] == "--kv" and i + 1 < len(argv):
+                kv = argv[i + 1]
+                i += 2
+            elif argv[i] == "--preset" and i + 1 < len(argv):
+                preset = argv[i + 1]
+                i += 2
+            else:
+                raise SystemExit(f"unknown option: {argv[i]}")
+        return cmd_up(profile_id, ctx=ctx, kv=kv, preset=preset)
     if cmd == "logs":
         return cmd_logs(argv[2] if len(argv) > 2 else None)
     if cmd == "bench":

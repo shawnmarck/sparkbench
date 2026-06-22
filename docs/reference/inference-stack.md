@@ -1,6 +1,6 @@
 # Inference stack (Phase 5 spec)
 
-Last updated: 2026-06-21
+Last updated: 2026-06-22 (gateway implemented)
 
 ## Goal
 
@@ -150,15 +150,15 @@ Bake-off UIs (Rookery, vLLM Studio) were removed from sparky. Phase 5 is this sp
 2. `spark inference up|down` unified switch
 3. HTTP API for gateway integration
 4. Portal Inference tab
-5. Hermes Agent install → point at `hermes-14b-q4` (or gateway)
-6. Optional: llama-swap-style idle eviction (later)
+5. Hermes Agent install → point at gateway (or alias)
+6. [partial] Thin gateway implemented (aliases + 503 auto-switch)
 7. Optional: MCP ops agent (recipes + notes)
 
 ## Open questions
 
 - [ ] Always-on small + on-demand heavy on same GB10 — measure VRAM before enabling
-- [ ] Single port `:8000` vs per-tier ports — gateway may prefer one upstream with swap
-- [ ] Open WebUI: direct backends vs gateway-only
+- [x] Single stable port implemented via gateway on :9000 (clients use fixed URL; upstream port moves internally)
+- [ ] Open WebUI: update default to gateway :9000/v1 (manual for now; still works with direct if preferred)
 
 
 ### ds4 (DwarfStar) recipe fields
@@ -174,3 +174,45 @@ ds4_args:
 ```
 
 Scaffold: `spark recipe scaffold antirez/deepseek-v4-flash ds4` or auto-detect when catalog marks `engine: ds4`.
+
+## Implemented: spark-inference-gateway (smallest useful slice)
+
+Stable unified endpoint now lives at `http://sparky:9000/v1` (or 127.0.0.1:9000 inside).
+
+- Thin Python proxy (`scripts/spark-inference-gateway.py` + wrapper).
+- Reads active profile via core `detect_active_profile()` + runtime checks (eugr/ds4 :8000, llama :8081).
+- Forwards GET/POST /v1/* with streaming (SSE for completions).
+- Model aliases (hardcoded in script for now; extend ALIASES):
+  - "qwen-local", "hermes-local" etc. → profile IDs.
+- On alias/profile mismatch for chat/completions: calls `core.start_switch_job()` (background), returns 503 + Retry-After + details.
+- While switching or no active: 503.
+- Quick upstream readiness probe + ds4 normalization injection (thinking disabled).
+- Headers: X-Spark-Active-Profile, X-Spark-Upstream-Port, X-Spark-Served-Model.
+- Systemd service: `spark-inference-gateway.service` (enabled, restarts on failure).
+- Wrapper: `/opt/spark/scripts/spark-inference-gateway --serve --port 9000`
+- Also callable directly from scripts.
+
+CLI integration is minimal (use the script); full `spark inference gateway ...` can be added later.
+
+### Usage for clients (Hermes, Open WebUI, curl)
+```
+base_url = "http://sparky:9000/v1"
+# or "http://sparky:9000/v1" in Open WebUI model config
+```
+
+Test:
+```
+curl http://sparky:9000/v1/models
+curl -X POST http://sparky:9000/v1/chat/completions -d '{"model":"qwen-local", ...}'
+```
+
+### Next for fuller gateway
+- Persistent alias map in a file (e.g. data/inference-aliases.json) + CLI to manage.
+- Enhanced /v1/models that unions aliases + marks active.
+- Nginx location for /v1/ on port 80 (for convenience).
+- Policy: auto-switch only for fast tiers or explicit flag.
+- LiteLLM fallback option if wanted (but this thin proxy covers the immediate pain).
+
+This matches the "thin spark-inference-gateway on :9000" column in the original options table.
+Clients (Hermes etc.) now have one fixed URL; switching happens underneath via control plane.
+

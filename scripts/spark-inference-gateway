@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec /opt/spark/venv/bin/python /opt/spark/scripts/spark-inference-gateway.py "$@"

@@ -171,6 +171,7 @@ Prefer HTTP when the agent has no shell or needs JSON without parsing tables:
 |------|-------------|
 | GPU + inference probe | `GET http://sparky/api/gpu` or `spark gpu` |
 | Active profile, switch | `GET/POST http://sparky/api/inference/status` · `…/switch` |
+| **OpenAI inference (stable)** | `GET/POST http://sparky:9000/v1/*` · `spark gateway --list-aliases` |
 | Shelf job status | `GET http://sparky/api/shelf/status` or `spark shelf status` |
 | Portal inventory | `GET http://sparky/models.json` (after `spark models inventory`) |
 

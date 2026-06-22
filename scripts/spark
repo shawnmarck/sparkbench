@@ -19,6 +19,7 @@ Groups:
   models verify|removal|inventory
   shelf pull|push|rm|status
   engine eugr|llama|ds4 <up|down|logs|status|build>
+  gateway                 Unified :9000/v1 front door
   gpu                    Metrics JSON (same as /api/gpu)
   bench history|show|note|latest   Benchmark run history (per recipe)
   hf login               Hugging Face token setup
@@ -54,7 +55,7 @@ run_py() {
 
 # --- contextual help (? at any level) ---
 
-SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf)
+SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf gateway)
 
 resolve_prefix() {
   local word="$1"
@@ -224,6 +225,21 @@ spark hf — Hugging Face tools
 EOF
 }
 
+help_gateway() {
+  cat <<'EOF'
+spark gateway — unified inference front door (:9000/v1)
+
+  (delegates to spark-inference-gateway script + systemd service)
+
+Examples:
+  spark gateway --serve --port 9000   # manual (service usually handles)
+  spark gateway --list-aliases
+  curl http://sparky:9000/v1/models
+
+Service: systemctl status spark-inference-gateway
+EOF
+}
+
 help_status() {
   cat <<'EOF'
 spark status — GPU + inference overview
@@ -337,12 +353,15 @@ EOF
         case "$eng" in
           eugr|vllm) help_engine_eugr ;;
           llama|llamacpp) help_engine_llama ;;
-    ds4|dwarfstar) help_engine_ds4 ;;
+          ds4|dwarfstar) help_engine_ds4 ;;
         esac
       fi
       ;;
     hf)
       help_hf
+      ;;
+    gateway)
+      help_gateway
       ;;
   esac
 }
@@ -481,6 +500,10 @@ cmd_hf() {
   esac
 }
 
+cmd_gateway() {
+  run "${LIB}/spark-inference-gateway" "$@"
+}
+
 dispatch_group() {
   local group="$1"
   shift
@@ -494,6 +517,7 @@ dispatch_group() {
     gpu) cmd_gpu "$@" ;;
     bench) cmd_bench "$@" ;;
     hf) cmd_hf "$@" ;;
+    gateway) cmd_gateway "$@" ;;
     *)
       die "unknown group: $group (run spark --help or spark ?)"
       ;;
@@ -514,7 +538,7 @@ main() {
   case "$cmd" in
     -h|--help|help) usage ;;
     status|gpu|bench) shift; dispatch_group "$cmd" "$@" ;;
-    inference|recipe|models|shelf|engine|hf) shift; dispatch_group "$cmd" "$@" ;;
+    inference|recipe|models|shelf|engine|hf|gateway) shift; dispatch_group "$cmd" "$@" ;;
     *)
       local group
       if group="$(resolve_prefix "$cmd" "${SPARK_GROUPS[@]}")"; then

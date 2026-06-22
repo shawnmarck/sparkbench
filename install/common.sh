@@ -46,6 +46,14 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location /api/hf/ {
+        proxy_pass http://127.0.0.1:8768/api/hf/;
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 10s;
+        add_header Cache-Control "no-store";
+    }
+
     location / {
         try_files \$uri \$uri/ =404;
     }

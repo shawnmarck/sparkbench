@@ -15,6 +15,9 @@ chmod +x "${TARGET}/scripts/spark-inference" \
   "${TARGET}/scripts/spark-shelf-pull" \
   "${TARGET}/scripts/spark-shelf-push" \
   "${TARGET}/scripts/spark-hf-login" \
+  "${TARGET}/scripts/spark-hf.py" \
+  "${TARGET}/scripts/spark-hf-api" \
+  "${TARGET}/scripts/spark-hf-api.py" \
   "${TARGET}/scripts/spark-inventory-build" \
   "${TARGET}/scripts/spark-local-rm" \
   "${TARGET}/scripts/spark-gpu-metrics" \

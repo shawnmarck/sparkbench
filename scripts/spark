@@ -172,7 +172,7 @@ help_engine() {
   cat <<'EOF'
 spark engine — low-level inference engines (bypass profile switcher)
 
-  eugr  up | down | logs | status | build
+  eugr  up | down | logs | status | build | check | record
   llama up | down | logs | status
 EOF
 }
@@ -186,6 +186,8 @@ spark engine eugr — vLLM via eugr docker
   logs    Tail build/run log
   status  Health + /v1/models
   build   Rebuild vllm-node image
+  check   Compare deployed stack vs upstream prebuilts
+  record  Save deployed pins after a successful upgrade
 EOF
 }
 
@@ -204,7 +206,10 @@ help_hf() {
   cat <<'EOF'
 spark hf — Hugging Face tools
 
-  login   Store HF token for downloads
+  login    Store HF token for downloads
+  status   Download queue + legacy/worker state
+  queue    list | add <repo> <intent>
+  plan     <repo> <intent>   Preview file-only download plan
 EOF
 }
 
@@ -449,12 +454,16 @@ cmd_bench() {
 }
 
 cmd_hf() {
-  local sub="${1:-login}"
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_hf; exit 0; }
   shift
   case "$sub" in
     login) run "${LIB}/spark-hf-login" "$@" ;;
+    status|queue|plan|worker)
+      run_py "${LIB}/spark-hf.py" "$sub" "$@"
+      ;;
     *)
-      die "unknown hf command: $sub (try: login)"
+      die "unknown hf command: $sub (try: login, status, queue, plan)"
       ;;
   esac
 }

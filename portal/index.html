@@ -252,6 +252,12 @@
     .inf-tier-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .35rem 0 .15rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-tier-legend b { color: #c5cdd8; font-weight: 600; }
     .inf-switch-banner { margin-top: .5rem; padding: .55rem .65rem; background: #241c10; border: 1px solid #4a402a; border-radius: 8px; font-size: .74rem; color: var(--warn); font-family: ui-monospace, monospace; line-height: 1.45; white-space: pre-wrap; }
+    .inf-update-banner {
+      margin-top: .5rem; padding: .55rem .65rem; border-radius: 8px; border: 1px solid #4a402a;
+      background: #241c10; font-size: .74rem; font-family: ui-monospace, monospace; color: var(--warn);
+      line-height: 1.45;
+    }
+    .inf-update-banner a { color: #9ec8ff; }
     .inf-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
     .inf-actions select { appearance: none; background: #12151c; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .65rem; font: inherit; font-size: .8rem; min-width: 220px; }
     .inf-btn { appearance: none; border: 1px solid var(--border); background: #1a2210; color: var(--accent); font: inherit; font-size: .78rem; padding: .45rem .75rem; border-radius: 8px; cursor: pointer; }
@@ -295,6 +301,122 @@
       font-size: .68rem; color: var(--muted); font-family: ui-monospace, monospace; text-align: center;
     }
     body.inf-log-overlay-open { overflow: hidden; }
+
+    .exp-card-body { display: flex; flex-direction: column; gap: 0; min-height: 0; }
+    body.exp-view .dashboard { overflow: hidden; display: flex; flex-direction: column; }
+    body.exp-view .dashboard-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; max-width: none; }
+    body.exp-view #explore-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
+    body.exp-view #explore-card .card-head { flex-shrink: 0; }
+    body.exp-view .exp-card-body { flex: 1; min-height: 0; }
+    .exp-status-banner {
+      flex-shrink: 0; padding: .55rem .7rem; border-radius: 8px; border: 1px solid var(--border);
+      background: #12151c; font-size: .74rem; font-family: ui-monospace, monospace; color: #c5cdd8;
+      line-height: 1.45; margin-bottom: .65rem;
+    }
+    .exp-status-banner.warn { border-color: #4a402a; background: #241c10; color: var(--warn); }
+    .exp-status-banner.ok { border-color: #2a4a2a; background: #141a10; color: var(--ok); }
+    .exp-status-banner.down { border-color: #4a2a2a; color: var(--down); }
+    .exp-toolbar {
+      flex-shrink: 0; display: flex; flex-direction: column; gap: .45rem;
+      padding: .5rem .55rem; border: 1px solid var(--border); border-radius: 10px; background: #0c0e14;
+      margin-bottom: .55rem;
+    }
+    .exp-toolbar input[type="search"] {
+      width: 100%; box-sizing: border-box; appearance: none;
+      background: #12151c; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+      padding: .42rem .6rem; font: inherit; font-size: .8rem;
+    }
+    .exp-toolbar input[type="search"]:focus { outline: none; border-color: #3a4a2a; }
+    .exp-mode-row { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .exp-mode-btn {
+      appearance: none; border: 1px solid var(--border); background: #12151c; color: #c5cdd8;
+      font: inherit; font-size: .74rem; padding: .3rem .65rem; border-radius: 999px; cursor: pointer;
+    }
+    .exp-mode-btn.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+    .exp-chip-row { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+    .exp-chip {
+      appearance: none; border: 1px solid var(--border); background: #12151c; color: #c5cdd8;
+      font: inherit; font-size: .68rem; padding: .22rem .5rem; border-radius: 999px; cursor: pointer;
+    }
+    .exp-chip.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+    .exp-chip.active[data-exp-chip="nvfp4"] { border-color: #2a3a5a; color: #9ec8ff; }
+    .exp-main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr min(340px, 34%); gap: .55rem; }
+    @media (max-width: 900px) { .exp-main { grid-template-columns: 1fr; } }
+    .exp-results-panel {
+      min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--border);
+      border-radius: 10px; background: #0c0e14; overflow: hidden;
+    }
+    .exp-results-head {
+      flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+      padding: .42rem .55rem; border-bottom: 1px solid var(--border); font-size: .72rem; color: var(--muted);
+    }
+    .exp-results-scroll {
+      flex: 1; min-height: 0; overflow-y: auto; padding: .45rem; overscroll-behavior: contain;
+      display: grid; gap: .4rem; align-content: start;
+    }
+    .exp-model {
+      padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px;
+      cursor: pointer; transition: border-color .12s, background .12s;
+    }
+    .exp-model:hover, .exp-model:focus-visible { border-color: #3a4250; outline: none; }
+    .exp-model.selected { border-color: #3a5a2a; background: #141a10; box-shadow: inset 3px 0 0 var(--accent); }
+    .exp-model-head { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
+    .exp-model-repo { font-size: .78rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .exp-model-dl { font-size: .68rem; color: var(--muted); font-family: ui-monospace, monospace; flex-shrink: 0; }
+    .exp-model-badges { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .3rem; }
+    .exp-badge {
+      font-size: .6rem; font-weight: 600; letter-spacing: .04em; padding: .08rem .34rem;
+      border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
+    }
+    .exp-badge.gguf { border-color: #2a4a2a; color: var(--ok); }
+    .exp-badge.nvfp4 { border-color: #2a3a5a; color: #9ec8ff; }
+    .exp-badge.moe { border-color: #4a402a; color: var(--warn); }
+    .exp-model-tags { margin-top: .28rem; display: flex; flex-wrap: wrap; gap: .2rem; }
+    .exp-tag { font-size: .62rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .exp-side { min-height: 0; display: flex; flex-direction: column; gap: .45rem; }
+    .exp-detail {
+      flex-shrink: 0; border: 1px solid var(--border); border-radius: 10px; background: #12151c;
+      padding: .65rem .7rem; font-size: .76rem;
+    }
+    .exp-detail[hidden] { display: none !important; }
+    .exp-detail-title { font-weight: 600; color: var(--accent); font-size: .82rem; margin-bottom: .35rem; word-break: break-all; }
+    .exp-detail-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .7rem; line-height: 1.45; margin-bottom: .45rem; }
+    .exp-detail-plan { padding: .45rem .5rem; background: #0c0e14; border: 1px solid var(--border); border-radius: 8px; font-family: ui-monospace, monospace; font-size: .68rem; color: #aeb6c2; margin-bottom: .5rem; white-space: pre-wrap; }
+    .exp-detail-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+    .exp-detail-actions select {
+      appearance: none; background: #0c0e14; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: .38rem .55rem; font: inherit; font-size: .74rem; min-width: 8rem;
+    }
+    .exp-queues { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-top: .55rem; }
+    @media (max-width: 720px) { .exp-queues { grid-template-columns: 1fr; } }
+    .exp-queue-panel {
+      border: 1px solid var(--border); border-radius: 10px; background: #0c0e14; min-height: 0;
+      display: flex; flex-direction: column; max-height: min(200px, 24vh);
+    }
+    .exp-queue-head {
+      flex-shrink: 0; padding: .38rem .55rem; border-bottom: 1px solid var(--border);
+      font-size: .7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .exp-queue-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: .35rem .45rem; }
+    .exp-queue-item {
+      padding: .38rem .45rem; border: 1px solid var(--border); border-radius: 8px; background: #12151c;
+      font-size: .7rem; font-family: ui-monospace, monospace; margin-bottom: .3rem;
+    }
+    .exp-queue-item.state-done { border-color: #2a4a2a; }
+    .exp-queue-item.state-awaiting_license { border-color: #4a402a; }
+    .exp-queue-item.state-failed { border-color: #4a2a2a; color: var(--down); }
+    .exp-queue-repo { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .exp-queue-meta { color: var(--muted); margin-top: .15rem; font-size: .66rem; }
+    .exp-queue-actions { margin-top: .28rem; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .exp-queue-actions a, .exp-queue-actions button {
+      appearance: none; border: none; background: none; color: var(--accent); font: inherit;
+      font-size: .66rem; cursor: pointer; text-decoration: underline; padding: 0;
+    }
+    .exp-empty { padding: 1.2rem .65rem; text-align: center; color: var(--muted); font-size: .76rem; font-family: ui-monospace, monospace; }
+    .exp-msg { margin-top: .35rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .exp-msg.warn { color: var(--warn); }
+    .exp-msg.ok { color: var(--ok); }
+    .exp-msg.err { color: var(--down); }
   </style>
 </head>
 <body>
@@ -303,6 +425,7 @@
     <nav class="nav" id="nav">
       <a href="/" class="nav-btn active" data-view="system">System</a>
       <a href="/#models" class="nav-btn" data-src="/models.html" data-title="Model inventory" data-popout="/#models">Models</a>
+      <a href="#explore" class="nav-btn" data-view="explore">Explore</a>
       <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
@@ -423,6 +546,72 @@
           <div class="storage-grid" id="storage"></div>
         </div>
 
+        <div class="card" id="explore-card" hidden>
+          <div class="card-head">
+            <h2>Explore</h2>
+            <div class="card-head-meta" id="exp-head-meta">Hugging Face · file-only downloads</div>
+          </div>
+          <div class="exp-card-body">
+            <div class="exp-status-banner" id="exp-status-banner">Loading HF status…</div>
+            <div class="exp-toolbar">
+              <input type="search" id="exp-q" placeholder="Search Hugging Face models…" autocomplete="off" aria-label="Search models">
+              <div class="exp-mode-row">
+                <button type="button" class="exp-mode-btn active" data-exp-mode="trending" title="HF Hub trending (recent momentum, not all-time downloads)">Trending</button>
+                <button type="button" class="exp-mode-btn" data-exp-mode="new">New</button>
+              </div>
+              <div class="exp-chip-row" id="exp-filter-chips">
+                <button type="button" class="exp-chip" data-exp-chip="gguf">GGUF</button>
+                <button type="button" class="exp-chip" data-exp-chip="nvfp4">NVFP4</button>
+                <button type="button" class="exp-chip" data-exp-chip="moe">MoE</button>
+                <button type="button" class="exp-chip active" data-exp-chip="fits_spark">Fits Spark</button>
+              </div>
+            </div>
+            <div class="exp-main">
+              <div class="exp-results-panel">
+                <div class="exp-results-head">
+                  <span id="exp-results-label">Trending on HF</span>
+                  <span id="exp-results-count">—</span>
+                </div>
+                <div class="exp-results-scroll" id="exp-results">
+                  <div class="exp-empty">Loading…</div>
+                </div>
+              </div>
+              <div class="exp-side">
+                <div class="exp-detail" id="exp-detail" hidden>
+                  <div class="exp-detail-title" id="exp-detail-title">—</div>
+                  <div class="exp-detail-meta" id="exp-detail-meta">—</div>
+                  <pre class="exp-detail-plan" id="exp-detail-plan">—</pre>
+                  <div class="exp-detail-actions">
+                    <select id="exp-intent" aria-label="Download format">
+                      <option value="gguf_q4">GGUF Q4</option>
+                      <option value="gguf_q5">GGUF Q5</option>
+                      <option value="gguf_best">GGUF best</option>
+                      <option value="nvfp4">NVFP4 weights</option>
+                      <option value="fp8">FP8 weights</option>
+                      <option value="hf_weights">HF safetensors</option>
+                    </select>
+                    <button type="button" class="inf-btn" id="exp-download">Download</button>
+                    <button type="button" class="inf-btn" id="exp-save-explore">Save</button>
+                    <a href="#" id="exp-hf-link" target="_blank" rel="noopener">HF ↗</a>
+                  </div>
+                  <div class="exp-msg" id="exp-detail-msg"></div>
+                </div>
+              </div>
+            </div>
+            <div class="exp-queues">
+              <div class="exp-queue-panel">
+                <div class="exp-queue-head">Explore queue</div>
+                <div class="exp-queue-scroll" id="exp-explore-queue"><div class="exp-empty">Empty</div></div>
+              </div>
+              <div class="exp-queue-panel">
+                <div class="exp-queue-head">Download queue</div>
+                <div class="exp-queue-scroll" id="exp-download-queue"><div class="exp-empty">Empty</div></div>
+              </div>
+            </div>
+            <div class="exp-msg" id="exp-msg"></div>
+          </div>
+        </div>
+
         <div class="card" id="inference-card" hidden>
           <div class="card-head">
             <h2>Inference</h2>
@@ -434,6 +623,7 @@
               <div class="inf-active-title" id="inf-active-title">No active profile</div>
               <div class="inf-active-meta" id="inf-active-meta">Pick a recipe and switch — log stays visible below.</div>
               <div class="inf-switch-banner" id="inf-switch-banner" hidden></div>
+              <div class="inf-update-banner" id="inf-update-banner" hidden></div>
             </div>
 
             <div class="inf-controls-block">
@@ -455,7 +645,7 @@
                 <input type="search" id="inf-q" placeholder="Search recipes… (/)" autocomplete="off" aria-label="Search recipes">
                 <div class="inf-chip-row" id="inf-filter-chips">
                   <button type="button" class="inf-chip active" data-inf-chip="switchable">Switchable</button>
-                  <button type="button" class="inf-chip" data-inf-chip="eugr">eugr</button>
+                  <button type="button" class="inf-chip" data-inf-chip="eugr">vLLM</button>
                   <button type="button" class="inf-chip" data-inf-chip="llamacpp">GGUF</button>
                   <button type="button" class="inf-chip" data-inf-chip="fast">fast</button>
                   <button type="button" class="inf-chip" data-inf-chip="heavy">heavy</button>
@@ -530,6 +720,14 @@
       let infPollTimer = null;
       let onSystem = true;
       let onInference = false;
+      let onExplore = false;
+      let expMode = 'trending';
+      let expFilterChips = new Set(['fits_spark']);
+      let expResults = [];
+      let expSelectedRepo = null;
+      let expStatus = null;
+      let expBrowseBusy = false;
+      let expSearchTimer = null;
       let lastInfStatus = null;
       let pendingStartProfile = null;
       let benchBusy = false;
@@ -537,6 +735,15 @@
       let infLogOverlayOpen = false;
       const INF_PREFS_KEY = 'spark-inference-filters';
       const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'fast', 'heavy', 'bench', 'drafts'];
+      const engineDisplay = (engine) => {
+        if (engine === 'eugr' || engine === 'vllm') return 'vLLM';
+        if (engine === 'llamacpp') return 'GGUF';
+        return engine || '?';
+      };
+      const engineDisplayMeta = (engine) => {
+        if (engine === 'eugr') return 'vLLM · eugr';
+        return engineDisplay(engine);
+      };
       let infFilterChips = new Set(['switchable']);
       let infFilterQ = '';
       let lastInfProfilesSnapshot = '';
@@ -544,6 +751,7 @@
       let suppressInfGroupToggle = false;
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
+      const exploreCard = $('explore-card');
 
       const fmtGb = (mb) => (mb / 1024).toFixed(1);
       const setBar = (el, pct) => { el.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
@@ -792,6 +1000,11 @@
         return ' (' + m + 'm ' + r + 's)';
       }
 
+      function loadingPhaseKey(info) {
+        const phase = info && info.phase;
+        return phase === 'model' ? 'starting' : phase;
+      }
+
       function inferenceLoadingInfo(data) {
         if (!data) return null;
         if (data.loading && data.loading.profile) return data.loading;
@@ -812,7 +1025,7 @@
         const active = data.active;
         if (active && !active.ready) {
           return {
-            phase: active.starting ? 'model' : 'waiting',
+            phase: active.starting ? 'starting' : 'waiting',
             profile: active.id,
             name: active.name || active.id,
             started_at: active.started_at,
@@ -824,14 +1037,20 @@
       function inferenceLoadingLabel(info) {
         const name = (info && (info.name || info.profile)) || '…';
         const elapsed = formatLoadingElapsed(parseStartedAt(info && info.started_at));
-        return 'loading: ' + name + elapsed;
+        const fallback = { switch: 'Switching', starting: 'Starting', waiting: 'Waiting', model: 'Starting' };
+        const label = (info && info.phase_label) || fallback[loadingPhaseKey(info)] || 'Loading';
+        return label + ' · ' + name + elapsed;
       }
 
       function inferenceLoadingTitle(info) {
         if (!info || !info.profile) return 'Inference loading';
+        const parts = [];
+        if (info.detail) parts.push(info.detail);
+        if (info.expect && info.expect.hint) parts.push(info.expect.hint);
+        if (parts.length) return parts.join(' ');
         const name = info.name || info.profile;
-        if (info.phase === 'switch') return 'Switching to ' + name;
-        if (info.phase === 'model') return 'Loading model — ' + name;
+        if (loadingPhaseKey(info) === 'switch') return 'Switching to ' + name;
+        if (loadingPhaseKey(info) === 'starting') return 'Engine starting — ' + name;
         return 'Waiting for engine — ' + name;
       }
 
@@ -864,6 +1083,29 @@
         el.title = 'No active profile — click to switch';
       }
 
+      function eugrStackUpdateInfo(data) {
+        const stack = data && data.eugr_stack;
+        if (!stack || !stack.update_available) return null;
+        return stack;
+      }
+
+      function renderInfUpdateBanner(data) {
+        const el = $('inf-update-banner');
+        if (!el) return;
+        const stack = eugrStackUpdateInfo(data);
+        if (!stack) {
+          el.hidden = true;
+          el.textContent = '';
+          return;
+        }
+        const runbook = stack.runbook || 'docs/runbooks/eugr-vllm-upgrade.md';
+        el.innerHTML = 'vLLM stack update available — ' + escHtml(stack.message || 'new upstream prebuilts')
+          + ' · <a href="#inference">details below</a>'
+          + ' · runbook <code>' + escHtml(runbook) + '</code>'
+          + ' (tell an agent during a maintenance window)';
+        el.hidden = false;
+      }
+
       function renderInferencePills(data) {
         renderNavInference(data);
         const el = $('inference-status');
@@ -874,6 +1116,12 @@
         const loading = inferenceLoadingInfo(data);
         const active = data.active;
         const pills = [];
+        const eugrUpdate = eugrStackUpdateInfo(data);
+
+        if (eugrUpdate) {
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>vLLM update available</a>');
+        }
 
         if (loading) {
           pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference data-inf-log-focus="1">'
@@ -938,7 +1186,7 @@
         const shelf = p.inventory_path ? String(p.inventory_path).split('/').pop() : '';
         const metaParts = [];
         if (shelf) metaParts.push(shelf);
-        metaParts.push(p.engine || '?', p.tier || '?');
+        metaParts.push(engineDisplayMeta(p.engine), p.tier || '?');
         if (tok) metaParts.push(tok);
         metaParts.push(state);
         const metaShort = metaParts.join(' · ');
@@ -969,7 +1217,7 @@
         sel.innerHTML = switchable.map((p) => {
           const lc = p.lifecycle && p.lifecycle !== 'production' ? ' · ' + p.lifecycle : '';
           return '<option value="' + attrEsc(p.id) + '" data-tier="' + attrEsc(p.tier || '') + '">'
-            + escHtml(p.id + ' · ' + (p.engine || '') + ' · ' + (p.tier || '') + lc) + '</option>';
+            + escHtml(p.id + ' · ' + engineDisplayMeta(p.engine) + ' · ' + (p.tier || '') + lc) + '</option>';
         }).join('');
         if (prev && switchable.some((p) => p.id === prev)) sel.value = prev;
         else if (activeId && switchable.some((p) => p.id === activeId)) sel.value = activeId;
@@ -1035,16 +1283,17 @@
         const benching = data.bench && data.bench.running;
         const profiles = data.profiles || [];
         const switchBanner = $('inf-switch-banner');
+        renderInfUpdateBanner(data);
 
         if (loading && !benching) {
           const prof = loading.profile || '…';
-          const profMeta = profiles.find((p) => p.id === prof);
-          const display = loading.name || prof;
-          const tierHint = profMeta && profMeta.tier === 'heavy' ? ' (heavy — may take minutes)' : '';
-          if (loading.phase === 'switch') {
+          const expectHint = loading.expect && loading.expect.hint ? loading.expect.hint : '';
+          const phaseKey = loadingPhaseKey(loading);
+          if (phaseKey === 'switch') {
             $('inf-head-meta').textContent = 'switching… pid ' + (data.switch.pid || '—');
             $('inf-active-title').textContent = inferenceLoadingLabel(loading);
-            $('inf-active-meta').textContent = prof + tierHint + ' — log updates below';
+            $('inf-active-meta').textContent = (loading.detail || prof + ' — log updates below')
+              + (expectHint ? ' · ' + expectHint : '');
             const tail = (data.switch.log_tail || []).slice(-4).join('\n');
             if (tail) {
               switchBanner.hidden = false;
@@ -1053,17 +1302,16 @@
               switchBanner.hidden = true;
               switchBanner.textContent = '';
             }
-            setInfMsg('Profile switch running — API may be unavailable until ready.', 'warn');
+            setInfMsg(expectHint || 'Profile switch running — API may be unavailable until ready.', 'warn');
           } else {
             switchBanner.hidden = true;
             switchBanner.textContent = '';
-            $('inf-head-meta').textContent = (active && active.engine ? active.engine + ' · :' + active.port : 'engine starting')
+            $('inf-head-meta').textContent = (active && active.engine ? engineDisplayMeta(active.engine) + ' · :' + active.port : 'engine starting')
               + (active && active.tier ? ' · ' + active.tier : '');
             $('inf-active-title').textContent = inferenceLoadingLabel(loading);
-            $('inf-active-meta').textContent = prof + tierHint
-              + (loading.phase === 'model' ? ' · model loading into GPU' : ' · waiting for /v1/models')
-              + (active && active.started_at ? ' · since ' + active.started_at : '');
-            setInfMsg('Waiting for /v1/models — heavy profiles can take minutes.', 'warn');
+            $('inf-active-meta').textContent = (loading.detail || prof)
+              + (expectHint ? ' · ' + expectHint : '');
+            setInfMsg(expectHint || (loading.detail || 'Waiting for /v1/models.'), 'warn');
           }
         } else if (benching) {
           switchBanner.hidden = true;
@@ -1078,7 +1326,7 @@
           switchBanner.hidden = true;
           switchBanner.textContent = '';
           if (active && active.ready) {
-            $('inf-head-meta').textContent = active.engine + ' · :' + active.port
+            $('inf-head-meta').textContent = engineDisplayMeta(active.engine) + ' · :' + active.port
               + (active.tier ? ' · ' + active.tier : '');
             $('inf-active-title').textContent = active.name || active.id;
             const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
@@ -1088,7 +1336,7 @@
           } else {
             $('inf-head-meta').textContent = 'no active profile';
             $('inf-active-title').textContent = 'Inference offline';
-            $('inf-active-meta').textContent = 'eugr: ' + (data.engines.eugr ? 'up' : 'down')
+            $('inf-active-meta').textContent = 'vLLM: ' + (data.engines.eugr ? 'up' : 'down')
               + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down');
             setInfMsg('');
           }
@@ -1440,33 +1688,358 @@
         }
       }
 
+      function fmtDownloads(n) {
+        if (n == null || n < 0) return '—';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+        return String(n);
+      }
+
+      function expFilterQuery() {
+        return [...expFilterChips].join(',');
+      }
+
+      function setExpMsg(text, kind) {
+        const el = $('exp-msg');
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = 'exp-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function setExpDetailMsg(text, kind) {
+        const el = $('exp-detail-msg');
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = 'exp-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function renderExpStatusBanner(data) {
+        const el = $('exp-status-banner');
+        if (!el || !data) {
+          if (el) { el.textContent = 'HF API offline'; el.className = 'exp-status-banner down'; }
+          return;
+        }
+        const legacy = data.legacy || {};
+        const active = data.active || {};
+        const parts = [];
+        let cls = 'ok';
+        if (legacy.running) {
+          cls = 'warn';
+          parts.push('Legacy download in progress — queue paused (never interrupted)');
+        } else if (data.bench_running && !data.can_start) {
+          cls = 'warn';
+          parts.push('Benchmark running — new downloads deferred');
+        } else if (active.running && active.source === 'queue') {
+          cls = 'warn';
+          parts.push('Queue download running' + (active.pid ? ' (pid ' + active.pid + ')' : ''));
+        } else {
+          const dl = (data.queue && data.queue.download) || [];
+          const pending = dl.filter((i) => !['done', 'skipped', 'failed'].includes(i.state)).length;
+          parts.push(pending ? pending + ' item(s) queued · idle' : 'Download queue idle');
+        }
+        if (data.defer_reason && !legacy.running) parts.push(data.defer_reason);
+        el.textContent = parts.join(' · ');
+        el.className = 'exp-status-banner ' + cls;
+      }
+
+      function renderExpQueues(data) {
+        const explore = (data && data.queue && data.queue.explore) || [];
+        const download = (data && data.queue && data.queue.download) || [];
+        const exEl = $('exp-explore-queue');
+        const dlEl = $('exp-download-queue');
+        if (exEl) {
+          exEl.innerHTML = explore.length ? explore.slice().reverse().map((item) => {
+            return '<div class="exp-queue-item"><div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
+              + '<div class="exp-queue-meta">' + escHtml(item.intent || 'gguf_best') + '</div></div>';
+          }).join('') : '<div class="exp-empty">Empty</div>';
+        }
+        if (dlEl) {
+          dlEl.innerHTML = download.length ? download.slice().reverse().map((item) => {
+            const plan = item.plan || {};
+            const state = item.state || 'queued';
+            let actions = '';
+            if (state === 'awaiting_license') {
+              actions = '<div class="exp-queue-actions">'
+                + (item.accept_url ? '<a href="' + attrEsc(item.accept_url) + '" target="_blank" rel="noopener">Accept on HF ↗</a>' : '')
+                + '<button type="button" data-exp-recheck="' + attrEsc(item.id) + '">Recheck</button></div>';
+            }
+            return '<div class="exp-queue-item state-' + escHtml(state) + '">'
+              + '<div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
+              + '<div class="exp-queue-meta">' + escHtml(state) + ' · ' + escHtml(plan.intent || item.intent || '?')
+              + (plan.dest ? ' → ' + escHtml(plan.dest.replace('/models/', '')) : '') + '</div>'
+              + actions + '</div>';
+          }).join('') : '<div class="exp-empty">Empty</div>';
+        }
+      }
+
+      function renderExpResults(models) {
+        const el = $('exp-results');
+        if (!el) return;
+        if (!models || !models.length) {
+          el.innerHTML = '<div class="exp-empty">No models match filters</div>';
+          $('exp-results-count').textContent = '0';
+          return;
+        }
+        $('exp-results-count').textContent = String(models.length);
+        el.innerHTML = models.map((m) => {
+          const repo = m.repo || '';
+          const badges = [];
+          if (m.has_gguf) badges.push('<span class="exp-badge gguf">GGUF</span>');
+          if (m.has_nvfp4) badges.push('<span class="exp-badge nvfp4">NVFP4</span>');
+          if (m.has_moe) badges.push('<span class="exp-badge moe">MoE</span>');
+          const tags = (m.tags || []).slice(0, 5).map((t) => '<span class="exp-tag">' + escHtml(t) + '</span>').join('');
+          const sel = repo === expSelectedRepo ? ' selected' : '';
+          return '<article class="exp-model' + sel + '" data-repo="' + attrEsc(repo) + '" tabindex="0" role="button">'
+            + '<div class="exp-model-head"><span class="exp-model-repo">' + escHtml(repo) + '</span>'
+            + '<span class="exp-model-dl">↓ ' + escHtml(fmtDownloads(m.downloads)) + '</span></div>'
+            + '<div class="exp-model-badges">' + badges.join('') + '</div>'
+            + '<div class="exp-model-tags">' + tags + '</div></article>';
+        }).join('');
+      }
+
+      function guessExpIntent(model) {
+        if (!model) return 'gguf_best';
+        if (model.has_nvfp4) return 'nvfp4';
+        if (model.has_gguf) return 'gguf_q4';
+        if (model.has_safetensors) return 'hf_weights';
+        return 'gguf_best';
+      }
+
+      function syncExpIntentOptions(model) {
+        const sel = $('exp-intent');
+        if (!sel) return;
+        Array.from(sel.options).forEach((o) => { o.hidden = false; o.disabled = false; });
+        if (model && model.has_gguf === false) {
+          ['gguf_q4', 'gguf_q5', 'gguf_best'].forEach((v) => {
+            const o = sel.querySelector('option[value="' + v + '"]');
+            if (o) o.disabled = true;
+          });
+        }
+        if (model && model.has_nvfp4 === false) {
+          const o = sel.querySelector('option[value="nvfp4"]');
+          if (o) o.disabled = true;
+        }
+        sel.value = guessExpIntent(model);
+      }
+
+      async function expShowDetail(repo) {
+        expSelectedRepo = repo;
+        document.querySelectorAll('.exp-model').forEach((n) => {
+          n.classList.toggle('selected', n.dataset.repo === repo);
+        });
+        const panel = $('exp-detail');
+        if (!panel || !repo) { if (panel) panel.hidden = true; return; }
+        panel.hidden = false;
+        $('exp-detail-title').textContent = repo;
+        $('exp-detail-meta').textContent = 'Loading…';
+        $('exp-detail-plan').textContent = '—';
+        $('exp-hf-link').href = 'https://huggingface.co/' + repo;
+        setExpDetailMsg('');
+        try {
+          const intent = $('exp-intent').value || 'gguf_best';
+          const repoPath = repo.split('/').map(encodeURIComponent).join('/');
+          const res = await fetch('/api/hf/model/' + repoPath + '?intent=' + encodeURIComponent(intent), { cache: 'no-store' });
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'model fetch failed');
+          const m = d.model || {};
+          syncExpIntentOptions(m);
+          const lines = [];
+          if (m.pipeline_tag) lines.push('pipeline: ' + m.pipeline_tag);
+          if (m.downloads != null) lines.push('downloads: ' + fmtDownloads(m.downloads));
+          if (m.gated) lines.push('gated — accept license on HF before download');
+          if (!m.accessible) lines.push('access: restricted');
+          $('exp-detail-meta').textContent = lines.join(' · ') || '—';
+          const plan = d.default_plan;
+          if (plan) {
+            $('exp-detail-plan').textContent = plan.file_count + ' file(s) · ' + (plan.size_human || '?') + '\n'
+              + plan.dest + '\n' + (plan.files || []).join('\n');
+          } else {
+            $('exp-detail-plan').textContent = 'No plan for current intent — try another format';
+          }
+        } catch (e) {
+          $('exp-detail-meta').textContent = 'Failed to load model';
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expBrowse() {
+        if (expBrowseBusy || !onExplore) return;
+        expBrowseBusy = true;
+        const q = ($('exp-q') && $('exp-q').value || '').trim();
+        const filter = expFilterQuery();
+        const label = q ? ('Search: ' + q) : (expMode === 'new' ? 'Recently updated' : 'Trending on HF');
+        $('exp-results-label').textContent = label;
+        $('exp-results').innerHTML = '<div class="exp-empty">Loading…</div>';
+        try {
+          let url;
+          if (q) {
+            url = '/api/hf/search?q=' + encodeURIComponent(q) + '&limit=30&filter=' + encodeURIComponent(filter);
+          } else {
+            url = '/api/hf/' + expMode + '?limit=30&filter=' + encodeURIComponent(filter);
+          }
+          const res = await fetch(url, { cache: 'no-store' });
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'browse failed');
+          expResults = d.models || [];
+          renderExpResults(expResults);
+        } catch (e) {
+          $('exp-results').innerHTML = '<div class="exp-empty">' + escHtml(String(e.message || e)) + '</div>';
+          $('exp-results-count').textContent = '—';
+        } finally {
+          expBrowseBusy = false;
+        }
+      }
+
+      async function fetchExpStatus() {
+        try {
+          const res = await fetch('/api/hf/status', { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          expStatus = await res.json();
+          return expStatus;
+        } catch (e) {
+          expStatus = null;
+          return null;
+        }
+      }
+
+      async function expTick() {
+        if (!onExplore) return;
+        const d = await fetchExpStatus();
+        if (d) {
+          renderExpStatusBanner(d);
+          renderExpQueues(d);
+          $('live').classList.remove('live-stale');
+          $('live').lastChild.textContent = 'live';
+        } else {
+          renderExpStatusBanner(null);
+          $('live').classList.add('live-stale');
+          $('live').lastChild.textContent = 'offline';
+          setExpMsg('HF API unavailable — run install/21-hf-api.sh', 'err');
+        }
+      }
+
+      async function expQueueDownload() {
+        if (!expSelectedRepo) return;
+        const intent = $('exp-intent').value || 'gguf_best';
+        setExpDetailMsg('Queueing…', 'warn');
+        try {
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo: expSelectedRepo, intent: intent }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'queue failed');
+          setExpDetailMsg('Queued — ' + (d.item && d.item.state || 'queued'), 'ok');
+          setExpMsg('Download queued for ' + expSelectedRepo);
+          expTick();
+        } catch (e) {
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expSaveExplore() {
+        if (!expSelectedRepo) return;
+        const intent = $('exp-intent').value || 'gguf_best';
+        try {
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'explore', repo: expSelectedRepo, intent: intent }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'save failed');
+          setExpDetailMsg('Saved to explore queue', 'ok');
+          expTick();
+        } catch (e) {
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expRecheck(itemId) {
+        try {
+          const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/recheck', { method: 'POST' });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'recheck failed');
+          setExpMsg('Rechecked ' + itemId);
+          expTick();
+        } catch (e) {
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function toggleExpChip(chip) {
+        if (expFilterChips.has(chip)) expFilterChips.delete(chip);
+        else expFilterChips.add(chip);
+        document.querySelectorAll('[data-exp-chip]').forEach((el) => {
+          el.classList.toggle('active', expFilterChips.has(el.dataset.expChip));
+        });
+        expBrowse();
+      }
+
+      function setExpMode(mode) {
+        expMode = mode;
+        document.querySelectorAll('[data-exp-mode]').forEach((el) => {
+          el.classList.toggle('active', el.dataset.expMode === mode);
+        });
+        expBrowse();
+      }
+
       function setActiveNav(btn) {
         nav.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
         if (btn) btn.classList.add('active');
+      }
+
+      function hideAllViews() {
+        systemCard.hidden = true;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
       }
 
       function showSystem(btn) {
         closeInfLogOverlay();
         onSystem = true;
         onInference = false;
-        document.body.classList.remove('inf-view');
+        onExplore = false;
+        document.body.classList.remove('inf-view', 'exp-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         systemCard.hidden = false;
         inferenceCard.hidden = true;
+        exploreCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
         gpuPoll();
       }
 
+      function showExplore(btn) {
+        closeInfLogOverlay();
+        onSystem = false;
+        onInference = false;
+        onExplore = true;
+        document.body.classList.remove('inf-view');
+        document.body.classList.add('exp-view');
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        hideAllViews();
+        exploreCard.hidden = false;
+        expTick();
+        expBrowse();
+      }
+
       function showInference(btn) {
         onSystem = false;
         onInference = true;
+        onExplore = false;
+        document.body.classList.remove('exp-view');
         document.body.classList.add('inf-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         systemCard.hidden = true;
         inferenceCard.hidden = false;
+        exploreCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
         const qParam = new URLSearchParams(location.search).get('q');
@@ -1496,8 +2069,13 @@
         }
         onSystem = false;
         onInference = false;
+        onExplore = false;
+        document.body.classList.remove('inf-view', 'exp-view');
         setActiveNav(btn);
         dashboard.style.display = 'none';
+        systemCard.hidden = true;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
         framePanel.classList.add('open');
         $('frame-title').textContent = title;
         $('frame-popout').href = popoutHref;
@@ -1519,6 +2097,11 @@
         if (btn.dataset.view === 'inference') {
           showInference(btn);
           history.replaceState(null, '', '#inference');
+          return;
+        }
+        if (btn.dataset.view === 'explore') {
+          showExplore(btn);
+          history.replaceState(null, '', '#explore');
           return;
         }
         if (btn.dataset.src) {
@@ -1613,6 +2196,50 @@
       $('inf-expand-all').addEventListener('click', expandAllInfGroups);
       $('inf-collapse-all').addEventListener('click', collapseAllInfGroups);
 
+      $('exp-q').addEventListener('input', () => {
+        clearTimeout(expSearchTimer);
+        expSearchTimer = setTimeout(expBrowse, 350);
+      });
+      $('exp-q').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { clearTimeout(expSearchTimer); expBrowse(); }
+      });
+      $('exp-filter-chips').addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-exp-chip]');
+        if (!chip) return;
+        toggleExpChip(chip.dataset.expChip);
+      });
+      document.querySelectorAll('[data-exp-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => setExpMode(btn.dataset.expMode));
+      });
+      $('exp-results').addEventListener('click', (e) => {
+        const card = e.target.closest('.exp-model[data-repo]');
+        if (!card) return;
+        expShowDetail(card.dataset.repo);
+      });
+      $('exp-results').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.exp-model[data-repo]');
+        if (!card) return;
+        e.preventDefault();
+        expShowDetail(card.dataset.repo);
+      });
+      $('exp-intent').addEventListener('change', () => {
+        if (expSelectedRepo) expShowDetail(expSelectedRepo);
+      });
+      $('exp-download').addEventListener('click', expQueueDownload);
+      $('exp-save-explore').addEventListener('click', expSaveExplore);
+      $('exp-download-queue').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-exp-recheck]');
+        if (!btn) return;
+        expRecheck(btn.dataset.expRecheck);
+      });
+      $('exp-explore-queue').addEventListener('click', (e) => {
+        const item = e.target.closest('.exp-queue-item');
+        if (!item) return;
+        const repoEl = item.querySelector('.exp-queue-repo');
+        if (repoEl) expShowDetail(repoEl.textContent.trim());
+      });
+
       $('inference-status').addEventListener('click', (e) => {
         const link = e.target.closest('[data-goto-inference]');
         if (!link) return;
@@ -1648,7 +2275,9 @@
       }
 
       const hash = location.hash.replace('#', '');
-      if (hash === 'inference' || pendingStartProfile) {
+      if (hash === 'explore') {
+        showExplore(nav.querySelector('[data-view="explore"]'));
+      } else if (hash === 'inference' || pendingStartProfile) {
         showInference(nav.querySelector('[data-view="inference"]'));
         if (pendingStartProfile) history.replaceState(null, '', '#inference');
       } else if (hash && hash !== 'system') {
@@ -1679,7 +2308,7 @@
       });
 
       pollTimer = setInterval(gpuPoll, 1000);
-      infPollTimer = setInterval(infTick, 2000);
+      infPollTimer = setInterval(() => { infTick(); expTick(); }, 2000);
       gpuPoll();
     })();
   </script>

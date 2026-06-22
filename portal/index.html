@@ -2702,6 +2702,18 @@
         if (link.dataset.infLogFocus === '1') openInfLogOverlay();
       });
 
+      window.addEventListener('message', (e) => {
+        if (e.origin !== location.origin) return;
+        const d = e.data;
+        if (!d || d.type !== 'sparky-portal-nav') return;
+        if (d.view === 'inference') {
+          const btn = nav.querySelector('[data-view="inference"]');
+          if (btn) showInference(btn);
+          history.replaceState(null, '', '#inference');
+          if (d.infLogFocus) openInfLogOverlay();
+        }
+      });
+
       document.querySelectorAll('[data-inf-log-close]').forEach((el) => {
         el.addEventListener('click', closeInfLogOverlay);
       });

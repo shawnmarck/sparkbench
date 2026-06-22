@@ -254,7 +254,6 @@
     .badge.pending-delete { border-color: #5a2a2a; color: #e87878; background: #1a1010; }
     .badge.engine-vllm, .badge.engine-eugr { border-color: #2a3a5a; color: #9ec8ff; }
     .badge.engine-llamacpp { border-color: #3a4a2a; color: #b8d88a; }
-    .badge.engine-ds4 { border-color: #4a3a5a; color: #d8a8ff; }
     .badge.inf-profile { border-color: #2a3a4a; color: #9ec8ff; }
     .badge.inf-active { border-color: #3a4a2a; color: var(--accent); }
     .badge.inf-loading { border-color: #4a402a; color: var(--warn); }
@@ -480,13 +479,12 @@
     let benchNoteDrafts = {};
     const REFRESH_MS = 30000, JOB_POLL_MS = 2000, INF_POLL_MS = 10000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
-    const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'GGUF', ds4: 'DwarfStar' };
+    const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'GGUF' };
     const engineCssClass = (e) => (e === 'eugr' ? 'vllm' : e);
     const engineTitle = (e) => {
       if (e === 'eugr') return 'vLLM via eugr spark-vllm-docker (port 8000)';
       if (e === 'vllm') return 'vLLM';
       if (e === 'llamacpp') return 'llama.cpp GGUF (port 8081)';
-      if (e === 'ds4') return 'DwarfStar ds4-server (port 8000)';
       return e || '';
     };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
@@ -498,6 +496,25 @@
     const HF_NOISE = new Set(['transformers', 'safetensors', 'endpoints_compatible', 'text-generation-inference', 'eval-results', 'gguf', 'ggml']);
 
     const $ = (id) => document.getElementById(id);
+
+    function gotoInference(opts) {
+      opts = opts || {};
+      const msg = { type: 'sparky-portal-nav', view: 'inference', infLogFocus: !!opts.infLogFocus };
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(msg, location.origin);
+          return;
+        }
+      } catch (_) {}
+      location.href = '/#inference';
+    }
+
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('[data-portal-nav="inference"]');
+      if (!link) return;
+      e.preventDefault();
+      gotoInference({ infLogFocus: link.dataset.infLogFocus === '1' });
+    });
     const tagKey = (t) => (t || '').toLowerCase();
     const formatTagLabel = (tag) => {
       if (!tag) return '';
@@ -992,13 +1009,13 @@
           const ready = infStatus && infStatus.active && infStatus.active.ready;
           const loadInfo = inferenceLoadingInfo();
           actions = ready
-            ? '<span class="badge status-ready">active</span><a href="/#inference" target="_top">Inference ↗</a>'
+            ? '<span class="badge status-ready">active</span><a href="#" data-portal-nav="inference">Inference ↗</a>'
             : '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span>'
-              + '<a href="/#inference" target="_top">View progress ↗</a>';
+              + '<a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
         } else if (switching && infStatus.switch && infStatus.switch.profile === p.id) {
           const loadInfo = inferenceLoadingInfo();
           actions = '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span>'
-            + '<a href="/#inference" target="_top">View progress ↗</a>';
+            + '<a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
         } else if (switching) {
           actions = '<button type="button" class="btn" disabled>Switch in progress</button>';
         } else if (lc === 'testing' || p.enabled) {
@@ -1023,14 +1040,14 @@
       }).join('');
       const create = onDisk && !isSidecarModel(m) ? `<div class="recipe-lab-create">`
         + `<span class="verify-label">New recipe</span>`
-        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, ds4, MTP, DFlash)">Auto-scaffold</button>`
+        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, MTP, DFlash)">Auto-scaffold</button>`
         + `</div>` : (isSidecarModel(m) ? '<div class="verify-note">Sidecar — recipes are managed from the base model; this row shows the linked DFlash bench.</div>' : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>');
       return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4>`
         + `<div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote. Spark status syncs on mark testing.</div>`
         + renderBenchCompareStrip(profiles)
         + (rows || '<div class="meta-warn">No recipes yet.</div>')
         + create
-        + '<div class="actions" style="margin-top:.55rem"><a href="/#inference" target="_top">Open Inference tab ↗</a></div></div>';
+        + '<div class="actions" style="margin-top:.55rem"><a href="#" data-portal-nav="inference">Open Inference tab ↗</a></div></div>';
     }
 
     function renderDetail(m) {
@@ -1558,7 +1575,7 @@
         if (!res.ok) throw new Error(data.error || res.statusText);
         await refreshInferenceStatus();
         applyFilters();
-        window.top.location.href = '/#inference';
+        gotoInference();
       } catch (err) {
         alert(err.message);
       } finally {

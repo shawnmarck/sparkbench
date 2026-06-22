@@ -315,14 +315,28 @@
     body.exp-view #explore-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
     body.exp-view #explore-card .card-head { flex-shrink: 0; }
     body.exp-view .exp-card-body { flex: 1; min-height: 0; }
-    .exp-status-banner {
-      flex-shrink: 0; padding: .55rem .7rem; border-radius: 8px; border: 1px solid var(--border);
-      background: #12151c; font-size: .74rem; font-family: ui-monospace, monospace; color: #c5cdd8;
-      line-height: 1.45; margin-bottom: .65rem;
+    .exp-status-panel {
+      flex-shrink: 0; margin-bottom: .65rem; border-radius: 8px; border: 1px solid var(--border);
+      background: #12151c; overflow: hidden;
     }
-    .exp-status-banner.warn { border-color: #4a402a; background: #241c10; color: var(--warn); }
-    .exp-status-banner.ok { border-color: #2a4a2a; background: #141a10; color: var(--ok); }
-    .exp-status-banner.down { border-color: #4a2a2a; color: var(--down); }
+    .exp-status-panel.warn { border-color: #4a402a; background: #241c10; }
+    .exp-status-panel.ok { border-color: #2a4a2a; background: #141a10; }
+    .exp-status-panel.down { border-color: #4a2a2a; background: #1a1010; }
+    .exp-status-banner {
+      padding: .55rem .7rem; font-size: .74rem; font-family: ui-monospace, monospace;
+      color: #c5cdd8; line-height: 1.45;
+    }
+    .exp-status-panel.warn .exp-status-banner { color: var(--warn); }
+    .exp-status-panel.ok .exp-status-banner { color: var(--ok); }
+    .exp-status-panel.down .exp-status-banner { color: var(--down); }
+    .exp-status-title { font-weight: 600; color: var(--text); margin-bottom: .2rem; }
+    .exp-status-detail { color: inherit; opacity: .92; }
+    .exp-download-log {
+      margin: 0; padding: .45rem .7rem .55rem; border-top: 1px solid #2a3140;
+      font-size: .66rem; line-height: 1.4; color: #9aa3b0; background: #0c0e14;
+      max-height: 5.5rem; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    }
+    .exp-status-panel.warn .exp-download-log { border-top-color: #4a402a; }
     .exp-toolbar {
       flex-shrink: 0; display: flex; flex-direction: column; gap: .45rem;
       padding: .5rem .55rem; border: 1px solid var(--border); border-radius: 10px; background: #0c0e14;
@@ -464,6 +478,7 @@
     .exp-queue-item.pickable:hover { border-color: #3a4250; }
     .exp-queue-item.selected { border-color: #3a5a2a; background: #141a10; box-shadow: inset 3px 0 0 var(--accent); }
     .exp-queue-item.state-done { border-color: #2a4a2a; }
+    .exp-queue-item.state-downloading, .exp-queue-item.state-checking_access { border-color: #4a402a; background: #1a1810; box-shadow: inset 3px 0 0 var(--warn); }
     .exp-queue-item.state-awaiting_license { border-color: #4a402a; }
     .exp-queue-item.state-failed { border-color: #4a2a2a; color: var(--down); }
     .exp-queue-repo { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -613,7 +628,10 @@
             <div class="card-head-meta" id="exp-head-meta">Hugging Face · file-only downloads</div>
           </div>
           <div class="exp-card-body">
-            <div class="exp-status-banner" id="exp-status-banner">Loading HF status…</div>
+            <div class="exp-status-panel ok" id="exp-status-panel">
+              <div class="exp-status-banner" id="exp-status-banner">Loading HF status…</div>
+              <pre class="exp-download-log" id="exp-download-log" hidden></pre>
+            </div>
             <div class="exp-toolbar">
               <input type="search" id="exp-q" placeholder="Search Hugging Face models…" autocomplete="off" aria-label="Search models">
               <div class="exp-mode-row">
@@ -1848,33 +1866,125 @@
         el.className = 'exp-msg' + (kind ? ' ' + kind : '');
       }
 
+      function expFormatState(state) {
+        if (!state) return 'unknown';
+        return String(state).replace(/_/g, ' ');
+      }
+
+      function expActiveDownloadInfo(data) {
+        const active = (data && data.active) || {};
+        if (!active.running) return null;
+        const item = active.item || {};
+        const prog = active.progress || {};
+        const repo = item.repo || prog.repo || null;
+        const dest = String(item.dest || prog.dest || '').replace('/models/', '');
+        return {
+          source: active.source || 'unknown',
+          pid: active.pid,
+          repo: repo,
+          state: item.state || (prog.finished ? 'finishing' : 'downloading'),
+          dest: dest,
+          size: item.size_human || '',
+          files: item.file_count || prog.file_count || null,
+          startedAt: item.started_at || prog.log_started_at || null,
+          activity: prog.last_activity || null,
+          queued: active.queued_count || 0,
+          awaiting: active.awaiting_count || 0,
+          logTail: (active.log_tail || []).filter((l) => String(l).trim()),
+        };
+      }
+
       function renderExpStatusBanner(data) {
+        const panel = $('exp-status-panel');
         const el = $('exp-status-banner');
-        if (!el || !data) {
-          if (el) { el.textContent = 'HF API offline'; el.className = 'exp-status-banner down'; }
+        const logEl = $('exp-download-log');
+        if (!el) return;
+        if (!data) {
+          el.textContent = 'HF API offline';
+          if (panel) panel.className = 'exp-status-panel down';
+          if (logEl) logEl.hidden = true;
           return;
         }
         const legacy = data.legacy || {};
         const active = data.active || {};
-        const parts = [];
         let cls = 'ok';
+        let title = '';
+        let detail = '';
+        let logLines = [];
+
+        const dlInfo = expActiveDownloadInfo(data);
         if (legacy.running) {
           cls = 'warn';
-          parts.push('Legacy download in progress — queue paused (never interrupted)');
+          title = 'Legacy download in progress';
+          if (dlInfo && dlInfo.repo) {
+            detail = dlInfo.repo + (dlInfo.dest ? ' → ' + dlInfo.dest : '')
+              + ' · queue paused (never interrupted)';
+          } else {
+            detail = 'Queue paused — ad-hoc download script running';
+          }
+          logLines = dlInfo ? dlInfo.logTail : [];
+        } else if (active.running && dlInfo && dlInfo.repo) {
+          cls = 'warn';
+          title = 'Downloading · ' + dlInfo.repo;
+          const bits = [expFormatState(dlInfo.state)];
+          if (dlInfo.size) bits.push(dlInfo.size);
+          if (dlInfo.files) bits.push(dlInfo.files + ' file' + (dlInfo.files === 1 ? '' : 's'));
+          if (dlInfo.dest) bits.push('→ ' + dlInfo.dest);
+          if (dlInfo.pid) bits.push('pid ' + dlInfo.pid);
+          detail = bits.join(' · ');
+          if (dlInfo.activity) detail += '\n' + dlInfo.activity;
+          if (dlInfo.queued) detail += '\n' + dlInfo.queued + ' more queued after this';
+          logLines = dlInfo.logTail;
+        } else if (active.running) {
+          cls = 'warn';
+          title = 'Download worker active';
+          detail = (active.source || 'queue') + (active.pid ? ' · pid ' + active.pid : '')
+            + ' — waiting for queue item details';
+          logLines = (active.log_tail || []).filter((l) => String(l).trim());
         } else if (data.bench_running && !data.can_start) {
           cls = 'warn';
-          parts.push('Benchmark running — new downloads deferred');
-        } else if (active.running && active.source === 'queue') {
-          cls = 'warn';
-          parts.push('Queue download running' + (active.pid ? ' (pid ' + active.pid + ')' : ''));
+          title = 'Downloads deferred';
+          detail = 'Benchmark running — new queue items wait until bench finishes';
+          const dl = (data.queue && data.queue.download) || [];
+          const pending = dl.filter((i) => i.state === 'queued').length;
+          if (pending) detail += '\n' + pending + ' item(s) queued';
         } else {
           const dl = (data.queue && data.queue.download) || [];
-          const pending = dl.filter((i) => !['done', 'skipped', 'failed'].includes(i.state)).length;
-          parts.push(pending ? pending + ' item(s) queued · idle' : 'Download queue idle');
+          const queued = dl.filter((i) => i.state === 'queued');
+          const awaiting = dl.filter((i) => i.state === 'awaiting_license');
+          if (queued.length || awaiting.length) {
+            cls = 'ok';
+            title = 'Download queue';
+            const bits = [];
+            if (queued.length) bits.push(queued.length + ' queued');
+            if (awaiting.length) bits.push(awaiting.length + ' awaiting HF license');
+            detail = bits.join(' · ') + ' · idle';
+            if (queued.length === 1) {
+              const p = queued[0].plan || {};
+              detail += '\nNext: ' + queued[0].repo
+                + (p.size_human ? ' · ' + p.size_human : '')
+                + (p.dest ? ' → ' + String(p.dest).replace('/models/', '') : '');
+            }
+          } else {
+            title = 'Download queue idle';
+            detail = 'Pick a variant and click Download, or use Download on the explore queue';
+          }
         }
-        if (data.defer_reason && !legacy.running) parts.push(data.defer_reason);
-        el.textContent = parts.join(' · ');
-        el.className = 'exp-status-banner ' + cls;
+        if (data.defer_reason && !legacy.running && !active.running) {
+          detail = (detail ? detail + '\n' : '') + data.defer_reason;
+        }
+        el.innerHTML = '<div class="exp-status-title">' + escHtml(title) + '</div>'
+          + '<div class="exp-status-detail">' + escHtml(detail).replace(/\n/g, '<br>') + '</div>';
+        if (panel) panel.className = 'exp-status-panel ' + cls;
+        if (logEl) {
+          if (logLines.length) {
+            logEl.hidden = false;
+            logEl.textContent = logLines.slice(-8).join('\n');
+          } else {
+            logEl.hidden = true;
+            logEl.textContent = '';
+          }
+        }
       }
 
       function renderExpQueues(data) {
@@ -1898,9 +2008,15 @@
           }).join('') : '<div class="exp-empty">Empty</div>';
         }
         if (dlEl) {
+          const activeItem = expActiveDownloadInfo(data);
           dlEl.innerHTML = download.length ? download.slice().reverse().map((item) => {
             const plan = item.plan || {};
             const state = item.state || 'queued';
+            const isLive = state === 'downloading' || state === 'checking_access';
+            const size = plan.size_human ? ' · ' + plan.size_human : '';
+            const files = Array.isArray(plan.files) && plan.files.length
+              ? ' · ' + plan.files.length + ' file' + (plan.files.length === 1 ? '' : 's')
+              : '';
             let actions = '';
             if (state === 'awaiting_license') {
               actions = '<div class="exp-queue-actions">'
@@ -1913,10 +2029,15 @@
             } else if (state === 'queued') {
               actions = '<div class="exp-queue-actions">'
                 + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Cancel</button></div>';
+            } else if (isLive) {
+              actions = '<div class="exp-queue-meta" style="margin-top:.25rem">Active now'
+                + (activeItem && activeItem.activity ? ' · ' + escHtml(activeItem.activity) : '')
+                + '</div>';
             }
             return '<div class="exp-queue-item state-' + escHtml(state) + '">'
               + '<div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
-              + '<div class="exp-queue-meta">' + escHtml(state) + ' · ' + escHtml(plan.intent || item.intent || '?')
+              + '<div class="exp-queue-meta">' + escHtml(expFormatState(state))
+              + size + files
               + (plan.dest ? ' → ' + escHtml(plan.dest.replace('/models/', '')) : '') + '</div>'
               + actions + '</div>';
           }).join('') : '<div class="exp-empty">Empty</div>';

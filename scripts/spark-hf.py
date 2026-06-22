@@ -218,13 +218,108 @@ def active_bench_running() -> bool:
     return read_pid_file(BENCH_PID_FILE) is not None
 
 
+ACTIVE_DOWNLOAD_STATES = frozenset({STATE_DOWNLOADING, STATE_CHECKING})
+
+
+def active_download_item() -> dict[str, Any] | None:
+    for item in load_download_queue().get("items", []):
+        if item.get("state") in ACTIVE_DOWNLOAD_STATES:
+            return item
+    return None
+
+
+def download_item_public(item: dict[str, Any]) -> dict[str, Any]:
+    plan = item.get("plan") if isinstance(item.get("plan"), dict) else {}
+    files = plan.get("files") if isinstance(plan.get("files"), list) else []
+    return {
+        "id": item.get("id"),
+        "repo": item.get("repo"),
+        "state": item.get("state"),
+        "started_at": item.get("started_at"),
+        "intent": plan.get("intent") or item.get("intent"),
+        "dest": plan.get("dest"),
+        "size_human": plan.get("size_human"),
+        "file_count": len(files) or plan.get("file_count"),
+        "inventory_path": plan.get("inventory_path"),
+    }
+
+
+def parse_download_log_progress(log_tail: list[str]) -> dict[str, Any]:
+    """Best-effort hints from hf download log tail."""
+    out: dict[str, Any] = {}
+    for line in reversed(log_tail):
+        text = line.strip()
+        if not text:
+            continue
+        m = re.search(
+            r"==> HF queue download (\S+) -> (\S+) \((\d+) files\)",
+            text,
+        )
+        if m and "repo" not in out:
+            out["repo"] = m.group(1)
+            out["dest"] = m.group(2)
+            out["file_count"] = int(m.group(3))
+        if text.startswith("==> started "):
+            out["log_started_at"] = text.replace("==> started ", "")
+        if text.startswith("==> finished "):
+            out["finished"] = True
+            break
+        if "Downloading" in text or "Downloaded" in text or "%" in text:
+            out["last_activity"] = text[:160]
+    return out
+
+
+def _parse_legacy_repo(line: str) -> str | None:
+    m = re.search(r"(?:/venv/bin/hf|/bin/hf|\bhf)\s+download\s+([A-Za-z0-9._-]+/[A-Za-z0-9._-]+)", line)
+    return m.group(1) if m else None
+
+
+def enrich_active_download(active: dict[str, Any]) -> dict[str, Any]:
+    if not active.get("running"):
+        return active
+    log_tail = list(active.get("log_tail") or tail_log(DOWNLOAD_LOG_FILE))
+    active["log_tail"] = log_tail
+    progress = parse_download_log_progress(log_tail)
+    if progress:
+        active["progress"] = progress
+
+    item = active_download_item()
+    if item:
+        active["item"] = download_item_public(item)
+    elif progress.get("repo"):
+        active["item"] = {
+            "repo": progress["repo"],
+            "state": STATE_DOWNLOADING,
+            "dest": progress.get("dest"),
+            "file_count": progress.get("file_count"),
+        }
+
+    if active.get("source") == "legacy":
+        matches = active.get("matches") or []
+        if matches and not active.get("item"):
+            repo = _parse_legacy_repo(str(matches[0].get("line", "")))
+            if repo:
+                active["item"] = {"repo": repo, "state": STATE_DOWNLOADING}
+
+    dq = load_download_queue()
+    items = dq.get("items", [])
+    if isinstance(items, list):
+        active["queued_count"] = sum(
+            1 for i in items if i.get("state") == STATE_QUEUED
+        )
+        active["awaiting_count"] = sum(
+            1 for i in items if i.get("state") == STATE_AWAITING
+        )
+    return active
+
+
 def active_hf_download() -> dict[str, Any]:
     legacy = active_legacy_download()
     if legacy.get("running"):
-        return legacy
+        return enrich_active_download(legacy)
     worker = active_queue_worker()
     if worker.get("running"):
-        return worker
+        return enrich_active_download(worker)
     return {"running": False}
 
 

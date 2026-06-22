@@ -13,7 +13,7 @@ services:
     environment:
       - ENABLE_OLLAMA_API=false
       # Semicolon-separated OpenAI-compatible backends (host → container via host-gateway)
-      - OPENAI_API_BASE_URLS=http://host.docker.internal:8000/v1;http://host.docker.internal:8081/v1
+      - OPENAI_API_BASE_URLS=http://host.docker.internal:8002/v1;http://host.docker.internal:8000/v1;http://host.docker.internal:8081/v1
       - OPENAI_API_KEYS=local;local
       - AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST=3
     volumes:

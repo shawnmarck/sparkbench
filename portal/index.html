@@ -1455,8 +1455,10 @@
               + (active.tier ? ' · ' + active.tier : '');
             $('inf-active-title').textContent = active.name || active.id;
             const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
+            const owuiHint = active.engine === 'ds4'
+              ? ' · Open WebUI: backend :8002/v1 (thinking off)' : '';
             $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
-              + tok + ' · ready' + (active.started_at ? ' · since ' + active.started_at : '');
+              + tok + ' · ready' + owuiHint + (active.started_at ? ' · since ' + active.started_at : '');
             setInfMsg('');
           } else {
             $('inf-head-meta').textContent = 'no active profile';

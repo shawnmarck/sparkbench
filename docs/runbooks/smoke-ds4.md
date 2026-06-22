@@ -35,3 +35,17 @@ spark recipe works antirez-deepseek-v4-flash-ds4
 ```
 
 Logs: `/opt/spark/logs/ds4-server.log`
+
+## Open WebUI
+
+ds4 defaults to **thinking mode** — visible replies look like internal reasoning in Chinese unless disabled.
+
+- **Recommended:** connect Open WebUI to **`http://host.docker.internal:8002/v1`** (DwarfStar chat proxy — thinking off).
+- **Or** pick model id **`deepseek-chat`** on the raw `:8000` backend.
+- **Avoid** `deepseek-v4-flash` on `:8000` for casual chat unless you want thinking output.
+
+Quick test via proxy:
+
+```bash
+curl -s http://127.0.0.1:8002/v1/chat/completions   -H 'Content-Type: application/json'   -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":32}'
+```

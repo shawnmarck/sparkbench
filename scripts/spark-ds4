@@ -8,8 +8,12 @@ PIN="${SPARK_DS4_PIN:-/opt/spark/data/ds4-dwarfstar.yaml}"
 RUN_DIR="${ROOT}/run"
 LOG_DIR="${ROOT}/logs"
 PID_FILE="${RUN_DIR}/ds4-server.pid"
+PROXY_PID_FILE="${RUN_DIR}/ds4-owui-proxy.pid"
+PROXY_BIN="${ROOT}/scripts/spark-ds4-owui-proxy.py"
+PROXY_PORT="${SPARK_DS4_OWUI_PROXY_PORT:-8002}"
 LOCK_FILE="${RUN_DIR}/ds4.lock"
 LOG_FILE="${LOG_DIR}/ds4-server.log"
+PROXY_LOG_FILE="${LOG_DIR}/ds4-owui-proxy.log"
 PORT="${SPARK_DS4_PORT:-8000}"
 HOST="${SPARK_DS4_HOST:-0.0.0.0}"
 MODEL=""
@@ -122,6 +126,26 @@ ds4_pid_running() {
   pgrep -f "/opt/spark/bin/ds4-server" >/dev/null 2>&1
 }
 
+start_owui_proxy() {
+  [[ -f "${PROXY_BIN}" ]] || return 0
+  if [[ -f "${PROXY_PID_FILE}" ]] && kill -0 "$(cat "${PROXY_PID_FILE}")" 2>/dev/null; then
+    return 0
+  fi
+  nohup /opt/spark/venv/bin/python "${PROXY_BIN}" --serve --port "${PROXY_PORT}" >>"${PROXY_LOG_FILE}" 2>&1 &
+  echo $! >"${PROXY_PID_FILE}"
+}
+
+stop_owui_proxy() {
+  if [[ -f "${PROXY_PID_FILE}" ]]; then
+    pid="$(cat "${PROXY_PID_FILE}")"
+    kill "${pid}" 2>/dev/null || true
+    wait_for_exit "$pid"
+    rm -f "${PROXY_PID_FILE}"
+  fi
+  pkill -f "spark-ds4-owui-proxy.py --serve" 2>/dev/null || true
+}
+
+
 
 usage() {
   cat <<USAGE
@@ -155,11 +179,14 @@ case "${cmd}" in
     fi
     nohup env DS4_LOCK_FILE="${LOCK_FILE}" "${BIN}" "${args[@]}" >>"${LOG_FILE}" 2>&1 &
     echo $! >"${PID_FILE}"
+    start_owui_proxy
     echo "Started ds4-server pid $(cat "${PID_FILE}") — ${SERVED_NAME:-ds4} on :${PORT}"
     echo "Log: ${LOG_FILE}"
     echo "API: http://sparky:${PORT}/v1"
+    echo "Open WebUI chat proxy: http://sparky:${PROXY_PORT}/v1 (thinking off)"
     ;;
   down)
+    stop_owui_proxy
     if [[ -f "${PID_FILE}" ]]; then
       pid="$(cat "${PID_FILE}")"
       kill "${pid}" 2>/dev/null || true

@@ -14,7 +14,8 @@ model: /models/antirez/deepseek-v4-flash/gguf/DeepSeek-V4-Flash-IQ2XXS-w2Q2K-APr
 ds4_args:
 - -c
 - '32768'
-notes: DwarfStar scaffold 2026-06-22 from /models/antirez/deepseek-v4-flash. Mark
-  testing, switch, bench, then promote.
+notes: "DwarfStar scaffold 2026-06-22 from /models/antirez/deepseek-v4-flash. Mark\
+  \ testing, switch, bench, then promote. Open WebUI: use backend :8002/v1 (chat proxy)\
+  \ or model deepseek-chat \u2014 not raw deepseek-v4-flash."
 updated_at: '2026-06-22T04:52:30.912272+00:00'
 promoted_at: '2026-06-22T05:02:56.330104+00:00'

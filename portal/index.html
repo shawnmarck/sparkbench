@@ -460,6 +460,9 @@
       padding: .38rem .45rem; border: 1px solid var(--border); border-radius: 8px; background: #12151c;
       font-size: .7rem; font-family: ui-monospace, monospace; margin-bottom: .3rem;
     }
+    .exp-queue-item.pickable { cursor: pointer; }
+    .exp-queue-item.pickable:hover { border-color: #3a4250; }
+    .exp-queue-item.selected { border-color: #3a5a2a; background: #141a10; box-shadow: inset 3px 0 0 var(--accent); }
     .exp-queue-item.state-done { border-color: #2a4a2a; }
     .exp-queue-item.state-awaiting_license { border-color: #4a402a; }
     .exp-queue-item.state-failed { border-color: #4a2a2a; color: var(--down); }
@@ -1881,8 +1884,17 @@
         const dlEl = $('exp-download-queue');
         if (exEl) {
           exEl.innerHTML = explore.length ? explore.slice().reverse().map((item) => {
-            return '<div class="exp-queue-item"><div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
-              + '<div class="exp-queue-meta">' + escHtml(item.intent || 'gguf_best') + '</div></div>';
+            const sel = item.repo === expSelectedRepo ? ' selected' : '';
+            const variant = item.variant_label ? ' · ' + item.variant_label : '';
+            return '<div class="exp-queue-item pickable' + sel + '" data-exp-repo="' + attrEsc(item.repo) + '"'
+              + ' data-exp-id="' + attrEsc(item.id) + '" tabindex="0" role="button"'
+              + ' title="Open in search">'
+              + '<div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
+              + '<div class="exp-queue-meta">' + escHtml(item.intent || 'gguf_best') + escHtml(variant) + '</div>'
+              + '<div class="exp-queue-actions">'
+              + '<button type="button" data-exp-dl-explore="' + attrEsc(item.id) + '">Download</button>'
+              + '<button type="button" data-exp-rm-explore="' + attrEsc(item.id) + '">Remove</button>'
+              + '</div></div>';
           }).join('') : '<div class="exp-empty">Empty</div>';
         }
         if (dlEl) {
@@ -1893,7 +1905,14 @@
             if (state === 'awaiting_license') {
               actions = '<div class="exp-queue-actions">'
                 + (item.accept_url ? '<a href="' + attrEsc(item.accept_url) + '" target="_blank" rel="noopener">Accept on HF ↗</a>' : '')
-                + '<button type="button" data-exp-recheck="' + attrEsc(item.id) + '">Recheck</button></div>';
+                + '<button type="button" data-exp-recheck="' + attrEsc(item.id) + '">Recheck</button>'
+                + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Dismiss</button></div>';
+            } else if (state === 'failed') {
+              actions = '<div class="exp-queue-actions">'
+                + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Dismiss</button></div>';
+            } else if (state === 'queued') {
+              actions = '<div class="exp-queue-actions">'
+                + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Cancel</button></div>';
             }
             return '<div class="exp-queue-item state-' + escHtml(state) + '">'
               + '<div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
@@ -1968,10 +1987,43 @@
         }).join('');
       }
 
+      async function expOpenRepo(repo) {
+        if (!repo || !onExplore) return;
+        const qEl = $('exp-q');
+        if (qEl) qEl.value = repo;
+        $('exp-results-label').textContent = 'Search: ' + repo;
+        $('exp-results').innerHTML = '<div class="exp-empty">Loading…</div>';
+        try {
+          const filter = expFilterQuery();
+          const res = await fetch(
+            '/api/hf/search?q=' + encodeURIComponent(repo) + '&limit=30&filter=' + encodeURIComponent(filter),
+            { cache: 'no-store' }
+          );
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'search failed');
+          expResults = d.models || [];
+          if (!expResults.some((m) => m.repo === repo)) {
+            expResults.unshift({ repo: repo });
+          }
+          renderExpResults(expResults);
+          await expShowDetail(repo);
+          const card = document.querySelector('.exp-model[data-repo="' + CSS.escape(repo) + '"]');
+          if (card && card.scrollIntoView) {
+            requestAnimationFrame(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+          }
+        } catch (e) {
+          $('exp-results').innerHTML = '<div class="exp-empty">' + escHtml(String(e.message || e)) + '</div>';
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
       async function expShowDetail(repo) {
         expSelectedRepo = repo;
         document.querySelectorAll('.exp-model').forEach((n) => {
           n.classList.toggle('selected', n.dataset.repo === repo);
+        });
+        document.querySelectorAll('.exp-queue-item.pickable').forEach((n) => {
+          n.classList.toggle('selected', n.dataset.expRepo === repo);
         });
         const panel = $('exp-detail');
         if (!panel || !repo) { if (panel) panel.hidden = true; return; }
@@ -2110,7 +2162,14 @@
           const res = await fetch('/api/hf/queue', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'explore', repo: expSelectedRepo, intent: intent }),
+            body: JSON.stringify({
+              action: 'explore',
+              repo: expSelectedRepo,
+              intent: intent,
+              files: v && v.files,
+              inventory_path: v && v.inventory_path,
+              variant_label: v && v.label,
+            }),
           });
           const d = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(d.error || 'save failed');
@@ -2127,6 +2186,36 @@
           const d = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(d.error || 'recheck failed');
           setExpMsg('Rechecked ' + itemId);
+          expTick();
+        } catch (e) {
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expRemoveQueueItem(itemId, queue) {
+        try {
+          const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queue: queue }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'remove failed');
+          setExpMsg('Removed from ' + queue + ' queue');
+          expTick();
+        } catch (e) {
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expDownloadExploreItem(itemId) {
+        try {
+          const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/download', {
+            method: 'POST',
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'download queue failed');
+          setExpMsg('Download queued');
           expTick();
         } catch (e) {
           setExpMsg(String(e.message || e), 'err');
@@ -2414,15 +2503,39 @@
       });
       $('exp-save-explore').addEventListener('click', expSaveExplore);
       $('exp-download-queue').addEventListener('click', (e) => {
+        const rm = e.target.closest('[data-exp-rm-download]');
+        if (rm) {
+          e.stopPropagation();
+          expRemoveQueueItem(rm.dataset.expRmDownload, 'download');
+          return;
+        }
         const btn = e.target.closest('[data-exp-recheck]');
         if (!btn) return;
         expRecheck(btn.dataset.expRecheck);
       });
       $('exp-explore-queue').addEventListener('click', (e) => {
-        const item = e.target.closest('.exp-queue-item');
+        const dl = e.target.closest('[data-exp-dl-explore]');
+        if (dl) {
+          e.stopPropagation();
+          expDownloadExploreItem(dl.dataset.expDlExplore);
+          return;
+        }
+        const rm = e.target.closest('[data-exp-rm-explore]');
+        if (rm) {
+          e.stopPropagation();
+          expRemoveQueueItem(rm.dataset.expRmExplore, 'explore');
+          return;
+        }
+        const item = e.target.closest('.exp-queue-item[data-exp-repo]');
         if (!item) return;
-        const repoEl = item.querySelector('.exp-queue-repo');
-        if (repoEl) expShowDetail(repoEl.textContent.trim());
+        expOpenRepo(item.dataset.expRepo);
+      });
+      $('exp-explore-queue').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const item = e.target.closest('.exp-queue-item[data-exp-repo]');
+        if (!item) return;
+        e.preventDefault();
+        expOpenRepo(item.dataset.expRepo);
       });
 
       $('inference-status').addEventListener('click', (e) => {

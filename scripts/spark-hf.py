@@ -52,6 +52,8 @@ STATE_DONE = "done"
 STATE_FAILED = "failed"
 STATE_SKIPPED = "skipped"
 
+DOWNLOAD_QUEUE_PRUNE_STATES = frozenset({STATE_DONE, STATE_SKIPPED})
+
 REPO_SUFFIXES = (
     "-MTP-GGUF",
     "-Instruct-GGUF",
@@ -946,7 +948,22 @@ def save_explore_queue(data: dict[str, Any]) -> None:
     save_yaml(EXPLORE_QUEUE_FILE, data)
 
 
+def prune_download_queue(*, persist: bool = True) -> int:
+    """Drop finished download queue rows (done/skipped)."""
+    data = load_download_queue()
+    items = data.get("items", [])
+    if not isinstance(items, list):
+        return 0
+    kept = [i for i in items if i.get("state") not in DOWNLOAD_QUEUE_PRUNE_STATES]
+    removed = len(items) - len(kept)
+    if removed and persist:
+        data["items"] = kept
+        save_download_queue(data)
+    return removed
+
+
 def queue_list() -> dict[str, Any]:
+    prune_download_queue()
     dq = load_download_queue()
     eq = load_explore_queue()
     return {
@@ -1009,20 +1026,75 @@ def queue_add_download(
     return item
 
 
-def queue_add_explore(*, repo: str, intent: str = "gguf_best") -> dict[str, Any]:
+def queue_add_explore(
+    *,
+    repo: str,
+    intent: str = "gguf_best",
+    files: list[str] | None = None,
+    inventory_path: str | None = None,
+    variant_label: str | None = None,
+) -> dict[str, Any]:
     repo = validate_repo_id(repo)
     if not repo:
         raise ValueError("invalid repo")
-    item = {
+    item: dict[str, Any] = {
         "id": str(uuid.uuid4()),
         "repo": repo,
         "intent": intent,
         "added_at": utc_now(),
     }
+    if files:
+        item["files"] = [str(f) for f in files if str(f).strip()]
+    if inventory_path:
+        item["inventory_path"] = str(inventory_path).strip().strip("/")
+    if variant_label:
+        item["variant_label"] = str(variant_label).strip()
     data = load_explore_queue()
     data.setdefault("items", []).append(item)
     save_explore_queue(data)
     return item
+
+
+def queue_remove_explore(item_id: str) -> None:
+    data = load_explore_queue()
+    items = data.get("items", [])
+    kept = [i for i in items if i.get("id") != item_id]
+    if len(kept) == len(items):
+        raise ValueError("unknown explore item")
+    data["items"] = kept
+    save_explore_queue(data)
+
+
+def queue_remove_download(item_id: str) -> None:
+    data = load_download_queue()
+    items = data.get("items", [])
+    item = _find_item(items, item_id)
+    if not item:
+        raise ValueError("unknown download item")
+    state = item.get("state")
+    if state in {STATE_DOWNLOADING, STATE_CHECKING}:
+        raise ValueError("cannot remove active download")
+    data["items"] = [i for i in items if i.get("id") != item_id]
+    save_download_queue(data)
+
+
+def queue_download_explore_item(item_id: str) -> dict[str, Any]:
+    data = load_explore_queue()
+    item = _find_item(data.get("items", []), item_id)
+    if not item:
+        raise ValueError("unknown explore item")
+    repo = str(item.get("repo", ""))
+    intent = str(item.get("intent") or "gguf_best")
+    files = item.get("files") if isinstance(item.get("files"), list) else None
+    inventory_path = item.get("inventory_path")
+    if intent == "files" and not files:
+        intent = "gguf_best"
+    return queue_add_download(
+        repo=repo,
+        intent=intent,
+        files=files,
+        inventory_path=str(inventory_path) if inventory_path else None,
+    )
 
 
 def queue_recheck(item_id: str) -> dict[str, Any]:
@@ -1217,6 +1289,7 @@ def process_queue_item(item: dict[str, Any]) -> None:
     if _files_already_present(plan):
         _update_item(item_id, state=STATE_DONE, finished_at=utc_now(), note="already present")
         _post_download_complete(item)
+        prune_download_queue()
         return
 
     _update_item(item_id, state=STATE_DOWNLOADING)
@@ -1233,6 +1306,7 @@ def process_queue_item(item: dict[str, Any]) -> None:
     _update_item(item_id, state=STATE_DONE, finished_at=utc_now())
     refreshed = _find_item(load_download_queue().get("items", []), item_id) or item
     _post_download_complete(refreshed)
+    prune_download_queue()
 
 
 def worker_main() -> int:
@@ -1367,9 +1441,13 @@ def api_dispatch(
         action = str(body.get("action", "download")).strip().lower()
         if action == "explore":
             try:
+                files = body.get("files") if isinstance(body.get("files"), list) else None
                 item = queue_add_explore(
                     repo=str(body.get("repo", "")),
                     intent=str(body.get("intent", "gguf_best")),
+                    files=files,
+                    inventory_path=body.get("inventory_path"),
+                    variant_label=body.get("variant_label"),
                 )
             except ValueError as exc:
                 return 400, {"ok": False, "error": str(exc)}
@@ -1392,6 +1470,27 @@ def api_dispatch(
         except ValueError as exc:
             return 404, {"ok": False, "error": str(exc)}
         return 200, {"ok": True, "item": item}
+
+    remove_match = re.match(r"^/api/hf/queue/([^/]+)/remove$", route)
+    if remove_match:
+        item_id = remove_match.group(1)
+        which = str(body.get("queue", "explore")).strip().lower()
+        try:
+            if which == "download":
+                queue_remove_download(item_id)
+            else:
+                queue_remove_explore(item_id)
+        except ValueError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        return 200, {"ok": True, "removed": item_id, "queue": which}
+
+    download_match = re.match(r"^/api/hf/queue/([^/]+)/download$", route)
+    if download_match:
+        try:
+            item = queue_download_explore_item(download_match.group(1))
+        except ValueError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        return 202, {"ok": True, "item": item, "active": active_hf_download()}
 
     plan_match = re.match(r"^/api/hf/plan$", route)
     if plan_match or route == "/api/hf/plan":

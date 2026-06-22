@@ -1,0 +1,25 @@
+id: unsloth-qwen3-coder-30b-a3b-instruct-llama
+name: qwen3-coder-30b-a3b-instruct (llamacpp)
+inventory_path: unsloth/qwen3-coder-30b-a3b-instruct
+engine: llamacpp
+tier: fast
+lifecycle: testing
+served_name: qwen3-coder-30b-a3b-instruct
+port: 8081
+tags:
+- lab
+- llamacpp
+notes: 'Scaffolded 2026-06-21 from /models/unsloth/qwen3-coder-30b-a3b-instruct. Mark
+  testing, switch, bench, then promote.
+
+  Using Q4_K_M (Q5 hung during memory fit).'
+model: /models/unsloth/qwen3-coder-30b-a3b-instruct/gguf/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+updated_at: '2026-06-22T00:36:21.446008+00:00'

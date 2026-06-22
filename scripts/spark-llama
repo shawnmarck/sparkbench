@@ -72,7 +72,7 @@ case "${cmd}" in
         "${EXTRA_ARGS[@]}" \
         --host 0.0.0.0 \
         --port "${PORT}" \
-        >>"${LOG_FILE}" 2>&1 &
+        >"${LOG_FILE}" 2>&1 &
     else
       nohup "${BIN}" \
         -m "${MODEL}" \
@@ -83,7 +83,7 @@ case "${cmd}" in
         -c 32768 \
         --host 0.0.0.0 \
         --port "${PORT}" \
-        >>"${LOG_FILE}" 2>&1 &
+        >"${LOG_FILE}" 2>&1 &
     fi
     echo $! >"${PID_FILE}"
     echo "Started llama-server pid $(cat "${PID_FILE}") — ${SERVED_NAME} on :${PORT}"

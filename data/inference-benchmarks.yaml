@@ -64,31 +64,13 @@ profiles:
     note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 109.4s)"
     latest_run_id: 20260621T09163370-e8688b
   microsoft-phi-4-eugr:
-    tok_s: 8.1
-    engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-21T18:17:49.502330+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 3120
-    elapsed_s: 285.55
-    tok_s_min: 8.1
-    tok_s_max: 8.1
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 8.1
-    - 8.1
-    - 8.1
-    note: "agent bench avg 8.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 285.5s)"
-    latest_run_id: 20260621T18174950-8f90c7
-  nousresearch-hermes-4-14b-eugr:
     tok_s: 8.0
     engine: eugr
     method: bench-agent
-    measured_at: '2026-06-21T18:25:12.265283+00:00'
-    completion_tokens: 1995
-    prompt_tokens: 2538
-    elapsed_s: 250.63
+    measured_at: '2026-06-22T00:16:39.183718+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 3120
+    elapsed_s: 287.55
     tok_s_min: 8.0
     tok_s_max: 8.0
     sessions: 3
@@ -97,77 +79,221 @@ profiles:
     - 8.0
     - 8.0
     - 8.0
-    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (1995 tok in 250.6s)"
-    latest_run_id: 20260621T18251226-b5d9b1
-  nvidia-qwen3-30b-a3b-eugr:
-    tok_s: 74.6
+    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 287.5s)"
+    latest_run_id: 20260622T00163918-3ff9ef
+  nousresearch-hermes-4-14b-eugr:
+    tok_s: 8.0
     engine: eugr
     method: bench-agent
-    measured_at: '2026-06-21T18:28:30.898759+00:00'
+    measured_at: '2026-06-22T00:23:51.011351+00:00'
+    completion_tokens: 1995
+    prompt_tokens: 2538
+    elapsed_s: 249.53
+    tok_s_min: 8.0
+    tok_s_max: 8.0
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 8.0
+    - 8.0
+    - 8.0
+    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (1995 tok in 249.5s)"
+    latest_run_id: 20260622T00235101-a262cf
+  nvidia-qwen3-30b-a3b-eugr:
+    tok_s: 75.8
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-22T00:26:09.101664+00:00'
     completion_tokens: 2304
     prompt_tokens: 3162
-    elapsed_s: 30.87
-    tok_s_min: 74.2
-    tok_s_max: 75.0
+    elapsed_s: 30.39
+    tok_s_min: 75.4
+    tok_s_max: 76.1
     sessions: 3
     turns_per_session: 3
     run_tok_s:
-    - 74.2
-    - 74.7
-    - 75.0
-    note: "agent bench avg 74.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 30.9s)"
-    latest_run_id: 20260621T18283089-93bc4f
+    - 75.4
+    - 75.9
+    - 76.1
+    note: "agent bench avg 75.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 30.4s)"
+    latest_run_id: 20260622T00260910-bffd3b
   unsloth-qwen3-coder-30b-a3b-instruct-llama:
-    tok_s: 48.7
+    tok_s: 70.9
     engine: llamacpp
     method: bench-agent
-    measured_at: '2026-06-21T18:35:56.292177+00:00'
-    completion_tokens: 2256
-    prompt_tokens: 3062
-    elapsed_s: 46.57
-    tok_s_min: 45.7
-    tok_s_max: 54.3
+    measured_at: '2026-06-22T00:37:33.431684+00:00'
+    completion_tokens: 2196
+    prompt_tokens: 2940
+    elapsed_s: 30.98
+    tok_s_min: 70.7
+    tok_s_max: 71.0
     sessions: 3
     turns_per_session: 3
     run_tok_s:
-    - 46.0
-    - 45.7
-    - 54.3
-    note: "agent bench avg 48.7 tok/s over 3 sessions \xD7 3 turns (2256 tok in 46.6s)"
-    latest_run_id: 20260621T18355629-4459e0
+    - 70.9
+    - 70.7
+    - 71.0
+    note: "agent bench avg 70.9 tok/s over 3 sessions \xD7 3 turns (2196 tok in 31.0s)"
+    latest_run_id: 20260622T00373343-a99d1f
   deepseek-ai-deepseek-r1-distill-qwen-32b-eugr:
-    tok_s: 3.5
+    tok_s: 3.6
     engine: eugr
     method: bench-agent
-    measured_at: '2026-06-21T19:24:24.051416+00:00'
+    measured_at: '2026-06-21T23:59:48.185661+00:00'
     completion_tokens: 2304
     prompt_tokens: 3027
-    elapsed_s: 654.7
-    tok_s_min: 3.5
-    tok_s_max: 3.5
+    elapsed_s: 646.51
+    tok_s_min: 3.6
+    tok_s_max: 3.6
     sessions: 3
     turns_per_session: 3
     run_tok_s:
-    - 3.5
-    - 3.5
-    - 3.5
-    note: "agent bench avg 3.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 654.7s)"
-    latest_run_id: 20260621T19242405-3cd2b2
+    - 3.6
+    - 3.6
+    - 3.6
+    note: "agent bench avg 3.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 646.5s)"
+    latest_run_id: 20260621T23594818-66c11f
   google-gemma-4-26b-a4b-it-eugr:
-    tok_s: 21.8
+    tok_s: 23.6
     engine: eugr
     method: bench-agent
-    measured_at: '2026-06-21T19:49:28.854111+00:00'
-    completion_tokens: 2023
-    prompt_tokens: 2733
-    elapsed_s: 93.14
-    tok_s_min: 21.0
-    tok_s_max: 23.0
+    measured_at: '2026-06-22T00:08:52.818301+00:00'
+    completion_tokens: 2038
+    prompt_tokens: 2718
+    elapsed_s: 86.51
+    tok_s_min: 23.5
+    tok_s_max: 23.6
     sessions: 3
     turns_per_session: 3
     run_tok_s:
-    - 21.2
-    - 21.0
-    - 23.0
-    note: "agent bench avg 21.8 tok/s over 3 sessions \xD7 3 turns (2023 tok in 93.1s)"
-    latest_run_id: 20260621T19492885-77bbb2
+    - 23.5
+    - 23.5
+    - 23.6
+    note: "agent bench avg 23.6 tok/s over 3 sessions \xD7 3 turns (2038 tok in 86.5s)"
+    latest_run_id: 20260622T00085281-2fa9dd
+  qwen-qwen3-coder-next-eugr:
+    tok_s: 45.4
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-21T22:52:20.092434+00:00'
+    completion_tokens: 2091
+    prompt_tokens: 2730
+    elapsed_s: 46.1
+    tok_s_min: 45.0
+    tok_s_max: 45.7
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 45.7
+    - 45.4
+    - 45.0
+    note: "agent bench avg 45.4 tok/s over 3 sessions \xD7 3 turns (2091 tok in 46.1s)"
+    latest_run_id: 20260621T22522009-532d78
+  qwen-qwen3-6-27b-eugr:
+    tok_s: 7.8
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-21T23:06:38.644775+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 3180
+    elapsed_s: 295.55
+    tok_s_min: 7.7
+    tok_s_max: 7.8
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 7.8
+    - 7.8
+    - 7.7
+    note: "agent bench avg 7.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 295.5s)"
+    latest_run_id: 20260621T23063864-c07788
+  rdtand-qwen3-6-27b-eugr:
+    tok_s: 10.3
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-21T23:21:01.420918+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 3174
+    elapsed_s: 224.31
+    tok_s_min: 10.2
+    tok_s_max: 10.3
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 10.2
+    - 10.3
+    - 10.3
+    note: "agent bench avg 10.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 224.3s)"
+    latest_run_id: 20260621T23210142-de9687
+  unsloth-qwen3-6-27b-eugr:
+    tok_s: 9.4
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-21T23:34:03.527940+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 3180
+    elapsed_s: 245.23
+    tok_s_min: 9.4
+    tok_s_max: 9.4
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 9.4
+    - 9.4
+    - 9.4
+    note: "agent bench avg 9.4 tok/s over 3 sessions \xD7 3 turns (2304 tok in 245.2s)"
+    latest_run_id: 20260621T23340352-48b2a8
+  saricles-qwen3-coder-next-eugr:
+    tok_s: 63.3
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-21T23:43:30.858530+00:00'
+    completion_tokens: 2224
+    prompt_tokens: 2995
+    elapsed_s: 35.13
+    tok_s_min: 63.0
+    tok_s_max: 63.6
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 63.0
+    - 63.3
+    - 63.6
+    note: "agent bench avg 63.3 tok/s over 3 sessions \xD7 3 turns (2224 tok in 35.1s)"
+    latest_run_id: 20260621T23433085-2839ae
+  qwen-qwen3-6-27b-dflash-eugr:
+    tok_s: 29.0
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-22T01:39:33.462925+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 876
+    elapsed_s: 79.5
+    tok_s_min: 28.9
+    tok_s_max: 29.0
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 29.0
+    - 29.0
+    - 28.9
+    note: "agent bench avg 29.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 79.5s)"
+    latest_run_id: 20260622T01393346-90d997
+  stepfun-ai-step-3-7-flash-llama:
+    tok_s: 22.3
+    engine: llamacpp
+    method: bench-agent
+    measured_at: '2026-06-22T02:37:43.344433+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 897
+    elapsed_s: 103.16
+    tok_s_min: 22.3
+    tok_s_max: 22.4
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 22.3
+    - 22.4
+    - 22.4
+    note: "agent bench avg 22.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 103.2s)"
+    latest_run_id: 20260622T02374334-a57fd6

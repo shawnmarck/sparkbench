@@ -1,0 +1,15 @@
+id: microsoft-phi-4-eugr
+name: phi-4 (eugr)
+inventory_path: microsoft/phi-4
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: phi-4
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-21 from /models/microsoft/phi-4. Mark testing, switch, bench,
+  then promote.
+eugr_recipe: /opt/spark/services/eugr-microsoft-phi-4-eugr.yaml
+updated_at: '2026-06-22T00:08:56.953062+00:00'

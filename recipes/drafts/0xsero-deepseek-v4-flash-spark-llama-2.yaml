@@ -1,0 +1,22 @@
+id: 0xsero-deepseek-v4-flash-spark-llama-2
+name: deepseek-v4-flash-spark (llamacpp)
+inventory_path: 0xsero/deepseek-v4-flash-spark
+engine: llamacpp
+tier: fast
+lifecycle: draft
+served_name: deepseek-v4-flash-spark
+port: 8081
+tags:
+- lab
+- llamacpp
+notes: Scaffolded 2026-06-22 from /models/0xsero/deepseek-v4-flash-spark. Mark testing,
+  switch, bench, then promote.
+model: /models/0xsero/deepseek-v4-flash-spark/gguf/DeepSeek-V4-Flash-Spark-Q3-Dynamic-REAP-ds4.gguf
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'

@@ -1,0 +1,15 @@
+id: qwen-qwen3-6-27b-eugr
+name: qwen3.6-27b (eugr)
+inventory_path: qwen/qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: qwen3.6-27b
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-21 from /models/qwen/qwen3.6-27b. Mark testing, switch,
+  bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-qwen-qwen3-6-27b-eugr.yaml
+updated_at: '2026-06-21T22:52:24.273852+00:00'

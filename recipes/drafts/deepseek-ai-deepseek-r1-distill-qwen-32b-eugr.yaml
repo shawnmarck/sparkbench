@@ -1,0 +1,15 @@
+id: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
+name: deepseek-r1-distill-qwen-32b (eugr)
+inventory_path: deepseek-ai/deepseek-r1-distill-qwen-32b
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: deepseek-r1-distill-qwen-32b
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-21 from /models/deepseek-ai/deepseek-r1-distill-qwen-32b.
+  Mark testing, switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-deepseek-ai-deepseek-r1-distill-qwen-32b-eugr.yaml
+updated_at: '2026-06-21T23:43:36.365944+00:00'

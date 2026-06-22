@@ -1,0 +1,15 @@
+id: nvidia-qwen3-30b-a3b-eugr
+name: qwen3-30b-a3b (eugr)
+inventory_path: nvidia/qwen3-30b-a3b
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: qwen3-30b-a3b
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-21 from /models/nvidia/qwen3-30b-a3b. Mark testing, switch,
+  bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-nvidia-qwen3-30b-a3b-eugr.yaml
+updated_at: '2026-06-22T00:23:54.760541+00:00'

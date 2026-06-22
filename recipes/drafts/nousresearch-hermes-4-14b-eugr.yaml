@@ -1,0 +1,15 @@
+id: nousresearch-hermes-4-14b-eugr
+name: hermes-4-14b (eugr)
+inventory_path: nousresearch/hermes-4-14b
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: hermes-4-14b
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-21 from /models/nousresearch/hermes-4-14b. Mark testing,
+  switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-nousresearch-hermes-4-14b-eugr.yaml
+updated_at: '2026-06-22T00:16:43.431476+00:00'

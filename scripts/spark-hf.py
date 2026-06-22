@@ -289,6 +289,28 @@ def repo_siblings(repo_id: str) -> list[Any]:
     return list(getattr(info, "siblings", []) or [])
 
 
+def repo_file_sizes(repo_id: str) -> dict[str, int]:
+    """Path → bytes from HF repo tree (model_info siblings often omit size)."""
+    sizes: dict[str, int] = {}
+    try:
+        api = _hf_api()
+        for entry in api.list_repo_tree(repo_id, recursive=True, expand=True):
+            path = getattr(entry, "path", None)
+            raw = getattr(entry, "size", None)
+            if path and raw:
+                sizes[str(path)] = int(raw)
+    except Exception:
+        pass
+    return sizes
+
+
+def _sibling_size(name: str, sibling: Any, sizes: dict[str, int]) -> int:
+    raw = getattr(sibling, "size", None)
+    if raw:
+        return int(raw)
+    return sizes.get(name, 0)
+
+
 def repo_meta(repo_id: str, cache: dict[str, Any] | None = None) -> dict[str, Any]:
     cache = cache if cache is not None else load_hf_disk_cache()
     key = f"model:{repo_id}"
@@ -458,22 +480,299 @@ def _human_size(n: int) -> str:
     return f"{val:.1f} TB"
 
 
+GGUF_QUANT_PATTERNS = (
+    "UD-Q4_K_M",
+    "UD-Q4_K_XL",
+    "Q4_K_XL",
+    "Q4_K_M",
+    "Q4_K_S",
+    "Q5_K_XL",
+    "Q5_K_M",
+    "Q5_K_S",
+    "Q6_K",
+    "Q6_K_XL",
+    "Q8_0",
+    "MXFP4_MOE",
+    "MXFP4",
+    "Q4_0",
+    "Q5_0",
+    "Q3_K",
+    "Q2_K",
+)
+
+GGUF_QUANT_NOTES: dict[str, str] = {
+    "UD-Q4_K_M": "Unsloth dynamic Q4 — strong default for llama.cpp on Spark",
+    "UD-Q4_K_XL": "Unsloth dynamic Q4 XL — more quality, still practical",
+    "Q4_K_M": "Balanced everyday quant — best general GGUF pick on Spark",
+    "Q4_K_XL": "Larger Q4 — sharper than Q4_K_M, heavier download",
+    "Q4_K_S": "Compact Q4 — smaller file, slightly lower quality",
+    "Q5_K_M": "Higher fidelity — good when you want sharper output",
+    "Q5_K_XL": "Premium Q5 — near-best GGUF quality, more disk",
+    "Q6_K": "High quality — large; use if you have headroom",
+    "Q8_0": "Near-FP16 size — rarely worth it for big models on Spark",
+    "MXFP4_MOE": "MoE MXFP4 — GB10-friendly experimental quant",
+    "MXFP4": "MXFP4 quant — tuned for MoE on Blackwell-class hardware",
+    "Q3_K": "Small quant — fast, noticeable quality loss",
+    "Q2_K": "Very small — experiments only",
+}
+
+SPARK_FIT_ORDER = {
+    "recommended": 0,
+    "ok": 1,
+    "tight": 2,
+    "too_large": 3,
+    "not_recommended": 4,
+}
+
+
+def _gguf_quant_label(filename: str) -> str:
+    base = filename.replace(".gguf", "")
+    for pat in GGUF_QUANT_PATTERNS:
+        if pat in base:
+            return pat
+    return base.split("/")[-1][-48:]
+
+
+def _infer_weights_format(repo_id: str) -> str:
+    repo_low = repo_id.lower()
+    if "nvfp4" in repo_low:
+        return "nvfp4"
+    if "fp8" in repo_low:
+        return "fp8"
+    if "prismaquant" in repo_low:
+        return "prismaquant"
+    return "hf"
+
+
+def _spark_fit(
+    size_bytes: int, fmt: str, label: str, repo_id: str
+) -> tuple[str, str, str]:
+    """Return (spark_fit, spark_fit_label, explanation)."""
+    size_gb = (size_bytes or 0) / (1024**3)
+    repo_low = repo_id.lower()
+    label_u = label.upper()
+
+    if any(x in repo_low for x in ("70b", "72b", "405b", "671b")) and fmt != "gguf":
+        return (
+            "not_recommended",
+            "Skip",
+            "Dense 70B+ HF weights — poor fit for a single 128GB Spark",
+        )
+
+    if size_gb > 95:
+        return (
+            "too_large",
+            "Too large",
+            f"~{size_gb:.0f} GB — unlikely to leave room for KV cache on Spark",
+        )
+    if size_gb > 72:
+        return (
+            "tight",
+            "Tight",
+            f"~{size_gb:.0f} GB — may load but little headroom for long context",
+        )
+
+    if fmt == "gguf":
+        note = GGUF_QUANT_NOTES.get(label, "GGUF file for llama.cpp")
+        if any(x in label_u for x in ("Q4_K_M", "Q4_K_XL", "UD-Q4")):
+            return "recommended", "Spark pick", note
+        if "MXFP4" in label_u:
+            return "recommended", "Spark pick", note
+        if any(x in label_u for x in ("Q5_K_M", "Q5_K_XL")) and size_gb < 52:
+            return "recommended", "Spark pick", note
+        if any(x in label_u for x in ("Q2", "Q3")):
+            return "ok", "OK", note
+        if "Q8" in label_u and size_gb > 35:
+            return "not_recommended", "Skip", note + " — very heavy on Spark"
+        if "BF16" in label_u or "F16" in label_u:
+            return "not_recommended", "Skip", "BF16 / full-precision GGUF — too heavy for daily Spark use"
+        if size_gb < 55:
+            return "ok", "OK", note
+        return "tight", "Tight", note
+
+    if fmt == "nvfp4":
+        return (
+            "recommended",
+            "Spark pick",
+            "NVFP4 weights — native Blackwell vLLM path (eugr)",
+        )
+
+    if fmt == "fp8":
+        if size_gb < 70:
+            return "recommended", "Spark pick", "FP8 checkpoint — reference vLLM path"
+        return "tight", "Tight", "FP8 weights — verify headroom before switching"
+
+    if fmt in {"hf", "prismaquant"}:
+        if size_gb < 68:
+            return "recommended", "Spark pick", "HF safetensors — eugr vLLM serve path"
+        if size_gb < 78:
+            return "ok", "OK", "HF weights — fits many Spark profiles; heavy for 24/7"
+        return "tight", "Tight", "Large HF tree — benchmark before promoting"
+
+    return "ok", "OK", "May work — check disk and VRAM headroom"
+
+
+def discover_model_variants(repo_id: str) -> list[dict[str, Any]]:
+    """List downloadable file/quant options with Spark fit hints."""
+    repo_id = validate_repo_id(repo_id)
+    if not repo_id:
+        raise ValueError("invalid repo id")
+
+    siblings = repo_siblings(repo_id)
+    by_name = {s.rfilename: s for s in siblings}
+    sizes = repo_file_sizes(repo_id)
+    inv = inventory_path_for_repo(repo_id)
+    meta = repo_meta(repo_id)
+    variants: list[dict[str, Any]] = []
+
+    ggufs = [s for s in siblings if s.rfilename.endswith(".gguf")]
+    for s in sorted(ggufs, key=lambda x: -_sibling_size(x.rfilename, x, sizes)):
+        fname = s.rfilename
+        label = _gguf_quant_label(fname)
+        size = _sibling_size(fname, s, sizes)
+        fit, fit_label, explanation = _spark_fit(size, "gguf", label, repo_id)
+        dest = MODELS_ROOT / inv / "gguf"
+        variants.append(
+            {
+                "id": f"gguf:{fname}",
+                "label": label,
+                "format": "gguf",
+                "engine": "llamacpp",
+                "intent": "files",
+                "files": [fname],
+                "inventory_path": inv,
+                "subpath": "gguf",
+                "dest": str(dest),
+                "size_bytes": size,
+                "size_human": _human_size(size),
+                "explanation": explanation,
+                "spark_fit": fit,
+                "spark_fit_label": fit_label,
+            }
+        )
+
+    weight_files = _weights_files(siblings)
+    if weight_files and not ggufs:
+        fmt = _infer_weights_format(repo_id)
+        engine = "vllm"
+        total = sum(
+            _sibling_size(f, by_name[f], sizes) for f in weight_files if f in by_name
+        )
+        label = fmt.upper() if fmt != "hf" else "HF weights"
+        fit, fit_label, explanation = _spark_fit(total, fmt, label, repo_id)
+        if len(weight_files) > 12:
+            explanation = (
+                f"{len(weight_files)} essential files (config, tokenizer, shards) — "
+                + explanation
+            )
+        dest = MODELS_ROOT / inv / fmt
+        variants.append(
+            {
+                "id": f"{fmt}:bundle",
+                "label": label,
+                "format": fmt,
+                "engine": engine,
+                "intent": "files",
+                "files": weight_files,
+                "inventory_path": inv,
+                "subpath": fmt,
+                "dest": str(dest),
+                "size_bytes": total,
+                "size_human": _human_size(total),
+                "file_count": len(weight_files),
+                "explanation": explanation,
+                "spark_fit": fit,
+                "spark_fit_label": fit_label,
+            }
+        )
+
+    variants.sort(
+        key=lambda v: (
+            SPARK_FIT_ORDER.get(str(v.get("spark_fit")), 9),
+            v.get("size_bytes") or 0,
+        )
+    )
+    return variants
+
+
+TEXT_GEN_PIPES = frozenset(
+    {"text-generation", "text2text-generation", "conversational", "feature-extraction"}
+)
+VISION_PIPES = frozenset(
+    {
+        "image-text-to-text",
+        "image-to-text",
+        "visual-question-answering",
+        "document-question-answering",
+    }
+)
+DIFFUSION_PIPES = frozenset({"text-to-image", "image-to-image"})
+
+
+def _model_traits(
+    repo: str, tags: list[str], pipeline_tag: str | None
+) -> dict[str, bool]:
+    repo_low = repo.lower()
+    tag_blob = " ".join(tags).lower()
+    pipe = (pipeline_tag or "").lower()
+
+    has_gguf = "gguf" in repo_low or "gguf" in tag_blob or "llama.cpp" in tag_blob
+    has_nvfp4 = "nvfp4" in repo_low or "nvfp4" in tag_blob
+    has_mtp = "mtp" in repo_low or "-mtp" in repo_low or "mtp" in tag_blob
+    has_moe = bool(
+        "moe" in tag_blob
+        or re.search(r"\ba3b\b", repo_low)
+        or "-a3b" in repo_low
+        or re.search(r"-\d+b-a\d+b", repo_low)
+    )
+    has_diffusion = (
+        pipe in DIFFUSION_PIPES
+        or "diffusion" in repo_low
+        or "diffusion" in tag_blob
+        or "diffusers" in tag_blob
+    )
+    has_vision = (
+        pipe in VISION_PIPES
+        or "vision" in tag_blob
+        or "multimodal" in tag_blob
+        or "image-text" in pipe
+        or "visual" in tag_blob
+    )
+    is_text_llm = pipe in TEXT_GEN_PIPES or (
+        not has_diffusion
+        and not has_vision
+        and (not pipe or "gguf" in tag_blob or "transformers" in tag_blob)
+    )
+    has_dense = is_text_llm and not has_moe
+
+    return {
+        "has_gguf": has_gguf,
+        "has_nvfp4": has_nvfp4,
+        "has_moe": has_moe,
+        "has_dense": has_dense,
+        "has_mtp": has_mtp,
+        "has_vision": has_vision,
+        "has_diffusion": has_diffusion,
+    }
+
+
 def _model_card(m: Any) -> dict[str, Any]:
     repo = getattr(m, "id", None) or getattr(m, "modelId", None) or ""
     tags = list(getattr(m, "tags", []) or [])
-    repo_low = repo.lower()
-    tag_blob = " ".join(tags).lower()
+    pipeline_tag = getattr(m, "pipeline_tag", None)
+    created = getattr(m, "created_at", None)
+    modified = getattr(m, "lastModified", None)
+    traits = _model_traits(repo, tags, pipeline_tag)
     return {
         "repo": repo,
         "author": getattr(m, "author", None),
         "downloads": getattr(m, "downloads", None),
         "likes": getattr(m, "likes", None),
-        "pipeline_tag": getattr(m, "pipeline_tag", None),
+        "pipeline_tag": pipeline_tag,
         "tags": tags[:20],
-        "last_modified": _iso(getattr(m, "lastModified", None)),
-        "has_gguf": "gguf" in repo_low or "gguf" in tag_blob or "llama.cpp" in tag_blob,
-        "has_nvfp4": "nvfp4" in repo_low or "nvfp4" in tag_blob,
-        "has_moe": "a3b" in repo_low or "moe" in tag_blob,
+        "release_date": _iso(created) or _iso(modified),
+        "last_modified": _iso(modified),
+        **traits,
         "hf_url": f"https://huggingface.co/{repo}" if repo else None,
     }
 
@@ -961,12 +1260,17 @@ def api_dispatch(
             if not repo:
                 return 400, {"ok": False, "error": "invalid repo"}
             meta = repo_meta(repo)
-            intent = q.get("intent", "gguf_best")
             try:
-                plan = plan_download(repo, intent)
+                variants = discover_model_variants(repo)
             except ValueError:
-                plan = None
-            return 200, {"ok": True, "model": meta, "default_plan": plan}
+                variants = []
+            default_plan = variants[0] if variants else None
+            return 200, {
+                "ok": True,
+                "model": meta,
+                "variants": variants,
+                "default_plan": default_plan,
+            }
         return None
 
     if method != "POST":

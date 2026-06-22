@@ -141,13 +141,18 @@
 }
 
 .nebula-tune-wrap {
-  position: static;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: .45rem;
+  position: relative;
+  align-self: flex-end;
+  flex-shrink: 0;
   font-family: inherit;
   pointer-events: none;
+}
+
+body > .nebula-tune-wrap {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 30;
 }
 
 .nebula-tune-wrap > * {
@@ -179,6 +184,9 @@
 }
 
 .nebula-tune-panel {
+  position: absolute;
+  bottom: calc(100% + .45rem);
+  left: 0;
   width: min(320px, calc(100vw - 2rem));
   max-height: min(70vh, 520px);
   overflow: auto;

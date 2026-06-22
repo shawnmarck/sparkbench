@@ -5,14 +5,16 @@ models:
     tok_s_engine: eugr
     tok_s_profile: qwen36-nvfp4
     note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
-    updated_at: '2026-06-21T08:53:52.017644+00:00'
+    updated_at: '2026-06-22T02:47:27.167575+00:00'
+    engine: eugr
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
     note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
-    updated_at: '2026-06-21T09:01:22.328122+00:00'
+    updated_at: '2026-06-22T02:47:27.209659+00:00'
     tok_s: 48.6
     tok_s_engine: llamacpp
     tok_s_profile: qwen36-q4-llama
+    engine: llamacpp
   yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
     spark_status: works
     engine: llamacpp
@@ -31,9 +33,111 @@ models:
   microsoft/phi-4:
     removal_pending: true
     removal_queued_at: '2026-06-21T17:20:57.143401+00:00'
+    spark_status: wip
+    updated_at: '2026-06-22T00:16:39.183718+00:00'
+    engine: eugr
+    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 287.5s)"
+    tok_s: 8.0
+    tok_s_engine: eugr
+    tok_s_profile: microsoft-phi-4-eugr
   nvidia/qwen3-30b-a3b:
-    removal_pending: true
-    removal_queued_at: '2026-06-21T17:21:09.913575+00:00'
+    spark_status: wip
+    updated_at: '2026-06-22T00:26:09.101664+00:00'
+    engine: eugr
+    note: "agent bench avg 75.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 30.4s)"
+    tok_s: 75.8
+    tok_s_engine: eugr
+    tok_s_profile: nvidia-qwen3-30b-a3b-eugr
   deepseek-ai/deepseek-r1-distill-qwen-32b:
     removal_pending: true
     removal_queued_at: '2026-06-21T17:21:35.987485+00:00'
+    spark_status: wip
+    updated_at: '2026-06-21T23:59:48.185661+00:00'
+    engine: eugr
+    note: "agent bench avg 3.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 646.5s)"
+    tok_s: 3.6
+    tok_s_engine: eugr
+    tok_s_profile: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
+  nousresearch/hermes-4-14b:
+    spark_status: wip
+    updated_at: '2026-06-22T00:23:51.011351+00:00'
+    engine: eugr
+    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (1995 tok in 249.5s)"
+    tok_s: 8.0
+    tok_s_engine: eugr
+    tok_s_profile: nousresearch-hermes-4-14b-eugr
+  unsloth/qwen3-coder-30b-a3b-instruct:
+    spark_status: wip
+    updated_at: '2026-06-22T00:37:33.431684+00:00'
+    engine: llamacpp
+    note: "agent bench avg 70.9 tok/s over 3 sessions \xD7 3 turns (2196 tok in 31.0s)"
+    tok_s: 70.9
+    tok_s_engine: llamacpp
+    tok_s_profile: unsloth-qwen3-coder-30b-a3b-instruct-llama
+  google/gemma-4-26b-a4b-it:
+    spark_status: wip
+    updated_at: '2026-06-22T00:08:52.818301+00:00'
+    engine: eugr
+    note: "agent bench avg 23.6 tok/s over 3 sessions \xD7 3 turns (2038 tok in 86.5s)"
+    tok_s: 23.6
+    tok_s_engine: eugr
+    tok_s_profile: google-gemma-4-26b-a4b-it-eugr
+  unsloth/qwen3.6-27b:
+    spark_status: wip
+    updated_at: '2026-06-21T23:34:03.527940+00:00'
+    engine: eugr
+    note: "agent bench avg 9.4 tok/s over 3 sessions \xD7 3 turns (2304 tok in 245.2s)"
+    tok_s: 9.4
+    tok_s_engine: eugr
+    tok_s_profile: unsloth-qwen3-6-27b-eugr
+  0xsero/deepseek-v4-flash-spark:
+    spark_status: wip
+    updated_at: '2026-06-21T22:31:35.806109+00:00'
+    engine: llamacpp
+    note: 'Model Lab: 0xsero-deepseek-v4-flash-spark-llama testing'
+  qwen/qwen3-coder-next:
+    spark_status: wip
+    updated_at: '2026-06-21T22:52:20.092434+00:00'
+    engine: eugr
+    note: "agent bench avg 45.4 tok/s over 3 sessions \xD7 3 turns (2091 tok in 46.1s)"
+    tok_s: 45.4
+    tok_s_engine: eugr
+    tok_s_profile: qwen-qwen3-coder-next-eugr
+  qwen/qwen3.6-27b:
+    spark_status: wip
+    updated_at: '2026-06-22T01:39:33.462925+00:00'
+    engine: eugr
+    note: "agent bench avg 29.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 79.5s)"
+    tok_s: 29.0
+    tok_s_engine: eugr
+    tok_s_profile: qwen-qwen3-6-27b-dflash-eugr
+  rdtand/qwen3.6-27b:
+    spark_status: wip
+    updated_at: '2026-06-21T23:21:01.420918+00:00'
+    engine: eugr
+    note: "agent bench avg 10.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 224.3s)"
+    tok_s: 10.3
+    tok_s_engine: eugr
+    tok_s_profile: rdtand-qwen3-6-27b-eugr
+  saricles/qwen3-coder-next:
+    spark_status: wip
+    updated_at: '2026-06-21T23:43:30.858530+00:00'
+    engine: eugr
+    note: "agent bench avg 63.3 tok/s over 3 sessions \xD7 3 turns (2224 tok in 35.1s)"
+    tok_s: 63.3
+    tok_s_engine: eugr
+    tok_s_profile: saricles-qwen3-coder-next-eugr
+  z-lab/qwen3.6-35b-a3b:
+    spark_status: failed
+    updated_at: '2026-06-22T02:22:08.961845+00:00'
+    engine: eugr
+    note: 'DFlash sidecar: NVFP4 MoE target hits KV cache page-size mismatch in vLLM
+      (4 load fails). Needs FP8 target or vLLM fix.'
+  stepfun-ai/step-3.7-flash:
+    spark_status: wip
+    updated_at: '2026-06-22T02:37:43.344433+00:00'
+    engine: llamacpp
+    note: "agent bench avg 22.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 103.2s)"
+    tok_s: 22.3
+    tok_s_engine: llamacpp
+    tok_s_profile: stepfun-ai-step-3-7-flash-llama

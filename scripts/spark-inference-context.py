@@ -376,7 +376,7 @@ def materialize_llama_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
         args = _set_arg(args, "--cache-type-k", llama_kv)
         args = _set_arg(args, "--cache-type-v", llama_kv)
     out["llamacpp_args"] = args
-    path = LLAMA_LAUNCH_DIR / f"{out.get(id, launch)}.yaml"
+    path = LLAMA_LAUNCH_DIR / f"{out.get('id', 'launch')}.yaml"
     import yaml
 
     path.write_text(yaml.safe_dump(out, sort_keys=False, default_flow_style=False), encoding="utf-8")
@@ -401,7 +401,7 @@ def materialize_eugr_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
             cmd = cmd.replace("--trust-remote-code \\", f"--trust-remote-code \\\n    --kv-cache-dtype {kv} \\")
     data["command"] = cmd
     EUgr_LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
-    path = EUgr_LAUNCH_DIR / f"{recipe.get(id, launch)}.yaml"
+    path = EUgr_LAUNCH_DIR / f"{recipe.get('id', 'launch')}.yaml"
     path.write_text(yaml.safe_dump(data, sort_keys=False, default_flow_style=False), encoding="utf-8")
     return path
 
@@ -413,7 +413,7 @@ def materialize_ds4_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
     args = [str(a) for a in (out.get("ds4_args") or [])]
     args = _set_arg(args, "-c", str(ctx))
     out["ds4_args"] = args
-    path = LLAMA_LAUNCH_DIR / f"ds4-{out.get(id, launch)}.yaml"
+    path = LLAMA_LAUNCH_DIR / f"ds4-{out.get('id', 'launch')}.yaml"
     path.write_text(yaml.safe_dump(out, sort_keys=False, default_flow_style=False), encoding="utf-8")
     return path
 

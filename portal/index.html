@@ -218,7 +218,7 @@
     body.inf-view #inference-card .card-head { flex-shrink: 0; }
     body.inf-view .inf-card-body { flex: 1; min-height: 0; }
     body.inf-view .inf-recipes-panel { flex: 1; max-height: none; min-height: 8rem; }
-    body.inf-view .inf-log { max-height: min(200px, 22vh); }
+    body.inf-view .inf-log:not(.inf-log-overlay-log) { max-height: min(200px, 22vh); }
     .inf-profile-grid { display: grid; gap: .45rem; margin-top: 0; min-width: 0; }
     .inf-profile { display: flex; flex-direction: column; gap: .2rem; padding: .5rem .6rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; min-width: 0; overflow: hidden; cursor: pointer; transition: border-color .12s, background .12s; }
     .inf-profile:hover { border-color: #3a4250; }
@@ -287,6 +287,7 @@
     .inf-log-overlay-backdrop { position: absolute; inset: 0; background: rgba(8, 10, 14, 0.78); cursor: pointer; }
     .inf-log-overlay-panel {
       position: absolute; inset: 1rem; z-index: 1; display: flex; flex-direction: column; min-height: 0;
+      height: calc(100vh - var(--nav-h) - 2rem); max-height: calc(100vh - var(--nav-h) - 2rem);
       background: var(--card); border: 1px solid #4a402a; border-radius: 12px;
       box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5); overflow: hidden;
     }
@@ -303,8 +304,8 @@
     .inf-log-overlay-title { font-size: .88rem; font-weight: 600; color: var(--warn); font-family: ui-monospace, monospace; }
     .inf-log-overlay-meta { margin-top: .25rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-log-overlay-log {
-      flex: 1; min-height: 0; max-height: none; margin: 0; border: none; border-radius: 0;
-      padding: .85rem 1rem 1rem; font-size: .74rem; line-height: 1.45;
+      flex: 1 1 auto; min-height: 0; height: 100%; max-height: none !important; margin: 0; border: none; border-radius: 0;
+      padding: .85rem 1rem 1rem; font-size: .74rem; line-height: 1.45; overflow: auto;
     }
     .inf-log-overlay-hint {
       flex-shrink: 0; padding: .45rem 1rem; border-top: 1px solid var(--border);

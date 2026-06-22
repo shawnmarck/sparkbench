@@ -8,6 +8,7 @@ PIN="${SPARK_DS4_PIN:-/opt/spark/data/ds4-dwarfstar.yaml}"
 RUN_DIR="${ROOT}/run"
 LOG_DIR="${ROOT}/logs"
 PID_FILE="${RUN_DIR}/ds4-server.pid"
+LOCK_FILE="${RUN_DIR}/ds4.lock"
 LOG_FILE="${LOG_DIR}/ds4-server.log"
 PORT="${SPARK_DS4_PORT:-8000}"
 HOST="${SPARK_DS4_HOST:-0.0.0.0}"
@@ -107,6 +108,21 @@ stop_others() {
   sleep 1
 }
 
+clear_stale_ds4_locks() {
+  if ds4_pid_running; then
+    return 0
+  fi
+  rm -f "${LOCK_FILE}" /tmp/ds4.lock 2>/dev/null || true
+}
+
+ds4_pid_running() {
+  if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+    return 0
+  fi
+  pgrep -f "/opt/spark/bin/ds4-server" >/dev/null 2>&1
+}
+
+
 usage() {
   cat <<USAGE
 Usage: spark engine ds4 {up|down|status|logs|build}
@@ -128,7 +144,8 @@ case "${cmd}" in
     [[ -n "${MODEL}" && -f "${MODEL}" ]] || die "Missing model GGUF (set SPARK_DS4_RECIPE or check ${PIN})"
     stop_others
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
-    if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+    clear_stale_ds4_locks
+    if ds4_pid_running; then
       die "ds4-server already running (pid $(cat "${PID_FILE}"))"
     fi
     args=( -m "${MODEL}" --host "${HOST}" --port "${PORT}" )
@@ -136,7 +153,7 @@ case "${cmd}" in
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
       args+=( "${EXTRA_ARGS[@]}" )
     fi
-    nohup "${BIN}" "${args[@]}" >>"${LOG_FILE}" 2>&1 &
+    nohup env DS4_LOCK_FILE="${LOCK_FILE}" "${BIN}" "${args[@]}" >>"${LOG_FILE}" 2>&1 &
     echo $! >"${PID_FILE}"
     echo "Started ds4-server pid $(cat "${PID_FILE}") — ${SERVED_NAME:-ds4} on :${PORT}"
     echo "Log: ${LOG_FILE}"
@@ -148,9 +165,11 @@ case "${cmd}" in
       kill "${pid}" 2>/dev/null || true
       wait_for_exit "$pid"
       rm -f "${PID_FILE}"
+      rm -f "${LOCK_FILE}" /tmp/ds4.lock 2>/dev/null || true
       echo "Stopped ds4-server (${pid})"
     else
       pkill -f '/opt/spark/bin/ds4-server' 2>/dev/null && echo "Stopped ds4-server" || echo "Not running"
+      rm -f "${LOCK_FILE}" /tmp/ds4.lock 2>/dev/null || true
     fi
     ;;
   status)

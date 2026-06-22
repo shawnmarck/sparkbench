@@ -24,6 +24,9 @@ After=network.target docker.service
 
 [Service]
 Type=simple
+User=techno
+Group=techno
+WorkingDirectory=${TARGET}
 ExecStart=${TARGET}/scripts/spark-inference-api --serve
 Restart=on-failure
 RestartSec=2

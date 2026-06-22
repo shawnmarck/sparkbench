@@ -54,8 +54,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        if self.path == "/api/inference/status":
-            self._json(200, {"ok": True, **core.api_status()})
+        route = self.path.split("?", 1)[0]
+        if route == "/api/inference/status":
+            lite = False
+            if "?" in self.path:
+                for part in self.path.split("?", 1)[1].split("&"):
+                    if part.startswith("lite=") and part.split("=", 1)[1].lower() in {
+                        "1",
+                        "true",
+                        "yes",
+                    }:
+                        lite = True
+            self._json(200, {"ok": True, **core.api_status(lite=lite)})
             return
 
         if self.path.startswith("/api/inference/logs"):

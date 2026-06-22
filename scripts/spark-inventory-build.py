@@ -551,6 +551,27 @@ def parse_active_param_b(name: str, slug: str) -> float | None:
     return None
 
 
+def infer_architecture(
+    *,
+    capabilities: list | None,
+    param_b: float | None,
+    param_active_b: float | None,
+    name: str = "",
+    slug: str = "",
+) -> str | None:
+    caps = {str(c).lower() for c in (capabilities or [])}
+    if param_active_b or "moe" in caps:
+        return "moe"
+    if "dense" in caps:
+        return "dense"
+    text = f"{name} {slug}".lower()
+    if re.search(r"a\d+b|moe", text):
+        return "moe"
+    if param_b is not None:
+        return "dense"
+    return None
+
+
 def _bench_history_path() -> Path | None:
     if BENCHMARK_HISTORY_FILE.is_file():
         return BENCHMARK_HISTORY_FILE
@@ -824,6 +845,13 @@ def main() -> int:
                 break
         param_b = m.get("param_b") or parse_param_b(m["name"], slug, best_cfg)
         param_active_b = m.get("param_active_b") or parse_active_param_b(m["name"], slug)
+        architecture = infer_architecture(
+            capabilities=m.get("capabilities", []),
+            param_b=param_b,
+            param_active_b=param_active_b,
+            name=m["name"],
+            slug=slug,
+        )
 
         entries.append(
             {
@@ -845,6 +873,7 @@ def main() -> int:
                 "max_context": max_ctx,
                 "param_b": param_b,
                 "param_active_b": param_active_b,
+                "architecture": architecture,
                 "pipeline_tag": hf_info.get("pipeline_tag"),
                 "tags": hf_info.get("tags", []),
                 "status": overall,
@@ -886,6 +915,8 @@ def main() -> int:
                     model_dir,
                     hf_cache,
                 )
+                untracked_param_b = parse_param_b(model_dir.name, slug, read_local_config(model_dir))
+                untracked_param_active_b = parse_active_param_b(model_dir.name, slug)
                 entries.append(
                     {
                         "id": mid,
@@ -904,8 +935,15 @@ def main() -> int:
                         "release_date": untracked_release,
                         "release_date_source": untracked_source,
                         "max_context": max_context_from_config(read_local_config(model_dir)),
-                        "param_b": parse_param_b(model_dir.name, slug, read_local_config(model_dir)),
-                        "param_active_b": parse_active_param_b(model_dir.name, slug),
+                        "param_b": untracked_param_b,
+                        "param_active_b": untracked_param_active_b,
+                        "architecture": infer_architecture(
+                            capabilities=["untracked"],
+                            param_b=untracked_param_b,
+                            param_active_b=untracked_param_active_b,
+                            name=model_dir.name,
+                            slug=slug,
+                        ),
                         "status": "ready" if size else "empty",
                         "size_bytes": size,
                         "size_human": human_size(size),
@@ -946,6 +984,8 @@ def main() -> int:
                     model_dir,
                     hf_cache,
                 )
+                shelf_param_b = parse_param_b(model_dir.name, model_dir.name, {})
+                shelf_param_active_b = parse_active_param_b(model_dir.name, model_dir.name)
                 entries.append(
                     {
                         "id": mid,
@@ -964,8 +1004,15 @@ def main() -> int:
                         "release_date": shelf_release,
                         "release_date_source": shelf_source,
                         "max_context": max_context_from_config(read_local_config(model_dir)),
-                        "param_b": parse_param_b(model_dir.name, model_dir.name, {}),
-                        "param_active_b": parse_active_param_b(model_dir.name, model_dir.name),
+                        "param_b": shelf_param_b,
+                        "param_active_b": shelf_param_active_b,
+                        "architecture": infer_architecture(
+                            capabilities=["shelf-only"],
+                            param_b=shelf_param_b,
+                            param_active_b=shelf_param_active_b,
+                            name=model_dir.name,
+                            slug=model_dir.name,
+                        ),
                         "status": "shelf-only",
                         "size_bytes": size,
                         "size_human": human_size(size),

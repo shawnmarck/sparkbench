@@ -116,11 +116,12 @@
     .model-inventory {
       --rail-spark: 4.4rem;
       --rail-dl: 5.4rem;
+      --rail-arch: 3.5rem;
       --rail-engine: 3.6rem;
       --rail-inf: 7.2rem;
       --rail-bench: 3.4rem;
       --rail-flag: 1.8rem;
-      --rail-template: var(--rail-spark) var(--rail-dl) var(--rail-engine) var(--rail-inf) var(--rail-bench) var(--rail-flag);
+      --rail-template: var(--rail-spark) var(--rail-dl) var(--rail-arch) var(--rail-engine) var(--rail-inf) var(--rail-bench) var(--rail-flag);
     }
     .model-grid-head {
       display: grid;
@@ -266,6 +267,8 @@
     .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
     .badge.spec-dflash { border-color: #2a4a5a; color: #9ec8ff; background: #101820; }
     .badge.spec-mtp { border-color: #4a2a6a; color: #c49cff; background: #140c1a; }
+    .badge.arch-moe { border-color: #6a4020; color: #f0a060; background: #1a140c; }
+    .badge.arch-dense { border-color: #2a5858; color: #70b8b0; background: #0c1818; }
     .bench-compare-strip { display: flex; flex-wrap: wrap; gap: .35rem .55rem; align-items: center; margin: 0 0 .65rem; padding: .45rem .55rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
     .bench-compare-label { color: var(--muted); font-weight: 600; margin-right: .15rem; }
     .bench-compare-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .45rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
@@ -331,9 +334,9 @@
     .job-banner { display: none; margin-bottom: 1rem; padding: .65rem .85rem; border-radius: 10px; border: 1px solid #2a3a4a; background: #121a24; color: #c5d4e8; font-size: .84rem; font-family: ui-monospace, monospace; }
     .job-banner.active { display: block; }
     @media (max-width: 900px) {
-      .model-inventory { --rail-engine: 0fr; --rail-bench: 0fr; --rail-flag: 0fr; }
-      .grid-head-rail.engine, .grid-head-rail.bench, .grid-head-rail.flag,
-      .rail-cell.engine, .rail-cell.bench, .rail-cell.flag { display: none; }
+      .model-inventory { --rail-arch: 0fr; --rail-engine: 0fr; --rail-bench: 0fr; --rail-flag: 0fr; }
+      .grid-head-rail.arch, .grid-head-rail.engine, .grid-head-rail.bench, .grid-head-rail.flag,
+      .rail-cell.arch, .rail-cell.engine, .rail-cell.bench, .rail-cell.flag { display: none; }
     }
     @media (max-width: 640px) {
       .model-inventory { --rail-inf: 0fr; }
@@ -849,12 +852,48 @@
       return `<span title="${n} tok/s">${n}</span>`;
     }
 
+    function modelArchitecture(m) {
+      if (m.architecture === 'moe' || m.architecture === 'dense') return m.architecture;
+      const caps = new Set((m.capabilities || []).map((c) => String(c).toLowerCase()));
+      if (m.param_active_b != null && m.param_active_b > 0) return 'moe';
+      if (caps.has('moe')) return 'moe';
+      if (caps.has('dense')) return 'dense';
+      if (m.param_b != null && (m.param_active_b == null || m.param_active_b === 0)) return 'dense';
+      return null;
+    }
+
+    function archLabel(m) {
+      const a = modelArchitecture(m);
+      if (a === 'moe') return 'MoE';
+      if (a === 'dense') return 'Dense';
+      return '—';
+    }
+
+    function archTitle(m) {
+      const a = modelArchitecture(m);
+      if (a === 'moe') {
+        const active = m.param_active_b != null ? `${m.param_active_b}B active` : 'sparse experts';
+        const total = m.param_b != null ? ` / ${m.param_b}B total` : '';
+        return `Mixture-of-Experts · ${active}${total}`;
+      }
+      if (a === 'dense' && m.param_b != null) return `Dense · ${m.param_b}B parameters per token`;
+      if (a === 'dense') return 'Dense architecture';
+      return 'Architecture unknown';
+    }
+
+    function railArchCell(m) {
+      const a = modelArchitecture(m);
+      if (!a) return railEmpty();
+      return `<span class="badge arch-${a}" title="${esc(archTitle(m))}">${esc(archLabel(m))}</span>`;
+    }
+
     function renderStatusRail(m) {
       const spark = sparkStatus(m);
       const queued = removalPending(m);
       return `<div class="row-rail" aria-label="Status">`
         + `<span class="rail-cell spark"><span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span></span>`
         + `<span class="rail-cell dl"><span class="badge status-${m.status || 'missing'}">${esc(m.status || 'missing')}</span></span>`
+        + `<span class="rail-cell arch">${railArchCell(m)}</span>`
         + `<span class="rail-cell engine">${railEngineCell(m)}</span>`
         + `<span class="rail-cell inf">${railInferenceCell(m)}</span>`
         + `<span class="rail-cell bench">${railBenchCell(m)}</span>`
@@ -867,6 +906,7 @@
         + `<span class="grid-head-title">Model</span>`
         + `<span class="grid-head-rail">Spark</span>`
         + `<span class="grid-head-rail">Download</span>`
+        + `<span class="grid-head-rail arch">Arch</span>`
         + `<span class="grid-head-rail engine">Engine</span>`
         + `<span class="grid-head-rail inf">Inference</span>`
         + `<span class="grid-head-rail bench">Bench</span>`
@@ -1048,6 +1088,7 @@
             <span><b>Released</b> ${fmtRelease(m)}</span>
             <span><b>Ctx</b> ${fmtCtx(m.max_context)}</span>
             <span><b>Params</b> ${fmtParams(m)}</span>
+            <span><b>Arch</b> ${esc(archLabel(m))}</span>
           </div>
         </button>
         <div class="row-detail">${open ? renderDetail(m) : ''}</div>

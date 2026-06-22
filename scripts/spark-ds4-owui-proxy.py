@@ -45,8 +45,10 @@ class Handler(BaseHTTPRequestHandler):
             return body
         if not isinstance(payload, dict):
             return body
-        if "thinking" not in payload:
-            payload["thinking"] = {"type": "disabled"}
+        # Always chat mode — thinking mode has caused CUDA illegal-instruction crashes.
+        payload["thinking"] = {"type": "disabled"}
+        payload["think"] = False
+        payload.pop("reasoning_effort", None)
         return json.dumps(payload).encode()
 
     def do_GET(self) -> None:

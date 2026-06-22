@@ -3,7 +3,7 @@ name: qwen3-coder-next (eugr)
 inventory_path: qwen/qwen3-coder-next
 engine: eugr
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: qwen3-coder-next
 port: 8000
 tags:
@@ -13,3 +13,4 @@ notes: Scaffolded 2026-06-21 from /models/qwen/qwen3-coder-next. Mark testing, s
   bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-qwen-qwen3-coder-next-eugr.yaml
 updated_at: '2026-06-21T22:40:57.343995+00:00'
+promoted_at: '2026-06-22T02:48:58.622164+00:00'

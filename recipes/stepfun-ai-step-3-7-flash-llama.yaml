@@ -3,7 +3,7 @@ name: step-3.7-flash (llamacpp)
 inventory_path: stepfun-ai/step-3.7-flash
 engine: llamacpp
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: step-3.7-flash
 port: 8081
 tags:
@@ -21,3 +21,4 @@ llamacpp_args:
 - -c
 - '32768'
 updated_at: '2026-06-22T02:33:07.600003+00:00'
+promoted_at: '2026-06-22T02:48:58.918327+00:00'

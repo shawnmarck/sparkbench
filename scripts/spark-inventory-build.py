@@ -661,20 +661,26 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         first_note = notes.split("\n", 1)[0].strip() if notes else None
         lifecycle = recipe.get("lifecycle")
         if not lifecycle:
-            lifecycle = "production" if recipe_file.parent == RECIPES_DIR else "draft"
+            lifecycle = "works" if recipe_file.parent == RECIPES_DIR else "draft"
+        spec = recipe.get("speculative") if isinstance(recipe.get("speculative"), dict) else None
+        mtp = recipe.get("mtp") if isinstance(recipe.get("mtp"), dict) else None
+        tags = recipe.get("tags") or []
         info = {
             "id": profile_id,
             "name": recipe.get("name"),
             "engine": recipe.get("engine"),
             "tier": recipe.get("tier"),
             "lifecycle": lifecycle,
-            "enabled": profile_id in enabled,
+            "enabled": profile_id in enabled or (lifecycle in ("production", "works")),
             "tok_s": bench.get("tok_s") if measured else None,
             "bench_method": method if measured else None,
             "bench_measured_at": bench.get("measured_at") if measured else None,
             "latest_run_id": bench.get("latest_run_id") if measured else None,
             "bench_run_count": history_counts.get(profile_id, 0),
             "notes": first_note,
+            "tags": tags if isinstance(tags, list) else [],
+            "speculative": spec,
+            "mtp": mtp,
         }
         by_path.setdefault(str(inv_path), []).append(info)
 

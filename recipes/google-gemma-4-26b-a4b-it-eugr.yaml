@@ -3,7 +3,7 @@ name: gemma-4-26b-a4b-it (eugr)
 inventory_path: google/gemma-4-26b-a4b-it
 engine: eugr
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: gemma-4-26b-a4b-it
 port: 8000
 tags:
@@ -13,3 +13,4 @@ notes: Scaffolded 2026-06-21 from /models/google/gemma-4-26b-a4b-it. Mark testin
   switch, bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-google-gemma-4-26b-a4b-it-eugr.yaml
 updated_at: '2026-06-21T23:59:52.369147+00:00'
+promoted_at: '2026-06-22T02:48:58.056602+00:00'

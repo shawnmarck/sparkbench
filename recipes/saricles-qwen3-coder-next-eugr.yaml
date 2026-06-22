@@ -3,7 +3,7 @@ name: qwen3-coder-next (eugr)
 inventory_path: saricles/qwen3-coder-next
 engine: eugr
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: qwen3-coder-next
 port: 8000
 tags:
@@ -13,3 +13,4 @@ notes: Scaffolded 2026-06-21 from /models/saricles/qwen3-coder-next. Mark testin
   switch, bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-saricles-qwen3-coder-next-eugr.yaml
 updated_at: '2026-06-21T23:39:09.338688+00:00'
+promoted_at: '2026-06-22T02:48:58.824056+00:00'

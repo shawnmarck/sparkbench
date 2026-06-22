@@ -5,12 +5,12 @@ models:
     tok_s_engine: eugr
     tok_s_profile: qwen36-nvfp4
     note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
-    updated_at: '2026-06-22T02:47:27.167575+00:00'
+    updated_at: '2026-06-22T02:48:26.367366+00:00'
     engine: eugr
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
     note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
-    updated_at: '2026-06-22T02:47:27.209659+00:00'
+    updated_at: '2026-06-22T02:48:26.395199+00:00'
     tok_s: 48.6
     tok_s_engine: llamacpp
     tok_s_profile: qwen36-q4-llama
@@ -25,68 +25,127 @@ models:
     updated_at: '2026-06-21T09:01:17.761172+00:00'
   google/gemma-4-12b-it:
     spark_status: works
-    updated_at: '2026-06-21T09:19:11.660595+00:00'
+    updated_at: '2026-06-22T02:48:57.986857+00:00'
     tok_s: 21.1
     tok_s_engine: llamacpp
     tok_s_profile: google-gemma-4-12b-it-llama
-    note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 109.4s)"
+    note: 'Model Lab: {''id'': ''google-gemma-4-12b-it-llama'', ''name'': ''gemma-4-12b-it
+      (llamacpp)'', ''inventory_path'': ''google/gemma-4-12b-it'', ''engine'': ''llamacpp'',
+      ''tier'': ''fast'', ''lifecycle'': ''works'', ''served_name'': ''gemma-4-12b-it'',
+      ''port'': 8081, ''tags'': [''lab'', ''llamacpp''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/google/gemma-4-12b-it. Mark testing, switch, bench, then promote.'',
+      ''model'': ''/models/google/gemma-4-12b-it/gguf/gemma-4-12b-it-Q4_K_M.gguf'',
+      ''llamacpp_args'': [''-ngl'', ''999'', ''-fa'', ''1'', ''--no-mmap'', ''-c'',
+      ''32768''], ''updated_at'': ''2026-06-21T09:11:44.077238+00:00'', ''promoted_at'':
+      ''2026-06-22T02:48:57.950057+00:00''} works'
+    engine: llamacpp
   microsoft/phi-4:
     removal_pending: true
     removal_queued_at: '2026-06-21T17:20:57.143401+00:00'
-    spark_status: wip
-    updated_at: '2026-06-22T00:16:39.183718+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.170278+00:00'
     engine: eugr
-    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 287.5s)"
+    note: 'Model Lab: {''id'': ''microsoft-phi-4-eugr'', ''name'': ''phi-4 (eugr)'',
+      ''inventory_path'': ''microsoft/phi-4'', ''engine'': ''eugr'', ''tier'': ''heavy'',
+      ''lifecycle'': ''works'', ''served_name'': ''phi-4'', ''port'': 8000, ''tags'':
+      [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21 from /models/microsoft/phi-4.
+      Mark testing, switch, bench, then promote.'', ''eugr_recipe'': ''/opt/spark/services/eugr-microsoft-phi-4-eugr.yaml'',
+      ''updated_at'': ''2026-06-22T00:08:56.953062+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.148863+00:00''}
+      works'
     tok_s: 8.0
     tok_s_engine: eugr
     tok_s_profile: microsoft-phi-4-eugr
   nvidia/qwen3-30b-a3b:
-    spark_status: wip
-    updated_at: '2026-06-22T00:26:09.101664+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.362707+00:00'
     engine: eugr
-    note: "agent bench avg 75.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 30.4s)"
+    note: 'Model Lab: {''id'': ''nvidia-qwen3-30b-a3b-eugr'', ''name'': ''qwen3-30b-a3b
+      (eugr)'', ''inventory_path'': ''nvidia/qwen3-30b-a3b'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3-30b-a3b'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/nvidia/qwen3-30b-a3b. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-nvidia-qwen3-30b-a3b-eugr.yaml'',
+      ''updated_at'': ''2026-06-22T00:23:54.760541+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.339864+00:00''}
+      works'
     tok_s: 75.8
     tok_s_engine: eugr
     tok_s_profile: nvidia-qwen3-30b-a3b-eugr
   deepseek-ai/deepseek-r1-distill-qwen-32b:
     removal_pending: true
     removal_queued_at: '2026-06-21T17:21:35.987485+00:00'
-    spark_status: wip
-    updated_at: '2026-06-21T23:59:48.185661+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:57.882648+00:00'
     engine: eugr
-    note: "agent bench avg 3.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 646.5s)"
+    note: 'Model Lab: {''id'': ''deepseek-ai-deepseek-r1-distill-qwen-32b-eugr'',
+      ''name'': ''deepseek-r1-distill-qwen-32b (eugr)'', ''inventory_path'': ''deepseek-ai/deepseek-r1-distill-qwen-32b'',
+      ''engine'': ''eugr'', ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'':
+      ''deepseek-r1-distill-qwen-32b'', ''port'': 8000, ''tags'': [''lab'', ''eugr''],
+      ''notes'': ''Scaffolded 2026-06-21 from /models/deepseek-ai/deepseek-r1-distill-qwen-32b.
+      Mark testing, switch, bench, then promote.'', ''eugr_recipe'': ''/opt/spark/services/eugr-deepseek-ai-deepseek-r1-distill-qwen-32b-eugr.yaml'',
+      ''updated_at'': ''2026-06-21T23:43:36.365944+00:00'', ''promoted_at'': ''2026-06-22T02:48:57.838841+00:00''}
+      works'
     tok_s: 3.6
     tok_s_engine: eugr
     tok_s_profile: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
   nousresearch/hermes-4-14b:
-    spark_status: wip
-    updated_at: '2026-06-22T00:23:51.011351+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.284893+00:00'
     engine: eugr
-    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (1995 tok in 249.5s)"
+    note: 'Model Lab: {''id'': ''nousresearch-hermes-4-14b-eugr'', ''name'': ''hermes-4-14b
+      (eugr)'', ''inventory_path'': ''nousresearch/hermes-4-14b'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''hermes-4-14b'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/nousresearch/hermes-4-14b. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-nousresearch-hermes-4-14b-eugr.yaml'',
+      ''updated_at'': ''2026-06-22T00:16:43.431476+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.250057+00:00''}
+      works'
     tok_s: 8.0
     tok_s_engine: eugr
     tok_s_profile: nousresearch-hermes-4-14b-eugr
   unsloth/qwen3-coder-30b-a3b-instruct:
-    spark_status: wip
-    updated_at: '2026-06-22T00:37:33.431684+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:59.141539+00:00'
     engine: llamacpp
-    note: "agent bench avg 70.9 tok/s over 3 sessions \xD7 3 turns (2196 tok in 31.0s)"
+    note: 'Model Lab: {''id'': ''unsloth-qwen3-coder-30b-a3b-instruct-llama'', ''name'':
+      ''qwen3-coder-30b-a3b-instruct (llamacpp)'', ''inventory_path'': ''unsloth/qwen3-coder-30b-a3b-instruct'',
+      ''engine'': ''llamacpp'', ''tier'': ''fast'', ''lifecycle'': ''works'', ''served_name'':
+      ''qwen3-coder-30b-a3b-instruct'', ''port'': 8081, ''tags'': [''lab'', ''llamacpp''],
+      ''notes'': ''Scaffolded 2026-06-21 from /models/unsloth/qwen3-coder-30b-a3b-instruct.
+      Mark testing, switch, bench, then promote.\nUsing Q4_K_M (Q5 hung during memory
+      fit).'', ''model'': ''/models/unsloth/qwen3-coder-30b-a3b-instruct/gguf/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf'',
+      ''llamacpp_args'': [''-ngl'', ''999'', ''-fa'', ''1'', ''--no-mmap'', ''-c'',
+      ''32768''], ''updated_at'': ''2026-06-22T00:36:21.446008+00:00'', ''promoted_at'':
+      ''2026-06-22T02:48:59.105185+00:00''} works'
     tok_s: 70.9
     tok_s_engine: llamacpp
     tok_s_profile: unsloth-qwen3-coder-30b-a3b-instruct-llama
   google/gemma-4-26b-a4b-it:
-    spark_status: wip
-    updated_at: '2026-06-22T00:08:52.818301+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.093307+00:00'
     engine: eugr
-    note: "agent bench avg 23.6 tok/s over 3 sessions \xD7 3 turns (2038 tok in 86.5s)"
+    note: 'Model Lab: {''id'': ''google-gemma-4-26b-a4b-it-eugr'', ''name'': ''gemma-4-26b-a4b-it
+      (eugr)'', ''inventory_path'': ''google/gemma-4-26b-a4b-it'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''gemma-4-26b-a4b-it'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/google/gemma-4-26b-a4b-it. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-google-gemma-4-26b-a4b-it-eugr.yaml'',
+      ''updated_at'': ''2026-06-21T23:59:52.369147+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.056602+00:00''}
+      works'
     tok_s: 23.6
     tok_s_engine: eugr
     tok_s_profile: google-gemma-4-26b-a4b-it-eugr
   unsloth/qwen3.6-27b:
-    spark_status: wip
-    updated_at: '2026-06-21T23:34:03.527940+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:59.036798+00:00'
     engine: eugr
-    note: "agent bench avg 9.4 tok/s over 3 sessions \xD7 3 turns (2304 tok in 245.2s)"
+    note: 'Model Lab: {''id'': ''unsloth-qwen3-6-27b-eugr'', ''name'': ''qwen3.6-27b
+      (eugr)'', ''inventory_path'': ''unsloth/qwen3.6-27b'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3.6-27b'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/unsloth/qwen3.6-27b. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-unsloth-qwen3-6-27b-eugr.yaml'',
+      ''updated_at'': ''2026-06-21T23:21:09.691209+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.999672+00:00''}
+      works'
     tok_s: 9.4
     tok_s_engine: eugr
     tok_s_profile: unsloth-qwen3-6-27b-eugr
@@ -96,34 +155,61 @@ models:
     engine: llamacpp
     note: 'Model Lab: 0xsero-deepseek-v4-flash-spark-llama testing'
   qwen/qwen3-coder-next:
-    spark_status: wip
-    updated_at: '2026-06-21T22:52:20.092434+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.659957+00:00'
     engine: eugr
-    note: "agent bench avg 45.4 tok/s over 3 sessions \xD7 3 turns (2091 tok in 46.1s)"
+    note: 'Model Lab: {''id'': ''qwen-qwen3-coder-next-eugr'', ''name'': ''qwen3-coder-next
+      (eugr)'', ''inventory_path'': ''qwen/qwen3-coder-next'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3-coder-next'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/qwen/qwen3-coder-next. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-qwen-qwen3-coder-next-eugr.yaml'',
+      ''updated_at'': ''2026-06-21T22:40:57.343995+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.622164+00:00''}
+      works'
     tok_s: 45.4
     tok_s_engine: eugr
     tok_s_profile: qwen-qwen3-coder-next-eugr
   qwen/qwen3.6-27b:
-    spark_status: wip
-    updated_at: '2026-06-22T01:39:33.462925+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.551427+00:00'
     engine: eugr
-    note: "agent bench avg 29.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 79.5s)"
+    note: 'Model Lab: {''id'': ''qwen-qwen3-6-27b-eugr'', ''name'': ''qwen3.6-27b
+      (eugr)'', ''inventory_path'': ''qwen/qwen3.6-27b'', ''engine'': ''eugr'', ''tier'':
+      ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3.6-27b'', ''port'':
+      8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21 from
+      /models/qwen/qwen3.6-27b. Mark testing, switch, bench, then promote.'', ''eugr_recipe'':
+      ''/opt/spark/services/eugr-qwen-qwen3-6-27b-eugr.yaml'', ''updated_at'': ''2026-06-21T22:52:24.273852+00:00'',
+      ''promoted_at'': ''2026-06-22T02:48:58.528981+00:00''} works'
     tok_s: 29.0
     tok_s_engine: eugr
     tok_s_profile: qwen-qwen3-6-27b-dflash-eugr
   rdtand/qwen3.6-27b:
-    spark_status: wip
-    updated_at: '2026-06-21T23:21:01.420918+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.765957+00:00'
     engine: eugr
-    note: "agent bench avg 10.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 224.3s)"
+    note: 'Model Lab: {''id'': ''rdtand-qwen3-6-27b-eugr'', ''name'': ''qwen3.6-27b
+      (eugr)'', ''inventory_path'': ''rdtand/qwen3.6-27b'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3.6-27b'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/rdtand/qwen3.6-27b. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-rdtand-qwen3-6-27b-eugr.yaml'',
+      ''updated_at'': ''2026-06-21T23:06:43.538756+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.728478+00:00''}
+      works'
     tok_s: 10.3
     tok_s_engine: eugr
     tok_s_profile: rdtand-qwen3-6-27b-eugr
   saricles/qwen3-coder-next:
-    spark_status: wip
-    updated_at: '2026-06-21T23:43:30.858530+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.860702+00:00'
     engine: eugr
-    note: "agent bench avg 63.3 tok/s over 3 sessions \xD7 3 turns (2224 tok in 35.1s)"
+    note: 'Model Lab: {''id'': ''saricles-qwen3-coder-next-eugr'', ''name'': ''qwen3-coder-next
+      (eugr)'', ''inventory_path'': ''saricles/qwen3-coder-next'', ''engine'': ''eugr'',
+      ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3-coder-next'',
+      ''port'': 8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21
+      from /models/saricles/qwen3-coder-next. Mark testing, switch, bench, then promote.'',
+      ''eugr_recipe'': ''/opt/spark/services/eugr-saricles-qwen3-coder-next-eugr.yaml'',
+      ''updated_at'': ''2026-06-21T23:39:09.338688+00:00'', ''promoted_at'': ''2026-06-22T02:48:58.824056+00:00''}
+      works'
     tok_s: 63.3
     tok_s_engine: eugr
     tok_s_profile: saricles-qwen3-coder-next-eugr
@@ -134,10 +220,18 @@ models:
     note: 'DFlash sidecar: NVFP4 MoE target hits KV cache page-size mismatch in vLLM
       (4 load fails). Needs FP8 target or vLLM fix.'
   stepfun-ai/step-3.7-flash:
-    spark_status: wip
-    updated_at: '2026-06-22T02:37:43.344433+00:00'
+    spark_status: works
+    updated_at: '2026-06-22T02:48:58.940989+00:00'
     engine: llamacpp
-    note: "agent bench avg 22.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 103.2s)"
+    note: 'Model Lab: {''id'': ''stepfun-ai-step-3-7-flash-llama'', ''name'': ''step-3.7-flash
+      (llamacpp)'', ''inventory_path'': ''stepfun-ai/step-3.7-flash'', ''engine'':
+      ''llamacpp'', ''tier'': ''heavy'', ''lifecycle'': ''works'', ''served_name'':
+      ''step-3.7-flash'', ''port'': 8081, ''tags'': [''lab'', ''llamacpp''], ''notes'':
+      ''Scaffolded 2026-06-22 from /models/stepfun-ai/step-3.7-flash. Mark testing,
+      switch, bench, then promote.'', ''model'': ''/models/stepfun-ai/step-3.7-flash/gguf/IQ4_XS/Step-3.7-flash-IQ4_XS-00001-of-00003.gguf'',
+      ''llamacpp_args'': [''-ngl'', ''999'', ''-fa'', ''1'', ''--no-mmap'', ''-c'',
+      ''32768''], ''updated_at'': ''2026-06-22T02:33:07.600003+00:00'', ''promoted_at'':
+      ''2026-06-22T02:48:58.918327+00:00''} works'
     tok_s: 22.3
     tok_s_engine: llamacpp
     tok_s_profile: stepfun-ai-step-3-7-flash-llama

@@ -247,7 +247,14 @@
     .inf-life { display: inline-block; font-size: .68rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: .35rem; }
     .inf-life.life-testing { border-color: #2a3a4a; color: #8ab4d8; }
     .inf-life.life-draft { border-color: #3a3a3a; color: var(--muted); opacity: .85; }
-    .inf-life.life-production { border-color: #2a4a2a; color: var(--ok); }
+    .inf-life.life-production, .inf-life.life-works { border-color: #2a4a2a; color: var(--ok); }
+    .inf-spec {
+      display: inline-block; font-size: .56rem; font-weight: 600; letter-spacing: .04em;
+      padding: .06rem .32rem; border-radius: 999px; border: 1px solid var(--border);
+      color: var(--muted); background: #12151c; margin-right: .28rem; vertical-align: middle;
+    }
+    .inf-spec.dflash { border-color: #6a4020; color: #f0a060; background: #1a140c; }
+    .inf-spec.mtp { border-color: #4a2a6a; color: #c49cff; background: #140c1a; }
     .inf-profile.draft { opacity: .72; }
     .inf-tier-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .35rem 0 .15rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace; }
     .inf-tier-legend b { color: #c5cdd8; font-weight: 600; }
@@ -967,7 +974,7 @@
         if (p.active || p.id === activeId) return true;
         const chips = infFilterChips;
         const q = infFilterQ.trim().toLowerCase();
-        if ((p.lifecycle || 'production') === 'draft' && !chips.has('drafts')) return false;
+        if ((p.lifecycle || 'works') === 'draft' && !chips.has('drafts')) return false;
         if (chips.has('switchable') && p.switchable === false) return false;
         const engineOn = chips.has('eugr') || chips.has('llamacpp');
         if (engineOn) {
@@ -1235,21 +1242,34 @@
       }
 
       function infLifeBadge(lifecycle) {
-        const lc = lifecycle || 'production';
+        const lc = lifecycle || 'works';
         return '<span class="inf-life life-' + lc + '">' + lc + '</span>';
       }
 
+      function infRecipeFeatureBadges(p) {
+        const tags = new Set((p.tags || []).map((t) => String(t).toLowerCase()));
+        const spec = p.speculative || {};
+        let html = '';
+        if (spec.method === 'dflash' || tags.has('dflash')) {
+          html += '<span class="inf-spec dflash">DFlash</span>';
+        }
+        if (p.mtp || spec.method === 'mtp' || tags.has('mtp')) {
+          html += '<span class="inf-spec mtp">MTP</span>';
+        }
+        return html;
+      }
+
       function infProfileSort(a, b) {
-        const rank = { production: 0, testing: 1, draft: 2 };
-        const ra = rank[a.lifecycle || 'production'] ?? 1;
-        const rb = rank[b.lifecycle || 'production'] ?? 1;
+        const rank = { works: 0, production: 0, testing: 1, draft: 2 };
+        const ra = rank[a.lifecycle || 'works'] ?? 1;
+        const rb = rank[b.lifecycle || 'works'] ?? 1;
         if (ra !== rb) return ra - rb;
         if (!!b.active - !!a.active) return (b.active ? 1 : 0) - (a.active ? 1 : 0);
         return (a.id || '').localeCompare(b.id || '');
       }
 
       function renderInfProfileRow(p, selectedId) {
-        const lc = p.lifecycle || 'production';
+        const lc = p.lifecycle || 'works';
         const canPick = p.switchable !== false && lc !== 'draft';
         const cls = 'inf-profile compact' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '')
           + (p.id === selectedId && !p.active ? ' selected' : '')
@@ -1275,7 +1295,7 @@
           : (p.id === selectedId ? '<span class="inf-selected-pill">selected</span>' : '');
         return '<div class="' + cls + '"' + pickAttrs + '><div class="inf-profile-row">'
           + '<span class="name" title="' + attrEsc((p.name || p.id) + noteHint) + '">'
-          + infLifeBadge(lc) + escHtml(displayName) + statusPill + '</span>'
+          + infLifeBadge(lc) + infRecipeFeatureBadges(p) + escHtml(displayName) + statusPill + '</span>'
           + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + escHtml(metaShort) + '</span>'
           + '</div></div>';
       }
@@ -1289,7 +1309,8 @@
         const sel = $('inf-select');
         const prev = sel.value;
         sel.innerHTML = switchable.map((p) => {
-          const lc = p.lifecycle && p.lifecycle !== 'production' ? ' · ' + p.lifecycle : '';
+          const lc = p.lifecycle && p.lifecycle !== 'production' && p.lifecycle !== 'works'
+            ? ' · ' + p.lifecycle : '';
           return '<option value="' + attrEsc(p.id) + '" data-tier="' + attrEsc(p.tier || '') + '">'
             + escHtml(p.id + ' · ' + engineDisplayMeta(p.engine) + ' · ' + (p.tier || '') + lc) + '</option>';
         }).join('');

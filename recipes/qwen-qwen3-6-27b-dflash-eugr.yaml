@@ -3,7 +3,7 @@ name: qwen3.6-27b DFlash (eugr)
 inventory_path: qwen/qwen3.6-27b
 engine: eugr
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: qwen3.6-27b-dflash
 port: 8000
 tags:
@@ -20,3 +20,4 @@ speculative:
 eugr_recipe: /opt/spark/services/eugr-qwen-qwen3-6-27b-dflash-eugr.yaml
 notes: 'DFlash sidecar scaffold 2026-06-22: target /models/qwen/qwen3.6-27b, drafter
   /models/z-lab/qwen3.6-27b/dflash. No prefix caching. Bench vs baseline before promote.'
+promoted_at: '2026-06-22T02:48:58.419328+00:00'

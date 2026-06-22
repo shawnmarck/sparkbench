@@ -3,7 +3,7 @@ name: gemma-4-12b-it (llamacpp)
 inventory_path: google/gemma-4-12b-it
 engine: llamacpp
 tier: fast
-lifecycle: testing
+lifecycle: works
 served_name: gemma-4-12b-it
 port: 8081
 tags:
@@ -21,3 +21,4 @@ llamacpp_args:
 - -c
 - '32768'
 updated_at: '2026-06-21T09:11:44.077238+00:00'
+promoted_at: '2026-06-22T02:48:57.950057+00:00'

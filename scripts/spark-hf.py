@@ -451,8 +451,28 @@ def plan_download(
         if sib is not None and getattr(sib, "size", None):
             total_bytes += int(sib.size or 0)
 
-    scaffold_engine = "llamacpp" if engine == "llamacpp" else "eugr"
-    return {
+    repo_low = repo_id.lower()
+    scaffold_kind: str | None = None
+    scaffold_engine: str | None = "llamacpp" if engine == "llamacpp" else "eugr"
+
+    if str(engine).lower() == "ds4":
+        scaffold_kind = "ds4"
+        scaffold_engine = None
+    elif "dflash" in repo_low:
+        fmt = "dflash"
+        subpath = "dflash"
+        scaffold_kind = "dflash"
+        scaffold_engine = None
+        dest = MODELS_ROOT / inv / subpath
+    elif "mtp" in repo_low:
+        if "gguf" in repo_low or fmt == "gguf":
+            fmt = "gguf"
+            subpath = "mtp-gguf"
+            scaffold_kind = "mtp_llama"
+            scaffold_engine = "llamacpp"
+            dest = MODELS_ROOT / inv / subpath
+
+    plan: dict[str, Any] = {
         "repo": repo_id,
         "intent": intent,
         "mode": "files",
@@ -467,6 +487,9 @@ def plan_download(
         "size_human": _human_size(total_bytes),
         "file_count": len(selected),
     }
+    if scaffold_kind:
+        plan["scaffold_kind"] = scaffold_kind
+    return plan
 
 
 def _human_size(n: int) -> str:
@@ -1097,10 +1120,9 @@ def _post_download_complete(item: dict[str, Any]) -> None:
         return
     _write_manifest(str(inv), plan)
     _merge_catalog(str(inv), plan)
-    engine = plan.get("scaffold_engine") or "eugr"
     try:
         core = _load_inference_core()
-        core.scaffold_recipe(str(inv), str(engine))
+        core.scaffold_auto(str(inv), plan if isinstance(plan, dict) else None)
     except Exception as exc:
         _update_item(str(item.get("id", "")), scaffold_error=str(exc)[:200])
     if INVENTORY_BUILD.is_file():

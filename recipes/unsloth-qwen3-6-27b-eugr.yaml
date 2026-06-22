@@ -3,7 +3,7 @@ name: qwen3.6-27b (eugr)
 inventory_path: unsloth/qwen3.6-27b
 engine: eugr
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: qwen3.6-27b
 port: 8000
 tags:
@@ -13,3 +13,4 @@ notes: Scaffolded 2026-06-21 from /models/unsloth/qwen3.6-27b. Mark testing, swi
   bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-unsloth-qwen3-6-27b-eugr.yaml
 updated_at: '2026-06-21T23:21:09.691209+00:00'
+promoted_at: '2026-06-22T02:48:58.999672+00:00'

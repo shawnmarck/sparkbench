@@ -260,10 +260,17 @@
     .badge.tok-s.unbench { border-color: #3a3a3a; color: var(--muted); }
     .badge.life-draft { border-color: #3a3a3a; color: var(--muted); }
     .badge.life-testing { border-color: #2a3a4a; color: var(--dl); }
-    .badge.life-production { border-color: #2a4a2a; color: var(--ok); }
+    .badge.life-works, .badge.life-production { border-color: #2a4a2a; color: var(--ok); }
     .recipe-lab-create { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); }
     .recipe-lab-create select { font-size: .8rem; padding: .35rem .5rem; }
     .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
+    .badge.spec-dflash { border-color: #2a4a5a; color: #9ec8ff; background: #101820; }
+    .badge.spec-mtp { border-color: #4a2a6a; color: #c49cff; background: #140c1a; }
+    .bench-compare-strip { display: flex; flex-wrap: wrap; gap: .35rem .55rem; align-items: center; margin: 0 0 .65rem; padding: .45rem .55rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
+    .bench-compare-label { color: var(--muted); font-weight: 600; margin-right: .15rem; }
+    .bench-compare-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .45rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
+    .bench-compare-chip strong { color: var(--accent); font-weight: 600; }
+    .bench-compare-pct { color: var(--muted); font-size: .72rem; }
     .inference-block { padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
     .inference-block h4 { margin: 0 0 .45rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
     .inf-profile-row { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: center; justify-content: space-between; padding: .45rem 0; border-top: 1px solid var(--border); font-size: .82rem; }
@@ -872,6 +879,34 @@
       return `<span class="badge life-${esc(lc)}">${esc(lc)}</span>`;
     }
 
+    function recipeFeatureBadges(p) {
+      const tags = new Set((p.tags || []).map((t) => String(t).toLowerCase()));
+      const spec = p.speculative || {};
+      let html = '';
+      if (spec.method === 'dflash' || tags.has('dflash')) {
+        html += '<span class="badge spec-dflash">DFlash</span>';
+      }
+      if (p.mtp || spec.method === 'mtp' || tags.has('mtp')) {
+        html += '<span class="badge spec-mtp">MTP</span>';
+      }
+      return html;
+    }
+
+    function renderBenchCompareStrip(profiles) {
+      const rated = profiles.filter((p) => p.tok_s != null && !Number.isNaN(Number(p.tok_s)));
+      if (rated.length < 2) return '';
+      const sorted = [...rated].sort((a, b) => Number(b.tok_s) - Number(a.tok_s));
+      const best = Number(sorted[0].tok_s) || 1;
+      const cells = sorted.map((p) => {
+        const n = Math.round(Number(p.tok_s));
+        const pct = Math.round((n / best) * 100);
+        return `<span class="bench-compare-chip" title="${esc(p.id)}">`
+          + `${recipeFeatureBadges(p)}<strong>${n}</strong> tok/s`
+          + `<span class="bench-compare-pct">${pct}%</span></span>`;
+      }).join('');
+      return `<div class="bench-compare-strip"><span class="bench-compare-label">Recipe compare</span>${cells}</div>`;
+    }
+
     function inferenceSection(m) {
       const rel = m.rel_path || m.id;
       const onDisk = m.local && m.local.present;
@@ -918,20 +953,17 @@
         const histOpen = benchHistoryOpen.has(p.id) ? ' open' : '';
         return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
           + `<code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div>`
-          + `<div class="inf-profile-actions">${lifeBadge(lc)}${tier}${tokBadge}${actions}</div></div>`
+          + `<div class="inf-profile-actions">${lifeBadge(lc)}${recipeFeatureBadges(p)}${tier}${tokBadge}${actions}</div></div>`
           + `<details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary>`
           + `<div class="bench-history-panel"></div></details></div>`;
       }).join('');
       const create = onDisk ? `<div class="recipe-lab-create">`
         + `<span class="verify-label">New recipe</span>`
-        + `<select class="recipe-engine" data-path="${esc(rel)}" aria-label="Engine">`
-        + `<option value="llamacpp">llama.cpp (GGUF)</option>`
-        + `<option value="eugr">vLLM (eugr NVFP4)</option>`
-        + `</select>`
-        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}">Create draft</button>`
+        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, MTP, DFlash)">Auto-scaffold</button>`
         + `</div>` : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>';
       return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4>`
         + `<div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote. Spark status syncs on mark testing.</div>`
+        + renderBenchCompareStrip(profiles)
         + (rows || '<div class="meta-warn">No recipes yet.</div>')
         + create
         + '<div class="actions" style="margin-top:.55rem"><a href="/#inference" target="_top">Open Inference tab ↗</a></div></div>';
@@ -1383,7 +1415,7 @@
       const updated = {
         ...base,
         lifecycle: recipe.lifecycle,
-        enabled: recipe.lifecycle === 'production',
+        enabled: recipe.lifecycle === 'production' || recipe.lifecycle === 'works',
       };
       if (i >= 0) profiles[i] = updated;
       else profiles.push(updated);
@@ -1568,10 +1600,11 @@
       const scaffoldBtn = e.target.closest('[data-action="recipe-scaffold"]');
       if (scaffoldBtn && !scaffoldBtn.disabled) {
         e.stopPropagation();
-        const path = scaffoldBtn.dataset.path;
-        const sel = document.querySelector(`select.recipe-engine[data-path="${CSS.escape(path)}"]`);
-        const engine = sel ? sel.value : 'llamacpp';
-        recipeApi('/api/inference/recipes/scaffold', { inventory_path: path, engine }, scaffoldBtn);
+        recipeApi(
+          '/api/inference/recipes/scaffold',
+          { inventory_path: scaffoldBtn.dataset.path, auto: true },
+          scaffoldBtn
+        );
         return;
       }
       const testBtn = e.target.closest('[data-action="recipe-testing"]');
@@ -1583,7 +1616,7 @@
       const promoteBtn = e.target.closest('[data-action="recipe-promote"]');
       if (promoteBtn && !promoteBtn.disabled) {
         e.stopPropagation();
-        if (!confirm('Promote recipe “' + promoteBtn.dataset.profile + '” to production?')) return;
+        if (!confirm('Mark recipe works “' + promoteBtn.dataset.profile + '” as works?')) return;
         recipeApi('/api/inference/recipes/promote', { profile: promoteBtn.dataset.profile }, promoteBtn);
         return;
       }

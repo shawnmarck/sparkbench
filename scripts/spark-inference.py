@@ -54,8 +54,10 @@ PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
 BENCH_METHODS = frozenset({"bench", "bench-agent"})
 LIFECYCLE_DRAFT = "draft"
 LIFECYCLE_TESTING = "testing"
-LIFECYCLE_PRODUCTION = "production"
-LIFECYCLE_VALID = frozenset({LIFECYCLE_DRAFT, LIFECYCLE_TESTING, LIFECYCLE_PRODUCTION})
+LIFECYCLE_PRODUCTION = "production"  # legacy; prefer works
+LIFECYCLE_WORKS = "works"
+LIFECYCLE_VALID = frozenset({LIFECYCLE_DRAFT, LIFECYCLE_TESTING, LIFECYCLE_PRODUCTION, LIFECYCLE_WORKS})
+LIFECYCLE_LIVE = frozenset({LIFECYCLE_PRODUCTION, LIFECYCLE_WORKS})
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -87,6 +89,23 @@ def trigger_inventory_rebuild() -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def sync_spark_status_for_works(recipe: dict[str, Any], note: str | None = None) -> None:
+    """Mark inventory model as works after a successful bench / recipe promotion."""
+    inv_path = recipe.get("inventory_path") or recipe.get("catalog_id")
+    if not inv_path or not VERIFY_SCRIPT.is_file():
+        return
+    engine = str(recipe.get("engine") or "").strip()
+    if engine == "eugr-dflash":
+        engine = "eugr"
+    if not note:
+        note = f"Model Lab: {recipe.get('id', 'recipe')} works"
+    args = [sys.executable, str(VERIFY_SCRIPT), "set", str(inv_path), "works"]
+    if engine:
+        args.append(engine)
+    args.append(note)
+    subprocess.run(args, capture_output=True, check=False)
 
 
 def sync_spark_status_for_testing(recipe: dict[str, Any]) -> None:
@@ -139,7 +158,7 @@ def infer_lifecycle(recipe: dict[str, Any], path: Path) -> str:
         return lifecycle
     if path.parent == RECIPES_DRAFTS_DIR:
         return LIFECYCLE_DRAFT
-    return LIFECYCLE_PRODUCTION
+    return LIFECYCLE_WORKS
 
 
 def load_recipe(profile_id: str) -> dict[str, Any]:
@@ -183,7 +202,7 @@ def switchable_profile_ids() -> list[str]:
         except SystemExit:
             continue
         lifecycle = recipe.get("lifecycle")
-        if lifecycle == LIFECYCLE_PRODUCTION and profile_id in enabled_profiles():
+        if lifecycle in LIFECYCLE_LIVE and profile_id in enabled_profiles():
             out.append(profile_id)
         elif lifecycle == LIFECYCLE_TESTING:
             out.append(profile_id)
@@ -672,13 +691,287 @@ def scaffold_recipe(
     return recipe
 
 
+def _is_mtp_gguf_name(path: Path) -> bool:
+    return "mtp" in path.name.lower()
+
+
+def discover_mtp_gguf_pair(model_root: Path) -> tuple[Path, Path] | None:
+    """Main GGUF + MTP draft GGUF (subdir or sibling file)."""
+    mtp_dir = model_root / "mtp-gguf"
+    mtp_files: list[Path] = []
+    if mtp_dir.is_dir():
+        mtp_files = sorted(mtp_dir.glob("*.gguf"))
+    if not mtp_files:
+        mtp_files = sorted(
+            p for p in model_root.rglob("*.gguf") if _is_mtp_gguf_name(p)
+        )
+    if not mtp_files:
+        return None
+    mtp_path = mtp_files[0]
+    main = discover_gguf(model_root)
+    if main is None or main.resolve() == mtp_path.resolve():
+        main_candidates = sorted(
+            p
+            for p in model_root.rglob("*.gguf")
+            if not _is_mtp_gguf_name(p)
+        )
+        if not main_candidates:
+            return None
+        main = main_candidates[0]
+    return main, mtp_path
+
+
+def discover_mtp_safetensors(model_dir: Path) -> Path | None:
+    path = model_dir / "mtp.safetensors"
+    return path if path.is_file() else None
+
+
+def make_variant_profile_id(inventory_path: str, suffix: str) -> str:
+    lab, slug = inventory_path.split("/", 1)
+    raw = f"{lab}-{slug.replace('.', '-')}-{suffix}".lower()
+    raw = re.sub(r"[^a-z0-9._-]+", "-", raw).strip("-")
+    base = raw[:56].strip("-") or "profile"
+    candidate = base
+    n = 2
+    while resolve_recipe_path(candidate):
+        candidate = f"{base}-{n}"
+        n += 1
+    return candidate
+
+
+def write_eugr_mtp_service(
+    profile_id: str,
+    inventory_path: str,
+    served_name: str,
+) -> Path:
+    found = discover_vllm_weights_dir(MODELS_ROOT / inventory_path)
+    if found is None:
+        raise RuntimeError(
+            f"no vLLM weights (nvfp4/ or hf/) under /models/{inventory_path}"
+        )
+    model_dir, weight_format = found
+    if discover_mtp_safetensors(model_dir) is None:
+        raise RuntimeError(f"no mtp.safetensors beside weights in {model_dir}")
+    moe_line = "    --moe-backend marlin \\\n" if weight_format == "nvfp4" else ""
+    attn_line = ""
+    if not is_multimodal_model(model_dir):
+        attn_line = "    --attention-backend flashinfer \\\n"
+    load_fmt = eugr_load_format(model_dir, weight_format)
+    env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
+    max_len = infer_max_model_len(model_dir, weight_format)
+    moe_backend = "triton" if is_moe_model(model_dir) else "triton"
+    spec_json = (
+        f'{{{{"method": "mtp", "num_speculative_tokens": 3, '
+        f'"moe_backend": "{moe_backend}"}}}}'
+    )
+    path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
+    content = f"""# Generated by spark-inference MTP scaffold ({profile_id})
+recipe_version: "1"
+name: {profile_id}
+description: eugr vLLM MTP speculative serve for {inventory_path}
+
+model: {served_name}
+container: vllm-node
+{env_block}
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: {max_len}
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+
+command: |
+  vllm serve {model_dir} \\
+    --host {{host}} \\
+    --port {{port}} \\
+    --served-model-name {served_name} \\
+    --tensor-parallel-size {{tensor_parallel}} \\
+    --trust-remote-code \\
+    --kv-cache-dtype auto \\
+{attn_line}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+    --max-model-len {{max_model_len}} \\
+    --max-num-seqs {{max_num_seqs}} \\
+    --max-num-batched-tokens {{max_num_batched_tokens}} \\
+    --enable-chunked-prefill \\
+    --enable-prefix-caching \\
+    --load-format {load_fmt} \\
+    --speculative-config '{spec_json}'
+"""
+    SERVICES_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return path
+
+
+def scaffold_mtp_eugr_recipe(
+    inventory_path: str,
+    *,
+    name: str | None = None,
+    tier: str | None = None,
+) -> dict[str, Any]:
+    inventory_path = inventory_path.strip().strip("/")
+    profile_id = make_variant_profile_id(inventory_path, "mtp-eugr")
+    slug = inventory_path.split("/", 1)[1]
+    served_name = re.sub(r"[^a-z0-9._-]+", "-", f"{slug}-mtp".lower()).strip("-")[:48]
+    eugr_path = write_eugr_mtp_service(profile_id, inventory_path, served_name)
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": name or f"{slug} MTP (eugr)",
+        "inventory_path": inventory_path,
+        "engine": "eugr",
+        "tier": tier or "heavy",
+        "lifecycle": LIFECYCLE_DRAFT,
+        "served_name": served_name,
+        "port": 8000,
+        "tags": ["lab", "eugr", "mtp"],
+        "mtp": {"method": "mtp", "num_speculative_tokens": 3},
+        "eugr_recipe": str(eugr_path),
+        "notes": (
+            f"MTP scaffold {datetime.now(timezone.utc).date().isoformat()} from "
+            f"/models/{inventory_path}. Bench vs non-MTP baseline before promote."
+        ),
+    }
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
+    return recipe
+
+
+def scaffold_mtp_llamacpp_recipe(
+    inventory_path: str,
+    *,
+    name: str | None = None,
+    tier: str | None = None,
+) -> dict[str, Any]:
+    inventory_path = inventory_path.strip().strip("/")
+    model_root = MODELS_ROOT / inventory_path
+    pair = discover_mtp_gguf_pair(model_root)
+    if pair is None:
+        raise RuntimeError(f"no MTP GGUF pair under /models/{inventory_path}")
+    main_gguf, mtp_gguf = pair
+    profile_id = make_variant_profile_id(inventory_path, "mtp-llama")
+    slug = inventory_path.split("/", 1)[1]
+    served_name = re.sub(r"[^a-z0-9._-]+", "-", f"{slug}-mtp".lower()).strip("-")[:48]
+    args = ["-ngl", "999", "-fa", "1", "--no-mmap", "-c", "32768"]
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": name or f"{slug} MTP (llama.cpp)",
+        "inventory_path": inventory_path,
+        "engine": "llamacpp",
+        "tier": tier or "fast",
+        "lifecycle": LIFECYCLE_DRAFT,
+        "served_name": served_name,
+        "port": 8081,
+        "model": str(main_gguf),
+        "tags": ["lab", "llamacpp", "mtp"],
+        "mtp": {"method": "mtp", "draft_model": str(mtp_gguf)},
+        "llamacpp_args": args,
+        "notes": (
+            f"MTP GGUF scaffold {datetime.now(timezone.utc).date().isoformat()}: "
+            f"main {main_gguf.name}, draft {mtp_gguf.name}. "
+            "Wire draft model in spark-llama when runner supports it; bench first."
+        ),
+    }
+    try:
+        if main_gguf.stat().st_size >= 40 * 1024**3:
+            recipe["tier"] = "heavy"
+    except OSError:
+        pass
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
+    return recipe
+
+
+def resolve_scaffold_kind(
+    inventory_path: str,
+    plan: dict[str, Any] | None = None,
+) -> str:
+    """Return scaffold route: ds4, dflash, mtp_eugr, mtp_llama, llamacpp, eugr."""
+    plan = plan or {}
+    engine = str(plan.get("engine") or "").lower()
+    fmt = str(plan.get("format") or "").lower()
+    subpath = str(plan.get("subpath") or "").lower()
+    repo = str(plan.get("repo") or "").lower()
+    kind = str(plan.get("scaffold_kind") or "").lower()
+    if kind in {"ds4", "dflash", "mtp_eugr", "mtp_llama", "llamacpp", "eugr"}:
+        return kind
+    if engine == "ds4":
+        return "ds4"
+    if fmt == "dflash" or "dflash" in repo or subpath == "dflash":
+        return "dflash"
+
+    inv = inventory_path.strip().strip("/")
+    slug = inv.split("/", 1)[1] if "/" in inv else inv
+    if inv.startswith("z-lab/") and discover_dflash_sidecar(slug):
+        return "dflash"
+
+    files = [str(f).lower() for f in (plan.get("files") or [])]
+    if (
+        "mtp" in subpath
+        or "mtp" in repo
+        or any("mtp" in f for f in files)
+        or "-mtp-" in repo
+    ):
+        if fmt == "gguf" or engine in {"llamacpp", "gguf"} or subpath in {
+            "gguf",
+            "mtp-gguf",
+        }:
+            return "mtp_llama"
+
+    model_root = MODELS_ROOT / inv
+    if model_root.is_dir():
+        found = discover_vllm_weights_dir(model_root)
+        if found:
+            model_dir, _ = found
+            if discover_mtp_safetensors(model_dir) and is_qwen36_family(model_dir):
+                return "mtp_eugr"
+        if discover_mtp_gguf_pair(model_root):
+            return "mtp_llama"
+        if discover_gguf(model_root) and (
+            fmt == "gguf" or (model_root / "gguf").is_dir()
+        ):
+            return "llamacpp"
+
+    return "llamacpp" if fmt == "gguf" or engine == "llamacpp" else "eugr"
+
+
+def scaffold_auto(
+    inventory_path: str,
+    plan: dict[str, Any] | None = None,
+    *,
+    name: str | None = None,
+    tier: str | None = None,
+    engine: str | None = None,
+) -> dict[str, Any]:
+    """Route scaffold from on-disk layout + download plan (Phase 5d)."""
+    kind = resolve_scaffold_kind(inventory_path, plan)
+    if kind == "ds4":
+        raise RuntimeError(
+            "ds4 engine scaffold deferred — see data/ds4-dwarfstar.yaml"
+        )
+    if kind == "dflash":
+        return scaffold_dflash_recipe(inventory_path)
+    if kind == "mtp_eugr":
+        return scaffold_mtp_eugr_recipe(inventory_path, name=name, tier=tier)
+    if kind == "mtp_llama":
+        return scaffold_mtp_llamacpp_recipe(inventory_path, name=name, tier=tier)
+    picked = (engine or "").strip().lower()
+    if picked in {"llamacpp", "eugr"}:
+        return scaffold_recipe(inventory_path, picked, name=name, tier=tier)
+    if kind == "llamacpp":
+        return scaffold_recipe(inventory_path, "llamacpp", name=name, tier=tier)
+    return scaffold_recipe(inventory_path, "eugr", name=name, tier=tier)
+
+
 def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
     if lifecycle not in LIFECYCLE_VALID:
         raise RuntimeError(f"invalid lifecycle: {lifecycle}")
     path = resolve_recipe_path(profile_id)
     if path is None:
         raise RuntimeError(f"unknown profile: {profile_id}")
-    if path.parent == RECIPES_DIR and lifecycle != LIFECYCLE_PRODUCTION:
+    if path.parent == RECIPES_DIR and lifecycle not in LIFECYCLE_LIVE:
         raise RuntimeError("production recipes live in recipes/ — use discard to remove")
     recipe = load_yaml(path)
     recipe["lifecycle"] = lifecycle
@@ -700,7 +993,7 @@ def promote_recipe(profile_id: str) -> dict[str, Any]:
     if lifecycle == LIFECYCLE_DRAFT:
         raise RuntimeError("mark recipe as testing before promote (bench first)")
 
-    recipe["lifecycle"] = LIFECYCLE_PRODUCTION
+    recipe["lifecycle"] = LIFECYCLE_WORKS
     recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
     prod_path = production_recipe_path(profile_id)
     save_recipe_file(prod_path, recipe)
@@ -711,6 +1004,7 @@ def promote_recipe(profile_id: str) -> dict[str, Any]:
         profiles.append(profile_id)
         save_profiles_index(profiles)
 
+    sync_spark_status_for_works(recipe)
     trigger_inventory_rebuild()
     recipe["id"] = profile_id
     return recipe
@@ -1284,6 +1578,12 @@ def recipe_public(
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
     }
+    spec = recipe.get("speculative")
+    if isinstance(spec, dict) and spec:
+        out["speculative"] = spec
+    mtp = recipe.get("mtp")
+    if isinstance(mtp, dict) and mtp:
+        out["mtp"] = mtp
     if bench and bench.get("tok_s") is not None and bench.get("method") in BENCH_METHODS:
         out["tok_s"] = bench.get("tok_s")
         out["tok_s_method"] = bench.get("method")
@@ -1362,6 +1662,7 @@ def record_benchmark(
         model_entry["tok_s_engine"] = engine
         model_entry["tok_s_profile"] = profile_id
         model_entry["updated_at"] = now
+        model_entry["spark_status"] = "works"
         if note:
             model_entry["note"] = note
         VERIFY_FILE.write_text(
@@ -2217,13 +2518,19 @@ def api_dispatch(
             return 400, {"ok": False, "error": "confirmation required"}
         inv = str(body.get("inventory_path", "")).strip()
         engine = str(body.get("engine", "")).strip().lower()
+        name = str(body.get("name", "")).strip() or None
+        tier = str(body.get("tier", "")).strip() or None
         try:
-            recipe = scaffold_recipe(
-                inv,
-                engine,
-                name=str(body.get("name", "")).strip() or None,
-                tier=str(body.get("tier", "")).strip() or None,
-            )
+            if body.get("auto") or not engine:
+                recipe = scaffold_auto(
+                    inv,
+                    body,
+                    name=name,
+                    tier=tier,
+                    engine=engine or None,
+                )
+            else:
+                recipe = scaffold_recipe(inv, engine, name=name, tier=tier)
         except RuntimeError as exc:
             return 400, {"ok": False, "error": str(exc)}
         pub = recipe_public(recipe)
@@ -2430,11 +2737,15 @@ def cmd_recipe(argv: list[str]) -> int:
             )
         return 0
     if sub == "scaffold":
-        if len(argv) < 5:
+        if len(argv) < 4:
             raise SystemExit(
-                "usage: spark-inference recipe scaffold <lab/slug> <llamacpp|eugr>"
+                "usage: spark-inference recipe scaffold <lab/slug> [llamacpp|eugr] "
+                "(omit engine for auto-detect)"
             )
-        recipe = scaffold_recipe(argv[3], argv[4])
+        if len(argv) >= 5:
+            recipe = scaffold_recipe(argv[3], argv[4])
+        else:
+            recipe = scaffold_auto(argv[3])
         print(f"Scaffolded draft {recipe['id']} -> {draft_recipe_path(recipe['id'])}")
         return 0
     if sub == "scaffold-dflash":
@@ -2454,11 +2765,11 @@ def cmd_recipe(argv: list[str]) -> int:
         recipe = set_recipe_lifecycle(argv[3], LIFECYCLE_TESTING)
         print(f"Marked testing: {recipe['id']}")
         return 0
-    if sub == "promote":
+    if sub in ("promote", "works"):
         if len(argv) < 4:
-            raise SystemExit("usage: spark-inference recipe promote <profile>")
+            raise SystemExit("usage: spark-inference recipe works <profile>")
         recipe = promote_recipe(argv[3])
-        print(f"Promoted to production: {recipe['id']}")
+        print(f"Marked works: {recipe['id']}")
         return 0
     if sub == "discard":
         if len(argv) < 4:
@@ -2475,9 +2786,9 @@ def usage() -> None:
 
 Recipe-driven inference control (Phase 5). One GPU workload at a time.
 bench — multi-turn agent-style timing on the active profile (avg of 3 sessions).
-recipe scaffold <lab/slug> <llamacpp|eugr> — Model Lab draft recipe
+recipe scaffold <lab/slug> [llamacpp|eugr] — Model Lab draft (auto-detect if engine omitted)
 recipe scaffold-dflash <lab/slug> — DFlash sidecar + target eugr draft
-recipe testing|promote|discard <profile> — lifecycle (draft → testing → production)"""
+recipe testing|works|promote|discard <profile> — lifecycle (draft → testing → works)"""
     )
 
 

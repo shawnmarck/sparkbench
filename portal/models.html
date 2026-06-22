@@ -254,6 +254,7 @@
     .badge.pending-delete { border-color: #5a2a2a; color: #e87878; background: #1a1010; }
     .badge.engine-vllm, .badge.engine-eugr { border-color: #2a3a5a; color: #9ec8ff; }
     .badge.engine-llamacpp { border-color: #3a4a2a; color: #b8d88a; }
+    .badge.engine-ds4 { border-color: #4a3a5a; color: #d8a8ff; }
     .badge.inf-profile { border-color: #2a3a4a; color: #9ec8ff; }
     .badge.inf-active { border-color: #3a4a2a; color: var(--accent); }
     .badge.inf-loading { border-color: #4a402a; color: var(--warn); }
@@ -262,6 +263,8 @@
     .badge.life-draft { border-color: #3a3a3a; color: var(--muted); }
     .badge.life-testing { border-color: #2a3a4a; color: var(--dl); }
     .badge.life-works, .badge.life-production { border-color: #2a4a2a; color: var(--ok); }
+    .badge.sidecar-req { border-color: #3a3a5a; color: #b8b8ff; font-size: .62rem; }
+    .row-sidecar-note { color: var(--muted); font-size: .68rem; margin-top: .15rem; }
     .recipe-lab-create { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); }
     .recipe-lab-create select { font-size: .8rem; padding: .35rem .5rem; }
     .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
@@ -477,12 +480,13 @@
     let benchNoteDrafts = {};
     const REFRESH_MS = 30000, JOB_POLL_MS = 2000, INF_POLL_MS = 10000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
-    const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'GGUF' };
+    const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'GGUF', ds4: 'DwarfStar' };
     const engineCssClass = (e) => (e === 'eugr' ? 'vllm' : e);
     const engineTitle = (e) => {
       if (e === 'eugr') return 'vLLM via eugr spark-vllm-docker (port 8000)';
       if (e === 'vllm') return 'vLLM';
       if (e === 'llamacpp') return 'llama.cpp GGUF (port 8081)';
+      if (e === 'ds4') return 'DwarfStar ds4-server (port 8000)';
       return e || '';
     };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
@@ -599,7 +603,23 @@
       applyFilters();
     }
     const parseDate = (iso) => { const t = Date.parse(iso || ''); return Number.isNaN(t) ? 0 : t; };
-    const localSize = (m) => (m.local && m.local.present) ? m.local.size_human : '—';
+    const localSize = (m) => {
+      if (m.model_kind === 'speculative_sidecar' && m.combined_size_human) return m.combined_size_human;
+      return (m.local && m.local.present) ? m.local.size_human : '—';
+    };
+    const sidecarSizeDetail = (m) => {
+      if (m.model_kind !== 'speculative_sidecar') return '';
+      const parts = [];
+      if (m.requires_target_size_human) parts.push('base ' + m.requires_target_size_human);
+      if (m.sidecar_size_human) parts.push('add-on ' + m.sidecar_size_human);
+      return parts.length ? parts.join(' + ') : '';
+    };
+    const isSidecarModel = (m) => m.model_kind === 'speculative_sidecar';
+    const requiresTargetLine = (m) => {
+      if (!isSidecarModel(m) || !m.requires_target) return '';
+      const hint = m.requires_target_name ? ` (${m.requires_target_name})` : '';
+      return `<span class="badge sidecar-req" title="Speculative add-on — needs base weights on disk">requires ${esc(m.requires_target)}${esc(hint)}</span>`;
+    };
     const shelfSize = (m) => (m.shelf && m.shelf.present) ? m.shelf.size_human : '—';
 
     const benchRated = (m) => m.best_bench_tok_s != null && !Number.isNaN(Number(m.best_bench_tok_s));
@@ -623,8 +643,12 @@
         case 'name-desc': return b.name.localeCompare(a.name);
         case 'name-asc':
         default: return a.name.localeCompare(b.name);
-        case 'size-desc': return (b.local && b.local.size_bytes || b.size_bytes || 0) - (a.local && a.local.size_bytes || a.size_bytes || 0);
-        case 'size-asc': return (a.local && a.local.size_bytes || a.size_bytes || 0) - (b.local && b.local.size_bytes || b.size_bytes || 0);
+        case 'size-desc':
+          return ((b.combined_size_bytes || (b.local && b.local.size_bytes) || b.size_bytes || 0)
+            - (a.combined_size_bytes || (a.local && a.local.size_bytes) || a.size_bytes || 0));
+        case 'size-asc':
+          return ((a.combined_size_bytes || (a.local && a.local.size_bytes) || a.size_bytes || 0)
+            - (b.combined_size_bytes || (b.local && b.local.size_bytes) || b.size_bytes || 0));
         case 'ctx-desc': return nSort(b.max_context) - nSort(a.max_context) || a.name.localeCompare(b.name);
         case 'ctx-asc': return nSort(a.max_context) - nSort(b.max_context) || a.name.localeCompare(b.name);
         case 'params-desc': return nSort(b.param_b) - nSort(a.param_b) || a.name.localeCompare(b.name);
@@ -997,10 +1021,10 @@
           + `<details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary>`
           + `<div class="bench-history-panel"></div></details></div>`;
       }).join('');
-      const create = onDisk ? `<div class="recipe-lab-create">`
+      const create = onDisk && !isSidecarModel(m) ? `<div class="recipe-lab-create">`
         + `<span class="verify-label">New recipe</span>`
-        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, MTP, DFlash)">Auto-scaffold</button>`
-        + `</div>` : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>';
+        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, ds4, MTP, DFlash)">Auto-scaffold</button>`
+        + `</div>` : (isSidecarModel(m) ? '<div class="verify-note">Sidecar — recipes are managed from the base model; this row shows the linked DFlash bench.</div>' : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>');
       return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4>`
         + `<div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote. Spark status syncs on mark testing.</div>`
         + renderBenchCompareStrip(profiles)
@@ -1041,11 +1065,14 @@
       return `
         ${tagBlock}
         ${summaryBlock(m)}
+        ${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter. Start the DFlash recipe from the base model's recipe list, or from Inference when this sidecar is linked.</div></div>` : ''}
         ${inferenceSection(m)}
         <div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>
         ${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}
         <div class="detail-section storage">
-          <div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>
+          ${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}${sidecarSizeDetail(m) ? ' <span class="row-sidecar-note">(' + esc(sidecarSizeDetail(m)) + ')</span>' : ''}</span></div>
+          <div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>
+          ${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}
           <div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div>
           <div class="actions">
             <button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button>
@@ -1077,13 +1104,18 @@
           + `<span class="row-path" title="Canonical shelf path on Spark and NAS"><span class="row-path-label">path</span>${esc(m.rel_path || m.id)}</span>`;
       }
       const nested = grouped ? ' nested' : '';
-      return `<article class="model-row${nested}${open ? ' open' : ''}${queued ? ' pending-delete' : ''}${highlighted ? ' highlight' : ''}" data-id="${id}" data-path="${esc(m.rel_path || m.id)}">
+      const sidecarDetail = sidecarSizeDetail(m);
+      const localLabel = isSidecarModel(m) ? 'Combined' : 'Local';
+      const localMeta = sidecarDetail
+        ? `<span><b>${localLabel}</b> ${esc(localSize(m))} <span class="row-sidecar-note">(${esc(sidecarDetail)})</span></span>`
+        : `<span><b>${localLabel}</b> ${esc(localSize(m))}</span>`;
+      return `<article class="model-row${nested}${open ? ' open' : ''}${queued ? ' pending-delete' : ''}${highlighted ? ' highlight' : ''}${isSidecarModel(m) ? ' sidecar-model' : ''}" data-id="${id}" data-path="${esc(m.rel_path || m.id)}">
         <button type="button" class="row-main" data-expand="${id}">
-          <div class="row-title">${titleHtml}</div>
+          <div class="row-title">${titleHtml}${requiresTargetLine(m)}</div>
           ${renderStatusRail(m)}
           <span class="chevron">▸</span>
           <div class="row-meta">
-            <span><b>Local</b> ${esc(localSize(m))}</span>
+            ${localMeta}
             <span><b>Shelf</b> ${esc(shelfSize(m))}</span>
             <span><b>Released</b> ${fmtRelease(m)}</span>
             <span><b>Ctx</b> ${fmtCtx(m.max_context)}</span>

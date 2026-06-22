@@ -37,6 +37,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | `docs/guides/model-picks.md` | Why each model is in the catalog |
 | `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark engine eugr`) |
 | `docs/runbooks/smoke-llamacpp.md` | llama.cpp validation (`spark engine llama`) |
+| `docs/runbooks/smoke-ds4.md` | DwarfStar ds4 validation (`spark engine ds4`) |
 | `docs/reference/inference-stack.md` | Phase 5 technical spec |
 | `install/INSTALL.md` | Install script index + order |
 

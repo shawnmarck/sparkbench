@@ -16,3 +16,6 @@ profiles:
 - stepfun-ai-step-3-7-flash-llama
 - unsloth-qwen3-6-27b-eugr
 - unsloth-qwen3-coder-30b-a3b-instruct-llama
+- google-diffusiongemma-26b-a4b-it-eugr
+- kaitchup-qwen3-6-27b-llama
+- antirez-deepseek-v4-flash-ds4

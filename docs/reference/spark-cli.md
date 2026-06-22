@@ -26,7 +26,7 @@ spark <group> <subcommand> [args...]
 | `recipe` | Model Lab lifecycle |
 | `models` | Inventory verify / removal / rebuild |
 | `shelf` | Local disk ↔ NAS |
-| `engine` | Low-level `eugr` or `llama` (bypass profile switcher) |
+| `engine` | Low-level `eugr`, `llama`, or `ds4` (bypass profile switcher) |
 | `gpu` | Metrics JSON |
 | `hf` | Hugging Face login |
 
@@ -192,4 +192,19 @@ Gateway/agents mapping many model names → one profile: see `docs/reference/inf
 | `spark-gpu-metrics` | `spark gpu` |
 | `spark-hf-login` | `spark hf login` |
 
-Full table: `scripts/legacy/README.md`.
+Full table: `scripts/legacy/README.md`
+### `spark engine ds4`
+
+DwarfStar native DeepSeek V4 Flash (`ds4-server`). Same port as eugr (**8000**) — mutually exclusive.
+
+```bash
+spark engine ds4 build    # cuda-spark (install/22)
+spark engine ds4 up
+spark engine ds4 status
+spark engine ds4 down
+spark engine ds4 logs
+```
+
+Pin: `data/ds4-dwarfstar.yaml`. Production profile: `antirez-deepseek-v4-flash-ds4`.
+
+.

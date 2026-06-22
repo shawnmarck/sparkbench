@@ -3,7 +3,7 @@
 
 engine: ds4
 display_name: DwarfStar
-status: pending
+status: ready
 
 source:
   repo: https://github.com/Entrpi/ds4.git

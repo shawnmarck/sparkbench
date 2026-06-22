@@ -748,6 +748,7 @@
                   <button type="button" class="inf-chip active" data-inf-chip="switchable">Switchable</button>
                   <button type="button" class="inf-chip" data-inf-chip="eugr">vLLM</button>
                   <button type="button" class="inf-chip" data-inf-chip="llamacpp">GGUF</button>
+                  <button type="button" class="inf-chip" data-inf-chip="ds4">DwarfStar</button>
                   <button type="button" class="inf-chip" data-inf-chip="fast">fast</button>
                   <button type="button" class="inf-chip" data-inf-chip="heavy">heavy</button>
                   <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
@@ -840,14 +841,16 @@
       let benchMsgUntil = 0;
       let infLogOverlayOpen = false;
       const INF_PREFS_KEY = 'spark-inference-filters';
-      const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'fast', 'heavy', 'bench', 'drafts'];
+      const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'ds4', 'fast', 'heavy', 'bench', 'drafts'];
       const engineDisplay = (engine) => {
         if (engine === 'eugr' || engine === 'vllm') return 'vLLM';
         if (engine === 'llamacpp') return 'GGUF';
+        if (engine === 'ds4') return 'DwarfStar';
         return engine || '?';
       };
       const engineDisplayMeta = (engine) => {
         if (engine === 'eugr') return 'vLLM · eugr';
+        if (engine === 'ds4') return 'DwarfStar · ds4';
         return engineDisplay(engine);
       };
       let infFilterChips = new Set(['switchable']);
@@ -1001,11 +1004,12 @@
         const q = infFilterQ.trim().toLowerCase();
         if ((p.lifecycle || 'works') === 'draft' && !chips.has('drafts')) return false;
         if (chips.has('switchable') && p.switchable === false) return false;
-        const engineOn = chips.has('eugr') || chips.has('llamacpp');
+        const engineOn = chips.has('eugr') || chips.has('llamacpp') || chips.has('ds4');
         if (engineOn) {
           const eng = p.engine || '';
           const engineMatch = (chips.has('eugr') && eng === 'eugr')
-            || (chips.has('llamacpp') && eng === 'llamacpp');
+            || (chips.has('llamacpp') && eng === 'llamacpp')
+            || (chips.has('ds4') && eng === 'ds4');
           if (!engineMatch) return false;
         }
         const tierOn = chips.has('fast') || chips.has('heavy');
@@ -1457,7 +1461,8 @@
             $('inf-head-meta').textContent = 'no active profile';
             $('inf-active-title').textContent = 'Inference offline';
             $('inf-active-meta').textContent = 'vLLM: ' + (data.engines.eugr ? 'up' : 'down')
-              + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down');
+              + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down')
+              + ' · DwarfStar: ' + (data.engines.ds4 ? 'up' : 'down');
             setInfMsg('');
           }
         }
@@ -2103,6 +2108,7 @@
       }
 
       function engineLabel(engine, format) {
+        if (engine === 'ds4') return 'DwarfStar';
         if (engine === 'llamacpp' || format === 'gguf') return 'llama.cpp';
         if (format === 'nvfp4') return 'vLLM · NVFP4';
         if (format === 'fp8') return 'vLLM · FP8';

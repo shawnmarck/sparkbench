@@ -66,7 +66,7 @@ One file per profile under `/opt/spark/recipes/`:
 ```yaml
 id: qwen36-nvfp4
 name: Qwen3.6 35B NVFP4
-engine: eugr                    # eugr | llamacpp
+engine: eugr                    # eugr | llamacpp | ds4
 tier: heavy                     # heavy | fast | experimental
 eugr_recipe: /opt/spark/services/eugr-qwen36-local.yaml
 served_name: qwen3.6-35b-a3b-nvfp4
@@ -109,7 +109,7 @@ spark inference logs <profile>
 
 **Agents:** prefer `spark inference help` and `spark inference list` for discovery; or `GET /api/inference/status` when shell is unavailable.
 
-Implementation: profile-driven dispatch over existing engine scripts (`scripts/spark-eugr`, `scripts/spark-llama`) — not a new engine.
+Implementation: profile-driven dispatch over engine scripts (`scripts/spark-eugr`, `scripts/spark-llama`, `scripts/spark-ds4`). eugr and ds4 both use port 8000 (one at a time).
 
 ## Switch semantics (for gateway + agents)
 
@@ -159,3 +159,18 @@ Bake-off UIs (Rookery, vLLM Studio) were removed from sparky. Phase 5 is this sp
 - [ ] Always-on small + on-demand heavy on same GB10 — measure VRAM before enabling
 - [ ] Single port `:8000` vs per-tier ports — gateway may prefer one upstream with swap
 - [ ] Open WebUI: direct backends vs gateway-only
+
+
+### ds4 (DwarfStar) recipe fields
+
+```yaml
+engine: ds4
+model: /models/antirez/deepseek-v4-flash/gguf/DeepSeek-V4-Flash-….gguf
+served_name: deepseek-v4-flash
+port: 8000
+ds4_args:
+  - -c
+  - "32768"
+```
+
+Scaffold: `spark recipe scaffold antirez/deepseek-v4-flash ds4` or auto-detect when catalog marks `engine: ds4`.

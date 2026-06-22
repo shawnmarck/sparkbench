@@ -60,3 +60,4 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
 20 (unified `spark` CLI — run once, or chained from 17)
 ```
+- `22-ds4-dwarfstar.sh` — DwarfStar (ds4) cuda-spark build + `spark engine ds4`

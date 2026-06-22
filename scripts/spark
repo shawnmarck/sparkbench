@@ -15,10 +15,10 @@ Usage: spark <group> <command> [args]
 Groups:
   status                 GPU + inference overview
   inference list|status|up|down|logs|bench
-  recipe list|scaffold|testing|promote|discard   (Model Lab)
+  recipe list|scaffold|testing|works|promote|discard   (Model Lab)
   models verify|removal|inventory
   shelf pull|push|rm|status
-  engine eugr|llama <up|down|logs|status|build>
+  engine eugr|llama|ds4 <up|down|logs|status|build>
   gpu                    Metrics JSON (same as /api/gpu)
   bench history|show|note|latest   Benchmark run history (per recipe)
   hf login               Hugging Face token setup
@@ -114,10 +114,10 @@ help_recipe() {
   cat <<'EOF'
 spark recipe — Model Lab lifecycle
 
-  list                         All recipes (draft/testing/production)
+  list                         All recipes (draft/testing/works)
   scaffold <lab/slug> <engine> Create draft recipe (llamacpp|eugr)
   testing <id>                 Mark recipe as testing (switchable)
-  promote <id>                 Promote testing → production
+  works <id>                   Mark testing → works (alias: promote)
   discard <id>                 Remove draft/testing recipe
 EOF
 }
@@ -172,8 +172,9 @@ help_engine() {
   cat <<'EOF'
 spark engine — low-level inference engines (bypass profile switcher)
 
-  eugr  up | down | logs | status | build | check | record
+  eugr  up | down | logs | status | build
   llama up | down | logs | status
+  ds4   up | down | logs | status | build
 EOF
 }
 
@@ -186,8 +187,18 @@ spark engine eugr — vLLM via eugr docker
   logs    Tail build/run log
   status  Health + /v1/models
   build   Rebuild vllm-node image
-  check   Compare deployed stack vs upstream prebuilts
-  record  Save deployed pins after a successful upgrade
+EOF
+}
+
+help_engine_ds4() {
+  cat <<'EOF'
+spark engine ds4 — DwarfStar (DeepSeek V4 Flash)
+
+  up      Start ds4-server (:8000)
+  down    Stop ds4-server
+  logs    Tail server log
+  status  PID + /v1/models
+  build   Rebuild cuda-spark binaries
 EOF
 }
 
@@ -286,9 +297,9 @@ context_help() {
         help_recipe
       else
         local sub
-        sub="$(resolve_prefix "${args[1]}" list scaffold testing promote discard)" || return 1
+        sub="$(resolve_prefix "${args[1]}" list scaffold testing works promote discard)" || return 1
         case "$sub" in
-          testing|promote|discard) help_recipe_id_cmds "$sub" ;;
+          testing|works|promote|discard) help_recipe_id_cmds "$sub" ;;
           scaffold)
             cat <<'EOF'
 spark recipe scaffold — create draft recipe
@@ -326,6 +337,7 @@ EOF
         case "$eng" in
           eugr|vllm) help_engine_eugr ;;
           llama|llamacpp) help_engine_llama ;;
+    ds4|dwarfstar) help_engine_ds4 ;;
         esac
       fi
       ;;
@@ -436,8 +448,9 @@ cmd_engine() {
   case "$engine" in
     eugr|vllm) run "${LIB}/spark-eugr" "$@" ;;
     llama|llamacpp) run "${LIB}/spark-llama" "$@" ;;
+    ds4|dwarfstar) run "${LIB}/spark-ds4" "$@" ;;
     *)
-      die "unknown engine: $engine (try: eugr, llama)"
+      die "unknown engine: $engine (try: eugr, llama, ds4)"
       ;;
   esac
 }

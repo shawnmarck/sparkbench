@@ -48,6 +48,8 @@ VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_EUGR_CHECK = ROOT / "scripts" / "spark-eugr-check.py"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
+SPARK_DS4 = ROOT / "scripts" / "spark-ds4"
+DS4_PIN_FILE = ROOT / "data" / "ds4-dwarfstar.yaml"
 VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
 INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
@@ -366,9 +368,98 @@ def infer_max_model_len(model_dir: Path, weight_format: str) -> int:
     return default
 
 
+
+
+def load_ds4_pin() -> dict[str, Any]:
+    if not DS4_PIN_FILE.is_file():
+        return {}
+    data = load_yaml(DS4_PIN_FILE)
+    return data if isinstance(data, dict) else {}
+
+
+def discover_ds4_gguf(model_root: Path, pin: dict[str, Any] | None = None) -> Path | None:
+    pin = pin or load_ds4_pin()
+    model = pin.get("model") or {}
+    gguf_name = model.get("gguf_file")
+    if gguf_name:
+        for sub in ("gguf", ""):
+            candidate = model_root / sub / gguf_name if sub else model_root / gguf_name
+            if candidate.is_file() and candidate.stat().st_size >= 500 * 1024**2:
+                return candidate
+    gguf_dir = model_root / "gguf"
+    if not gguf_dir.is_dir():
+        return None
+    best: Path | None = None
+    best_size = 0
+    for p in gguf_dir.glob("*.gguf"):
+        try:
+            size = p.stat().st_size
+        except OSError:
+            continue
+        if size > best_size:
+            best, best_size = p, size
+    return best if best_size >= 500 * 1024**2 else None
+
+
+def scaffold_ds4_recipe(
+    inventory_path: str,
+    *,
+    name: str | None = None,
+    tier: str | None = None,
+) -> dict[str, Any]:
+    inventory_path = inventory_path.strip().strip("/")
+    if "/" not in inventory_path:
+        raise RuntimeError("inventory_path must be lab/slug")
+    pin = load_ds4_pin()
+    pinned_inv = (pin.get("model") or {}).get("inventory_path")
+    if pinned_inv and pinned_inv != inventory_path:
+        raise RuntimeError(
+            f"ds4 scaffold pinned to {pinned_inv!r}, not {inventory_path!r}"
+        )
+    model_root = MODELS_ROOT / inventory_path
+    if not model_root.is_dir():
+        raise RuntimeError(f"model not on disk: /models/{inventory_path}")
+    gguf = discover_ds4_gguf(model_root, pin)
+    if gguf is None:
+        raise RuntimeError(f"no ds4 GGUF under /models/{inventory_path}/gguf")
+
+    engine = "ds4"
+    profile_id = make_profile_id(inventory_path, engine)
+    slug = inventory_path.split("/", 1)[1]
+    model_meta = pin.get("model") or {}
+    served_name = model_meta.get("served_name") or re.sub(
+        r"[^a-z0-9._-]+", "-", slug.lower()
+    ).strip("-")[:48]
+    runtime = pin.get("runtime") or {}
+    default_ctx = int(runtime.get("default_ctx") or 32768)
+    display = name or f"{slug} (DwarfStar)"
+
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": display,
+        "inventory_path": inventory_path,
+        "engine": engine,
+        "tier": tier or "heavy",
+        "lifecycle": LIFECYCLE_DRAFT,
+        "served_name": served_name,
+        "port": int(runtime.get("port") or 8000),
+        "tags": ["lab", "ds4", "dwarfstar"],
+        "model": str(gguf),
+        "ds4_args": ["-c", str(default_ctx)],
+        "notes": (
+            f"DwarfStar scaffold {datetime.now(timezone.utc).date().isoformat()} from "
+            f"/models/{inventory_path}. Mark testing, switch, bench, then promote."
+        ),
+    }
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
+    return recipe
+
+
 def make_profile_id(inventory_path: str, engine: str) -> str:
     lab, slug = inventory_path.split("/", 1)
-    suffix = "llama" if engine == "llamacpp" else "eugr"
+    suffix = {"llamacpp": "llama", "eugr": "eugr", "ds4": "ds4"}.get(engine, engine)
     raw = f"{lab}-{slug.replace('.', '-')}-{suffix}".lower()
     raw = re.sub(r"[^a-z0-9._-]+", "-", raw).strip("-")
     base = raw[:56].strip("-") or "profile"
@@ -948,9 +1039,7 @@ def scaffold_auto(
     """Route scaffold from on-disk layout + download plan (Phase 5d)."""
     kind = resolve_scaffold_kind(inventory_path, plan)
     if kind == "ds4":
-        raise RuntimeError(
-            "ds4 engine scaffold deferred — see data/ds4-dwarfstar.yaml"
-        )
+        return scaffold_ds4_recipe(inventory_path, name=name, tier=tier)
     if kind == "dflash":
         return scaffold_dflash_recipe(inventory_path)
     if kind == "mtp_eugr":
@@ -1060,6 +1149,21 @@ def eugr_running() -> bool:
     return any(name in {"vllm_node", "spark-vllm-qwen36"} for name in out.splitlines())
 
 
+def ds4_running() -> bool:
+    pid_file = ROOT / "run" / "ds4-server.pid"
+    if not pid_file.is_file():
+        return False
+    try:
+        pid = int(pid_file.read_text().strip())
+    except ValueError:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
 def llama_running() -> bool:
     pid_file = ROOT / "run" / "llama-server.pid"
     if not pid_file.is_file():
@@ -1098,9 +1202,13 @@ def detect_active_profile() -> dict[str, Any] | None:
                     return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "llamacpp" and llama_running():
                     return {"profile": profile_id, "recipe": recipe, "state": state}
+                if engine == "ds4" and ds4_running():
+                    return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "eugr" and not eugr_running() and not llama_running():
                     clear_state()
                 elif engine == "llamacpp" and not llama_running() and not eugr_running():
+                    clear_state()
+                elif engine == "ds4" and not ds4_running():
                     clear_state()
         except (json.JSONDecodeError, OSError, SystemExit):
             pass
@@ -1112,6 +1220,10 @@ def detect_active_profile() -> dict[str, Any] | None:
         if engine == "eugr" and eugr_running():
             return {"profile": profile_id, "recipe": recipe, "state": None}
         if engine == "llamacpp" and llama_running():
+            served = served_name_from_port(port) if port else None
+            if served == recipe.get("served_name"):
+                return {"profile": profile_id, "recipe": recipe, "state": None}
+        if engine == "ds4" and ds4_running():
             served = served_name_from_port(port) if port else None
             if served == recipe.get("served_name"):
                 return {"profile": profile_id, "recipe": recipe, "state": None}
@@ -1174,7 +1286,10 @@ def cmd_status() -> int:
     active = detect_active_profile()
     if not active:
         print("Active profile: none")
-        print("Engines: eugr down, llama.cpp down")
+        eu = "up" if eugr_running() else "down"
+        la = "up" if llama_running() else "down"
+        d4 = "up" if ds4_running() else "down"
+        print(f"Engines: eugr {eu}, llama.cpp {la}, ds4 {d4}")
         return 0
 
     recipe = active["recipe"]
@@ -1191,8 +1306,11 @@ def cmd_status() -> int:
         lines.append(f"  since:  {active['state']['started_at']}")
     lines.append("---")
     print("\n".join(lines), flush=True)
-    if recipe.get("engine") == "eugr":
+    engine = recipe.get("engine")
+    if engine == "eugr":
         run_script(SPARK_EUGR, "status")
+    elif engine == "ds4":
+        run_script(SPARK_DS4, "status")
     else:
         run_script(SPARK_LLAMA, "status")
     return 0
@@ -1200,7 +1318,7 @@ def cmd_status() -> int:
 
 def cmd_down() -> int:
     errors = 0
-    for script, args in ((SPARK_EUGR, ("down",)), (SPARK_LLAMA, ("down",))):
+    for script, args in ((SPARK_EUGR, ("down",)), (SPARK_LLAMA, ("down",)), (SPARK_DS4, ("down",))):
         try:
             run_script(script, *args)
         except subprocess.CalledProcessError:
@@ -1236,6 +1354,8 @@ def cmd_up(profile_id: str) -> int:
         )
     elif engine == "llamacpp":
         run_script(SPARK_LLAMA, "up", env={"SPARK_LLAMA_RECIPE": path})
+    elif engine == "ds4":
+        run_script(SPARK_DS4, "up", env={"SPARK_DS4_RECIPE": path})
     else:
         raise SystemExit(f"unsupported engine: {engine!r}")
 
@@ -1707,16 +1827,18 @@ def _chat_completion(
     max_tokens: int,
     min_tokens: int,
     timeout: float = 180.0,
+    engine: str | None = None,
 ) -> tuple[dict[str, Any], float]:
-    body = json.dumps(
-        {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "min_tokens": min_tokens,
-            "temperature": BENCH_TEMPERATURE,
-        }
-    ).encode()
+    req_body: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "min_tokens": min_tokens,
+        "temperature": BENCH_TEMPERATURE,
+    }
+    if (engine or "").strip().lower() == "ds4":
+        req_body["thinking"] = {"type": "disabled"}
+    body = json.dumps(req_body).encode()
     req = Request(
         f"http://127.0.0.1:{port}/v1/chat/completions",
         data=body,
@@ -1749,6 +1871,8 @@ def _bench_agent_session(
     port: int,
     model: str,
     turn_prompts: list[str],
+    *,
+    engine: str | None = None,
 ) -> tuple[int, int, float]:
     messages: list[dict[str, str]] = [{"role": "system", "content": BENCH_SYSTEM}]
     total_completion = 0
@@ -1763,6 +1887,7 @@ def _bench_agent_session(
             messages,
             max_tokens=BENCH_MAX_TOKENS,
             min_tokens=BENCH_MIN_COMPLETION_TOKENS,
+            engine=engine,
         )
         completion_tokens = _completion_tokens(payload)
         if completion_tokens < BENCH_MIN_COMPLETION_TOKENS:
@@ -1773,6 +1898,7 @@ def _bench_agent_session(
                 messages[:-1] + [{"role": "user", "content": retry_text}],
                 max_tokens=BENCH_MAX_TOKENS,
                 min_tokens=BENCH_MIN_COMPLETION_TOKENS,
+                engine=engine,
             )
             elapsed += retry_elapsed
             completion_tokens = _completion_tokens(payload)
@@ -1810,8 +1936,9 @@ def run_benchmark(
     if len(turn_prompts) < turns_per_session:
         raise RuntimeError("benchmark turn prompts misconfigured")
 
+    engine = recipe.get("engine")
     for _ in range(warmup_sessions):
-        _bench_agent_session(port, served, turn_prompts)
+        _bench_agent_session(port, served, turn_prompts, engine=engine)
 
     run_rates: list[float] = []
     total_completion = 0
@@ -1819,7 +1946,7 @@ def run_benchmark(
     total_elapsed = 0.0
     for _ in range(measured_sessions):
         completion_tokens, prompt_tokens, elapsed = _bench_agent_session(
-            port, served, turn_prompts
+            port, served, turn_prompts, engine=engine
         )
         if elapsed <= 0:
             raise RuntimeError("benchmark elapsed time was zero")
@@ -2019,8 +2146,11 @@ def start_bench_job() -> tuple[bool, str, dict[str, Any]]:
 def engine_log_file(recipe: dict[str, Any] | None) -> Path:
     if not recipe:
         return LOG_DIR / "llama-server.log"
-    if recipe.get("engine") == "eugr":
+    engine = recipe.get("engine")
+    if engine == "eugr":
         return SWITCH_LOG_FILE
+    if engine == "ds4":
+        return LOG_DIR / "ds4-server.log"
     return LOG_DIR / "llama-server.log"
 
 
@@ -2031,6 +2161,7 @@ def api_profiles(
     history_profiles: dict[str, Any] | None = None,
     eugr_up: bool | None = None,
     llama_up: bool | None = None,
+    ds4_up: bool | None = None,
 ) -> list[dict[str, Any]]:
     if benchmarks is None:
         benchmarks = load_benchmarks()
@@ -2040,6 +2171,8 @@ def api_profiles(
         eugr_up = eugr_running()
     if llama_up is None:
         llama_up = llama_running()
+    if ds4_up is None:
+        ds4_up = ds4_running()
     profiles = []
     production = set(enabled_profiles())
     switchable = switchable_profile_ids()
@@ -2059,6 +2192,7 @@ def api_profiles(
             item["starting"] = not item["ready"] and (
                 (recipe.get("engine") == "llamacpp" and llama_up)
                 or (recipe.get("engine") == "eugr" and eugr_up)
+                or (recipe.get("engine") == "ds4" and ds4_up)
             )
         else:
             item["ready"] = False
@@ -2083,6 +2217,7 @@ TIER_EXPECT_HINTS: dict[tuple[str, str], tuple[int, int, str]] = {
         "Heavy vLLM profiles (eugr build) on Spark often take 5–12 min (weights, compile, warmup).",
     ),
     ("heavy", "llamacpp"): (120, 360, "Large GGUF loads on Spark often take 2–6 min."),
+    ("heavy", "ds4"): (180, 900, "DwarfStar (ds4) 81GB GGUF load on Spark often takes 3–15 min."),
     ("fast", "eugr"): (30, 120, "Fast vLLM profiles (eugr build) usually ready within 30s–2 min."),
     ("fast", "llamacpp"): (15, 90, "Fast GGUF profiles usually ready within 15s–90s."),
 }
@@ -2252,6 +2387,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
     )
     eugr_up = eugr_running()
     llama_up = llama_running()
+    ds4_up = ds4_running()
     active = detect_active_profile()
     active_id = active["profile"] if active else None
     recipe = active["recipe"] if active else None
@@ -2271,9 +2407,10 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
                 history_profiles=history_profiles,
                 eugr_up=eugr_up,
                 llama_up=llama_up,
+                ds4_up=ds4_up,
             )
         ),
-        "engines": {"eugr": eugr_up, "llamacpp": llama_up},
+        "engines": {"eugr": eugr_up, "llamacpp": llama_up, "ds4": ds4_up},
         "switch": switch_job,
         "bench": active_bench_job(),
         "urls": {
@@ -2286,6 +2423,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
         starting = not ready and (
             (recipe.get("engine") == "llamacpp" and llama_up)
             or (recipe.get("engine") == "eugr" and eugr_up)
+            or (recipe.get("engine") == "ds4" and ds4_up)
         )
         payload["active"] = {
             **recipe_public(
@@ -2586,8 +2724,11 @@ def cmd_logs(profile_id: str | None) -> int:
         raise SystemExit("no active profile — pass: spark-inference logs <profile>")
 
     recipe = load_recipe(target)
-    if recipe.get("engine") == "eugr":
+    engine = recipe.get("engine")
+    if engine == "eugr":
         run_script(SPARK_EUGR, "logs")
+    elif engine == "ds4":
+        run_script(SPARK_DS4, "logs")
     else:
         run_script(SPARK_LLAMA, "logs")
     return 0
@@ -2739,11 +2880,15 @@ def cmd_recipe(argv: list[str]) -> int:
     if sub == "scaffold":
         if len(argv) < 4:
             raise SystemExit(
-                "usage: spark-inference recipe scaffold <lab/slug> [llamacpp|eugr] "
+                "usage: spark-inference recipe scaffold <lab/slug> [llamacpp|eugr|ds4] "
                 "(omit engine for auto-detect)"
             )
         if len(argv) >= 5:
-            recipe = scaffold_recipe(argv[3], argv[4])
+            eng = argv[4].strip().lower()
+            if eng == "ds4":
+                recipe = scaffold_ds4_recipe(argv[3])
+            else:
+                recipe = scaffold_recipe(argv[3], argv[4])
         else:
             recipe = scaffold_auto(argv[3])
         print(f"Scaffolded draft {recipe['id']} -> {draft_recipe_path(recipe['id'])}")

@@ -5,30 +5,18 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 
 ROOT = Path("/opt/spark")
-CORE_SCRIPT = ROOT / "scripts" / "spark-inference.py"
-_core_mtime: float = 0.0
-_core: Any = None
-
-
-def get_core() -> Any:
-    """Reload spark-inference.py when it changes (no systemd restart needed)."""
-    global _core, _core_mtime
-    mtime = CORE_SCRIPT.stat().st_mtime
-    if _core is not None and mtime == _core_mtime:
-        return _core
-    spec = importlib.util.spec_from_file_location("inference_core", CORE_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise SystemExit("failed to load spark-inference.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    _core = mod
-    _core_mtime = mtime
-    return _core
+SPEC = importlib.util.spec_from_file_location(
+    "inference_core", ROOT / "scripts" / "spark-inference.py"
+)
+if SPEC is None or SPEC.loader is None:
+    raise SystemExit("failed to load spark-inference.py")
+core = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(core)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -37,7 +25,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _json(self, code: int, payload: dict[str, Any]) -> None:
@@ -60,35 +48,91 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return data if isinstance(data, dict) else None
 
-    def _dispatch(self, method: str, body: dict[str, Any] | None = None) -> None:
-        result = get_core().api_dispatch(method, self.path, body)
-        if result is None:
-            self.send_error(404)
-            return
-        code, payload = result
-        self._json(code, payload)
-
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self._cors()
         self.end_headers()
 
     def do_GET(self) -> None:
-        self._dispatch("GET")
+        if self.path == "/api/inference/status":
+            self._json(200, {"ok": True, **core.api_status()})
+            return
+
+        if self.path.startswith("/api/inference/logs"):
+            lines = 30
+            if "?" in self.path:
+                for part in self.path.split("?", 1)[1].split("&"):
+                    if part.startswith("lines="):
+                        try:
+                            lines = max(5, min(200, int(part.split("=", 1)[1])))
+                        except ValueError:
+                            pass
+            active = core.detect_active_profile()
+            recipe = active["recipe"] if active else None
+            log_path = core.engine_log_file(recipe)
+            self._json(
+                200,
+                {
+                    "ok": True,
+                    "file": log_path.name,
+                    "lines": core.tail_log(log_path, lines),
+                    "switch": core.active_switch_job(),
+                },
+            )
+            return
+
+        self.send_error(404)
 
     def do_POST(self) -> None:
         data = self._read_json_body()
         if data is None:
             self._json(400, {"ok": False, "error": "invalid JSON"})
             return
-        self._dispatch("POST", data)
 
-    def do_PATCH(self) -> None:
-        data = self._read_json_body()
-        if data is None:
-            self._json(400, {"ok": False, "error": "invalid JSON"})
+        if self.path == "/api/inference/switch":
+            if not data.get("confirm"):
+                self._json(400, {"ok": False, "error": "confirmation required"})
+                return
+            profile = str(data.get("profile", "")).strip()
+            if not core.validate_profile_id(profile):
+                self._json(400, {"ok": False, "error": "unknown or disabled profile"})
+                return
+            recipe = core.load_recipe(profile)
+            if recipe.get("tier") == "heavy" and not data.get("confirm_heavy"):
+                self._json(
+                    400,
+                    {
+                        "ok": False,
+                        "error": "heavy tier requires confirm_heavy",
+                        "profile": profile,
+                        "notes": (recipe.get("notes") or "").strip(),
+                    },
+                )
+                return
+            ok, message, job = core.start_switch_job(profile)
+            if not ok:
+                code = 409 if "already" in message else 400
+                self._json(code, {"ok": False, "error": message, "job": job})
+                return
+            self._json(
+                202,
+                {"ok": True, "message": message, "profile": profile, "job": job},
+            )
             return
-        self._dispatch("PATCH", data)
+
+        if self.path == "/api/inference/down":
+            if not data.get("confirm"):
+                self._json(400, {"ok": False, "error": "confirmation required"})
+                return
+            try:
+                status = core.api_down()
+            except RuntimeError as exc:
+                self._json(409, {"ok": False, "error": str(exc)})
+                return
+            self._json(200, {"ok": True, "message": "stopped", **status})
+            return
+
+        self.send_error(404)
 
     def log_message(self, *_args: object) -> None:
         return
@@ -96,10 +140,9 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--serve":
-        get_core()
-        ThreadingHTTPServer(("127.0.0.1", 8767), Handler).serve_forever()
+        HTTPServer(("127.0.0.1", 8767), Handler).serve_forever()
         return 0
-    print(json.dumps({"ok": True, **get_core().api_status()}, indent=2))
+    print(json.dumps({"ok": True, **core.api_status()}, indent=2))
     return 0
 
 

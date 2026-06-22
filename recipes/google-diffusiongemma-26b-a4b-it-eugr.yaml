@@ -1,0 +1,16 @@
+id: google-diffusiongemma-26b-a4b-it-eugr
+name: diffusiongemma-26b-a4b-it (eugr)
+inventory_path: google/diffusiongemma-26b-a4b-it
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: diffusiongemma-26b-a4b-it
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-22 from /models/google/diffusiongemma-26b-a4b-it. Mark testing,
+  switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-google-diffusiongemma-26b-a4b-it-eugr.yaml
+updated_at: '2026-06-22T04:08:49.335371+00:00'
+promoted_at: '2026-06-22T04:17:22.293875+00:00'

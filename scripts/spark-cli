@@ -1,0 +1,530 @@
+#!/usr/bin/env bash
+# spark — unified Sparky homelab CLI (git/docker-style groups).
+set -euo pipefail
+
+ROOT="${SPARK_ROOT:-/opt/spark}"
+LIB="${ROOT}/scripts"
+PY="${ROOT}/venv/bin/python"
+
+usage() {
+  cat <<'EOF'
+spark — Sparky homelab control
+
+Usage: spark <group> <command> [args]
+
+Groups:
+  status                 GPU + inference overview
+  inference list|status|up|down|logs|bench
+  recipe list|scaffold|testing|works|promote|discard   (Model Lab)
+  models verify|removal|inventory
+  shelf pull|push|rm|status
+  engine eugr|llama|ds4 <up|down|logs|status|build>
+  gpu                    Metrics JSON (same as /api/gpu)
+  bench history|show|note|latest   Benchmark run history (per recipe)
+  hf login               Hugging Face token setup
+
+Examples:
+  spark status
+  spark inference up qwen36-nvfp4
+  spark recipe scaffold google/gemma-4-12b-it llamacpp
+  spark models verify set google/gemma-4-12b-it works
+  spark shelf pull nvidia/qwen3.6-35b-a3b
+  spark engine llama status
+
+Tip: spark <group> ?  — contextual help (prefixes OK; zsh: unquoted ? works after install/20)
+      spark inf help     Same without ?
+EOF
+}
+
+die() { echo "spark: $*" >&2; exit 1; }
+
+run() {
+  local target="$1"
+  shift
+  [[ -x "$target" || -f "$target" ]] || die "missing implementation: $target"
+  exec "$target" "$@"
+}
+
+run_py() {
+  local script="$1"
+  shift
+  [[ -f "$script" ]] || die "missing implementation: $script"
+  exec "$PY" "$script" "$@"
+}
+
+# --- contextual help (? at any level) ---
+
+SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf)
+
+resolve_prefix() {
+  local word="$1"
+  shift
+  local -a choices=("$@")
+  local -a matches=()
+  local c
+  for c in "${choices[@]}"; do
+    [[ "$c" == "${word}"* ]] && matches+=("$c")
+  done
+  if [[ ${#matches[@]} -eq 1 ]]; then
+    echo "${matches[0]}"
+    return 0
+  fi
+  if [[ ${#matches[@]} -gt 1 ]]; then
+    echo "spark: ambiguous '${word}' — matches: ${matches[*]}" >&2
+    return 1
+  fi
+  echo "spark: unknown '${word}'" >&2
+  return 1
+}
+
+list_profile_ids() {
+  "${PY}" "${LIB}/spark-inference.py" list 2>/dev/null \
+    | awk 'NR>2 && $1 !~ /^-+/ {print $1}' || true
+}
+
+list_recipe_ids() {
+  "${PY}" "${LIB}/spark-inference.py" recipe list 2>/dev/null \
+    | awk 'NF {print $1}' || true
+}
+
+help_inference() {
+  cat <<'EOF'
+spark inference — recipe-driven profile control
+
+  list                 All profiles (production + testing)
+  status               Active profile + engine health
+  up <profile>         Switch profile (evicts current if needed)
+  down                 Stop active profile
+  logs [profile]       Tail engine log
+  bench                Measure tok/s on active profile
+EOF
+}
+
+help_inference_up() {
+  help_inference
+  echo
+  echo "Profiles:"
+  local id
+  while IFS= read -r id; do
+    [[ -n "$id" ]] && echo "  ${id}"
+  done < <(list_profile_ids)
+}
+
+help_recipe() {
+  cat <<'EOF'
+spark recipe — Model Lab lifecycle
+
+  list                         All recipes (draft/testing/works)
+  scaffold <lab/slug> <engine> Create draft recipe (llamacpp|eugr)
+  testing <id>                 Mark recipe as testing (switchable)
+  works <id>                   Mark testing → works (alias: promote)
+  discard <id>                 Remove draft/testing recipe
+EOF
+}
+
+help_recipe_id_cmds() {
+  local cmd="$1"
+  help_recipe
+  echo
+  echo "Recipes:"
+  local id
+  while IFS= read -r id; do
+    [[ -n "$id" ]] && echo "  ${id}"
+  done < <(list_recipe_ids)
+}
+
+help_models() {
+  cat <<'EOF'
+spark models — inventory verification
+
+  verify get <lab/slug>        Show verification status
+  verify set <lab/slug> <flag> Set works|broken|untested
+  verify list                All verified models
+  verify pending               Models awaiting verification
+  removal <lab/slug> on|off    Queue or cancel local removal
+  inventory                    Rebuild portal/models.json
+EOF
+}
+
+help_models_verify() {
+  cat <<'EOF'
+spark models verify — verification flags
+
+  get <lab/slug>
+  set <lab/slug> works|broken|untested
+  list
+  pending
+EOF
+}
+
+help_shelf() {
+  cat <<'EOF'
+spark shelf — local disk ↔ NAS model shelf
+
+  pull <lab/slug> [lab/slug...]   Fetch from NAS to /models
+  push <lab/slug> [lab/slug...]   Backup local to NAS
+  rm <lab/slug>                   Delete local tree (NAS kept)
+  status                          Shelf API + mount status
+EOF
+}
+
+help_engine() {
+  cat <<'EOF'
+spark engine — low-level inference engines (bypass profile switcher)
+
+  eugr  up | down | logs | status | build
+  llama up | down | logs | status
+  ds4   up | down | logs | status | build
+EOF
+}
+
+help_engine_eugr() {
+  cat <<'EOF'
+spark engine eugr — vLLM via eugr docker
+
+  up      Start NVFP4 stack (:8000)
+  down    Stop vLLM container
+  logs    Tail build/run log
+  status  Health + /v1/models
+  build   Rebuild vllm-node image
+EOF
+}
+
+help_engine_ds4() {
+  cat <<'EOF'
+spark engine ds4 — DwarfStar (DeepSeek V4 Flash)
+
+  up      Start ds4-server (:8000)
+  down    Stop ds4-server
+  logs    Tail server log
+  status  PID + /v1/models
+  build   Rebuild cuda-spark binaries
+EOF
+}
+
+help_engine_llama() {
+  cat <<'EOF'
+spark engine llama — llama.cpp server
+
+  up      Start GGUF server (:8081)
+  down    Stop llama-server
+  logs    Tail server log
+  status  PID + /v1/models
+EOF
+}
+
+help_hf() {
+  cat <<'EOF'
+spark hf — Hugging Face tools
+
+  login    Store HF token for downloads
+  status   Download queue + legacy/worker state
+  queue    list | add <repo> <intent>
+  plan     <repo> <intent>   Preview file-only download plan
+EOF
+}
+
+help_status() {
+  cat <<'EOF'
+spark status — GPU + inference overview
+
+  One-shot summary: GPU util/MEM, engine probe, active profile.
+EOF
+}
+
+help_gpu() {
+  cat <<'EOF'
+spark gpu — metrics JSON
+
+  Prints the same JSON as http://sparky/api/gpu
+EOF
+}
+
+help_bench() {
+  cat <<'EOF'
+spark bench — per-recipe benchmark history (latest still on cards)
+
+  history <profile> [--json] [--limit N]   List runs (newest first)
+  show <profile> <run_id> [--json]         One run
+  latest <profile> [--json]                Latest cached result
+  note <profile> <run_id> <text>           Agent/human note on a run
+
+Run benchmarks: spark inference bench (unchanged)
+EOF
+}
+
+context_help() {
+  local -a args=("$@")
+
+  if [[ ${#args[@]} -eq 0 ]]; then
+    usage
+    return 0
+  fi
+
+  local group
+  group="$(resolve_prefix "${args[0]}" "${SPARK_GROUPS[@]}")" || return 1
+
+  case "$group" in
+    status)
+      help_status
+      ;;
+    gpu)
+      help_gpu
+      ;;
+    bench)
+      if [[ ${#args[@]} -eq 1 ]]; then
+        help_bench
+      else
+        local sub
+        sub="$(resolve_prefix "${args[1]}" history show note latest)" || return 1
+        help_bench
+      fi
+      ;;
+    inference)
+      if [[ ${#args[@]} -eq 1 ]]; then
+        help_inference
+      else
+        local sub
+        sub="$(resolve_prefix "${args[1]}" list status up down logs bench)" || return 1
+        case "$sub" in
+          up|logs) help_inference_up ;;
+          *) help_inference ;;
+        esac
+      fi
+      ;;
+    recipe)
+      if [[ ${#args[@]} -eq 1 ]]; then
+        help_recipe
+      else
+        local sub
+        sub="$(resolve_prefix "${args[1]}" list scaffold testing works promote discard)" || return 1
+        case "$sub" in
+          testing|works|promote|discard) help_recipe_id_cmds "$sub" ;;
+          scaffold)
+            cat <<'EOF'
+spark recipe scaffold — create draft recipe
+
+  scaffold <lab/slug> llamacpp
+  scaffold <lab/slug> eugr
+
+Engines:
+  llamacpp   GGUF via llama-server
+  eugr       NVFP4/HF via vLLM docker
+EOF
+            ;;
+          *) help_recipe ;;
+        esac
+      fi
+      ;;
+    models)
+      if [[ ${#args[@]} -eq 1 ]]; then
+        help_models
+      elif [[ "${args[1]}" == verify ]]; then
+        help_models_verify
+      else
+        help_models
+      fi
+      ;;
+    shelf)
+      help_shelf
+      ;;
+    engine)
+      if [[ ${#args[@]} -eq 1 ]]; then
+        help_engine
+      else
+        local eng
+        eng="$(resolve_prefix "${args[1]}" eugr llama vllm llamacpp)" || return 1
+        case "$eng" in
+          eugr|vllm) help_engine_eugr ;;
+          llama|llamacpp) help_engine_llama ;;
+    ds4|dwarfstar) help_engine_ds4 ;;
+        esac
+      fi
+      ;;
+    hf)
+      help_hf
+      ;;
+  esac
+}
+
+find_help_index() {
+  local -a arr=("$@")
+  local i
+  for i in "${!arr[@]}"; do
+    [[ "${arr[i]}" == '?' || "${arr[i]}" == help ]] && { echo "$i"; return 0; }
+  done
+  return 1
+}
+
+# --- commands ---
+
+cmd_status() {
+  echo "=== GPU ==="
+  if [[ -x "${LIB}/spark-gpu-metrics" ]]; then
+    "${PY}" "${LIB}/spark-gpu-metrics" 2>/dev/null | "${PY}" -c "
+import json, sys
+d = json.load(sys.stdin)
+print(f\"  {d.get('gpu_name', '?')}: {d.get('gpu_util_pct', '?')}% GPU · {d.get('memory_used_pct', '?')}% MEM\")
+inf = d.get('inference') or {}
+if inf.get('model'):
+    print(f\"  engine probe: {inf.get('engine', '?')} · {inf.get('model')}\")
+" 2>/dev/null || "${PY}" "${LIB}/spark-gpu-metrics" 2>/dev/null | head -c 400
+  else
+    echo "  (spark-gpu-metrics not found)"
+  fi
+  echo ""
+  echo "=== Inference ==="
+  run_py "${LIB}/spark-inference.py" status
+}
+
+cmd_inference() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_inference; exit 0; }
+  shift
+  run_py "${LIB}/spark-inference.py" "$sub" "$@"
+}
+
+cmd_recipe() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_recipe; exit 0; }
+  shift
+  run_py "${LIB}/spark-inference.py" recipe "$sub" "$@"
+}
+
+cmd_models() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_models; exit 0; }
+  shift
+  case "$sub" in
+    verify)
+      local action="${1:-}"
+      [[ -n "$action" ]] || die "usage: spark models verify {get|set|list|pending} ..."
+      shift
+      run_py "${LIB}/spark-model-verify" "$action" "$@"
+      ;;
+    removal)
+      local path="${1:-}"
+      local flag="${2:-}"
+      [[ -n "$path" && -n "$flag" ]] || die "usage: spark models removal <lab/slug> on|off"
+      shift 2
+      run_py "${LIB}/spark-model-verify" removal "$path" "$flag" "$@"
+      ;;
+    inventory)
+      run "${LIB}/spark-inventory-build" "$@"
+      ;;
+    *)
+      die "unknown models command: $sub (try: verify, removal, inventory)"
+      ;;
+  esac
+}
+
+cmd_shelf() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_shelf; exit 0; }
+  shift
+  case "$sub" in
+    pull) run "${LIB}/spark-shelf-pull" "$@" ;;
+    push) run "${LIB}/spark-shelf-push" "$@" ;;
+    rm) run "${LIB}/spark-local-rm" "$@" ;;
+    status)
+      if command -v curl >/dev/null 2>&1; then
+        curl -fsS "http://127.0.0.1/api/shelf/status" 2>/dev/null | "${PY}" -m json.tool 2>/dev/null \
+          || curl -fsS "http://127.0.0.1/api/shelf/status" 2>/dev/null \
+          || die "shelf API unavailable — run install/11-model-shelf-api.sh"
+      else
+        die "curl required for spark shelf status"
+      fi
+      ;;
+    *)
+      die "unknown shelf command: $sub (try: pull, push, rm, status)"
+      ;;
+  esac
+}
+
+cmd_engine() {
+  local engine="${1:-}"
+  [[ -n "$engine" ]] || { help_engine; exit 0; }
+  shift
+  case "$engine" in
+    eugr|vllm) run "${LIB}/spark-eugr" "$@" ;;
+    llama|llamacpp) run "${LIB}/spark-llama" "$@" ;;
+    ds4|dwarfstar) run "${LIB}/spark-ds4" "$@" ;;
+    *)
+      die "unknown engine: $engine (try: eugr, llama, ds4)"
+      ;;
+  esac
+}
+
+cmd_gpu() {
+  run_py "${LIB}/spark-gpu-metrics" "$@"
+}
+
+cmd_bench() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_bench; exit 0; }
+  shift
+  run_py "${LIB}/spark-inference.py" bench "$sub" "$@"
+}
+
+cmd_hf() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_hf; exit 0; }
+  shift
+  case "$sub" in
+    login) run "${LIB}/spark-hf-login" "$@" ;;
+    status|queue|plan|worker)
+      run_py "${LIB}/spark-hf.py" "$sub" "$@"
+      ;;
+    *)
+      die "unknown hf command: $sub (try: login, status, queue, plan)"
+      ;;
+  esac
+}
+
+dispatch_group() {
+  local group="$1"
+  shift
+  case "$group" in
+    status) cmd_status "$@" ;;
+    inference) cmd_inference "$@" ;;
+    recipe) cmd_recipe "$@" ;;
+    models) cmd_models "$@" ;;
+    shelf) cmd_shelf "$@" ;;
+    engine) cmd_engine "$@" ;;
+    gpu) cmd_gpu "$@" ;;
+    bench) cmd_bench "$@" ;;
+    hf) cmd_hf "$@" ;;
+    *)
+      die "unknown group: $group (run spark --help or spark ?)"
+      ;;
+  esac
+}
+
+main() {
+  local -a argv=("$@")
+  local hi
+
+  if hi="$(find_help_index "${argv[@]}")"; then
+    context_help "${argv[@]:0:hi}"
+    exit 0
+  fi
+
+  local cmd="${1:-}"
+  [[ -n "$cmd" ]] || { usage; exit 0; }
+  case "$cmd" in
+    -h|--help|help) usage ;;
+    status|gpu|bench) shift; dispatch_group "$cmd" "$@" ;;
+    inference|recipe|models|shelf|engine|hf) shift; dispatch_group "$cmd" "$@" ;;
+    *)
+      local group
+      if group="$(resolve_prefix "$cmd" "${SPARK_GROUPS[@]}")"; then
+        shift
+        dispatch_group "$group" "$@"
+      else
+        exit 1
+      fi
+      ;;
+  esac
+}
+
+main "$@"

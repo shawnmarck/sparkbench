@@ -40,8 +40,6 @@ models:
       ''2026-06-22T02:48:57.950057+00:00''} works'
     engine: llamacpp
   microsoft/phi-4:
-    removal_pending: true
-    removal_queued_at: '2026-06-21T17:20:57.143401+00:00'
     spark_status: works
     updated_at: '2026-06-22T02:48:58.170278+00:00'
     engine: eugr
@@ -71,8 +69,6 @@ models:
     tok_s_engine: eugr
     tok_s_profile: nvidia-qwen3-30b-a3b-eugr
   deepseek-ai/deepseek-r1-distill-qwen-32b:
-    removal_pending: true
-    removal_queued_at: '2026-06-21T17:21:35.987485+00:00'
     spark_status: works
     updated_at: '2026-06-22T02:48:57.882648+00:00'
     engine: eugr
@@ -235,3 +231,27 @@ models:
     tok_s: 22.3
     tok_s_engine: llamacpp
     tok_s_profile: stepfun-ai-step-3-7-flash-llama
+  google/diffusiongemma-26b-a4b-it:
+    spark_status: works
+    updated_at: '2026-06-22T04:17:22.318528+00:00'
+    engine: eugr
+    note: 'Model Lab: google-diffusiongemma-26b-a4b-it-eugr works'
+    tok_s: 70.8
+    tok_s_engine: eugr
+    tok_s_profile: google-diffusiongemma-26b-a4b-it-eugr
+  kaitchup/qwen3.6-27b:
+    spark_status: works
+    updated_at: '2026-06-22T04:23:27.985877+00:00'
+    engine: llamacpp
+    note: 'Model Lab: kaitchup-qwen3-6-27b-llama works'
+    tok_s: 9.3
+    tok_s_engine: llamacpp
+    tok_s_profile: kaitchup-qwen3-6-27b-llama
+  antirez/deepseek-v4-flash:
+    spark_status: works
+    updated_at: '2026-06-22T05:02:56.369040+00:00'
+    engine: ds4
+    note: 'Model Lab: antirez-deepseek-v4-flash-ds4 works'
+    tok_s: 17.3
+    tok_s_engine: ds4
+    tok_s_profile: antirez-deepseek-v4-flash-ds4

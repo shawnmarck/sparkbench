@@ -1,0 +1,24 @@
+id: kaitchup-qwen3-6-27b-llama
+name: qwen3.6-27b (llamacpp)
+inventory_path: kaitchup/qwen3.6-27b
+engine: llamacpp
+tier: fast
+lifecycle: works
+served_name: qwen3.6-27b
+port: 8081
+tags:
+- lab
+- llamacpp
+notes: Scaffolded 2026-06-22 from /models/kaitchup/qwen3.6-27b. Mark testing, switch,
+  bench, then promote.
+model: /models/kaitchup/qwen3.6-27b/moq/MoQ-5.0.gguf
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+updated_at: '2026-06-22T04:17:27.075709+00:00'
+promoted_at: '2026-06-22T04:23:27.947397+00:00'

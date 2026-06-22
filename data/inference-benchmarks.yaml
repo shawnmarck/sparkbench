@@ -297,3 +297,57 @@ profiles:
     - 22.4
     note: "agent bench avg 22.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 103.2s)"
     latest_run_id: 20260622T02374334-a57fd6
+  google-diffusiongemma-26b-a4b-it-eugr:
+    tok_s: 70.8
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-22T04:17:21.952519+00:00'
+    completion_tokens: 2094
+    prompt_tokens: 2789
+    elapsed_s: 29.59
+    tok_s_min: 69.3
+    tok_s_max: 71.8
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 71.8
+    - 69.3
+    - 71.2
+    note: "agent bench avg 70.8 tok/s over 3 sessions \xD7 3 turns (2094 tok in 29.6s)"
+    latest_run_id: 20260622T04172195-dfbf13
+  kaitchup-qwen3-6-27b-llama:
+    tok_s: 9.3
+    engine: llamacpp
+    method: bench-agent
+    measured_at: '2026-06-22T04:23:27.681359+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 876
+    elapsed_s: 247.41
+    tok_s_min: 9.3
+    tok_s_max: 9.3
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 9.3
+    - 9.3
+    - 9.3
+    note: "agent bench avg 9.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 247.4s)"
+    latest_run_id: 20260622T04232768-a0f646
+  antirez-deepseek-v4-flash-ds4:
+    tok_s: 17.3
+    engine: ds4
+    method: bench-agent
+    measured_at: '2026-06-22T05:02:45.858141+00:00'
+    completion_tokens: 2295
+    prompt_tokens: 3003
+    elapsed_s: 132.8
+    tok_s_min: 17.2
+    tok_s_max: 17.4
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 17.4
+    - 17.2
+    - 17.2
+    note: "agent bench avg 17.3 tok/s over 3 sessions \xD7 3 turns (2295 tok in 132.8s)"
+    latest_run_id: 20260622T05024585-e0d06b

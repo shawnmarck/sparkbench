@@ -625,15 +625,210 @@ def attach_spark_verify(entries: list, store: dict, benchmarks: dict[str, dict])
         entry["spark_verify"] = sv
 
 
+def is_speculative_profile(profile: dict) -> bool:
+    spec = profile.get("speculative") if isinstance(profile.get("speculative"), dict) else None
+    if spec and spec.get("method"):
+        return True
+    tags = {str(t).lower() for t in (profile.get("tags") or [])}
+    return "dflash" in tags or "sidecar" in tags
+
+
+def baseline_profiles(profiles: list[dict]) -> list[dict]:
+    return [p for p in profiles if not is_speculative_profile(p)]
+
+
+def target_weight_bytes(target_entry: dict, weight_format: str | None) -> int:
+    if weight_format:
+        for variant in target_entry.get("variants") or []:
+            if variant.get("format") == weight_format and variant.get("size_bytes"):
+                return int(variant["size_bytes"])
+    local = target_entry.get("local") or {}
+    if local.get("size_bytes"):
+        return int(local["size_bytes"])
+    if target_entry.get("size_bytes"):
+        return int(target_entry["size_bytes"])
+    return 0
+
+
+def attach_speculative_sidecars(
+    entries: list, by_path: dict[str, list[dict]]
+) -> None:
+    """Attribute speculative/DFlash profiles to sidecar rows; keep baseline-only on targets."""
+    sidecar_links: dict[str, list[dict]] = {}
+    for target_inv, profiles in by_path.items():
+        for profile in profiles:
+            if not is_speculative_profile(profile):
+                continue
+            spec = profile.get("speculative") if isinstance(profile.get("speculative"), dict) else {}
+            sidecar_inv = spec.get("sidecar_inventory")
+            if not sidecar_inv:
+                continue
+            sidecar_links.setdefault(str(sidecar_inv), []).append(
+                {
+                    "profile": profile,
+                    "target_inventory": str(target_inv),
+                    "weight_format": spec.get("target_weight_format"),
+                    "blocked": bool(spec.get("blocked")),
+                    "blocked_reason": spec.get("blocked_reason"),
+                }
+            )
+
+    entry_by_id = {str(e.get("id") or e.get("rel_path")): e for e in entries}
+
+    for entry in entries:
+        rel = str(entry.get("rel_path") or entry.get("id"))
+        profiles = list(by_path.get(rel) or [])
+        if not profiles:
+            continue
+        entry["inference_profiles"] = baseline_profiles(profiles)
+        spec_on_target = speculative_profiles(profiles)
+        if spec_on_target:
+            entry["has_speculative_addon"] = True
+
+    for sidecar_inv, links in sidecar_links.items():
+        entry = entry_by_id.get(sidecar_inv)
+        if not entry:
+            continue
+        entry["model_kind"] = entry.get("model_kind") or "speculative_sidecar"
+        profiles = [link["profile"] for link in links]
+        entry["inference_profiles"] = profiles
+        primary = links[0]
+        target_inv = primary["target_inventory"]
+        target_entry = entry_by_id.get(target_inv)
+        entry["requires_target"] = target_inv
+        if target_entry:
+            entry["requires_target_name"] = target_entry.get("name")
+        sidecar_bytes = int((entry.get("local") or {}).get("size_bytes") or entry.get("size_bytes") or 0)
+        target_bytes = target_weight_bytes(target_entry or {}, primary.get("weight_format"))
+        combined = sidecar_bytes + target_bytes
+        entry["sidecar_size_bytes"] = sidecar_bytes
+        entry["sidecar_size_human"] = human_size(sidecar_bytes) if sidecar_bytes else None
+        entry["requires_target_size_bytes"] = target_bytes or None
+        entry["requires_target_size_human"] = human_size(target_bytes) if target_bytes else None
+        entry["combined_size_bytes"] = combined or None
+        entry["combined_size_human"] = human_size(combined) if combined else None
+        if primary.get("blocked"):
+            entry["speculative_blocked"] = True
+            entry["speculative_blocked_reason"] = primary.get("blocked_reason")
+
+
+def speculative_profiles(profiles: list[dict]) -> list[dict]:
+    return [p for p in profiles if is_speculative_profile(p)]
+
+
+def attach_unlinked_sidecar_metadata(entries: list) -> None:
+    """Fill requires_target + combined size for z-lab sidecars without recipe links."""
+    entry_by_id = {str(e.get("id") or e.get("rel_path")): e for e in entries}
+
+    def sidecar_has_dflash(entry: dict) -> bool:
+        caps = {str(c).lower() for c in (entry.get("capabilities") or [])}
+        if "dflash" in caps or "speculative" in caps:
+            return True
+        path = Path(entry.get("path") or "")
+        if (path / "dflash").is_dir():
+            return True
+        return any(v.get("format") == "dflash" for v in (entry.get("variants") or []))
+
+    def infer_target(sidecar: dict) -> dict | None:
+        slug = sidecar.get("slug") or ""
+        if not slug:
+            return None
+        exact = [
+            e for eid, e in entry_by_id.items()
+            if eid != sidecar.get("id") and (e.get("slug") or "") == slug
+        ]
+        if len(exact) == 1:
+            return exact[0]
+        if len(exact) > 1:
+            exact.sort(key=lambda e: int((e.get("local") or {}).get("present") or 0), reverse=True)
+            return exact[0]
+        prefix = [
+            e for eid, e in entry_by_id.items()
+            if eid != sidecar.get("id")
+            and ((e.get("slug") or "").startswith(slug + "-") or slug.startswith((e.get("slug") or "") + "-"))
+        ]
+        if prefix:
+            prefix.sort(
+                key=lambda e: (
+                    int((e.get("local") or {}).get("present") or 0),
+                    int((e.get("local") or {}).get("size_bytes") or 0),
+                ),
+                reverse=True,
+            )
+            return prefix[0]
+        return None
+
+    for entry in entries:
+        if entry.get("lab") != "z-lab" or not sidecar_has_dflash(entry):
+            continue
+        entry["model_kind"] = entry.get("model_kind") or "speculative_sidecar"
+        if entry.get("requires_target"):
+            continue
+        target = infer_target(entry)
+        if not target:
+            continue
+        target_inv = str(target.get("rel_path") or target.get("id"))
+        entry["requires_target"] = target_inv
+        entry["requires_target_name"] = target.get("name")
+        sidecar_bytes = int((entry.get("local") or {}).get("size_bytes") or entry.get("size_bytes") or 0)
+        target_bytes = int((target.get("local") or {}).get("size_bytes") or target.get("size_bytes") or 0)
+        combined = sidecar_bytes + target_bytes
+        entry["sidecar_size_bytes"] = sidecar_bytes or None
+        entry["sidecar_size_human"] = human_size(sidecar_bytes) if sidecar_bytes else None
+        entry["requires_target_size_bytes"] = target_bytes or None
+        entry["requires_target_size_human"] = human_size(target_bytes) if target_bytes else None
+        entry["combined_size_bytes"] = combined or None
+        entry["combined_size_human"] = human_size(combined) if combined else None
+
+
 def attach_best_bench_tok(entries: list) -> None:
     for entry in entries:
-        toks = [
-            p["tok_s"]
-            for p in (entry.get("inference_profiles") or [])
-            if p.get("tok_s") is not None
-        ]
+        profiles = entry.get("inference_profiles") or []
+        toks = [p["tok_s"] for p in profiles if p.get("tok_s") is not None]
         entry["best_bench_tok_s"] = max(toks) if toks else None
         entry["latest_bench_tok_s"] = entry["best_bench_tok_s"]
+        entry.pop("best_speculative_tok_s", None)
+
+
+def reconcile_spark_verify_with_profiles(entry: dict) -> None:
+    """Align portal spark_verify headline with attributed inference profiles."""
+    sv = dict(entry.get("spark_verify") or {})
+    profiles = entry.get("inference_profiles") or []
+    rated = [p for p in profiles if p.get("tok_s") is not None]
+    kind = entry.get("model_kind")
+
+    if kind == "speculative_sidecar":
+        if entry.get("speculative_blocked") and not rated:
+            sv["spark_status"] = "failed"
+            if entry.get("speculative_blocked_reason"):
+                sv["note"] = str(entry["speculative_blocked_reason"])
+        elif rated:
+            best = max(rated, key=lambda p: float(p["tok_s"]))
+            spec = best.get("speculative") if isinstance(best.get("speculative"), dict) else {}
+            sv["spark_status"] = "failed" if spec.get("blocked") else "works"
+            sv["tok_s"] = best.get("tok_s")
+            sv["tok_s_engine"] = best.get("engine")
+            sv["tok_s_profile"] = best.get("id")
+            if best.get("notes"):
+                sv["note"] = best["notes"]
+        elif sv.get("spark_status") == "failed" and sv.get("note"):
+            pass
+        entry["spark_verify"] = sv
+        return
+
+    if rated:
+        best = max(rated, key=lambda p: float(p["tok_s"]))
+        if sv.get("spark_status") not in ("failed",):
+            if sv.get("spark_status") in (None, "unverified", "wip", ""):
+                sv["spark_status"] = "works"
+        sv["tok_s"] = best.get("tok_s")
+        sv["tok_s_engine"] = best.get("engine")
+        sv["tok_s_profile"] = best.get("id")
+        if best.get("notes") and not sv.get("note"):
+            sv["note"] = best["notes"]
+    elif entry.get("has_speculative_addon"):
+        entry.pop("has_speculative_addon", None)
+    entry["spark_verify"] = sv
 
 
 def load_inference_profile_map() -> dict[str, list[dict]]:
@@ -881,6 +1076,7 @@ def main() -> int:
                 "size_human": human_size(total_size),
                 "engines": model_engines(variants),
                 "variants": variants,
+                "model_kind": m.get("model_kind"),
             }
         )
 
@@ -1024,8 +1220,17 @@ def main() -> int:
 
     profile_benchmarks = load_profile_benchmarks()
     attach_spark_verify(entries, load_spark_verification(), profile_benchmarks)
-    attach_inference_profiles(entries, load_inference_profile_map())
+    profile_map = load_inference_profile_map()
+    attach_inference_profiles(entries, profile_map)
+    attach_speculative_sidecars(entries, profile_map)
+    attach_unlinked_sidecar_metadata(entries)
+    for entry in entries:
+        caps = {str(c).lower() for c in (entry.get("capabilities") or [])}
+        if entry.get("lab") == "z-lab" and ("dflash" in caps or "speculative" in caps):
+            entry.setdefault("model_kind", "speculative_sidecar")
     attach_best_bench_tok(entries)
+    for entry in entries:
+        reconcile_spark_verify_with_profiles(entry)
 
     payload = {
         "generated_at": now,

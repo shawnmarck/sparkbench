@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# DwarfStar (ds4) native DeepSeek V4 Flash server on GB10.
+set -euo pipefail
+
+ROOT="${SPARK_ROOT:-/opt/spark}"
+BIN="${SPARK_DS4_BIN:-/opt/spark/bin/ds4-server}"
+PIN="${SPARK_DS4_PIN:-/opt/spark/data/ds4-dwarfstar.yaml}"
+RUN_DIR="${ROOT}/run"
+LOG_DIR="${ROOT}/logs"
+PID_FILE="${RUN_DIR}/ds4-server.pid"
+LOG_FILE="${LOG_DIR}/ds4-server.log"
+PORT="${SPARK_DS4_PORT:-8000}"
+HOST="${SPARK_DS4_HOST:-0.0.0.0}"
+MODEL=""
+SERVED_NAME=""
+CTX=""
+EXTRA_ARGS=()
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+load_pin_defaults() {
+  [[ -f "${PIN}" ]] || return 0
+  eval "$(
+    /opt/spark/venv/bin/python - "${PIN}" <<'PY'
+import shlex, sys, yaml
+pin = yaml.safe_load(open(sys.argv[1])) or {}
+model = pin.get("model") or {}
+runtime = pin.get("runtime") or {}
+print(f"MODEL={shlex.quote(model.get('dest','') + '/' + model.get('gguf_file','') if model.get('dest') and model.get('gguf_file') else '')}")
+print(f"SERVED_NAME={shlex.quote(model.get('served_name') or 'deepseek-v4-flash')}")
+print(f"PORT={runtime.get('port', 8000)}")
+print(f"CTX={runtime.get('default_ctx', 32768)}")
+PY
+  )"
+  # pin dest is directory; build full gguf path
+  if [[ -n "${MODEL}" && "${MODEL}" == /models/* ]]; then
+    :
+  elif [[ -f "${PIN}" ]]; then
+    MODEL="$(/opt/spark/venv/bin/python - "${PIN}" <<'PY'
+import sys, yaml
+from pathlib import Path
+pin = yaml.safe_load(open(sys.argv[1])) or {}
+m = pin.get("model") or {}
+dest = m.get("dest") or ""
+gguf = m.get("gguf_file") or ""
+p = Path(dest) / gguf if dest and gguf else Path()
+print(p if p.is_file() else "")
+PY
+)"
+  fi
+}
+
+load_recipe() {
+  local recipe="${SPARK_DS4_RECIPE:-}"
+  [[ -n "${recipe}" ]] || return 0
+  [[ -f "${recipe}" ]] || die "Missing recipe: ${recipe}"
+  eval "$(
+    /opt/spark/venv/bin/python - "${recipe}" <<'PY'
+import shlex, sys, yaml
+recipe = yaml.safe_load(open(sys.argv[1])) or {}
+print(f"MODEL={shlex.quote(recipe.get('model', ''))}")
+print(f"SERVED_NAME={shlex.quote(recipe.get('served_name', ''))}")
+print(f"PORT={recipe.get('port', 8000)}")
+flat = []
+for arg in recipe.get("ds4_args") or []:
+    flat.extend(shlex.split(str(arg)))
+if flat:
+    joined = " ".join(shlex.quote(a) for a in flat)
+    print(f"EXTRA_ARGS=({joined})")
+else:
+    print("EXTRA_ARGS=()")
+ctx = None
+for i, a in enumerate(flat):
+    if a in ("-c", "--ctx") and i + 1 < len(flat):
+        ctx = flat[i + 1]
+        break
+if ctx:
+    print(f"CTX={ctx}")
+PY
+  )"
+}
+
+other_engines_running() {
+  docker ps --format '{{.Names}}' 2>/dev/null | grep -qx vllm_node && return 0
+  [[ -f /opt/spark/run/llama-server.pid ]] && kill -0 "$(cat /opt/spark/run/llama-server.pid)" 2>/dev/null && return 0
+  return 1
+}
+
+wait_for_exit() {
+  local pid="$1" tries=0
+  while kill -0 "$pid" 2>/dev/null && (( tries < 60 )); do
+    sleep 1; ((++tries)) || true
+  done
+  kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+}
+
+stop_others() {
+  /opt/spark/scripts/spark-eugr down 2>/dev/null || true
+  /opt/spark/scripts/spark-llama down 2>/dev/null || true
+  if [[ -f "${PID_FILE}" ]]; then
+    old="$(cat "${PID_FILE}")"
+    kill "${old}" 2>/dev/null || true
+    wait_for_exit "$old"
+    rm -f "${PID_FILE}"
+  fi
+  pkill -f "/opt/spark/bin/ds4-server" 2>/dev/null || true
+  sleep 1
+}
+
+usage() {
+  cat <<USAGE
+Usage: spark engine ds4 {up|down|status|logs|build}
+
+DwarfStar (ds4) — native DeepSeek V4 Flash (:${PORT}/v1)
+Pin: ${PIN}
+USAGE
+}
+
+cmd="${1:-}"
+[[ -n "${cmd}" ]] || { usage; exit 1; }
+
+load_pin_defaults
+
+case "${cmd}" in
+  up)
+    load_recipe
+    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run: sudo bash install/22-ds4-dwarfstar.sh"
+    [[ -n "${MODEL}" && -f "${MODEL}" ]] || die "Missing model GGUF (set SPARK_DS4_RECIPE or check ${PIN})"
+    stop_others
+    mkdir -p "${RUN_DIR}" "${LOG_DIR}"
+    if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+      die "ds4-server already running (pid $(cat "${PID_FILE}"))"
+    fi
+    args=( -m "${MODEL}" --host "${HOST}" --port "${PORT}" )
+    [[ -n "${CTX}" ]] && args+=( -c "${CTX}" )
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+      args+=( "${EXTRA_ARGS[@]}" )
+    fi
+    nohup "${BIN}" "${args[@]}" >>"${LOG_FILE}" 2>&1 &
+    echo $! >"${PID_FILE}"
+    echo "Started ds4-server pid $(cat "${PID_FILE}") — ${SERVED_NAME:-ds4} on :${PORT}"
+    echo "Log: ${LOG_FILE}"
+    echo "API: http://sparky:${PORT}/v1"
+    ;;
+  down)
+    if [[ -f "${PID_FILE}" ]]; then
+      pid="$(cat "${PID_FILE}")"
+      kill "${pid}" 2>/dev/null || true
+      wait_for_exit "$pid"
+      rm -f "${PID_FILE}"
+      echo "Stopped ds4-server (${pid})"
+    else
+      pkill -f '/opt/spark/bin/ds4-server' 2>/dev/null && echo "Stopped ds4-server" || echo "Not running"
+    fi
+    ;;
+  status)
+    if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+      echo "Running pid $(cat "${PID_FILE}") — http://127.0.0.1:${PORT}/v1/models"
+      curl -sf "http://127.0.0.1:${PORT}/v1/models" | head -c 600 || echo "(API not ready yet)"
+      echo
+    else
+      echo "Not running"
+    fi
+    ;;
+  logs)
+    tail -f "${LOG_FILE}"
+    ;;
+  build)
+    VENDOR="${SPARK_DS4_VENDOR:-/opt/spark/vendor/ds4}"
+    STAGING_VENDOR="/home/techno/spark/vendor/ds4"
+    if [[ ! -d "${VENDOR}/.git" && -d "${STAGING_VENDOR}/.git" ]]; then
+      VENDOR="${STAGING_VENDOR}"
+    fi
+    [[ -d "${VENDOR}" ]] || die "Missing ds4 source — run install/22-ds4-dwarfstar.sh"
+    cd "${VENDOR}"
+    make cuda-spark -j"$(nproc)"
+    mkdir -p /opt/spark/bin
+    install -m 755 ./ds4-server ./ds4 ./ds4-bench /opt/spark/bin/
+    echo "Installed ds4 binaries to /opt/spark/bin/"
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

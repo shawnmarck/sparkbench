@@ -116,6 +116,28 @@ def read_pid_file(path: Path) -> int | None:
     return None
 
 
+def _pid_cmdline(pid: int) -> str:
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return ""
+    return raw.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+
+
+def _is_queue_worker_pid(pid: int) -> bool:
+    cmd = _pid_cmdline(pid)
+    return "spark-hf.py" in cmd and re.search(r"\bworker\b", cmd) is not None
+
+
+def _clear_stale_download_pid() -> None:
+    pid = read_pid_file(DOWNLOAD_PID_FILE)
+    if pid is None:
+        DOWNLOAD_PID_FILE.unlink(missing_ok=True)
+        return
+    if not _is_queue_worker_pid(pid):
+        DOWNLOAD_PID_FILE.unlink(missing_ok=True)
+
+
 def tail_log(path: Path, lines: int = 12) -> list[str]:
     if not path.is_file():
         return []
@@ -202,8 +224,8 @@ def _extract_pid(line: str) -> int | None:
 
 def active_queue_worker() -> dict[str, Any]:
     pid = read_pid_file(DOWNLOAD_PID_FILE)
-    if not pid:
-        DOWNLOAD_PID_FILE.unlink(missing_ok=True)
+    if not pid or not _is_queue_worker_pid(pid):
+        _clear_stale_download_pid()
         return {"running": False}
     return {
         "running": True,
@@ -330,6 +352,19 @@ def can_start_download(*, defer_bench: bool = True) -> tuple[bool, str]:
         return False, f"download already running ({src})"
     if defer_bench and active_bench_running():
         return False, "benchmark running — queue deferred"
+    return True, "ok"
+
+
+def worker_can_start(self_pid: int) -> tuple[bool, str]:
+    """Queue worker guard — must not treat our own PID file as a blocking download."""
+    legacy = active_legacy_download()
+    if legacy.get("running"):
+        return False, "legacy download in progress"
+    if active_bench_running():
+        return False, "benchmark running — queue deferred"
+    pid = read_pid_file(DOWNLOAD_PID_FILE)
+    if pid and pid != self_pid and _is_queue_worker_pid(pid):
+        return False, "another queue worker is running"
     return True, "ok"
 
 
@@ -1408,18 +1443,13 @@ def worker_main() -> int:
     DOWNLOAD_PID_FILE.parent.mkdir(parents=True, exist_ok=True)
     DOWNLOAD_PID_FILE.write_text(str(os.getpid()))
 
+    self_pid = os.getpid()
     try:
         while True:
-            ok, reason = can_start_download()
-            if not ok and "already running" in reason:
-                return 0
+            ok, reason = worker_can_start(self_pid)
             if not ok:
-                return 0
-
-            legacy = active_legacy_download()
-            if legacy.get("running"):
                 with DOWNLOAD_LOG_FILE.open("a", encoding="utf-8") as logfh:
-                    logfh.write(f"==> yielding to legacy download {utc_now()}\n")
+                    logfh.write(f"==> worker idle exit: {reason} {utc_now()}\n")
                 return 0
 
             item = _next_actionable_item()
@@ -1428,7 +1458,7 @@ def worker_main() -> int:
 
             process_queue_item(item)
 
-            ok, reason = can_start_download()
+            ok, reason = worker_can_start(self_pid)
             if not ok:
                 return 0
     finally:
@@ -1436,7 +1466,9 @@ def worker_main() -> int:
 
 
 def maybe_start_worker() -> bool:
-    if read_pid_file(DOWNLOAD_PID_FILE):
+    _clear_stale_download_pid()
+    pid = read_pid_file(DOWNLOAD_PID_FILE)
+    if pid and _is_queue_worker_pid(pid):
         return False
     ok, _reason = can_start_download()
     if not ok:
@@ -1444,13 +1476,12 @@ def maybe_start_worker() -> bool:
     if _next_actionable_item() is None:
         return False
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    proc = subprocess.Popen(
+    subprocess.Popen(
         [sys.executable, str(ROOT / "scripts" / "spark-hf.py"), "worker"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
-    DOWNLOAD_PID_FILE.write_text(str(proc.pid))
     return True
 
 

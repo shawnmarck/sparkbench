@@ -1,4 +1,4 @@
-id: opencode-qwen36-100k
+id: opencode-qwen36-250k
 name: "OpenCode · Qwen3.6 250k NVFP4"
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
@@ -28,9 +28,8 @@ context:
       ctx: 163840
       kv: fp8
 notes: |
-  Max tested OpenCode agent profile for Sparky (ctx ladder 2026-06-22: 232k fill @ 256k ceiling).
-  Launch: spark inference up opencode-qwen36-100k
+  OpenCode agent profile for Sparky — 256k ctx, fp8 KV (ctx ladder validated 2026-06-22).
+  Launch: spark inference up opencode-qwen36-250k
   OpenCode: http://sparky:9000/v1 — run sync-sparky-models locally after switch.
-  Non-reasoning (thinking off) — pass chat_template_kwargs.enable_thinking=false.
-  ~90% unified mem at load; fp8 KV @ gpu_memory_utilization 0.85.
-promoted_at: "2026-06-22T16:22:00+00:00"
+  Non-reasoning: chat_template_kwargs.enable_thinking=false.
+promoted_at: "2026-06-22T20:02:00+00:00"

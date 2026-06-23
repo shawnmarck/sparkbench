@@ -248,8 +248,8 @@ models:
     tok_s_engine: llamacpp
     tok_s_profile: kaitchup-qwen3-6-27b-llama
   antirez/deepseek-v4-flash:
-    spark_status: works
-    updated_at: '2026-06-22T05:02:56.369040+00:00'
+    spark_status: wip
+    updated_at: '2026-06-22T07:03:04.563501+00:00'
     engine: ds4
     note: 'Model Lab: antirez-deepseek-v4-flash-ds4 works'
     tok_s: 17.3

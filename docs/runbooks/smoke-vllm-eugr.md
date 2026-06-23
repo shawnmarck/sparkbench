@@ -34,19 +34,19 @@ MoE NVFP4 scale tensors aren't handled by the stock ModelOpt loader on Spark. Th
 
 ```bash
 # Start (build once via install/16-eugr-vllm-qwen36.sh)
-spark engine eugr up
+spark-eugr up
 
 # Logs (first boot may take 5–15 min for CUDA graph compile)
-spark engine eugr logs
+spark-eugr logs
 
 # Status + /v1/models
-spark engine eugr status
+spark-eugr status
 
 # Stop (required before llama.cpp smoke — one GPU workload at a time)
-spark engine eugr down
+spark-eugr down
 ```
 
-Legacy stock compose is stopped; use `spark engine eugr` (or `spark inference up qwen36-nvfp4` for profile-driven control).
+Legacy `spark-inference` / stock compose is stopped; use `spark-eugr` only.
 
 ## First chat in Open WebUI
 
@@ -64,30 +64,22 @@ curl http://sparky:8000/v1/chat/completions \
   -d '{"model":"qwen3.6-35b-a3b-nvfp4","messages":[{"role":"user","content":"Hello!"}],"max_tokens":64}'
 ```
 
-## Stack upgrades
-
-Upstream publishes nightly prebuilt wheels. Spark shows a portal banner when a newer stack is available (no auto-upgrade). Agent workflow: [eugr-vllm-upgrade.md](./eugr-vllm-upgrade.md).
-
-```bash
-spark engine eugr check    # compare deployed vs upstream
-```
-
 ## Key paths
 
 | Item | Path |
 |------|------|
 | Vendor | `/opt/spark/vendor/spark-vllm-docker` |
 | Recipe | `/opt/spark/services/eugr-qwen36-local.yaml` |
-| CLI | `spark engine eugr` (`/usr/local/bin/spark`) |
+| CLI | `/usr/local/bin/spark-eugr` |
 | Container | `vllm_node` |
 
 Launch uses `VLLM_SPARK_EXTRA_DOCKER_ARGS="-v /models:/models:ro"` and `--solo --daemon --apply-mod mods/fix-qwen3.6-chat-template`.
 
 ## Troubleshooting
 
-- **Open WebUI shows no models** — vLLM still loading; `spark engine eugr logs` or `curl http://sparky:8000/v1/models`
+- **Open WebUI shows no models** — vLLM still loading; `spark-eugr logs` or `curl http://sparky:8000/v1/models`
 - **OOM** — lower gpu-memory-utilization in eugr recipe
-- **Switching to llama.cpp** — `spark engine eugr down` first
+- **Switching to llama.cpp** — `spark-eugr down` first
 
 ## Next
 

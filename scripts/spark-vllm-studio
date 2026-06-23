@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cmd="${1:-status}"
+case "$cmd" in
+  status)
+    systemctl is-active spark-vllm-studio-controller.service 2>/dev/null || echo controller:inactive
+    systemctl is-active spark-vllm-studio-frontend.service 2>/dev/null || echo frontend:inactive
+    curl -sf --max-time 2 "http://127.0.0.1:8080/health" >/dev/null && echo "controller API: ok" || echo "controller API: waiting"
+    curl -sf --max-time 2 "http://127.0.0.1:3080/" >/dev/null && echo "frontend: ok" || echo "frontend: waiting"
+    ;;
+  logs) journalctl -u spark-vllm-studio-controller.service -u spark-vllm-studio-frontend.service -f ;;
+  restart)
+    sudo systemctl restart spark-vllm-studio-controller.service spark-vllm-studio-frontend.service
+    ;;
+  stop)
+    sudo systemctl stop spark-vllm-studio-frontend.service spark-vllm-studio-controller.service
+    ;;
+  start)
+    sudo systemctl start spark-vllm-studio-controller.service spark-vllm-studio-frontend.service
+    ;;
+  *) echo "Usage: spark-vllm-studio {status|logs|start|stop|restart}"; exit 1 ;;
+esac

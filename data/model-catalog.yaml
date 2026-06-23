@@ -67,8 +67,9 @@ models:
     hf_repo: rdtand/Qwen3.6-27B-PrismaQuant-5.5bit-vllm
 - id: z-lab/qwen3.6-27b
   lab: z-lab
-  name: Qwen3.6-27B (DFlash)
+  name: Qwen3.6-27B + DFlash (speculative)
   slug: qwen3.6-27b
+  model_kind: speculative_sidecar
   hf_repo: Qwen/Qwen3.6-27B
   param_b: 27
   capabilities:
@@ -397,3 +398,17 @@ models:
     engine: llamacpp
     hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
     note: gemma4-coding-Q4_K_M.gguf
+- id: google/diffusiongemma-26b-a4b-it
+  lab: google
+  name: Diffusiongemma 26B A4B It
+  slug: diffusiongemma-26b-a4b-it
+  hf_repo: google/diffusiongemma-26B-A4B-it
+  capabilities:
+  - explorer
+  - vllm
+  why_downloaded: HF Explorer download 2026-06-22
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: google/diffusiongemma-26B-A4B-it

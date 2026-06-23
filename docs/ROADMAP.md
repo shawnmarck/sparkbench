@@ -1,7 +1,7 @@
 # Spark setup roadmap
 
 **This is the plan.** Status, phases, URLs, and what to build next.  
-Last updated: 2026-06-22 (ds4 shipped)
+Last updated: 2026-06-22 (inference gateway :9000/v1 implemented)
 
 ---
 
@@ -137,7 +137,7 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 8. [x] **Status API perf** — YAML mtime caches, 1s TTL snapshot, `?lite=1` for nav/models polls, `ThreadingHTTPServer` (`2026-06-22`)
 9. [x] **eugr upgrade detection** — `spark engine eugr check` / `record`, portal banner, runbook [`eugr-vllm-upgrade.md`](runbooks/eugr-vllm-upgrade.md)
 10. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
-11. [ ] **Gateway integration** — model aliases → profiles, cold-start 503/retry
+11. [x] **Gateway integration** — `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) — smallest useful slice implemented
 12. [ ] Later: idle eviction, MCP ops agent
 
 ---

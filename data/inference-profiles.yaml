@@ -20,3 +20,4 @@ profiles:
 - kaitchup-qwen3-6-27b-llama
 - antirez-deepseek-v4-flash-ds4
 - opencode-qwen36-250k
+- opencode-qwen27-dflash-262k

@@ -46,9 +46,9 @@ UPSTREAM_HOST = "127.0.0.1"
 ALIASES: dict[str, str] = {
     "hermes-local": "nousresearch-hermes-4-14b-eugr",
     "hermes-14b": "nousresearch-hermes-4-14b-eugr",
-    "qwen-local": "qwen-qwen3-6-27b-dflash-eugr",
-    "qwen3-6-27b": "qwen-qwen3-6-27b-dflash-eugr",
-    "qwen3.6-27b-dflash": "qwen-qwen3-6-27b-dflash-eugr",
+    "qwen-local": "opencode-qwen27-dflash-262k",
+    "qwen3-6-27b": "opencode-qwen27-dflash-262k",
+    "qwen3.6-27b-dflash": "opencode-qwen27-dflash-262k",
     "step-3-7-flash": "stepfun-ai-step-3-7-flash-llama",
 }
 

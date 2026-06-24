@@ -25,5 +25,6 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
 | [docs/runbooks/smoke-llamacpp.md](docs/runbooks/smoke-llamacpp.md) | llama.cpp smoke test |
 | [`docs/runbooks/smoke-ds4.md`](docs/runbooks/smoke-ds4.md) | DwarfStar ds4 smoke |
 | [docs/reference/inference-stack.md](docs/reference/inference-stack.md) | Phase 5 inference control plane |
+| [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md) | Versioned bench v2 (long-ctx + tools) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | Unified `spark` command reference |
 | [docs/examples/](docs/examples/) | YAML templates |

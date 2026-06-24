@@ -144,6 +144,8 @@ spark bench latest <profile> [--json]
 
 HTTP: `GET /api/inference/benchmarks/<profile>/history`, `PATCH .../runs/<run_id>` with `{"note":"..."}`.
 
+**Benchmark standard:** see [benchmark-standard.md](benchmark-standard.md) — default `BENCH_STANDARD=v2`.
+
 Cards and Inference tab still show **latest** `tok_s`; full timeline is in history + Models detail panel.
 
 ### Environment

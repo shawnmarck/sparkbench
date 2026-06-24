@@ -30,6 +30,13 @@ ctxmod = importlib.util.module_from_spec(_CTX_SPEC)
 assert _CTX_SPEC.loader is not None
 _CTX_SPEC.loader.exec_module(ctxmod)
 
+_BENCH_V2_SPEC = importlib.util.spec_from_file_location(
+    "spark_inference_bench_v2", ROOT / "scripts" / "spark-inference-bench-v2.py"
+)
+benchv2 = importlib.util.module_from_spec(_BENCH_V2_SPEC)
+assert _BENCH_V2_SPEC.loader is not None
+_BENCH_V2_SPEC.loader.exec_module(benchv2)
+
 RECIPES_DIR = ROOT / "recipes"
 RECIPES_DRAFTS_DIR = RECIPES_DIR / "drafts"
 MODELS_ROOT = Path("/models")
@@ -63,7 +70,7 @@ DS4_PIN_FILE = ROOT / "data" / "ds4-dwarfstar.yaml"
 VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
 INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
-BENCH_METHODS = frozenset({"bench", "bench-agent"})
+BENCH_METHODS = frozenset({"bench", "bench-agent", "bench-agent-v2"})
 LIFECYCLE_DRAFT = "draft"
 LIFECYCLE_TESTING = "testing"
 LIFECYCLE_PRODUCTION = "production"  # legacy; prefer works
@@ -1585,6 +1592,9 @@ def append_benchmark_history_run(
         "sessions",
         "turns_per_session",
         "run_tok_s",
+        "bench_standard_version",
+        "context_fill_target_tokens",
+        "tool_roundtrip_ok",
     ):
         if entry.get(key) is not None:
             run[key] = entry[key]
@@ -1753,6 +1763,7 @@ def record_benchmark(
     sessions: int | None = None,
     turns_per_session: int | None = None,
     run_tok_s: list[float] | None = None,
+    **extra: Any,
 ) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat()
     engine = recipe.get("engine")
@@ -1781,6 +1792,9 @@ def record_benchmark(
         entry["run_tok_s"] = [round(float(v), 1) for v in run_tok_s]
     if note:
         entry["note"] = note
+    for key, val in extra.items():
+        if val is not None:
+            entry[key] = val
     run = append_benchmark_history_run(
         profile_id, entry, system_note=note, source="auto"
     )
@@ -2971,8 +2985,20 @@ def cmd_bench_history_cli(argv: list[str]) -> int:
 
 
 def cmd_bench(write_result: bool = False) -> int:
+    standard = os.environ.get("BENCH_STANDARD", "v2").strip().lower()
     try:
-        result = run_benchmark()
+        if standard in {"v2", "2", "2.0", "bench-agent-v2"}:
+            active = detect_active_profile()
+            if not active:
+                raise RuntimeError("no active profile")
+            result = benchv2.run_benchmark_v2(
+                profile_id=active["profile"],
+                recipe=active["recipe"],
+                engine_ready=engine_ready,
+                record_benchmark=record_benchmark,
+            )
+        else:
+            result = run_benchmark()
     except (RuntimeError, URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
         if write_result:
             _write_bench_result({"ok": False, "error": str(exc)})
@@ -3064,7 +3090,7 @@ def usage() -> None:
         """Usage: spark-inference {list|status|up <profile>|down|logs [profile]|bench|recipe ...}
 
 Recipe-driven inference control (Phase 5). One GPU workload at a time.
-bench — multi-turn agent-style timing on the active profile (avg of 3 sessions).
+bench — agent benchmark on active profile (default BENCH_STANDARD=v2: ~50k ctx + tools).
 recipe scaffold <lab/slug> [llamacpp|eugr] — Model Lab draft (auto-detect if engine omitted)
 recipe scaffold-dflash <lab/slug> — DFlash sidecar + target eugr draft
 recipe testing|works|promote|discard <profile> — lifecycle (draft → testing → works)"""

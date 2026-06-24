@@ -167,18 +167,12 @@ models:
     tok_s_profile: qwen-qwen3-coder-next-eugr
   qwen/qwen3.6-27b:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.551427+00:00'
+    updated_at: '2026-06-24T16:51:09.736611+00:00'
     engine: eugr
-    note: 'Model Lab: {''id'': ''qwen-qwen3-6-27b-eugr'', ''name'': ''qwen3.6-27b
-      (eugr)'', ''inventory_path'': ''qwen/qwen3.6-27b'', ''engine'': ''eugr'', ''tier'':
-      ''heavy'', ''lifecycle'': ''works'', ''served_name'': ''qwen3.6-27b'', ''port'':
-      8000, ''tags'': [''lab'', ''eugr''], ''notes'': ''Scaffolded 2026-06-21 from
-      /models/qwen/qwen3.6-27b. Mark testing, switch, bench, then promote.'', ''eugr_recipe'':
-      ''/opt/spark/services/eugr-qwen-qwen3-6-27b-eugr.yaml'', ''updated_at'': ''2026-06-21T22:52:24.273852+00:00'',
-      ''promoted_at'': ''2026-06-22T02:48:58.528981+00:00''} works'
-    tok_s: 29.0
+    note: "agent bench avg 27.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 83.8s)"
+    tok_s: 27.5
     tok_s_engine: eugr
-    tok_s_profile: qwen-qwen3-6-27b-dflash-eugr
+    tok_s_profile: opencode-qwen27-dflash-262k
   rdtand/qwen3.6-27b:
     spark_status: works
     updated_at: '2026-06-22T02:48:58.765957+00:00'

@@ -170,10 +170,17 @@ Prefer HTTP when the agent has no shell or needs JSON without parsing tables:
 | Need | URL / command |
 |------|-------------|
 | GPU + inference probe | `GET http://sparky/api/gpu` or `spark gpu` |
-| Active profile, switch | `GET/POST http://sparky/api/inference/status` · `…/switch` |
+| Active profile | `GET http://sparky/api/inference/status` (`?lite=1` for nav polls) |
+| Switch / stop profile | `POST http://sparky/api/inference/switch` · `POST …/down` |
+| **Benchmark (portal button)** | `POST http://sparky/api/inference/bench` → 202 async job |
+| Bench history / notes | `GET …/benchmarks/<profile>/history` · `PATCH …/runs/<run_id>` |
+| Recipe lifecycle | `GET/POST http://sparky/api/inference/recipes/*` (scaffold, testing, promote) |
+| Log tail | `GET http://sparky/api/inference/logs?profile=<id>` |
 | **OpenAI inference (stable)** | `GET/POST http://sparky:9000/v1/*` · `spark gateway --list-aliases` |
 | Shelf job status | `GET http://sparky/api/shelf/status` or `spark shelf status` |
 | Portal inventory | `GET http://sparky/models.json` (after `spark models inventory`) |
+
+Internal listener: `127.0.0.1:8767` (`spark-inference-api.service`). Portal nginx proxies `/api/inference/*` to it.
 
 Gateway/agents mapping many model names → one profile: see `docs/reference/inference-stack.md` (503 + retry during cold start).
 

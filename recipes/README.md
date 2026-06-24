@@ -25,3 +25,15 @@ Recipe env overrides (used by `spark inference up` or direct engine control):
 SPARK_LLAMA_RECIPE=/opt/spark/recipes/gemma4-12b-coder-q4.yaml spark engine llama up
 SPARK_EUGR_RECIPE=/opt/spark/services/eugr-qwen36-local.yaml spark engine eugr up
 ```
+
+## OpenCode (long-context agents)
+
+Production profiles for OpenCode via `http://sparky:9000/v1`:
+
+- `opencode-qwen36-250k` — Qwen3.6 35B MoE NVFP4 @ 256k ctx
+- `opencode-qwen27-dflash-262k` — Qwen3.6 27B + DFlash @ 262k ctx (design / architecture)
+
+```bash
+spark inference up opencode-qwen27-dflash-262k
+```
+

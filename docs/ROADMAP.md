@@ -1,7 +1,7 @@
 # Spark setup roadmap
 
 **This is the plan.** Status, phases, URLs, and what to build next.  
-Last updated: 2026-06-22 (inference gateway :9000/v1 implemented)
+Last updated: 2026-06-24 (OpenCode profiles + inference API bench route fix)
 
 ---
 
@@ -48,6 +48,7 @@ spark engine eugr (:8000)  │  spark engine llama (:8081)  │  spark engine ds
 | eugr vLLM (`spark engine eugr`) | ✅ Proven |
 | llama.cpp (`spark engine llama`) | ✅ Proven |
 | Open WebUI | ✅ `:3000` |
+| OpenCode agent profiles | ✅ `opencode-qwen36-250k` (256k MoE) · `opencode-qwen27-dflash-262k` (262k DFlash) |
 | Recipes (production) | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4` (+ many testing drafts) |
 | `spark inference` control plane | ✅ CLI + API + portal Inference tab + async bench |
 | Model Lab (recipe lifecycle) | ✅ Phase 5b — scaffold, test, promote |
@@ -138,6 +139,7 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 9. [x] **eugr upgrade detection** — `spark engine eugr check` / `record`, portal banner, runbook [`eugr-vllm-upgrade.md`](runbooks/eugr-vllm-upgrade.md)
 10. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
 11. [x] **Gateway integration** — `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) — smallest useful slice implemented
+11b. [x] **OpenCode profiles** — 35B MoE @ 256k + 27B DFlash @ 262k for long-context agents
 12. [ ] Later: idle eviction, MCP ops agent
 
 ---

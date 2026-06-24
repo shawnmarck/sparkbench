@@ -10,13 +10,19 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path("/opt/spark")
-SPEC = importlib.util.spec_from_file_location(
-    "inference_core", ROOT / "scripts" / "spark-inference.py"
-)
-if SPEC is None or SPEC.loader is None:
-    raise SystemExit("failed to load spark-inference.py")
-core = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(core)
+_CORE_PATH = ROOT / "scripts" / "spark-inference.py"
+
+
+def _load_core():
+    spec = importlib.util.spec_from_file_location("inference_core", _CORE_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("failed to load spark-inference.py")
+    core = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(core)
+    return core
+
+
+core = _load_core()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -25,7 +31,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _json(self, code: int, payload: dict[str, Any]) -> None:
@@ -48,112 +54,35 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return data if isinstance(data, dict) else None
 
+    def _dispatch(self, method: str) -> None:
+        global core
+        core = _load_core()
+        body: dict[str, Any] | None = {} if method in {"GET", "OPTIONS"} else None
+        if method in {"POST", "PATCH"}:
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"ok": False, "error": "invalid JSON"})
+                return
+        result = core.api_dispatch(method, self.path, body)
+        if result is None:
+            self.send_error(404)
+            return
+        code, payload = result
+        self._json(code, payload)
+
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self._cors()
         self.end_headers()
 
     def do_GET(self) -> None:
-        route = self.path.split("?", 1)[0]
-        if route == "/api/inference/status":
-            lite = False
-            if "?" in self.path:
-                for part in self.path.split("?", 1)[1].split("&"):
-                    if part.startswith("lite=") and part.split("=", 1)[1].lower() in {
-                        "1",
-                        "true",
-                        "yes",
-                    }:
-                        lite = True
-            self._json(200, {"ok": True, **core.api_status(lite=lite)})
-            return
-
-        if self.path.startswith("/api/inference/context"):
-            prof = ""
-            if "?" in self.path:
-                for part in self.path.split("?", 1)[1].split("&"):
-                    k, _, v = part.partition("=")
-                    if k == "profile":
-                        prof = v.strip()
-            if not prof:
-                self._json(400, {"ok": False, "error": "profile query required"})
-                return
-            try:
-                self._json(200, {"ok": True, **core.api_context_plan(prof)})
-            except ValueError as exc:
-                self._json(400, {"ok": False, "error": str(exc)})
-            return
-
-        if self.path.startswith("/api/inference/logs"):
-            lines = 30
-            if "?" in self.path:
-                for part in self.path.split("?", 1)[1].split("&"):
-                    if part.startswith("lines="):
-                        try:
-                            lines = max(5, min(200, int(part.split("=", 1)[1])))
-                        except ValueError:
-                            pass
-            self._json(200, core.api_inference_logs(lines))
-            return
-
-        self.send_error(404)
+        self._dispatch("GET")
 
     def do_POST(self) -> None:
-        data = self._read_json_body()
-        if data is None:
-            self._json(400, {"ok": False, "error": "invalid JSON"})
-            return
+        self._dispatch("POST")
 
-        if self.path == "/api/inference/switch":
-            if not data.get("confirm"):
-                self._json(400, {"ok": False, "error": "confirmation required"})
-                return
-            profile = str(data.get("profile", "")).strip()
-            if not core.validate_profile_id(profile):
-                self._json(400, {"ok": False, "error": "unknown or disabled profile"})
-                return
-            recipe = core.load_recipe(profile)
-            if recipe.get("tier") == "heavy" and not data.get("confirm_heavy"):
-                self._json(
-                    400,
-                    {
-                        "ok": False,
-                        "error": "heavy tier requires confirm_heavy",
-                        "profile": profile,
-                        "notes": (recipe.get("notes") or "").strip(),
-                    },
-                )
-                return
-            ctx = data.get("ctx")
-            kv = data.get("kv")
-            preset = data.get("preset")
-            ctx_i = int(ctx) if ctx is not None else None
-            ok, message, job = core.start_switch_job(
-                profile, ctx=ctx_i, kv=str(kv) if kv else None, preset=str(preset) if preset else None
-            )
-            if not ok:
-                code = 409 if "already" in message else 400
-                self._json(code, {"ok": False, "error": message, "job": job})
-                return
-            self._json(
-                202,
-                {"ok": True, "message": message, "profile": profile, "job": job},
-            )
-            return
-
-        if self.path == "/api/inference/down":
-            if not data.get("confirm"):
-                self._json(400, {"ok": False, "error": "confirmation required"})
-                return
-            try:
-                status = core.api_down()
-            except RuntimeError as exc:
-                self._json(409, {"ok": False, "error": str(exc)})
-                return
-            self._json(200, {"ok": True, "message": "stopped", **status})
-            return
-
-        self.send_error(404)
+    def do_PATCH(self) -> None:
+        self._dispatch("PATCH")
 
     def log_message(self, *_args: object) -> None:
         return
@@ -163,7 +92,7 @@ def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--serve":
         HTTPServer(("127.0.0.1", 8767), Handler).serve_forever()
         return 0
-    print(json.dumps({"ok": True, **core.api_status()}, indent=2))
+    print(json.dumps({"ok": True, **_load_core().api_status()}, indent=2))
     return 0
 
 

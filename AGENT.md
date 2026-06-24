@@ -50,7 +50,8 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | Portal | http://sparky/ |
 | Models | http://sparky/models.html |
 | Metrics API | http://sparky/api/gpu |
-| Inference API | http://sparky/api/inference/status |
+| Inference API | http://sparky/api/inference/status (nginx → :8767) |
+| **Inference gateway** | http://sparky:9000/v1 (OpenAI-compatible; aliases + auto-switch) |
 | Shelf API | http://sparky/api/shelf/status |
 | vLLM | http://sparky:8000/v1 |
 | llama.cpp | http://sparky:8081/v1 |
@@ -127,11 +128,10 @@ Passwordless sudo for `install/*.sh` only (via `00-grant-install-sudo.sh`). Opti
 
 ## Inference API reload (agents)
 
-`spark-inference-api` **hot-reloads** `scripts/spark-inference.py` on each request when the file changes — new routes and logic apply without `systemctl restart`.
+`scripts/spark-inference-api.py` is a thin HTTP shell on **:8767** (proxied as `http://sparky/api/inference/*`). It delegates every GET/POST/PATCH to `scripts/spark-inference.py:api_dispatch()` and **reloads the core module on each request** — bench, switch, recipe lifecycle, and history routes all live in `spark-inference.py`.
 
-- **Routine code changes:** no restart; hit any `/api/inference/*` endpoint after editing `spark-inference.py`.
-- **Full process restart** (rare — e.g. first deploy of hot-reload shell, port stuck):  
-  `sudo bash install/19-inference-api-restart.sh` (needs `00-grant-install-sudo.sh` once).
+- **Routine changes to `spark-inference.py`:** no restart; hit any `/api/inference/*` endpoint after saving.
+- **Changes to `spark-inference-api.py` itself:** restart the service — `sudo bash install/19-inference-api-restart.sh` (or `sudo systemctl restart spark-inference-api`).
 - **Auto-restart on script save:** `sudo bash install/18-inference-api-watch.sh` (systemd path unit; chained from `17`).
 
 ## Threat model (short)

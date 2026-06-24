@@ -351,3 +351,21 @@ profiles:
     - 17.2
     note: "agent bench avg 17.3 tok/s over 3 sessions \xD7 3 turns (2295 tok in 132.8s)"
     latest_run_id: 20260622T05024585-e0d06b
+  opencode-qwen27-dflash-262k:
+    tok_s: 27.5
+    engine: eugr
+    method: bench-agent
+    measured_at: '2026-06-24T16:51:09.736611+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 876
+    elapsed_s: 83.75
+    tok_s_min: 27.5
+    tok_s_max: 27.5
+    sessions: 3
+    turns_per_session: 3
+    run_tok_s:
+    - 27.5
+    - 27.5
+    - 27.5
+    note: "agent bench avg 27.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 83.8s)"
+    latest_run_id: 20260624T16510973-560b0a

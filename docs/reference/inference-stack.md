@@ -1,6 +1,6 @@
 # Inference stack (Phase 5 spec)
 
-Last updated: 2026-06-22 (gateway implemented)
+Last updated: 2026-06-24 (inference API delegates to api_dispatch; OpenCode profiles)
 
 ## Goal
 
@@ -43,9 +43,11 @@ Consumers
         │
         │  many model IDs
         ▼
-  spark inference API (thin)          ← Phase 5
+  spark inference API (:8767, nginx /api/inference/*)  ← Phase 5
   GET  /api/inference/status
   POST /api/inference/switch { "profile": "qwen36-nvfp4" }
+  POST /api/inference/bench · POST /api/inference/down
+  GET/POST /api/inference/recipes/* · GET /api/inference/benchmarks/*/history
         │
         │  one active profile
         ▼
@@ -174,6 +176,20 @@ ds4_args:
 ```
 
 Scaffold: `spark recipe scaffold antirez/deepseek-v4-flash ds4` or auto-detect when catalog marks `engine: ds4`.
+
+
+## OpenCode production profiles (agent coding)
+
+Promoted recipes for **OpenCode** and other long-context agents via the stable gateway (`http://sparky:9000/v1`). Sync client model lists after switching profiles.
+
+| Profile ID | Served name | Context | Role |
+|------------|-------------|---------|------|
+| `opencode-qwen36-250k` | `qwen3.6-35b-a3b-nvfp4` | 256k (fp8 KV) | Fast MoE coding / general agents |
+| `opencode-qwen27-dflash-262k` | `qwen3.6-27b-dflash` | 262k (fp8 KV + DFlash speculative) | Dense 27B for architecture / design (slower prefill, ~27 tok/s bench) |
+
+Launch: `spark inference up <profile-id>`. Gateway alias `qwen3.6-27b-dflash` maps to `opencode-qwen27-dflash-262k` (not the 16k lab profile).
+
+Reload at new context: `spark inference down && spark inference up <profile-id>` (same profile with different `--ctx` requires down first).
 
 ## Implemented: spark-inference-gateway (smallest useful slice)
 

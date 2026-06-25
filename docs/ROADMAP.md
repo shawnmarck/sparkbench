@@ -49,15 +49,16 @@ spark engine eugr (:8000)  │  spark engine llama (:8081)  │  spark engine ds
 | llama.cpp (`spark engine llama`) | ✅ Proven |
 | Open WebUI | ✅ `:3000` |
 | OpenCode agent profiles | ✅ `opencode-qwen36-250k` (256k MoE) · `opencode-qwen27-dflash-262k` (262k DFlash) |
-| Recipes (production) | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4` (+ many testing drafts) |
+| Recipes (production) | 🟡 `gemma4`, `qwen36-q4`, `qwen36-nvfp4`, `antirez-deepseek-v4-flash-ds4`, `opencode-qwen36-250k`, `opencode-qwen27-dflash-262k` (+ many testing drafts) |
 | `spark inference` control plane | ✅ CLI + API + portal Inference tab + async bench |
 | Model Lab (recipe lifecycle) | ✅ Phase 5b — scaffold, test, promote |
 | HF Explorer | ✅ Phase 5c — Explore tab, search/trending, download queue |
 | Inference API perf (lite status, YAML cache) | ✅ 2026-06-22 — models page no longer hangs on poll |
 | eugr stack upgrade notice | ✅ `spark engine eugr check` + portal banner (manual upgrade) |
 | DwarfStar / ds4 engine | ✅ `spark engine ds4` — antirez V4 Flash benched **17.3 tok/s** |
+| MTP (Multi-Token Prediction) | ✅ Scaffold router implemented for eugr and llama.cpp |
 | Hermes Agent | ❌ Phase 5 step 5 (deferred) |
-| Gateway integration | ❌ Phase 5 step 6 |
+| Gateway integration | ✅ `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) |
 
 ---
 
@@ -137,10 +138,10 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 7. [x] **API auto-reload** — `install/18-inference-api-watch.sh` (systemd path unit)
 8. [x] **Status API perf** — YAML mtime caches, 1s TTL snapshot, `?lite=1` for nav/models polls, `ThreadingHTTPServer` (`2026-06-22`)
 9. [x] **eugr upgrade detection** — `spark engine eugr check` / `record`, portal banner, runbook [`eugr-vllm-upgrade.md`](runbooks/eugr-vllm-upgrade.md)
-10. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
-11. [x] **Gateway integration** — `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) — smallest useful slice implemented
-11b. [x] **OpenCode profiles** — 35B MoE @ 256k + 27B DFlash @ 262k for long-context agents
-12. [ ] Later: idle eviction, MCP ops agent
+10. [x] **Gateway integration** — `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) — smallest useful slice implemented
+11. [x] **OpenCode profiles** — 35B MoE @ 256k + 27B DFlash @ 262k for long-context agents
+12. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
+13. [ ] Later: idle eviction, MCP ops agent
 
 ---
 
@@ -226,6 +227,27 @@ Deferred until desk setup is stable.
 - Netdata vLLM integration
 - Always-on small + on-demand heavy (only if VRAM headroom proven)
 - Status cache hardening — YAML cache locks, single-flight coalesce, deepcopy on cache hit (review follow-ups)
+
+## UI & Performance Improvements (New Feature Ideas)
+
+### Performance Enhancements
+- **Polling Optimization** — Implement adaptive polling based on user activity (reduce polling frequency when tab is not active)
+- **CSS and JavaScript Loading** — Separate critical CSS from non-critical CSS, defer non-critical JavaScript execution
+- **Caching Strategy** — Implement appropriate caching headers for static assets and API responses that don't need to be completely fresh
+
+### Reliability Enhancements
+- **Error Handling and Fallbacks** — Add specific error handling and user feedback when API calls fail
+- **State Management** — Implement a more robust state management approach to ensure UI state matches backend state
+- **Loading States and Feedback** — Ensure all user actions that trigger backend operations provide clear loading indicators
+
+### Code-Level Improvements
+- **Event Listener Optimization** — Use event delegation where possible instead of attaching listeners to individual elements
+- **DOM Manipulation Efficiency** — Use more efficient DOM manipulation techniques or a lightweight templating system
+- **API Response Handling** — Implement more specific error handling for different types of API failures
+
+### Network and API Improvements
+- **Request Batching** — Batch related requests where possible to reduce network overhead
+- **Connection Management** — Consider connection pooling or keeping connections alive for frequently accessed endpoints
 
 ---
 

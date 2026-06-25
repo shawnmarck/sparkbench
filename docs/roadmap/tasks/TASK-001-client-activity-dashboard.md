@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ready |
+| **Status** | done |
 | **Priority** | Seq 3 |
 | **Owner** | — |
 | **PR policy** | **One PR** — gateway instrumentation + activity API + System widget |
@@ -88,3 +88,4 @@ Insert widget in System card after "Inference & containers" (`portal/index.html`
 | Date | Owner | Result | Commit |
 |------|-------|--------|--------|
 | — | — | — | — |
+| 2026-06-25 | agent | Gateway instrumentation + activity API + System widget implemented | — |

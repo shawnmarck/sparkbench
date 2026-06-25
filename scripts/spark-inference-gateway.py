@@ -24,7 +24,12 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
+import re
 import sys
+import threading
+import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -62,6 +67,110 @@ THINKING_VARIANT_SUFFIX = "-think"
 
 
 QWEN_ENGINE_MARKERS = ("eugr", "vllm", "ds4")
+
+# --- Activity logger ---
+_ACTIVITY_LOCK = threading.Lock()
+_JSONL_PATH: Path | None = None
+_JSONL_FD = None
+_JSONL_MAX_BYTES = 50 * 1024 * 1024  # 50 MB cap
+_JSONL_MAX_AGE_S = 7 * 86400  # 7 days
+
+
+def _classify_app(user_agent: str, spark_client: str | None) -> str:
+    if spark_client:
+        sc = spark_client.lower()
+        if "hermes" in sc:
+            return "hermes"
+        if "open-webui" in sc or "openwebui" in sc:
+            return "open-webui"
+        if "opencode" in sc:
+            return "opencode"
+        return sc
+    ua = (user_agent or "").lower()
+    if "hermes" in ua:
+        return "hermes"
+    if "open-webui" in ua or "openwebui" in ua:
+        return "open-webui"
+    if "opencode" in ua:
+        return "opencode"
+    if any(k in ua for k in ("curl", "python-requests", "httpie", "axios", "httpx", "fetch", "wget")):
+        return "script"
+    return "unknown"
+
+
+def _init_activity_logger(jsonl_path: str | None = None) -> None:
+    global _JSONL_PATH, _JSONL_FD, _JSONL_MAX_BYTES, _JSONL_MAX_AGE_S
+    _JSONL_PATH = Path(jsonl_path or (ROOT / "run" / "inference-activity.jsonl"))
+    dirname = _JSONL_PATH.parent
+    if not dirname.exists():
+        dirname.mkdir(parents=True, exist_ok=True)
+    _ensure_jsonl_fd()
+
+
+def _ensure_jsonl_fd() -> None:
+    global _JSONL_FD
+    if _JSONL_FD is not None:
+        try:
+            os.fstat(_JSONL_FD)
+            return
+        except OSError:
+            _JSONL_FD = None
+    try:
+        _rotate_jsonl_if_needed()
+        _JSONL_FD = os.open(str(_JSONL_PATH), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    except OSError:
+        pass
+
+
+def _rotate_jsonl_if_needed() -> None:
+    try:
+        st = os.stat(str(_JSONL_PATH))
+    except OSError:
+        return
+    if st.st_size > _JSONL_MAX_BYTES:
+        try:
+            truncated = _JSONL_PATH.with_suffix(".jsonl.truncated")
+            with open(str(_JSONL_PATH), "r") as f:
+                lines = f.readlines()
+            if len(lines) > 10_000:
+                lines = lines[len(lines) - 10_000:]
+            with open(str(truncated), "w") as f:
+                f.writelines(lines)
+            with open(str(_JSONL_PATH), "w") as f:
+                f.writelines(lines[-5000:])
+        except OSError:
+            pass
+    if _JSONL_MAX_AGE_S > 0:
+        age = time.time() - st.st_mtime
+        if age > _JSONL_MAX_AGE_S:
+            try:
+                os.remove(str(_JSONL_PATH))
+            except OSError:
+                pass
+
+
+def _append_activity(session: dict[str, Any]) -> None:
+    if _JSONL_PATH is None:
+        return
+    thread = threading.Thread(target=_append_activity_sync, args=(session,), daemon=True)
+    thread.start()
+
+
+def _append_activity_sync(session: dict[str, Any]) -> None:
+    global _JSONL_FD
+    with _ACTIVITY_LOCK:
+        _ensure_jsonl_fd()
+        if _JSONL_FD is None:
+            return
+        try:
+            line = json.dumps(session, separators=(",", ":")) + "\n"
+            os.write(_JSONL_FD, line.encode("utf-8", errors="replace"))
+            os.fsync(_JSONL_FD)
+        except OSError:
+            pass
+
+
+# --- End activity logger ---
 
 
 def _message_text(content: Any) -> str:
@@ -347,6 +456,248 @@ class Handler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, TypeError):
             return body
 
+    def _forward_with_activity(
+        self,
+        method: str,
+        path: str,
+        body: bytes | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> None:
+        t0 = time.time()
+        port, served, prof, active = self._get_active()
+        recipe = (active or {}).get("recipe", {}) or {}
+        engine = recipe.get("engine")
+        model = ""
+        is_stream = False
+        try:
+            payload = json.loads(body) if body else {}
+            if isinstance(payload, dict):
+                model = str(payload.get("model", "")).strip()
+                is_stream = bool(payload.get("stream", False))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        client_ip = self.client_address[0] if hasattr(self, "client_address") else "unknown"
+        ua = self.headers.get("User-Agent", "")
+        spark_client = self.headers.get("X-Spark-Client", "")
+        app = _classify_app(ua, spark_client)
+        session = {
+            "id": uuid.uuid4().hex[:16],
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t0)),
+            "client_ip": client_ip,
+            "app": app,
+            "user_agent": ua,
+            "model": model,
+            "profile": prof or "",
+            "engine": engine or "",
+            "stream": is_stream,
+            "status": "",
+        }
+
+        if not port:
+            duration_ms = int((time.time() - t0) * 1000)
+            session["duration_ms"] = duration_ms
+            session["prompt_tokens"] = 0
+            session["completion_tokens"] = 0
+            session["tok_s"] = 0
+            session["status"] = "503"
+            _append_activity(session)
+            self._forward(method, path, body=body, extra_headers=extra_headers)
+            return
+
+        if not self._upstream_ready(port):
+            duration_ms = int((time.time() - t0) * 1000)
+            session["duration_ms"] = duration_ms
+            session["prompt_tokens"] = 0
+            session["completion_tokens"] = 0
+            session["tok_s"] = 0
+            session["status"] = "503"
+            _append_activity(session)
+            self._forward(method, path, body=body, extra_headers=extra_headers)
+            return
+
+        upstream = f"http://{UPSTREAM_HOST}:{port}{path}"
+        headers: dict[str, str] = {}
+        for k, v in self.headers.items():
+            kl = k.lower()
+            if kl not in ("host", "connection", "content-length"):
+                headers[k] = v
+        if extra_headers:
+            headers.update(extra_headers)
+        if body is not None:
+            headers.setdefault("Content-Type", "application/json")
+
+        req = Request(upstream, data=body, headers=headers, method=method)
+        try:
+            with urlopen(req, timeout=600) as resp:
+                ctype = resp.headers.get("Content-Type", "application/json")
+                status = resp.status
+
+                if is_stream and "text/event-stream" in (ctype or ""):
+                    self._forward_stream_activity(resp, ctype, status, session, t0, served, prof)
+                else:
+                    resp_body = resp.read()
+                    duration_ms = int((time.time() - t0) * 1000)
+                    session["duration_ms"] = duration_ms
+                    session["status"] = str(status)
+                    try:
+                        j = json.loads(resp_body) if resp_body else {}
+                        usage = j.get("usage") or {}
+                        pt = usage.get("prompt_tokens") or 0
+                        ct = usage.get("completion_tokens") or 0
+                    except (json.JSONDecodeError, TypeError):
+                        pt, ct = 0, 0
+                    session["prompt_tokens"] = pt
+                    session["completion_tokens"] = ct
+                    d_s = duration_ms / 1000 if duration_ms > 0 else 0.001
+                    session["tok_s"] = round((ct / d_s) if ct else 0, 1)
+                    _append_activity(session)
+                    self.send_response(status)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("X-Spark-Active-Profile", prof or "")
+                    self.send_header("X-Spark-Upstream-Port", str(port))
+                    if served:
+                        self.send_header("X-Spark-Served-Model", served)
+                    self._cors()
+                    self.end_headers()
+                    if resp_body:
+                        self.wfile.write(resp_body)
+                        try:
+                            self.wfile.flush()
+                        except Exception:
+                            pass
+        except HTTPError as exc:
+            duration_ms = int((time.time() - t0) * 1000)
+            session["duration_ms"] = duration_ms
+            session["prompt_tokens"] = 0
+            session["completion_tokens"] = 0
+            session["tok_s"] = 0
+            session["status"] = str(exc.code)
+            _append_activity(session)
+            ctype = exc.headers.get("Content-Type", "application/json") if exc.headers else "application/json"
+            self.send_response(exc.code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-store")
+            self._cors()
+            self.end_headers()
+            err_body = exc.read()
+            if err_body:
+                self.wfile.write(err_body)
+        except URLError as exc:
+            duration_ms = int((time.time() - t0) * 1000)
+            session["duration_ms"] = duration_ms
+            session["prompt_tokens"] = 0
+            session["completion_tokens"] = 0
+            session["tok_s"] = 0
+            session["status"] = "502"
+            _append_activity(session)
+            payload = json.dumps(
+                {"error": {"message": f"upstream error: {exc.reason}", "type": "gateway_upstream"}}
+            ).encode()
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(payload)
+        except Exception as exc:
+            duration_ms = int((time.time() - t0) * 1000)
+            session["duration_ms"] = duration_ms
+            session["prompt_tokens"] = 0
+            session["completion_tokens"] = 0
+            session["tok_s"] = 0
+            session["status"] = "500"
+            _append_activity(session)
+            payload = json.dumps(
+                {"error": {"message": f"gateway error: {exc}", "type": "gateway"}}
+            ).encode()
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(payload)
+
+    def _forward_stream_activity(
+        self,
+        resp: Any,
+        ctype: str,
+        status: int,
+        session: dict[str, Any],
+        t0: float,
+        served: str | None,
+        prof: str | None,
+    ) -> None:
+        chunk_size = 8192
+        collected = bytearray()
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Spark-Active-Profile", prof or "")
+        self.send_header("X-Spark-Upstream-Port", str(resp.headers.get("X-Spark-Upstream-Port", "")))
+        if served:
+            self.send_header("X-Spark-Served-Model", served)
+        self._cors()
+        self.end_headers()
+        while True:
+            chunk = resp.read(chunk_size)
+            if not chunk:
+                break
+            collected.extend(chunk)
+            self.wfile.write(chunk)
+            try:
+                self.wfile.flush()
+            except Exception:
+                pass
+        duration_ms = int((time.time() - t0) * 1000)
+        session["duration_ms"] = duration_ms
+        session["status"] = str(status)
+        pt, ct = self._extract_stream_usage(collected)
+        session["prompt_tokens"] = pt
+        session["completion_tokens"] = ct
+        d_s = duration_ms / 1000 if duration_ms > 0 else 0.001
+        session["tok_s"] = round((ct / d_s) if ct else 0, 1)
+        _append_activity(session)
+
+    def _extract_stream_usage(self, collected: bytearray) -> tuple[int, int]:
+        try:
+            text = collected.decode("utf-8", errors="replace")
+            pt, ct = 0, 0
+            for line in text.split("\n"):
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(data)
+                    usage = obj.get("usage")
+                    if usage:
+                        pt = usage.get("prompt_tokens") or 0
+                        ct = usage.get("completion_tokens") or 0
+                except (json.JSONDecodeError, TypeError):
+                    continue
+            if not pt and not ct:
+                for line in reversed(text.split("\n")):
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(data)
+                        usage = obj.get("usage")
+                        if usage:
+                            pt = usage.get("prompt_tokens") or 0
+                            ct = usage.get("completion_tokens") or 0
+                            break
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+            return pt, ct
+        except Exception:
+            return 0, 0
+
     def _forward(
         self,
         method: str,
@@ -545,8 +896,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         body = self._read_body()
+        is_completion = "chat/completions" in self.path or "completions" in self.path
 
-        if "chat/completions" in self.path or "completions" in self.path:
+        if is_completion:
             try:
                 payload = json.loads(body) if body else {}
                 if isinstance(payload, dict):
@@ -579,7 +931,9 @@ class Handler(BaseHTTPRequestHandler):
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
-        self._forward("POST", self.path, body=body)
+            self._forward_with_activity("POST", self.path, body=body)
+        else:
+            self._forward("POST", self.path, body=body)
 
     def do_OPTIONS(self) -> None:
         self.send_response(204)
@@ -606,6 +960,7 @@ def main() -> int:
         return 1
 
     ThreadingHTTPServer.allow_reuse_address = True
+    _init_activity_logger()
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"spark-inference-gateway listening on http://{args.host}:{args.port}/v1")
     print(f"  Stable client endpoint: http://sparky:{args.port}/v1")

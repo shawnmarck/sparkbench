@@ -505,3 +505,48 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 .exp-msg.warn { color: var(--warn); }
 .exp-msg.ok { color: var(--ok); }
 .exp-msg.err { color: var(--down); }
+
+/* --- Client activity widget --- */
+.activity-recent-wrap {
+  margin-top: .5rem; border: 1px solid var(--border); border-radius: 10px;
+  background: #0c0e14; overflow: hidden;
+}
+.activity-recent-head {
+  flex-shrink: 0; padding: .38rem .55rem; border-bottom: 1px solid var(--border);
+  font-size: .7rem; color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.activity-table-scroll {
+  max-height: 160px; overflow-y: auto; scrollbar-gutter: stable;
+}
+.activity-table-scroll::-webkit-scrollbar { width: 6px; }
+.activity-table-scroll::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 3px; }
+.activity-table { width: 100%; border-collapse: collapse; font-size: .7rem; }
+.activity-table th {
+  position: sticky; top: 0; z-index: 1; text-align: left; padding: .32rem .4rem;
+  background: #12151c; color: var(--muted); font-weight: 600;
+  font-size: .62rem; text-transform: uppercase; letter-spacing: .04em;
+  white-space: nowrap;
+}
+.activity-table td {
+  padding: .32rem .4rem; border-top: 1px solid #1a1f28; color: #c5cdd8;
+  font-family: ui-monospace, monospace; white-space: nowrap; font-size: .68rem;
+}
+.activity-table tr:hover td { background: #10141c; }
+.activity-time { color: var(--muted); }
+.activity-app {
+  display: inline-block; font-size: .6rem; font-weight: 600; padding: .06rem .3rem;
+  border-radius: 999px; border: 1px solid var(--border);
+}
+.activity-app-hermes { border-color: #2a4a2a; color: var(--ok); background: #141a10; }
+.activity-app-open-webui { border-color: #2a4568; color: #7eb8ff; background: #101820; }
+.activity-app-opencode { border-color: #4a2a6a; color: #c49cff; background: #140c1a; }
+.activity-app-script { border-color: #3a4250; color: #a8b0c0; background: #12151c; }
+.activity-app-unknown { border-color: #2a2a2a; color: var(--muted); background: #0c0e14; }
+.activity-ip { color: var(--muted); }
+.activity-model { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; }
+.activity-status-err { color: var(--down); }
+.activity-empty {
+  padding: 1rem !important; text-align: center; color: var(--muted);
+  font-family: ui-monospace, monospace; font-size: .72rem;
+}

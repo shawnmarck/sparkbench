@@ -19,7 +19,7 @@ cd /opt/spark
 bash scripts/sparky-protect-runtime.sh
 ```
 
-Deploy runs this automatically before `git pull`.
+Deploy runs `sparky-protect-runtime.sh` automatically and **backs up runtime YAML before pull, restores after** — so git changes to those files on GitHub never clobber live audit results.
 
 ## Safe deploy (from techno)
 

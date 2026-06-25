@@ -458,14 +458,14 @@
     <div class="model-list" id="list"></div>
   </main>
   </div>
-  <script src="/assets/sparky-theme.js"></script>
-  <script>
+  <script src="/assets/sparky-theme.js" defer></script>
+  <script>document.addEventListener('DOMContentLoaded', () => {
     if (document.documentElement.classList.contains('embedded-pending')) {
       document.body.classList.add('embedded');
       document.documentElement.classList.remove('embedded-pending');
     }
     SparkyTheme.init();
-  </script>
+  });</script>
   <script>
     let all = [], shelfMounted = false, activeJob = { running: false };
     let infStatus = null, highlightPath = null;
@@ -1544,8 +1544,7 @@
         if (data.recipe) patchRecipeOnModel(data.recipe);
         else if (path.includes('/discard') && body.profile) removeRecipeFromModel(body.profile);
         await refreshInferenceStatus();
-        loadData(true).catch(() => {});
-        setTimeout(() => loadData(true).catch(() => {}), 2000);
+        setTimeout(() => loadData(true).catch(() => {}), 2000); // scaffold worker writes models.json async
         return data;
       } catch (err) {
         alert(err.message);
@@ -1801,7 +1800,10 @@
       $('summary').textContent = 'Failed to load models.json';
       $('list').innerHTML = `<div class="empty">${esc(String(err))}</div>`;
     });
-    pollTimer = setInterval(() => loadData(true).catch(() => {}), REFRESH_MS);
+    pollTimer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      loadData(true).catch(() => {});
+    }, REFRESH_MS);
     infPollTimer = setInterval(() => refreshInferenceStatus(), INF_POLL_MS);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {

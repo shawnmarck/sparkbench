@@ -30,6 +30,10 @@ CLEANUP_INTERVAL = 60
 _ACTIVE_LOCK = threading.Lock()
 _ACTIVE: dict[str, dict[str, Any]] = {}
 
+_STATS_CACHE: dict[str, Any] = {}
+_STATS_CACHE_LOCK = threading.Lock()
+_STATS_CACHE_TTL = 2.0
+
 
 def _classify_app(user_agent: str) -> str:
     ua = (user_agent or "").lower()
@@ -44,13 +48,16 @@ def _classify_app(user_agent: str) -> str:
     return "unknown"
 
 
-def _touch_active(client_ip: str, app: str) -> None:
-    now = time.time()
+def _touch_active(client_ip: str, app: str, ts: float) -> None:
+    key = f"{client_ip}/{app}"
     with _ACTIVE_LOCK:
-        _ACTIVE[f"{client_ip}/{app}"] = {
+        existing = _ACTIVE.get(key)
+        if existing and existing.get("last_seen", 0) >= ts:
+            return
+        _ACTIVE[key] = {
             "ip": client_ip,
             "app": app,
-            "last_seen": now,
+            "last_seen": ts,
         }
 
 
@@ -63,8 +70,12 @@ def _cleanup_active() -> None:
 
 
 def _active_clients() -> list[dict[str, Any]]:
+    now = time.time()
     with _ACTIVE_LOCK:
-        return list(_ACTIVE.values())
+        return [
+            v for v in _ACTIVE.values()
+            if now - v.get("last_seen", 0) <= ACTIVE_TTL
+        ]
 
 
 _cleanup_timer: Any = None
@@ -108,8 +119,12 @@ def read_jsonl() -> list[dict[str, Any]]:
 
 
 def compute_stats(window: str = "24h") -> dict[str, Any]:
-    rows = read_jsonl()
     now = time.time()
+    with _STATS_CACHE_LOCK:
+        cached = _STATS_CACHE.get(window)
+        if cached and now - cached["ts"] < _STATS_CACHE_TTL:
+            return cached["data"]
+    rows = read_jsonl()
     if window == "1h":
         cutoff = now - 3600
         cutoff24 = now - 86400
@@ -133,7 +148,7 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
             tok = row.get("tok_s")
             if tok and tok > 0:
                 tok_s_values.append(tok)
-            _touch_active(row.get("client_ip", ""), row.get("app", "unknown"))
+            _touch_active(row.get("client_ip", ""), row.get("app", "unknown"), ts)
 
     recent_list = [r for r in rows if _parse_ts(r.get("at", "")) > cutoff]
     recent_list.sort(key=lambda r: r.get("at", ""), reverse=True)
@@ -145,7 +160,7 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
 
     active = _active_clients()
 
-    return {
+    data = {
         "summary": {
             "active_clients": len(active),
             "sessions_1h": sessions_1h,
@@ -155,6 +170,9 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
         "active": active[:50],
         "recent": recent,
     }
+    with _STATS_CACHE_LOCK:
+        _STATS_CACHE[window] = {"ts": now, "data": data}
+    return data
 
 
 class Handler(BaseHTTPRequestHandler):

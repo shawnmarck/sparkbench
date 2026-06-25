@@ -111,10 +111,20 @@ def _ensure_jsonl_fd() -> None:
     global _JSONL_FD
     if _JSONL_FD is not None:
         try:
-            os.fstat(_JSONL_FD)
-            return
+            fst = os.fstat(_JSONL_FD)
         except OSError:
             _JSONL_FD = None
+        else:
+            if fst.st_size > _JSONL_MAX_BYTES or (
+                _JSONL_MAX_AGE_S > 0 and time.time() - fst.st_mtime > _JSONL_MAX_AGE_S
+            ):
+                try:
+                    os.close(_JSONL_FD)
+                except OSError:
+                    pass
+                _JSONL_FD = None
+            else:
+                return
     try:
         _rotate_jsonl_if_needed()
         _JSONL_FD = os.open(str(_JSONL_PATH), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
@@ -505,6 +515,17 @@ class Handler(BaseHTTPRequestHandler):
             self._forward(method, path, body=body, extra_headers=extra_headers)
             return
 
+        if self._is_switching():
+            duration_ms = int((time.time() - t0) * 1000)
+            session["duration_ms"] = duration_ms
+            session["prompt_tokens"] = 0
+            session["completion_tokens"] = 0
+            session["tok_s"] = 0
+            session["status"] = "503"
+            _append_activity(session)
+            self._forward(method, path, body=body, extra_headers=extra_headers)
+            return
+
         if not self._upstream_ready(port):
             duration_ms = int((time.time() - t0) * 1000)
             session["duration_ms"] = duration_ms
@@ -640,19 +661,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("X-Spark-Served-Model", served)
         self._cors()
         self.end_headers()
+        client_gone = False
         while True:
             chunk = resp.read(chunk_size)
             if not chunk:
                 break
             collected.extend(chunk)
-            self.wfile.write(chunk)
             try:
+                self.wfile.write(chunk)
                 self.wfile.flush()
             except Exception:
-                pass
+                client_gone = True
+                break
         duration_ms = int((time.time() - t0) * 1000)
         session["duration_ms"] = duration_ms
-        session["status"] = str(status)
+        session["status"] = "disconnect" if client_gone else str(status)
         pt, ct = self._extract_stream_usage(collected)
         session["prompt_tokens"] = pt
         session["completion_tokens"] = ct

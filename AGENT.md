@@ -47,8 +47,9 @@ flowchart LR
 
 1. **Code** (scripts, recipes, portal, docs): change on techno → commit → `./scripts/deploy-sparky.sh`. Do not `scp` to `/opt/spark` except emergencies (then commit immediately).
 2. **Ops** (inference up/down, golden audit, log tails): `ssh sparky '…'` — expected from techno sessions.
-3. **Runtime data** (`data/model-verification.yaml`, benchmarks): updated on sparky by `spark models verify`, bench, inventory — deploy stashes **code paths only**, not all of `data/`.
-4. After deploy, check drift: `./scripts/deploy-sparky.sh --status`.
+3. **Runtime data** (`data/model-verification.yaml`, benchmarks): updated on sparky by `spark models verify`, bench, inventory — deploy stashes **tracked code paths only**, not all of `data/`.
+4. **Model recipes/services must be in git** before deploy (golden map alone is not enough). Deploy refuses to run if the active profile's recipe is missing or untracked host-only files would block pull.
+5. After deploy, check drift: `./scripts/deploy-sparky.sh --status`.
 
 ```bash
 # From ~/projects/sparky on techno

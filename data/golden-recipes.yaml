@@ -35,4 +35,3 @@ deprecated_profiles:
 
 auxiliary_inventory:
   - z-lab/qwen3.6-27b
-  - z-lab/qwen3.6-35b-a3b

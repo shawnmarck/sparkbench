@@ -420,6 +420,14 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 .exp-detail[hidden] { display: none !important; }
 .exp-detail-title { font-weight: 600; color: var(--accent); font-size: .82rem; margin-bottom: .35rem; word-break: break-all; }
 .exp-detail-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: .7rem; line-height: 1.45; margin-bottom: .45rem; }
+.exp-spark-warning {
+  margin-bottom: .55rem; padding: .55rem .65rem; border-radius: 8px;
+  border: 1px solid #5a3030; background: #241010; color: #e87878;
+  font-size: .74rem; line-height: 1.45;
+}
+.exp-spark-warning strong { display: block; margin-bottom: .25rem; color: var(--down); }
+.exp-model-incompatible { border-color: #5a3030 !important; box-shadow: inset 3px 0 0 var(--down); }
+.exp-badge.incompatible { border-color: #5a3030; color: #e87878; background: #1a1010; }
 .exp-detail-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; }
 .exp-variants-wrap {
   margin-top: .45rem; border: 1px solid var(--border); border-radius: 10px; background: #0c0e14;

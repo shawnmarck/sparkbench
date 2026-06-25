@@ -44,13 +44,11 @@ download_files unsloth/Qwen3.6-27B-MTP-GGUF /models/unsloth/qwen3.6-27b/mtp-gguf
 # --- Spark community extras (DFlash drafters + PrismaQuant) ---
 download_repo z-lab/Qwen3.6-27B-DFlash /models/z-lab/qwen3.6-27b/dflash
 download_repo rdtand/Qwen3.6-27B-PrismaQuant-5.5bit-vllm /models/rdtand/qwen3.6-27b/prismaquant
-download_repo z-lab/Qwen3.6-35B-A3B-DFlash /models/z-lab/qwen3.6-35b-a3b/dflash
 
 echo
 echo "==> Download finished $(date -Is)"
 du -sh /models/unsloth/qwen3.6-27b/* /models/qwen/qwen3.6-27b/* \
-  /models/z-lab/qwen3.6-27b/* /models/rdtand/qwen3.6-27b/* \
-  /models/z-lab/qwen3.6-35b-a3b/* 2>/dev/null | sort -hr || true
+  /models/z-lab/qwen3.6-27b/* /models/rdtand/qwen3.6-27b/* 2>/dev/null | sort -hr || true
 df -h /models
 
 if command -v spark-inventory-build >/dev/null; then

@@ -12,12 +12,25 @@ log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 refresh_native() {
   local profile="$1"
   python3 <<PY
-import json, yaml
+import json, yaml, glob
 from pathlib import Path
 p = Path("/opt/spark/recipes/${profile}.yaml")
 r = yaml.safe_load(p.read_text()) or {}
 inv = r.get("inventory_path", "")
-cfg = json.loads(Path(f"/models/{inv}/hf/config.json").read_text())
+# Find config.json , prefer fp8 or hf subdir
+base = Path(f"/models/{inv}")
+cfg_path = None
+for sub in ["fp8", "hf", ""]:
+    for c in glob.glob(str(base / sub / "config.json")):
+        cfg_path = c
+        break
+    if cfg_path: break
+if not cfg_path:
+    cfg_path = next(iter(glob.glob(str(base / "**/config.json"), recursive=True)), None)
+if not cfg_path:
+    print("no config found")
+    sys.exit(1)
+cfg = json.loads(Path(cfg_path).read_text())
 native = 16384
 for src in (cfg, cfg.get("text_config") or {}):
     if isinstance(src, dict):
@@ -27,7 +40,7 @@ for src in (cfg, cfg.get("text_config") or {}):
 block = r.setdefault("context", {})
 block["native"] = native
 p.write_text(yaml.safe_dump(r, sort_keys=False, default_flow_style=False))
-print(f"native={native}")
+print(f"native={native} from {cfg_path}")
 PY
 }
 

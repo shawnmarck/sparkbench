@@ -73,7 +73,6 @@ ARCH_FIXES: dict[str, str] = {
     "qwen/qwen-agentworld-35b-a3b": "moe",
     "empero-ai/qwythos-9b-claude-mythos-5-1m": "dense",
     "z-lab/qwen3.6-27b": "dense",
-    "z-lab/qwen3.6-35b-a3b": "moe",
 }
 
 

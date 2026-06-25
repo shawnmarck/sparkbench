@@ -1,0 +1,10 @@
+# Known incompatible models — shown in Explore detail and blocks download queue.
+# Match keys are exact Hugging Face repo IDs (case-sensitive).
+repos:
+  z-lab/Qwen3.6-35B-A3B-DFlash:
+    status: incompatible
+    title: Does not work on Spark
+    message: >-
+      Z Lab DFlash sidecar for Qwen3.6-35B MoE fails on our DGX Spark — NVFP4 MoE
+      target hits KV cache page-size mismatch in vLLM (load fails). Use
+      z-lab/Qwen3.6-27B-DFlash instead (~29 tok/s with qwen/qwen3.6-27b target).

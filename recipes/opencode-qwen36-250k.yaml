@@ -30,7 +30,7 @@ context:
 notes: |
   OpenCode agent profile for Sparky — 256k ctx, fp8 KV (ctx ladder validated 2026-06-22).
   Launch: spark inference up opencode-qwen36-250k
-  OpenCode: http://sparky:9000/v1 — run sync-sparky-models locally after switch.
+  OpenCode / Grok: http://sparky:9000/v1 (model: sparky) — run sync-sparky-models locally after switch if using concrete names.
   Gateway model variants (same profile, pick in OpenCode):
     qwen3.6-35b-a3b-nvfp4       — fast / no thinking
     qwen3.6-35b-a3b-nvfp4-think  — thinking / orchestration

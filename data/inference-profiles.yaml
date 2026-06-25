@@ -18,3 +18,5 @@ profiles:
 - antirez-deepseek-v4-flash-ds4
 - opencode-qwen36-250k
 - opencode-qwen27-dflash-262k
+- qwen-qwen-agentworld-35b-a3b-eugr
+- empero-ai-qwythos-9b-claude-mythos-5-1m-eugr

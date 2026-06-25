@@ -33,23 +33,26 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 flowchart LR
   A["Edit on techno<br/>~/projects/sparky"] --> B["git commit + push<br/>GitHub main"]
   B --> C["scripts/deploy-sparky.sh"]
-  C --> D["sparky /opt/spark<br/>git pull + patches"]
+  C --> D["sparky /opt/spark<br/>git pull code only"]
   D --> E["Ops via ssh<br/>inference, audit, logs"]
 ```
 
-| Layer | Path | Role |
-|-------|------|------|
-| Dev clone | `~/projects/sparky` on techno | Cursor agent, commit, push |
-| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth |
-| Install | `/opt/spark` on sparky | Pull only — what nginx, `spark`, venv use |
+| Layer | Path | Role | Git on sparky |
+|-------|------|------|---------------|
+| Dev clone | `~/projects/sparky` on techno | Cursor agent, commit, push | — |
+| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth for **code** | — |
+| Install code | `/opt/spark` scripts, recipes, services… | Deploy pulls from GitHub | `git pull` |
+| **Runtime data** | `/opt/spark/data/*.yaml` (verify, bench, profiles) | Live on sparky only | **`skip-worktree`** — never pull |
+
+See **`docs/runbooks/sparky-live-sync.md`** for the full anti-regression model.
 
 **Rules for agents**
 
 1. **Code** (scripts, recipes, portal, docs): change on techno → commit → `./scripts/deploy-sparky.sh`. Do not `scp` to `/opt/spark` except emergencies (then commit immediately).
 2. **Ops** (inference up/down, golden audit, log tails): `ssh sparky '…'` — expected from techno sessions.
-3. **Runtime data** (`data/model-verification.yaml`, benchmarks): updated on sparky by `spark models verify`, bench, inventory — deploy stashes **tracked code paths only**, not all of `data/`.
-4. **Model recipes/services must be in git** before deploy (golden map alone is not enough). Deploy refuses to run if the active profile's recipe is missing or untracked host-only files would block pull.
-5. After deploy, check drift: `./scripts/deploy-sparky.sh --status`.
+3. **Runtime data** on sparky (`data/model-verification.yaml`, benchmarks, enabled profiles): owned by audits/bench on sparky — **never reset from git**. Protected via `scripts/sparky-protect-runtime.sh`.
+4. **Model recipes/services must be in git** before deploy. Deploy refuses if active profile recipe is missing.
+5. After deploy: `./scripts/deploy-sparky.sh --status`.
 
 ```bash
 # From ~/projects/sparky on techno
@@ -75,6 +78,7 @@ Emergency stash on sparky from a deploy: `ssh sparky 'cd /opt/spark && git stash
 | `docs/runbooks/smoke-ds4.md` | DwarfStar ds4 validation (`spark engine ds4`) |
 | `docs/runbooks/new-model-golden-benchmark.md` | Onboard new models: golden map, audit, ctx viability |
 | `docs/guides/local-model-testing.md` | Bench queue SOP, golden audit, stack fixes learned |
+| `docs/runbooks/sparky-live-sync.md` | **Sparky live sync** — runtime data vs code, skip-worktree |
 | `docs/reference/inference-stack.md` | Phase 5 technical spec |
 | `install/INSTALL.md` | Install script index + order |
 

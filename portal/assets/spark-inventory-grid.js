@@ -59,6 +59,8 @@
   /**
    * compareValues(a, b, col, dir)
    * General-purpose sort comparator. Nulls sort last regardless of direction.
+   * Strings compare via locale-aware (effectively case-insensitive) ordering,
+   * matching portal's human-facing display needs (model ids, names, etc.).
    */
   function compareValues(a, b, col, dir) {
     var av = a[col];
@@ -66,7 +68,13 @@
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
-    var r = av < bv ? -1 : av > bv ? 1 : 0;
+    var r;
+    if (typeof av === 'string' && typeof bv === 'string') {
+      r = av.localeCompare(bv);
+      if (r < 0) r = -1; else if (r > 0) r = 1;
+    } else {
+      r = av < bv ? -1 : av > bv ? 1 : 0;
+    }
     return dir === 'desc' ? -r : r;
   }
 

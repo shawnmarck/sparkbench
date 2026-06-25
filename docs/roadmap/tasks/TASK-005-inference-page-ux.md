@@ -56,6 +56,8 @@ Context window picker works well. Log functionality stays as-is.
 
 Refactor `renderInfProfiles()` using Models patterns: `renderGridHead`, flat vs grouped branch, `infGroupByFamily` (default `false`).
 
+Use `SparkInventoryGrid` from TASK-007 where applicable (summary line, sort, flat/grouped toggle already wired for the Inference count line).
+
 Extend `infProfilesSnapshot()` with view mode. Hidden `#inf-select` + `pickInfProfile()` unchanged.
 
 Suggested columns: Recipe, Model path, Engine, Tier, Lifecycle, Ctx (default), Bench, Status.

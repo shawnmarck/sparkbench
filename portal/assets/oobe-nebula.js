@@ -104,13 +104,14 @@
 
   function drawLinks(ctx, particles, fromIdx, maxDist, state) {
     const lineA = state.lineAlpha != null ? state.lineAlpha : 0.15;
+    const maxDistSq = maxDist * maxDist;
     for (let j = fromIdx + 1; j < particles.length; j++) {
       const a = particles[fromIdx];
       const b = particles[j];
       if (!a || !b) continue;
       const dx = a.x - b.x;
       const dy = a.y - b.y;
-      if (Math.sqrt(dx * dx + dy * dy) < maxDist) {
+      if (dx * dx + dy * dy < maxDistSq) {
         const stroke = Math.random() < 0.5 ? a.fillStyle(state) : b.fillStyle(state);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);

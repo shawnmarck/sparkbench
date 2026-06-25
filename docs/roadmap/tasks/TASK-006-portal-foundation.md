@@ -50,4 +50,4 @@ Source audit: [`reference/ui-improvements-opus.md`](../reference/ui-improvements
 
 | Date | Owner | Result | Commit / PR |
 |------|-------|--------|-------------|
-| — | — | — | — |
+| 2026-06-25 | claude | Done | PR #task-006-portal-foundation |

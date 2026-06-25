@@ -96,16 +96,31 @@ for p in "${PATHS[@]}"; do
   fi
 done
 
-# Stash uncommitted code-path changes (keep runtime data/*.yaml on disk)
+# Stash tracked edits only — never stash -u (would remove host-only recipes/services).
 STASHED=0
 if [[ ${#STASH_PATHS[@]} -gt 0 ]] && (
   ! git diff --quiet -- "${STASH_PATHS[@]}" 2>/dev/null \
-  || ! git diff --cached --quiet -- "${STASH_PATHS[@]}" 2>/dev/null \
-  || [[ -n "$(git ls-files -o --exclude-standard -- "${STASH_PATHS[@]}")" ]]
+  || ! git diff --cached --quiet -- "${STASH_PATHS[@]}" 2>/dev/null
 ); then
-  echo "==> stashing local code changes under: ${STASH_PATHS[*]}"
-  git stash push -u -m "deploy-sparky $(date -Iseconds)" -- "${STASH_PATHS[@]}"
+  echo "==> stashing tracked code changes under: ${STASH_PATHS[*]}"
+  git stash push -m "deploy-sparky $(date -Iseconds)" -- "${STASH_PATHS[@]}"
   STASHED=1
+fi
+
+# Abort if pull would clobber untracked files (commit them on techno first).
+if [[ -n "$(git ls-files -o --exclude-standard -- "${STASH_PATHS[@]}")" ]]; then
+  echo "ERROR: untracked files under deploy paths — commit on techno before deploy:" >&2
+  git ls-files -o --exclude-standard -- "${STASH_PATHS[@]}" | head -20 >&2
+  exit 1
+fi
+
+# Active inference recipe must exist on disk (not only in stash).
+if [[ -f run/inference-active.json ]]; then
+  active="$(python3 -c "import json; print(json.load(open('run/inference-active.json')).get('profile',''))" 2>/dev/null || true)"
+  if [[ -n "$active" && ! -f "recipes/${active}.yaml" && ! -f "recipes/drafts/${active}.yaml" ]]; then
+    echo "ERROR: active profile $active has no recipe yaml — restore or switch before deploy" >&2
+    exit 1
+  fi
 fi
 
 # Vendor trees often drift from local builds; reset to origin before pull

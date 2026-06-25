@@ -1,0 +1,30 @@
+id: qwen-qwen-agentworld-35b-a3b-eugr
+name: qwen-agentworld-35b-a3b (eugr)
+inventory_path: qwen/qwen-agentworld-35b-a3b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen-agentworld-35b-a3b
+port: 8000
+tags:
+- lab
+- eugr
+- golden
+notes: Scaffolded 2026-06-25 from /models/qwen/qwen-agentworld-35b-a3b. Mark testing,
+  switch, bench, then promote. Viability ctx 256000 verified 2026-06-25. Load + smoke
+  at 256k ctx, no bench.
+eugr_recipe: /opt/spark/services/eugr-qwen-qwen-agentworld-35b-a3b-eugr.yaml
+_path: /opt/spark/recipes/qwen-qwen-agentworld-35b-a3b-eugr.yaml
+context:
+  default: 256000
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Long ctx (250k viability)
+      ctx: 256000
+      kv: fp8
+    long:
+      label: Long ctx (viability 250k)
+      ctx: 256000
+      kv: fp8

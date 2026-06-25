@@ -15,6 +15,15 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | **spark CLI** — humans, coding agents, HTTP APIs |
 | [install/INSTALL.md](install/INSTALL.md) | Install script index |
 
+## Deploy to sparky
+
+From this clone on techno (after commit):
+
+```bash
+./scripts/deploy-sparky.sh
+./scripts/deploy-sparky.sh --status   # drift check
+```
+
 ## Docs
 
 | Path | Topic |
@@ -28,5 +37,6 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
 | [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md) | Versioned bench v2 (long-ctx + tools) |
 | [docs/runbooks/new-model-golden-benchmark.md](docs/runbooks/new-model-golden-benchmark.md) | New model golden audit |
 | [docs/guides/local-model-testing.md](docs/guides/local-model-testing.md) | Bench queue + stack fixes SOP |
+| [AGENT.md](AGENT.md) | Agent rules + **deploy workflow** (`scripts/deploy-sparky.sh`) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | Unified `spark` command reference |
 | [docs/examples/](docs/examples/) | YAML templates |

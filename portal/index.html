@@ -344,6 +344,7 @@
   </div>
 
   <script src="/assets/sparky-theme.js" defer></script>
+  <script src="/assets/spark-inventory-grid.js" defer></script>
   <script>document.addEventListener('DOMContentLoaded', () => SparkyTheme.init());</script>
   <script>
     (function () {
@@ -890,7 +891,7 @@
         const rb = rank[b.lifecycle || 'works'] ?? 1;
         if (ra !== rb) return ra - rb;
         if (!!b.active - !!a.active) return (b.active ? 1 : 0) - (a.active ? 1 : 0);
-        return (a.id || '').localeCompare(b.id || '');
+        return SparkInventoryGrid.compareValues(a, b, 'id', 'asc');
       }
 
 
@@ -1044,12 +1045,9 @@
 
         const countEl = $('inf-recipes-count');
         if (countEl) {
-          const n = filtered.length;
-          const total = all.length;
           const sw = switchable.length;
-          let text = 'Showing ' + n + ' of ' + total;
-          if (sw !== total) text += ' · ' + sw + ' switchable';
-          countEl.textContent = text;
+          const suffix = sw !== all.length ? '· ' + sw + ' switchable' : '';
+          SparkInventoryGrid.renderSummary(countEl, { filtered: filtered.length, total: all.length, suffix });
         }
 
         const selectedId = sel.value;

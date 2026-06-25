@@ -67,6 +67,8 @@ Extend explore queue items with `snapshot` (format, engine, size, spark_fit, bad
 
 Precedent: `renderBenchCompareStrip()` on Models page for post-download compare.
 
+Use `SparkInventoryGrid` from TASK-007 where applicable (sortable compare table, filter chips).
+
 ## Completion log
 
 | Date | Owner | Result | Commit |

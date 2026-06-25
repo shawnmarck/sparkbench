@@ -23,9 +23,43 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 └── services/             compose/yaml for inference UIs
 ```
 
-**Staging:** edits often land in `~/spark` first; install scripts promote to `/opt/spark`.
+**Staging:** edit on **techno** (`~/projects/sparky`), push to GitHub, deploy with `scripts/deploy-sparky.sh`. Runtime install is **`sparky:/opt/spark`** only.
 
 **Generated (gitignored):** `portal/models.json`, `logs/`, `run/`, `venv/`
+
+## Development workflow (techno → GitHub → sparky)
+
+```mermaid
+flowchart LR
+  A["Edit on techno<br/>~/projects/sparky"] --> B["git commit + push<br/>GitHub main"]
+  B --> C["scripts/deploy-sparky.sh"]
+  C --> D["sparky /opt/spark<br/>git pull + patches"]
+  D --> E["Ops via ssh<br/>inference, audit, logs"]
+```
+
+| Layer | Path | Role |
+|-------|------|------|
+| Dev clone | `~/projects/sparky` on techno | Cursor agent, commit, push |
+| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth |
+| Install | `/opt/spark` on sparky | Pull only — what nginx, `spark`, venv use |
+
+**Rules for agents**
+
+1. **Code** (scripts, recipes, portal, docs): change on techno → commit → `./scripts/deploy-sparky.sh`. Do not `scp` to `/opt/spark` except emergencies (then commit immediately).
+2. **Ops** (inference up/down, golden audit, log tails): `ssh sparky '…'` — expected from techno sessions.
+3. **Runtime data** (`data/model-verification.yaml`, benchmarks): updated on sparky by `spark models verify`, bench, inventory — deploy stashes **code paths only**, not all of `data/`.
+4. After deploy, check drift: `./scripts/deploy-sparky.sh --status`.
+
+```bash
+# From ~/projects/sparky on techno
+./scripts/deploy-sparky.sh                    # push + pull + apply patches
+SKIP_PUSH=1 ./scripts/deploy-sparky.sh        # pull only (already pushed)
+REGENERATE_INVENTORY=1 ./scripts/deploy-sparky.sh
+./scripts/deploy-sparky.sh --status
+```
+
+Emergency stash on sparky from a deploy: `ssh sparky 'cd /opt/spark && git stash list'`.
+
 
 ## Canonical docs (read these)
 

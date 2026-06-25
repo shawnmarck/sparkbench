@@ -9,6 +9,9 @@ Forwards to the active engine (eugr/ds4 on :8000 or llama on :8081).
 - Streaming-aware forwarding for SSE / completions.
 - Passthrough most /v1/* ; models list adds Qwen fast/thinking variants + stable "sparky" alias; chat applies them.
 - "sparky" (and "sparky-think") in /v1/models and chat always uses the active served model (no auto-switch).
+- Records each chat/completions + completions (stream and non-stream) as a session row appended to
+  run/inference-activity.jsonl (non-blocking background thread; Authorization header stripped).
+  Consumed by spark-client-activity.py (:8769) → Portal System-tab widget.
 
 Usage:
   python scripts/spark-inference-gateway.py --serve --port 9000

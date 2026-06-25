@@ -141,9 +141,9 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
         ts = _parse_ts(row.get("at", ""))
         if ts <= 0:
             continue
-        if now - ts <= cutoff24:
+        if ts >= cutoff24:
             sessions_24h += 1
-        if now - ts <= cutoff:
+        if ts >= cutoff:
             sessions_1h += 1
             tok = row.get("tok_s")
             if tok and tok > 0:

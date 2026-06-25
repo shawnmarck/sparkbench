@@ -117,8 +117,10 @@
       container.querySelectorAll('.sig-th.sig-th-sort').forEach(function (th) {
         th.addEventListener('click', function () {
           var col = th.dataset.col;
-          var currentDir = (sort && sort.col === col) ? sort.dir : 'asc';
-          onSort({ col: col, dir: currentDir === 'asc' ? 'desc' : 'asc' });
+          var dir = (sort && sort.col === col)
+            ? (sort.dir === 'asc' ? 'desc' : 'asc')
+            : 'asc';
+          onSort({ col: col, dir: dir });
         });
       });
     }

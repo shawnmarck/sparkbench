@@ -54,6 +54,11 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location ~* \.css$ {
+        add_header Cache-Control "public, max-age=86400";
+        try_files \$uri =404;
+    }
+
     location / {
         try_files \$uri \$uri/ =404;
     }

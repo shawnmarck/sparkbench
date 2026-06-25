@@ -13,7 +13,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 ├── AGENT.md              This file
 ├── README.md             Repo homepage (GitHub + local)
 ├── portal/               Static UI (nginx :80)
-│   ├── assets/           sparky-theme.js, oobe-nebula.js, nebula-tune.js
+│   ├── assets/           sparky-theme.js, oobe-nebula.js, nebula-tune.js, spark-inventory-grid.js
 │   └── themes/           theme-b.css, theme-ui.css
 ├── scripts/              spark CLI + implementation scripts
 ├── install/              Idempotent sudo install scripts (see install/INSTALL.md)

@@ -2,13 +2,13 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ready |
+| **Status** | done |
 | **Priority** | Seq 2 |
 | **Owner** | — |
 | **PR policy** | **One PR** — entire task |
 | **Parallel-safe** | yes after TASK-006 merged |
 | **Depends on** | TASK-006 (recommended) |
-| **Primary files** | `portal/assets/spark-inventory-grid.js` (new), `portal/index.html`, `portal/models.html` (minimal wiring) |
+| **Primary files** | `portal/assets/spark-inventory-grid.js` (new), `portal/index.html` (Inference reference wiring) |
 
 ## Problem
 
@@ -39,10 +39,10 @@ Export a small API (IIFE or `window.SparkInventoryGrid`) with:
 
 ## Acceptance criteria
 
-- [ ] Module loaded by portal without console errors
-- [ ] At least one live callsite uses summary + sort helpers
-- [ ] README snippet in file documents integration for TASK-002/005/004
-- [ ] One PR; Completion log filled
+- [x] Module loaded by portal without console errors
+- [x] At least one live callsite uses summary + sort helpers
+- [x] README snippet in file documents integration for TASK-002/005/004
+- [x] One PR; Completion log filled
 
 ## Test plan
 
@@ -53,4 +53,4 @@ Export a small API (IIFE or `window.SparkInventoryGrid`) with:
 
 | Date | Owner | Result | Commit / PR |
 |------|-------|--------|-------------|
-| — | — | — | — |
+| 2026-06-25 | agent fm/task-007-g8 | done | feat/TASK-007-shared-inventory-grid |

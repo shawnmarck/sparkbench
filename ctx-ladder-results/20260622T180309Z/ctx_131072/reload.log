@@ -1,0 +1,3 @@
+s
+---
+{"object":"list","data":[{"id":"qwen3.6-35b-a3b-nvfp4","object":"model","created":1782151389,"owned_by":"vllm","root":"/models/nvidia/qwen3.6-35b-a3b/nvfp4","parent":null,"max_model_len":112640,"permission":[{"id":"modelperm-a1514bf181ba7ee8","object":"model_permission","created":1782151389,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}

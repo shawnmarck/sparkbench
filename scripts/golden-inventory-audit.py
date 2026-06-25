@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path("/opt/spark")
+EUGR_READY_SECS = int(os.environ.get("AUDIT_EUGR_READY_SECS", "2400"))
+DEFAULT_READY_SECS = int(os.environ.get("AUDIT_READY_SECS", "300"))
 GOLDEN_FILE = ROOT / "data" / "golden-recipes.yaml"
 REPORT_FILE = ROOT / "run" / "golden-audit-report.json"
 LOG_FILE = ROOT / "logs" / "golden-audit.log"
@@ -44,7 +46,14 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "unsloth/qwen3.6-27b": "unsloth-qwen3-6-27b-eugr",
     "unsloth/qwen3.6-35b-a3b": "qwen36-q4-llama",
     "yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1": "gemma4-12b-coder-q4",
+    "qwen/qwen-agentworld-35b-a3b": "qwen-qwen-agentworld-35b-a3b-eugr",
+    "empero-ai/qwythos-9b-claude-mythos-5-1m": "empero-ai-qwythos-9b-claude-mythos-5-1m-eugr",
     "0xsero/deepseek-v4-flash-spark": "0xsero-deepseek-v4-flash-spark-llama",
+}
+
+SKIP_INVENTORY: set[str] = {
+    # REAP GGUF fails llama load on current stack — revisit with ds4 routing
+    "0xsero/deepseek-v4-flash-spark",
 }
 
 DEPRECATED_PROFILES = [
@@ -52,12 +61,17 @@ DEPRECATED_PROFILES = [
     "qwen-qwen3-6-27b-dflash-eugr",
     "qwen-qwen3-6-27b-eugr",
     "0xsero-deepseek-v4-flash-spark-llama-2",
+    "empero-ai-qwythos-9b-claude-mythos-5-1m-eugr-2",
+    "empero-ai-qwythos-9b-claude-mythos-5-1m-eugr-3",
+    "empero-ai-qwythos-9b-claude-mythos-5-1m-eugr-4",
 ]
 
 ARCH_FIXES: dict[str, str] = {
     "microsoft/phi-4": "dense",
     "qwen/qwen3-coder-next": "dense",
     "saricles/qwen3-coder-next": "dense",
+    "qwen/qwen-agentworld-35b-a3b": "moe",
+    "empero-ai/qwythos-9b-claude-mythos-5-1m": "dense",
     "z-lab/qwen3.6-27b": "dense",
     "z-lab/qwen3.6-35b-a3b": "moe",
 }
@@ -69,6 +83,11 @@ def log(msg: str) -> None:
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with LOG_FILE.open("a", encoding="utf-8") as fh:
         fh.write(line + "\n")
+
+
+def write_report(report: dict[str, Any]) -> None:
+    REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    REPORT_FILE.write_text(json.dumps(report, indent=2))
 
 
 def run(
@@ -130,7 +149,23 @@ def is_auxiliary(path: str) -> bool:
     return path.startswith(AUXILIARY_PREFIXES) or path.split("/")[0] == "z-lab"
 
 
-def wait_ready(port: int, timeout: int = 900) -> bool:
+def ready_timeout_secs(recipe: dict[str, Any]) -> int:
+    engine = str(recipe.get("engine") or "")
+    if engine == "eugr":
+        ctx_block = recipe.get("context") or {}
+        ctx = int(ctx_block.get("default") or ctx_block.get("effective") or 32768)
+        # Large KV windows can take many minutes to compile/load on eugr.
+        if ctx >= 200000:
+            return max(EUGR_READY_SECS, 3600)
+        if ctx >= 100000:
+            return max(EUGR_READY_SECS, 3000)
+        return EUGR_READY_SECS
+    if engine == "ds4":
+        return max(DEFAULT_READY_SECS, 600)
+    return DEFAULT_READY_SECS
+
+
+def wait_ready(port: int, timeout: int = DEFAULT_READY_SECS, *, engine: str | None = None) -> bool:
     url = f"http://127.0.0.1:{port}/v1/models"
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -398,13 +433,17 @@ def process_model(
         )
         if up.returncode != 0:
             result["status"] = "up_failed"
-            result["error"] = up.stderr[-800:]
+            result["error"] = (up.stderr or up.stdout)[-800:]
+            run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
             return result
 
         recipe = core.load_recipe(profile_id)
         port = int(recipe.get("port") or 8000)
-        if not wait_ready(port):
+        ready_secs = ready_timeout_secs(recipe)
+        if not wait_ready(port, timeout=ready_secs, engine=str(recipe.get("engine") or "")):
             result["status"] = "not_ready"
+            result["error"] = f"/v1/models not ready on port {port} within {ready_secs}s"
+            run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
             return result
 
         if not skip_bench:
@@ -416,13 +455,24 @@ def process_model(
             if bench.returncode != 0:
                 result["status"] = "bench_failed"
                 result["error"] = bench.stderr[-800:]
+                run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
                 return result
             try:
                 br = json.loads((ROOT / "run/inference-bench-result.json").read_text())
+                if not br.get("ok"):
+                    result["status"] = "bench_failed"
+                    result["error"] = str(br.get("error") or "bench result not ok")
+                    run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
+                    return result
                 result["bench"] = br
-            except Exception:
-                pass
+                result["bench_tok_s"] = br.get("tok_s")
+            except Exception as exc:
+                result["status"] = "bench_failed"
+                result["error"] = f"bench result unreadable: {exc}"
+                run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
+                return result
 
+        # works only after successful bench v2 (or explicit skip_bench for dry runs)
         run(["/usr/local/bin/spark", "models", "verify", "set", path, "works"], timeout=120)
         run(["/usr/local/bin/spark", "models", "inventory"], timeout=300)
 
@@ -443,7 +493,55 @@ def process_model(
     return result
 
 
-def audit_inventory(dry_run: bool = False, skip_bench: bool = False, skip_shelf: bool = False) -> dict[str, Any]:
+def reset_verify_all(paths: set[str], dry_run: bool) -> None:
+    """Clear works/failed flags so only a fresh bench v2 can set works."""
+    for path in sorted(paths):
+        if path in SKIP_INVENTORY:
+            continue
+        if dry_run:
+            log(f"DRY reset verify {path} -> unverified")
+            continue
+        run(["/usr/local/bin/spark", "models", "verify", "set", path, "unverified"], timeout=60)
+    if not dry_run and paths:
+        run(["/usr/local/bin/spark", "models", "inventory"], timeout=300)
+        log(f"reset verify -> unverified for {len(paths)} models")
+
+
+def write_report_markdown(report: dict[str, Any]) -> Path:
+    md_path = REPORT_FILE.with_suffix(".md")
+    lines = [
+        "# Golden inventory audit report",
+        "",
+        f"- **Started:** {report.get('started_at', '')}",
+        f"- **Finished:** {report.get('finished_at', '')}",
+        f"- **Bench standard:** v{report.get('bench_standard', '2.0')}",
+        "",
+        "| Model | Golden profile | Status | ctx | kv | tok/s (v2) |",
+        "|-------|----------------|--------|-----|-----|-------------|",
+    ]
+    ok = 0
+    for m in report.get("models") or []:
+        if m.get("status") == "ok":
+            ok += 1
+        bench = m.get("bench") or {}
+        tok = bench.get("tok_s") or m.get("bench_tok_s") or ""
+        lines.append(
+            f"| `{m.get('inventory_path', '')}` | `{m.get('golden_profile', '')}` | "
+            f"{m.get('status', '')} | {m.get('ctx', '')} | {m.get('kv', '')} | {tok} |"
+        )
+    lines.extend(["", f"**Summary:** {ok}/{len(report.get('models') or [])} ok", ""])
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+    return md_path
+
+
+def audit_inventory(
+    dry_run: bool = False,
+    skip_bench: bool = False,
+    skip_shelf: bool = False,
+    only: set[str] | None = None,
+    resume: bool = False,
+    reset_verify: bool = False,
+) -> dict[str, Any]:
     core = load_core()
     golden_data = load_yaml(GOLDEN_FILE)
     golden_map = dict(DEFAULT_GOLDEN)
@@ -458,6 +556,17 @@ def audit_inventory(dry_run: bool = False, skip_bench: bool = False, skip_shelf:
         "models": [],
         "auxiliary": [],
     }
+    done_paths: set[str] = set()
+    if resume and REPORT_FILE.is_file():
+        prior = json.loads(REPORT_FILE.read_text())
+        for entry in prior.get("models") or []:
+            if entry.get("status") == "ok":
+                path = str(entry.get("inventory_path") or "")
+                if path:
+                    done_paths.add(path)
+                    report["models"].append(entry)
+        if done_paths:
+            log(f"resume: skipping {len(done_paths)} ok models")
 
     targets: list[tuple[str, str]] = []
     for m in inventory_models():
@@ -467,6 +576,15 @@ def audit_inventory(dry_run: bool = False, skip_bench: bool = False, skip_shelf:
         if is_auxiliary(path):
             mark_auxiliary_catalog(path, dry_run)
             report["auxiliary"].append(path)
+            continue
+        if only and path not in only:
+            continue
+        if path in done_paths:
+            continue
+        if path in SKIP_INVENTORY:
+            report["models"].append(
+                {"inventory_path": path, "status": "skipped", "reason": "load_blocked"}
+            )
             continue
         profile = golden_map.get(path)
         if not profile:
@@ -488,6 +606,9 @@ def audit_inventory(dry_run: bool = False, skip_bench: bool = False, skip_shelf:
 
     consolidate_profiles({p for _, p in targets}, deprecated, dry_run)
 
+    if reset_verify and not dry_run and not resume:
+        reset_verify_all({p for p, _ in targets}, dry_run)
+
     for path, profile in targets:
         log(f"=== processing {path} -> {profile} ===")
         res = process_model(
@@ -499,10 +620,12 @@ def audit_inventory(dry_run: bool = False, skip_bench: bool = False, skip_shelf:
             skip_shelf=skip_shelf,
         )
         report["models"].append(res)
+        write_report(report)
 
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
-    REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_FILE.write_text(json.dumps(report, indent=2))
+    write_report(report)
+    md = write_report_markdown(report)
+    log(f"report markdown: {md}")
     run(["/usr/local/bin/spark", "models", "inventory"], timeout=300)
     return report
 
@@ -512,11 +635,22 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--skip-bench", action="store_true")
     parser.add_argument("--skip-shelf", action="store_true")
+    parser.add_argument("--only", help="Comma-separated inventory paths to process")
+    parser.add_argument("--resume", action="store_true", help="Skip models already ok in report")
+    parser.add_argument(
+        "--reset-verify",
+        action="store_true",
+        help="Reset targeted models to unverified before audit (works only set after bench)",
+    )
     args = parser.parse_args()
+    only = {x.strip() for x in args.only.split(",")} if args.only else None
     report = audit_inventory(
         dry_run=args.dry_run,
         skip_bench=args.skip_bench,
         skip_shelf=args.skip_shelf,
+        only=only,
+        resume=args.resume,
+        reset_verify=args.reset_verify,
     )
     ok = sum(1 for m in report["models"] if m.get("status") == "ok")
     log(f"DONE ok={ok}/{len(report['models'])}")

@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Power-user CLI for spark-bot on sparky.
+#
+#   spark-hermes              # interactive chat (default)
+#   spark-hermes chat         # same
+#   spark-hermes -q "ping"    # one-shot query
+#   spark-hermes shell        # bash inside container
+#   spark-hermes doctor       # hermes doctor
+#
+# Install: ln -sf ~/projects/sparky/hermes/scripts/spark-hermes ~/bin/spark-hermes
+
+set -euo pipefail
+
+HOST="${SPARKY_HOST:-sparky}"
+CONTAINER="${SPARKY_HERMES_CONTAINER:-spark-bot}"
+HERMES="/opt/hermes/.venv/bin/hermes"
+
+usage() {
+  cat <<EOF
+Usage: spark-hermes [chat] [-q QUERY | ARGS...]
+       spark-hermes shell
+       spark-hermes doctor
+       spark-hermes <hermes-subcommand> [ARGS...]
+
+Examples:
+  spark-hermes
+  spark-hermes -q "summarize my homelab setup"
+  spark-hermes shell
+  spark-hermes sessions list
+
+Env:
+  SPARKY_HOST              SSH host (default: sparky)
+  SPARKY_HERMES_CONTAINER   Docker container (default: spark-bot)
+EOF
+}
+
+run_hermes() {
+  # shellcheck disable=SC2029
+  exec ssh -t "$HOST" "docker exec -it ${CONTAINER} ${HERMES} $(printf '%q ' "$@")"
+}
+
+run_shell() {
+  # shellcheck disable=SC2029
+  exec ssh -t "$HOST" "docker exec -it ${CONTAINER} bash"
+}
+
+case "${1:-chat}" in
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+  shell|sh|bash)
+    run_shell
+    ;;
+  chat|"")
+    shift 2>/dev/null || true
+    run_hermes chat "$@"
+    ;;
+  doctor|sessions|config|auth|model|gateway)
+    run_hermes "$@"
+    ;;
+  -q|--query)
+    shift
+    run_hermes chat -q "$@"
+    ;;
+  *)
+    run_hermes "$@"
+    ;;
+esac

@@ -23,7 +23,9 @@ golden:
   unsloth/qwen3.6-27b: unsloth-qwen3-6-27b-eugr
   unsloth/qwen3.6-35b-a3b: qwen36-q4-llama
   yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1: gemma4-12b-coder-q4
-  0xsero/deepseek-v4-flash-spark: 0xsero-deepseek-v4-flash-spark-llama
+  qwen/qwen-agentworld-35b-a3b: qwen-qwen-agentworld-35b-a3b-eugr
+  empero-ai/qwythos-9b-claude-mythos-5-1m: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
+  # 0xsero/deepseek-v4-flash-spark: skipped — REAP GGUF load fails on llamacpp (see SKIP in audit script)
 
 deprecated_profiles:
   - qwen36-nvfp4

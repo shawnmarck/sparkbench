@@ -1,0 +1,37 @@
+# Merged into /opt/hermes/data/spark-bot/data/config.yaml at deploy time.
+
+model:
+  provider: xai-oauth
+  default: grok-4-fast-reasoning
+
+fallback_providers:
+  - provider: zai
+    model: glm-5-turbo
+  - provider: openrouter
+    model: deepseek/deepseek-v4-flash
+
+terminal:
+  backend: ssh
+  cwd: /opt/spark
+  ssh_host: host.docker.internal
+  ssh_user: techno
+  ssh_port: 22
+  ssh_key: /opt/data/home/.ssh/spark-bot-terminal
+  timeout: 180
+  lifetime_seconds: 600
+
+memory:
+  enabled: true
+
+skills:
+  auto_save: true
+
+display:
+  personality: default
+  compact: true
+  show_reasoning: false
+
+dashboard:
+  basic_auth:
+    username: techno
+    password_hash: scrypt$16384$8$1$6ghJ8Tk4omFqO8qdbkYpjQ==$Y44K7ZX33WFxgCPEj/kiC3PIrHhCN4Vti+BZH+vopto=

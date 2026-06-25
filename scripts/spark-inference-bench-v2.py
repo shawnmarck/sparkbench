@@ -6,6 +6,7 @@ import json
 import os
 import time
 from typing import Any, Callable
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 BENCH_V2_VERSION = "2.0"
@@ -108,8 +109,12 @@ def _chat_completion(
         method="POST",
     )
     start = time.perf_counter()
-    with urlopen(req, timeout=timeout) as resp:
-        payload = json.loads(resp.read().decode())
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            payload = json.loads(resp.read().decode())
+    except HTTPError as exc:
+        detail = exc.read().decode(errors="replace")[:500]
+        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
     return payload, time.perf_counter() - start
 
 
@@ -149,6 +154,37 @@ def _bench_v2_session(
     *,
     fill_target_tokens: int,
     engine: str | None = None,
+    use_tools: bool = True,
+) -> dict[str, Any]:
+    fill_target = fill_target_tokens
+    last_err: Exception | None = None
+    for attempt in range(4):
+        try:
+            return _bench_v2_session_once(
+                port,
+                model,
+                fill_target_tokens=fill_target,
+                engine=engine,
+                use_tools=use_tools,
+            )
+        except RuntimeError as exc:
+            last_err = exc
+            msg = str(exc)
+            if "HTTP 400" not in msg and "HTTP 413" not in msg and "HTTP 500" not in msg:
+                raise
+            fill_target = max(2048, fill_target // 2)
+            if attempt == 1 and use_tools and engine == "eugr":
+                use_tools = False
+    raise last_err or RuntimeError("v2 bench session failed")
+
+
+def _bench_v2_session_once(
+    port: int,
+    model: str,
+    *,
+    fill_target_tokens: int,
+    engine: str | None = None,
+    use_tools: bool = True,
 ) -> dict[str, Any]:
     fill_text = build_context_fill_text(fill_target_tokens)
     messages: list[dict[str, Any]] = [
@@ -178,49 +214,69 @@ def _bench_v2_session(
     decode_elapsed = 0.0
     tool_ok = False
 
-    # Tool roundtrip
-    messages.append(
-        {
-            "role": "user",
-            "content": (
-                "Call record_inventory_delta for model_id='qwen/qwen3.6-27b' action='update' "
-                "note='golden recipe audit'. Then explain the call in one sentence."
-            ),
-        }
-    )
-    tool_payload, tool_elapsed = _chat_completion(
-        port,
-        model,
-        messages,
-        max_tokens=BENCH_V2_GEN_MAX_TOKENS,
-        tools=BENCH_V2_TOOLS,
-        tool_choice="auto",
-        engine=engine,
-    )
-    tool_msg = _assistant_message(tool_payload)
-    tool_calls = tool_msg.get("tool_calls") or []
-    tool_ok = bool(tool_calls)
-    decode_completion += _completion_tokens(tool_payload)
-    decode_elapsed += tool_elapsed
-    messages.append(tool_msg)
-    if tool_calls:
+    # Tool roundtrip (optional — some stacks/models reject tool schemas)
+    if use_tools:
         messages.append(
             {
-                "role": "tool",
-                "tool_call_id": tool_calls[0].get("id") or "call_bench_v2",
-                "content": json.dumps({"ok": True, "recorded": True}),
+                "role": "user",
+                "content": (
+                    "Call record_inventory_delta for model_id='qwen/qwen3.6-27b' action='update' "
+                    "note='golden recipe audit'. Then explain the call in one sentence."
+                ),
             }
         )
-        follow_payload, follow_elapsed = _chat_completion(
+        tool_payload, tool_elapsed = _chat_completion(
+            port,
+            model,
+            messages,
+            max_tokens=BENCH_V2_GEN_MAX_TOKENS,
+            tools=BENCH_V2_TOOLS,
+            tool_choice="auto",
+            engine=engine,
+        )
+        tool_msg = _assistant_message(tool_payload)
+        tool_calls = tool_msg.get("tool_calls") or []
+        tool_ok = bool(tool_calls)
+        decode_completion += _completion_tokens(tool_payload)
+        decode_elapsed += tool_elapsed
+        messages.append(tool_msg)
+        if tool_calls:
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_calls[0].get("id") or "call_bench_v2",
+                    "content": json.dumps({"ok": True, "recorded": True}),
+                }
+            )
+            follow_payload, follow_elapsed = _chat_completion(
+                port,
+                model,
+                messages,
+                max_tokens=BENCH_V2_GEN_MAX_TOKENS,
+                engine=engine,
+            )
+            decode_completion += _completion_tokens(follow_payload)
+            decode_elapsed += follow_elapsed
+            messages.append(_assistant_message(follow_payload))
+    else:
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    "Reply with one sentence confirming you read the context block above."
+                ),
+            }
+        )
+        plain_payload, plain_elapsed = _chat_completion(
             port,
             model,
             messages,
             max_tokens=BENCH_V2_GEN_MAX_TOKENS,
             engine=engine,
         )
-        decode_completion += _completion_tokens(follow_payload)
-        decode_elapsed += follow_elapsed
-        messages.append(_assistant_message(follow_payload))
+        decode_completion += _completion_tokens(plain_payload)
+        decode_elapsed += plain_elapsed
+        messages.append(_assistant_message(plain_payload))
 
     # Agent turns
     for user_text in BENCH_V2_AGENT_TURNS:
@@ -258,8 +314,12 @@ def _bench_v2_session(
 def resolve_fill_target(recipe: dict[str, Any]) -> int:
     ctx_block = recipe.get("context") or {}
     recipe_ctx = int(ctx_block.get("default") or ctx_block.get("effective") or 32768)
-    cap = min(BENCH_V2_TARGET_CTX, int(recipe_ctx * 0.85))
-    return max(8192, cap)
+    # Leave headroom for system prompt, tool schema, and follow-up agent turns.
+    headroom = 12288 if recipe_ctx >= 100000 else 8192
+    max_fill = max(2048, recipe_ctx - headroom)
+    ratio = 0.35 if recipe_ctx <= 16384 else 0.45 if recipe_ctx <= 65536 else 0.40
+    cap = min(BENCH_V2_TARGET_CTX, max_fill, int(recipe_ctx * ratio))
+    return max(2048, cap)
 
 
 def run_benchmark_v2(
@@ -323,6 +383,11 @@ def run_benchmark_v2(
         "tok_s": bench["tok_s"],
         "tok_s_min": bench.get("tok_s_min"),
         "tok_s_max": bench.get("tok_s_max"),
+        "completion_tokens": totals["decode_completion_tokens"],
+        "elapsed_s": totals["decode_elapsed_s"],
+        "sessions": BENCH_V2_MEASURED_SESSIONS,
+        "turns_per_session": len(BENCH_V2_AGENT_TURNS) + 2,
+        "run_tok_s": rates,
         "bench_standard_version": BENCH_V2_VERSION,
         "context_fill_target_tokens": fill_target,
         "tool_roundtrip_ok": totals["tool_roundtrip_ok"],

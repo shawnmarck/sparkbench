@@ -88,13 +88,23 @@ cd "$ROOT"
 
 git fetch origin "$BRANCH"
 
+# Only stash paths that exist on this install (older checkouts may lack hermes/, etc.)
+STASH_PATHS=()
+for p in "${PATHS[@]}"; do
+  if [[ -e "$p" ]] || git ls-files --error-unmatch "$p" &>/dev/null; then
+    STASH_PATHS+=("$p")
+  fi
+done
+
 # Stash uncommitted code-path changes (keep runtime data/*.yaml on disk)
 STASHED=0
-if ! git diff --quiet -- "${PATHS[@]}" 2>/dev/null \
-  || ! git diff --cached --quiet -- "${PATHS[@]}" 2>/dev/null \
-  || [[ -n "$(git ls-files -o --exclude-standard -- "${PATHS[@]}")" ]]; then
-  echo "==> stashing local code changes under: ${PATHS[*]}"
-  git stash push -u -m "deploy-sparky $(date -Iseconds)" -- "${PATHS[@]}"
+if [[ ${#STASH_PATHS[@]} -gt 0 ]] && (
+  ! git diff --quiet -- "${STASH_PATHS[@]}" 2>/dev/null \
+  || ! git diff --cached --quiet -- "${STASH_PATHS[@]}" 2>/dev/null \
+  || [[ -n "$(git ls-files -o --exclude-standard -- "${STASH_PATHS[@]}")" ]]
+); then
+  echo "==> stashing local code changes under: ${STASH_PATHS[*]}"
+  git stash push -u -m "deploy-sparky $(date -Iseconds)" -- "${STASH_PATHS[@]}"
   STASHED=1
 fi
 

@@ -28,7 +28,7 @@ HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
 README_SUMMARY_VERSION = 6
 SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
-BENCH_METHODS = frozenset({"bench", "bench-agent"})
+BENCH_METHODS = frozenset({"bench", "bench-agent", "bench-agent-v2"})
 HF = Path("/opt/spark/venv/bin/python")
 
 
@@ -818,9 +818,7 @@ def reconcile_spark_verify_with_profiles(entry: dict) -> None:
 
     if rated:
         best = max(rated, key=lambda p: float(p["tok_s"]))
-        if sv.get("spark_status") not in ("failed",):
-            if sv.get("spark_status") in (None, "unverified", "wip", ""):
-                sv["spark_status"] = "works"
+        # Never auto-promote to works — only explicit verify set (post successful bench) does that.
         sv["tok_s"] = best.get("tok_s")
         sv["tok_s_engine"] = best.get("engine")
         sv["tok_s_profile"] = best.get("id")

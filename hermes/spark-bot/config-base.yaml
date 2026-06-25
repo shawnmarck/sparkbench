@@ -1,0 +1,11 @@
+# Minimal base config for first boot; overlay deep-merges on top at deploy.
+model:
+  provider: xai-oauth
+  default: grok-4-fast-reasoning
+
+terminal:
+  backend: docker
+  cwd: /workspace
+
+memory:
+  enabled: true

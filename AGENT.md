@@ -38,6 +38,8 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark engine eugr`) |
 | `docs/runbooks/smoke-llamacpp.md` | llama.cpp validation (`spark engine llama`) |
 | `docs/runbooks/smoke-ds4.md` | DwarfStar ds4 validation (`spark engine ds4`) |
+| `docs/runbooks/new-model-golden-benchmark.md` | Onboard new models: golden map, audit, ctx viability |
+| `docs/guides/local-model-testing.md` | Bench queue SOP, golden audit, stack fixes learned |
 | `docs/reference/inference-stack.md` | Phase 5 technical spec |
 | `install/INSTALL.md` | Install script index + order |
 
@@ -56,6 +58,7 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 | vLLM | http://sparky:8000/v1 |
 | llama.cpp | http://sparky:8081/v1 |
 | Open WebUI | http://sparky:3000 |
+| Hermes UI | http://sparky:9119 |
 | Netdata | http://sparky:19999/v3/ |
 
 ## Portal theme (optional)
@@ -133,6 +136,32 @@ Passwordless sudo for `install/*.sh` only (via `00-grant-install-sudo.sh`). Opti
 - **Routine changes to `spark-inference.py`:** no restart; hit any `/api/inference/*` endpoint after saving.
 - **Changes to `spark-inference-api.py` itself:** restart the service — `sudo bash install/19-inference-api-restart.sh` (or `sudo systemctl restart spark-inference-api`).
 - **Auto-restart on script save:** `sudo bash install/18-inference-api-watch.sh` (systemd path unit; chained from `17`).
+
+## Golden audit & new models
+
+**Policy:** `spark models verify set … works` only after **bench v2** succeeds (`docs/reference/benchmark-standard.md`).
+
+```bash
+# Full fleet
+nohup /opt/spark/venv/bin/python3 scripts/golden-inventory-audit.py \
+  --reset-verify --skip-shelf >> logs/golden-audit.log 2>&1 &
+
+# New models only
+scripts/spark-new-model-golden.sh qwen/qwen-agentworld-35b-a3b empero-ai/qwythos-9b-claude-mythos-5-1m
+```
+
+Reports: `run/golden-audit-report.json` + `.md`. Golden map: `data/golden-recipes.yaml`.
+
+**Common eugr fixes (Qwen agents / Grok):**
+
+- Text-only MM checkpoint: `--language-model-only` when `config.json` has `"language_model_only": true` (AgentWorld).
+- Grok `tool_choice: auto`: `--enable-auto-tool-choice` + `--tool-call-parser qwen3_xml` on eugr YAML.
+
+**Context viability (load + smoke, no bench):** `scripts/ctx-viability-test.sh`, `scripts/update-recipe-ctx.py` — see runbook.
+
+## Hermes spark-bot
+
+Compose + deploy live under `hermes/` in this repo; runtime on host is **`/opt/hermes`** (outside `/opt/spark`). Do **not** stop Model Lab inference for routine bot work. See `hermes/spark-bot/AGENTS.md`, deploy via `hermes/scripts/deploy-spark-bot.sh`.
 
 ## Threat model (short)
 

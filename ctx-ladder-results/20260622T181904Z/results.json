@@ -1,0 +1,98 @@
+[
+  {
+    "ctx": 131072,
+    "target_fill_tokens": 120586,
+    "reload_ok": true,
+    "reload_seconds": 176.9,
+    "max_model_len": 131072,
+    "spark_mem_pct": 91.3,
+    "kv_pool_tokens": 7397019,
+    "api_fill_ok": true,
+    "api_fill_prompt_tokens": 126657,
+    "api_fill_seconds": 52.58,
+    "api_fill_error": null,
+    "opencode_ok": false,
+    "opencode_seconds": 900.04,
+    "opencode_error": "opencode turn 1 timed out after 900s",
+    "opencode_turns": [
+      {
+        "turn": 1,
+        "timeout": true,
+        "stderr_tail": "Command '['/home/techno/.opencode/bin/opencode', 'run', '-m', 'sparky/qwen3.6-35b-a3b-nvfp4', '--dir', '/home/techno/projects/sparky', '--format', 'json', '--log-level', 'WARN', 'List 3 files in this repo root (names only, one line).']' timed out after 900 seconds"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "ctx": 163840,
+    "target_fill_tokens": 150732,
+    "reload_ok": true,
+    "reload_seconds": 247.1,
+    "max_model_len": 163840,
+    "spark_mem_pct": 89.7,
+    "kv_pool_tokens": 7467248,
+    "api_fill_ok": true,
+    "api_fill_prompt_tokens": 158313,
+    "api_fill_seconds": 74.34,
+    "api_fill_error": null,
+    "opencode_ok": false,
+    "opencode_seconds": 900.1,
+    "opencode_error": "opencode turn 1 timed out after 900s",
+    "opencode_turns": [
+      {
+        "turn": 1,
+        "timeout": true,
+        "stderr_tail": "Command '['/home/techno/.opencode/bin/opencode', 'run', '-m', 'sparky/qwen3.6-35b-a3b-nvfp4', '--dir', '/home/techno/projects/sparky', '--format', 'json', '--log-level', 'WARN', 'List 3 files in this repo root (names only, one line).']' timed out after 900 seconds"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "ctx": 194560,
+    "target_fill_tokens": 178995,
+    "reload_ok": true,
+    "reload_seconds": 206.9,
+    "max_model_len": 194560,
+    "spark_mem_pct": 91.9,
+    "kv_pool_tokens": 7605527,
+    "api_fill_ok": true,
+    "api_fill_prompt_tokens": 179417,
+    "api_fill_seconds": 91.39,
+    "api_fill_error": null,
+    "opencode_ok": false,
+    "opencode_seconds": 900.11,
+    "opencode_error": "opencode turn 1 timed out after 900s",
+    "opencode_turns": [
+      {
+        "turn": 1,
+        "timeout": true,
+        "stderr_tail": "Command '['/home/techno/.opencode/bin/opencode', 'run', '-m', 'sparky/qwen3.6-35b-a3b-nvfp4', '--dir', '/home/techno/projects/sparky', '--format', 'json', '--log-level', 'WARN', 'List 3 files in this repo root (names only, one line).']' timed out after 900 seconds"
+      }
+    ],
+    "notes": []
+  },
+  {
+    "ctx": 256000,
+    "target_fill_tokens": 230400,
+    "reload_ok": true,
+    "reload_seconds": 236.8,
+    "max_model_len": 256000,
+    "spark_mem_pct": 90.4,
+    "kv_pool_tokens": 7681984,
+    "api_fill_ok": true,
+    "api_fill_prompt_tokens": 232177,
+    "api_fill_seconds": 138.6,
+    "api_fill_error": null,
+    "opencode_ok": false,
+    "opencode_seconds": 900.1,
+    "opencode_error": "opencode turn 1 timed out after 900s",
+    "opencode_turns": [
+      {
+        "turn": 1,
+        "timeout": true,
+        "stderr_tail": "Command '['/home/techno/.opencode/bin/opencode', 'run', '-m', 'sparky/qwen3.6-35b-a3b-nvfp4', '--dir', '/home/techno/projects/sparky', '--format', 'json', '--log-level', 'WARN', 'List 3 files in this repo root (names only, one line).']' timed out after 900 seconds"
+      }
+    ],
+    "notes": []
+  }
+]

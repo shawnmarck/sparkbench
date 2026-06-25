@@ -1,0 +1,119 @@
+{
+  "target": 241172,
+  "turns": [
+    {
+      "turn": 1,
+      "prompt_tokens": 11239,
+      "seconds": 14.75
+    },
+    {
+      "turn": 2,
+      "prompt_tokens": 22462,
+      "seconds": 35.31
+    },
+    {
+      "turn": 3,
+      "prompt_tokens": 33685,
+      "seconds": 41.27
+    },
+    {
+      "turn": 4,
+      "prompt_tokens": 44908,
+      "seconds": 56.22
+    },
+    {
+      "turn": 5,
+      "prompt_tokens": 56131,
+      "seconds": 83.46
+    },
+    {
+      "turn": 6,
+      "prompt_tokens": 67354,
+      "seconds": 91.57
+    },
+    {
+      "turn": 7,
+      "prompt_tokens": 78577,
+      "seconds": 116.14
+    },
+    {
+      "turn": 8,
+      "prompt_tokens": 89800,
+      "seconds": 127.53
+    },
+    {
+      "turn": 9,
+      "prompt_tokens": 101023,
+      "seconds": 150.21
+    },
+    {
+      "turn": 10,
+      "prompt_tokens": 112247,
+      "seconds": 177.51
+    },
+    {
+      "turn": 11,
+      "prompt_tokens": 123471,
+      "seconds": 191.32
+    },
+    {
+      "turn": 12,
+      "prompt_tokens": 134695,
+      "seconds": 219.37
+    },
+    {
+      "turn": 13,
+      "prompt_tokens": 145919,
+      "seconds": 246.85
+    },
+    {
+      "turn": 14,
+      "prompt_tokens": 157143,
+      "seconds": 262.09
+    },
+    {
+      "turn": 15,
+      "prompt_tokens": 168367,
+      "seconds": 293.95
+    },
+    {
+      "turn": 16,
+      "prompt_tokens": 179591,
+      "seconds": 311.81
+    },
+    {
+      "turn": 17,
+      "prompt_tokens": 190815,
+      "seconds": 342.45
+    },
+    {
+      "turn": 18,
+      "prompt_tokens": 202039,
+      "seconds": 376.3
+    },
+    {
+      "turn": 19,
+      "prompt_tokens": 213263,
+      "seconds": 395.67
+    },
+    {
+      "turn": 20,
+      "prompt_tokens": 224487,
+      "seconds": 431.3
+    },
+    {
+      "turn": 21,
+      "prompt_tokens": 235711,
+      "seconds": 454.87
+    },
+    {
+      "turn": 22,
+      "prompt_tokens": 246935,
+      "seconds": 488.33
+    }
+  ],
+  "final_prompt_tokens": 246951,
+  "reply": "CONTEXT_OK",
+  "seconds": 5397.25,
+  "ok": true
+}

@@ -31,3 +31,4 @@ secrets/
 *.lock
 # DwarfStar — cloned/built by install/22-ds4-dwarfstar.sh
 vendor/ds4/
+oobe-extract/

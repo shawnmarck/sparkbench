@@ -369,7 +369,8 @@ def ensure_local(path: str, dry_run: bool) -> bool:
     return True
 
 
-def promote_draft_if_needed(core: Any, profile_id: str, dry_run: bool) -> None:
+def ensure_testing_recipe(core: Any, profile_id: str, dry_run: bool) -> None:
+    """Mark a draft recipe as testing — never promote before bench v2."""
     draft = ROOT / "recipes" / "drafts" / f"{profile_id}.yaml"
     prod = ROOT / "recipes" / f"{profile_id}.yaml"
     if prod.is_file():
@@ -377,10 +378,36 @@ def promote_draft_if_needed(core: Any, profile_id: str, dry_run: bool) -> None:
     if not draft.is_file():
         raise RuntimeError(f"no recipe for {profile_id}")
     if dry_run:
-        log(f"DRY promote draft {profile_id}")
+        log(f"DRY mark testing {profile_id}")
         return
     core.set_recipe_lifecycle(profile_id, "testing")
-    core.promote_recipe(profile_id)
+
+
+def promote_after_bench(core: Any, profile_id: str, dry_run: bool) -> None:
+    """Promote draft → production works only after bench v2 succeeded."""
+    if dry_run:
+        log(f"DRY promote after bench {profile_id}")
+        return
+    draft = ROOT / "recipes" / "drafts" / f"{profile_id}.yaml"
+    if draft.is_file():
+        recipe = core.load_yaml(draft)
+        if core.infer_lifecycle(recipe, draft) == core.LIFECYCLE_DRAFT:
+            core.set_recipe_lifecycle(profile_id, "testing")
+        core.promote_recipe(profile_id)
+        return
+    prod = ROOT / "recipes" / f"{profile_id}.yaml"
+    if not prod.is_file():
+        raise RuntimeError(f"no recipe to promote: {profile_id}")
+    recipe = core.load_yaml(prod)
+    recipe["lifecycle"] = core.LIFECYCLE_WORKS
+    recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
+    core.save_recipe_file(prod, recipe)
+    profiles = core.enabled_profiles()
+    if profile_id not in profiles:
+        profiles.append(profile_id)
+        core.save_profiles_index(profiles)
+    core.sync_spark_status_for_works(recipe)
+    core.trigger_inventory_rebuild()
 
 
 def process_model(
@@ -405,7 +432,7 @@ def process_model(
             result["status"] = "needs_shelf_pull"
             return result
 
-        promote_draft_if_needed(core, profile_id, dry_run)
+        ensure_testing_recipe(core, profile_id, dry_run)
         if not dry_run:
             run(["/usr/local/bin/spark", "inference", "down"], timeout=120)
         ctx, kv = optimize_recipe_context(core, profile_id, dry_run)
@@ -446,33 +473,36 @@ def process_model(
             run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
             return result
 
-        if not skip_bench:
-            bench = run(
-                [str(ROOT / "venv/bin/python"), str(ROOT / "scripts/spark-inference.py"), "bench", "--write-result"],
-                timeout=7200,
-                env={"BENCH_STANDARD": "v2"},
-            )
-            if bench.returncode != 0:
-                result["status"] = "bench_failed"
-                result["error"] = bench.stderr[-800:]
-                run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
-                return result
-            try:
-                br = json.loads((ROOT / "run/inference-bench-result.json").read_text())
-                if not br.get("ok"):
-                    result["status"] = "bench_failed"
-                    result["error"] = str(br.get("error") or "bench result not ok")
-                    run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
-                    return result
-                result["bench"] = br
-                result["bench_tok_s"] = br.get("tok_s")
-            except Exception as exc:
-                result["status"] = "bench_failed"
-                result["error"] = f"bench result unreadable: {exc}"
-                run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
-                return result
+        if skip_bench:
+            result["status"] = "bench_skipped"
+            return result
 
-        # works only after successful bench v2 (or explicit skip_bench for dry runs)
+        bench = run(
+            [str(ROOT / "venv/bin/python"), str(ROOT / "scripts/spark-inference.py"), "bench", "--write-result"],
+            timeout=7200,
+            env={"BENCH_STANDARD": "v2"},
+        )
+        if bench.returncode != 0:
+            result["status"] = "bench_failed"
+            result["error"] = bench.stderr[-800:]
+            run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
+            return result
+        try:
+            br = json.loads((ROOT / "run/inference-bench-result.json").read_text())
+            if not br.get("ok"):
+                result["status"] = "bench_failed"
+                result["error"] = str(br.get("error") or "bench result not ok")
+                run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
+                return result
+            result["bench"] = br
+            result["bench_tok_s"] = br.get("tok_s")
+        except Exception as exc:
+            result["status"] = "bench_failed"
+            result["error"] = f"bench result unreadable: {exc}"
+            run(["/usr/local/bin/spark", "models", "verify", "set", path, "failed"], timeout=120)
+            return result
+
+        promote_after_bench(core, profile_id, dry_run=False)
         run(["/usr/local/bin/spark", "models", "verify", "set", path, "works"], timeout=120)
         run(["/usr/local/bin/spark", "models", "inventory"], timeout=300)
 

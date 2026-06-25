@@ -146,10 +146,10 @@ models:
     tok_s_engine: eugr
     tok_s_profile: unsloth-qwen3-6-27b-eugr
   0xsero/deepseek-v4-flash-spark:
-    spark_status: wip
-    updated_at: '2026-06-21T22:31:35.806109+00:00'
+    spark_status: failed
+    updated_at: '2026-06-25T12:00:00+00:00'
     engine: llamacpp
-    note: 'Model Lab: 0xsero-deepseek-v4-flash-spark-llama testing'
+    note: 'REAP GGUF load blocked (needs dsv4 llama variant). Demoted — premature audit promote without bench v2.'
   qwen/qwen3-coder-next:
     spark_status: works
     updated_at: '2026-06-22T02:48:58.659957+00:00'

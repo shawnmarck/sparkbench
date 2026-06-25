@@ -3,15 +3,15 @@ name: deepseek-v4-flash-spark (llamacpp)
 inventory_path: 0xsero/deepseek-v4-flash-spark
 engine: llamacpp
 tier: fast
-lifecycle: works
+lifecycle: testing
 served_name: deepseek-v4-flash-spark
 port: 8081
 tags:
 - lab
 - llamacpp
-- golden
 notes: Scaffolded 2026-06-21 from /models/0xsero/deepseek-v4-flash-spark. Mark testing,
-  switch, bench, then promote.
+  switch, bench, then promote. REAP GGUF needs dsv4 llama variant — demoted after premature
+  audit promote (no bench v2).
 model: /models/0xsero/deepseek-v4-flash-spark/gguf/DeepSeek-V4-Flash-Spark-Q3-Dynamic-REAP-ds4.gguf
 llamacpp_args:
 - -ngl
@@ -21,9 +21,7 @@ llamacpp_args:
 - --no-mmap
 - -c
 - '32768'
-updated_at: '2026-06-24T17:09:27.031171+00:00'
-promoted_at: '2026-06-24T17:09:27.073131+00:00'
-_path: /opt/spark/recipes/0xsero-deepseek-v4-flash-spark-llama.yaml
+updated_at: '2026-06-25T12:00:00+00:00'
 context:
   default: 32768
   native: 32768

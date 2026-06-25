@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ready |
+| **Status** | done |
 | **Priority** | Seq 2 |
 | **Owner** | — |
 | **PR policy** | **One PR** — entire task |
@@ -53,4 +53,4 @@ Export a small API (IIFE or `window.SparkInventoryGrid`) with:
 
 | Date | Owner | Result | Commit / PR |
 |------|-------|--------|-------------|
-| — | — | — | — |
+| 2026-06-25 | agent fm/task-007-g8 | done | feat/TASK-007-shared-inventory-grid |

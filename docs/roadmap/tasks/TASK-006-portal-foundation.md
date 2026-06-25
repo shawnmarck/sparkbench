@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ready |
+| **Status** | done |
 | **Priority** | Seq 1 (do first) |
 | **Owner** | — |
 | **PR policy** | **One PR** — entire task; merge before TASK-007+ |

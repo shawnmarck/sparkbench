@@ -56,6 +56,12 @@ else
 fi
 DIRTY="$(git status --porcelain | wc -l | tr -d ' ')"
 echo "  dirty:  $DIRTY path(s)"
+SKIP="$(git ls-files -v | grep '^[S]' | wc -l | tr -d ' ')"
+echo "  skip-worktree data: $SKIP file(s)"
+if [[ -f run/inference-active.json ]]; then
+  active="$(python3 -c "import json; print(json.load(open('run/inference-active.json')).get('profile',''))" 2>/dev/null || true)"
+  echo "  inference active: ${active:-none}"
+fi
 REMOTE
 }
 
@@ -87,6 +93,25 @@ PATHS=("$@")
 cd "$ROOT"
 
 git fetch origin "$BRANCH"
+
+# Protect runtime data before pull (script may not exist until after first pull).
+RUNTIME_DATA=(
+  data/model-verification.yaml
+  data/inference-benchmarks.yaml
+  data/inference-profiles.yaml
+  data/model-catalog.yaml
+)
+for path in "${RUNTIME_DATA[@]}"; do
+  if git ls-files --error-unmatch "$path" &>/dev/null; then
+    git update-index --skip-worktree "$path" 2>/dev/null || true
+  fi
+done
+
+if [[ -x scripts/sparky-protect-runtime.sh ]]; then
+  bash scripts/sparky-protect-runtime.sh
+elif [[ -f scripts/sparky-protect-runtime.sh ]]; then
+  bash scripts/sparky-protect-runtime.sh
+fi
 
 # Only stash paths that exist on this install (older checkouts may lack hermes/, etc.)
 STASH_PATHS=()

@@ -18,6 +18,7 @@ ROOT = Path("/opt/spark")
 VENDOR = ROOT / "vendor" / "spark-vllm-docker"
 WHEELS = VENDOR / "wheels"
 STATE_FILE = ROOT / "run" / "eugr-stack-state.json"
+PENDING_STATE_FILE = ROOT / "run" / "eugr-stack-state.pending.json"
 CACHE_FILE = ROOT / "run" / "eugr-check-cache.json"
 RUNBOOK = "docs/runbooks/eugr-vllm-upgrade.md"
 WHEELS_REPO = "eugr/spark-vllm-docker"
@@ -99,16 +100,24 @@ def docker_image_info() -> dict[str, str]:
 
 
 def load_state() -> dict[str, Any]:
-    try:
-        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except (OSError, json.JSONDecodeError):
-        return {}
+    for path in (STATE_FILE, PENDING_STATE_FILE):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data:
+                return data
+        except (OSError, json.JSONDecodeError):
+            continue
+    return {}
 
 
 def save_state(state: dict[str, Any]) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps(state, indent=2) + "\n"
+    PENDING_STATE_FILE.write_text(payload, encoding="utf-8")
+    try:
+        STATE_FILE.write_text(payload, encoding="utf-8")
+    except OSError:
+        pass
 
 
 def seed_state_if_missing() -> dict[str, Any]:

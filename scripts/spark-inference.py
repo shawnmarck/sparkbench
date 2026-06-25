@@ -273,6 +273,32 @@ def discover_vllm_weights_dir(model_root: Path) -> tuple[Path, str] | None:
     return None
 
 
+def is_language_model_only(model_dir: Path) -> bool:
+    cfg_path = model_dir / "config.json"
+    if not cfg_path.is_file():
+        return False
+    try:
+        cfg = json.loads(cfg_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    return cfg.get("language_model_only") is True
+
+
+def eugr_qwen_agent_lines(model_dir: Path) -> str:
+    if not is_qwen36_family(model_dir):
+        return ""
+    return (
+        "    --enable-auto-tool-choice \\\n"
+        "    --tool-call-parser qwen3_xml \\\n"
+    )
+
+
+def eugr_language_model_only_line(model_dir: Path) -> str:
+    if is_language_model_only(model_dir):
+        return "    --language-model-only \\\n"
+    return ""
+
+
 def is_multimodal_model(model_dir: Path) -> bool:
     cfg_path = model_dir / "config.json"
     if not cfg_path.is_file():
@@ -375,6 +401,11 @@ def infer_max_model_len(model_dir: Path, weight_format: str) -> int:
         return default
     for key in ("max_position_embeddings", "max_seq_len", "seq_length"):
         val = cfg.get(key)
+        if isinstance(val, (int, float)) and val > 0:
+            return int(val)
+    text_cfg = cfg.get("text_config")
+    if isinstance(text_cfg, dict):
+        val = text_cfg.get("max_position_embeddings")
         if isinstance(val, (int, float)) and val > 0:
             return int(val)
     rope = cfg.get("rope_scaling") or {}
@@ -500,6 +531,8 @@ def write_eugr_service(profile_id: str, inventory_path: str, served_name: str) -
     if not is_multimodal_model(model_dir):
         attn_line = "    --attention-backend flashinfer \\\n"
     load_fmt = eugr_load_format(model_dir, weight_format)
+    lmo_line = eugr_language_model_only_line(model_dir)
+    agent_line = eugr_qwen_agent_lines(model_dir)
     env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
     max_len = infer_max_model_len(model_dir, weight_format)
     path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
@@ -527,8 +560,8 @@ command: |
     --served-model-name {served_name} \\
     --tensor-parallel-size {{tensor_parallel}} \\
     --trust-remote-code \\
-    --kv-cache-dtype auto \\
-{attn_line}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+{agent_line}    --kv-cache-dtype auto \\
+{attn_line}{lmo_line}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
     --max-model-len {{max_model_len}} \\
     --max-num-seqs {{max_num_seqs}} \\
     --max-num-batched-tokens {{max_num_batched_tokens}} \\
@@ -865,6 +898,7 @@ def write_eugr_mtp_service(
     if not is_multimodal_model(model_dir):
         attn_line = "    --attention-backend flashinfer \\\n"
     load_fmt = eugr_load_format(model_dir, weight_format)
+    lmo_line = eugr_language_model_only_line(model_dir)
     env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
     max_len = infer_max_model_len(model_dir, weight_format)
     moe_backend = "triton" if is_moe_model(model_dir) else "triton"
@@ -898,7 +932,7 @@ command: |
     --tensor-parallel-size {{tensor_parallel}} \\
     --trust-remote-code \\
     --kv-cache-dtype auto \\
-{attn_line}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+{attn_line}{lmo_line}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
     --max-model-len {{max_model_len}} \\
     --max-num-seqs {{max_num_seqs}} \\
     --max-num-batched-tokens {{max_num_batched_tokens}} \\

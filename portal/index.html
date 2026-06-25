@@ -46,7 +46,7 @@
     .nav-metric.gpu .nav-metric-val { color: var(--accent); }
     .nav-metric.mem .nav-metric-val { color: #c5a3ff; }
     .nav-metric-bar { width: 28px; height: 4px; background: #12151c; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
-    .nav-metric-bar > i { display: block; height: 100%; width: 0%; border-radius: 999px; transition: width .35s ease; }
+    .nav-metric-bar > i { display: block; height: 100%; width: 100%; border-radius: 999px; transform-origin: left center; transform: scaleX(var(--bar-pct, 0)); transition: transform .35s ease; will-change: transform; }
     .nav-metric.gpu .nav-metric-bar > i { background: linear-gradient(90deg, #5a9200, var(--accent)); }
     .nav-metric.mem .nav-metric-bar > i { background: linear-gradient(90deg, #7a5ab0, #c5a3ff); }
     .nav-metric.inf { min-width: auto; max-width: 12rem; gap: .35rem; }
@@ -94,7 +94,7 @@
     .metric-value { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
     .metric-value span { font-size: 1rem; color: var(--muted); font-weight: 500; }
     .metric-bar { height: 8px; background: #12151c; border-radius: 999px; overflow: hidden; margin-top: 0; border: 1px solid var(--border); }
-    .metric-bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #5a9200, var(--accent)); border-radius: 999px; transition: width .35s ease; }
+    .metric-bar > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #5a9200, var(--accent)); border-radius: 999px; transform-origin: left center; transform: scaleX(var(--bar-pct, 0)); transition: transform .35s ease; will-change: transform; }
     .spark { height: 28px; margin-top: .45rem; opacity: .9; }
     .spark svg { width: 100%; height: 100%; display: block; }
     .metric-sub { margin-top: .4rem; font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; }
@@ -103,7 +103,7 @@
     .metric-value.temp-warn { color: var(--warn); }
     .metric-value.temp-hot { color: #f08a5d; }
     .temp-bar { position: relative; overflow: visible; }
-    .temp-bar > i { border-radius: 999px; transition: width .35s ease, background .35s ease; }
+    .temp-bar > i { border-radius: 999px; transition: transform .35s ease, background .35s ease; }
     .temp-bar .temp-redline { position: absolute; top: -3px; bottom: -3px; left: 85%; width: 2px; margin-left: -1px; background: #e85c5c; border-radius: 1px; opacity: .9; pointer-events: none; z-index: 1; box-shadow: 0 0 6px #e85c5c88; }
     .temp-bar .temp-redline::after { content: '85°'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: .58rem; color: #e85c5c; font-family: ui-monospace, monospace; letter-spacing: -.02em; }
     .temp-fill-ok { background: linear-gradient(90deg, #5a9200, var(--accent)); }
@@ -855,6 +855,14 @@
       const nav = $('nav');
       let pollTimer = null;
       let infPollTimer = null;
+      let gpuPollInFlight = false;
+      let infTickInFlight = false;
+      let expTickInFlight = false;
+      let gpuPollErrors = 0;
+      let gpuPollNextDelay = 1000;
+      const GPU_POLL_BASE_MS = 1000;
+      const GPU_POLL_MAX_MS = 30000;
+      const INF_POLL_BASE_MS = 2000;
       let onSystem = true;
       let onInference = false;
       let onExplore = false;
@@ -894,6 +902,10 @@
 
       let infFilterQ = '';
       let lastInfProfilesSnapshot = '';
+      let lastStorageSnapshot = '';
+      let lastContainersSnapshot = '';
+      let lastNavHermesSnapshot = '';
+      let lastNavInferenceSnapshot = '';
       const infModelGroupsOpen = new Set();
       let suppressInfGroupToggle = false;
       const systemCard = $('system-card');
@@ -901,7 +913,7 @@
       const exploreCard = $('explore-card');
 
       const fmtGb = (mb) => (mb / 1024).toFixed(1);
-      const setBar = (el, pct) => { el.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
+      const setBar = (el, pct) => { el.style.setProperty('--bar-pct', (Math.max(0, Math.min(100, pct)) / 100)); };
       const TEMP_SCALE_MAX = 100;
       const TEMP_REDLINE_C = 85;
 
@@ -918,7 +930,8 @@
         $(wrapId).className = 'metric-value ' + zone.cls;
         $(valId).textContent = c != null ? Math.round(c) : '—';
         const bar = $(barId);
-        bar.style.width = (c != null ? Math.min(100, (c / TEMP_SCALE_MAX) * 100) : 0) + '%';
+        const pct = c != null ? Math.min(100, (c / TEMP_SCALE_MAX) * 100) : 0;
+        bar.style.setProperty('--bar-pct', pct / 100);
         bar.className = zone.fill;
       };
 
@@ -946,6 +959,9 @@
       }
 
       function renderStorage(volumes) {
+        const snap = JSON.stringify(volumes || []);
+        if (snap === lastStorageSnapshot) return;
+        lastStorageSnapshot = snap;
         $('storage').innerHTML = (volumes || []).map((v) => {
           if (!v.online) {
             return '<div class="storage-card"><div class="storage-head"><strong>' + v.label + '</strong>'
@@ -958,7 +974,7 @@
           const disk = fmtStorageSize(v.used_gb) + ' / ' + fmtStorageSize(v.total_gb)
             + ' · ' + fmtStorageSize(v.avail_gb) + ' free';
           return '<div class="storage-card"><div class="storage-head"><strong>' + v.label + '</strong>' + models + '</div>'
-            + '<div class="metric-bar"><i style="width:' + v.used_pct + '%"></i></div>'
+            + '<div class="metric-bar"><i style="--bar-pct:' + (Math.max(0, Math.min(100, v.used_pct)) / 100) + '"></i></div>'
             + '<div class="storage-disk">' + disk + '</div></div>';
         }).join('');
       }
@@ -1205,6 +1221,16 @@
       function renderNavInference(data) {
         const el = $('nav-inf');
         const text = $('nav-inf-text');
+        const snap = data ? JSON.stringify({
+          active: data.active ? {
+            id: data.active.id, ready: data.active.ready, name: data.active.name,
+            tok_s: data.active.tok_s, starting: data.active.starting,
+          } : null,
+          switch: data.switch ? { running: data.switch.running, profile: data.switch.profile, phase: data.switch.phase } : null,
+          loading: data.loading || null,
+        }) : 'null';
+        if (snap === lastNavInferenceSnapshot) return;
+        lastNavInferenceSnapshot = snap;
         if (!data) {
           el.className = 'nav-metric inf down';
           text.textContent = 'API offline';
@@ -1310,6 +1336,9 @@
       }
 
       function renderContainers(list) {
+        const snap = JSON.stringify(list || []);
+        if (snap === lastContainersSnapshot) return;
+        lastContainersSnapshot = snap;
         if (!list.length) {
           $('containers').innerHTML = '<div class="svc-item"><span class="name">No running containers</span></div>';
           return;
@@ -1742,19 +1771,27 @@
 
       async function infTick() {
         if (!onInference) return;
-        const d = await fetchInferenceStatus();
-        if (d) {
-          renderInferencePanel(d);
-          maybeCloseInfLogOverlay(d);
-          await fetchInfLogs();
-          if (infLogOverlayOpen) updateInfLogOverlayChrome();
-          $('live').classList.remove('live-stale');
-          $('live').lastChild.textContent = 'live';
-          maybeAutoStartProfile(d);
-        } else {
-          $('live').classList.add('live-stale');
-          $('live').lastChild.textContent = 'offline';
-          setInfMsg('Inference API unavailable — run install/17-inference-api.sh', 'err');
+        if (infTickInFlight) return;
+        if (document.visibilityState !== 'visible') return;
+        infTickInFlight = true;
+        try {
+          const d = await fetchInferenceStatus();
+          if (!onInference) return;
+          if (d) {
+            renderInferencePanel(d);
+            maybeCloseInfLogOverlay(d);
+            await fetchInfLogs();
+            if (infLogOverlayOpen) updateInfLogOverlayChrome();
+            $('live').classList.remove('live-stale');
+            $('live').lastChild.textContent = 'live';
+            maybeAutoStartProfile(d);
+          } else {
+            $('live').classList.add('live-stale');
+            $('live').lastChild.textContent = 'offline';
+            setInfMsg('Inference API unavailable — run install/17-inference-api.sh', 'err');
+          }
+        } finally {
+          infTickInFlight = false;
         }
       }
 
@@ -1923,6 +1960,9 @@
         const dot = $('nav-hermes-dot');
         const link = $('nav-hermes');
         if (!dot || !link) return;
+        const snap = JSON.stringify({ h: h || null, c: (containers || []).map((x) => ({ name: x.name, up: x.up })) });
+        if (snap === lastNavHermesSnapshot) return;
+        lastNavHermesSnapshot = snap;
         let online = false;
         if (h) {
           online = !!h.online;
@@ -1962,6 +2002,9 @@
       }
 
       async function gpuPoll() {
+        if (gpuPollInFlight) return;
+        if (document.visibilityState !== 'visible') return;
+        gpuPollInFlight = true;
         try {
           const now = Date.now();
           const infPromise = (now - lastInfNavFetchAt >= INF_NAV_POLL_MS)
@@ -1981,13 +2024,15 @@
           const d = await gpuRes.json();
           const hist = d.history || {};
 
+          gpuPollErrors = 0;
+          gpuPollNextDelay = GPU_POLL_BASE_MS;
+
           updateNavMetrics(d);
           renderNavHermes(d.hermes, d.containers);
           renderNavInference(infData);
           maybeCloseInfLogOverlay(infData);
           if (infLogOverlayOpen) {
             updateInfLogOverlayChrome();
-            fetchInfLogs();
           }
           if (!onSystem) {
             $('live').classList.remove('live-stale');
@@ -2041,6 +2086,14 @@
         } catch (e) {
           $('live').classList.add('live-stale');
           $('live').lastChild.textContent = 'offline';
+          gpuPollErrors++;
+          gpuPollNextDelay = Math.min(GPU_POLL_MAX_MS, GPU_POLL_BASE_MS * Math.pow(2, gpuPollErrors));
+        } finally {
+          gpuPollInFlight = false;
+          if (pollTimer != null) {
+            clearTimeout(pollTimer);
+            pollTimer = setTimeout(gpuPoll, gpuPollNextDelay);
+          }
         }
       }
 
@@ -2488,17 +2541,25 @@
 
       async function expTick() {
         if (!onExplore) return;
-        const d = await fetchExpStatus();
-        if (d) {
-          renderExpStatusBanner(d);
-          renderExpQueues(d);
-          $('live').classList.remove('live-stale');
-          $('live').lastChild.textContent = 'live';
-        } else {
-          renderExpStatusBanner(null);
-          $('live').classList.add('live-stale');
-          $('live').lastChild.textContent = 'offline';
-          setExpMsg('HF API unavailable — run install/21-hf-api.sh', 'err');
+        if (expTickInFlight) return;
+        if (document.visibilityState !== 'visible') return;
+        expTickInFlight = true;
+        try {
+          const d = await fetchExpStatus();
+          if (!onExplore) return;
+          if (d) {
+            renderExpStatusBanner(d);
+            renderExpQueues(d);
+            $('live').classList.remove('live-stale');
+            $('live').lastChild.textContent = 'live';
+          } else {
+            renderExpStatusBanner(null);
+            $('live').classList.add('live-stale');
+            $('live').lastChild.textContent = 'offline';
+            setExpMsg('HF API unavailable — run install/21-hf-api.sh', 'err');
+          }
+        } finally {
+          expTickInFlight = false;
         }
       }
 
@@ -2990,9 +3051,15 @@
         applyWideMode(on);
       });
 
-      pollTimer = setInterval(gpuPoll, 1000);
-      infPollTimer = setInterval(() => { infTick(); expTick(); }, 2000);
-      gpuPoll();
+      pollTimer = setTimeout(gpuPoll, 0);
+      infPollTimer = setInterval(() => { infTick(); expTick(); }, INF_POLL_BASE_MS);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(gpuPoll, 0);
+        if (onInference) infTick();
+        if (onExplore) expTick();
+      });
     })();
   </script>
 </body>

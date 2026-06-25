@@ -112,7 +112,9 @@ Emergency stash on sparky from a deploy: `ssh sparky 'cd /opt/spark && git stash
 
 | Doc | Use when |
 |-----|----------|
-| `docs/ROADMAP.md` | **The plan** — phases, status, next steps |
+| `docs/ROADMAP.md` | **The plan** — vision, Model Lab loop, backlog queue |
+| `docs/roadmap/README.md` | **Main agent workflow** — techno, one PR per task, sequential merge |
+| `docs/roadmap/tasks/*.md` | Task specs (requirements, acceptance criteria, test plan) |
 | `README.md` | Repo homepage + doc index |
 | `docs/guides/model-shelf.md` | `/models` + NAS shelf layout |
 | `docs/guides/model-picks.md` | Why each model is in the catalog |

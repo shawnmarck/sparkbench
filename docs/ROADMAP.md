@@ -1,7 +1,13 @@
 # Spark setup roadmap
 
 **This is the plan.** Status, phases, URLs, and what to build next.  
-Last updated: 2026-06-24 (OpenCode profiles + inference API bench route fix)
+Last updated: 2026-06-25 (vision, agent loop, reprioritized backlog)
+
+---
+
+## Vision
+
+**Sparky is the Model Lab control panel for one DGX Spark:** discover models, define recipes, bench on real hardware, promote to production, and see who’s using inference — all without leaving the portal.
 
 ---
 
@@ -35,7 +41,44 @@ spark engine eugr (:8000)  │  spark engine llama (:8081)  │  spark engine ds
 
 **Rule:** One heavy GPU workload at a time. Many logical model names; switching = evict + load (minutes for big NVFP4).
 
-**Model Lab arc (Phase 5b–5d):** Explore (HF) → Download → Draft recipe → Test/bench → Promote to production.
+---
+
+## Model Lab loop
+
+The product is a **closed loop** from discovery to production. Phases 5b–5d built the backend; the backlog finishes the **operator surface** so each step is scannable in the portal.
+
+```text
+  ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+  │   Explore   │────▶│   Download   │────▶│ Draft recipe    │
+  │  (HF browse │     │  (HF queue → │     │ (auto-scaffold) │
+  │  + shortlist)│     │   /models/)  │     │                 │
+  └─────────────┘     └──────────────┘     └────────┬────────┘
+                                                     │
+  ┌─────────────┐     ┌──────────────┐              ▼
+  │  Promote to │◀────│ Bench + test │◀────┌─────────────────┐
+  │ production  │     │ (agent tok/s)│     │ Mark testing +  │
+  └─────────────┘     └──────────────┘     │ switch profile  │
+         │                    ▲             └────────┬────────┘
+         │                    │                      │
+         └────────────────────┴──────────────────────┘
+                           Models inventory
+                    (sizes, ctx, recipes, verify)
+
+  Operate: gateway :9000 ← Hermes │ Open WebUI │ agents
+            System tab ← client activity (TASK-001)
+            Inference tab ← switch, ctx picker, logs
+```
+
+| Step | Portal | Backend |
+|------|--------|---------|
+| Discover | Explore tab | `/api/hf/*`, explore queue |
+| Acquire | Download queue | `spark-hf`, `/models/{lab}/` |
+| Define | Models → scaffold | `scaffold_auto`, `recipes/drafts/` |
+| Validate | Inference → switch + bench | `spark inference`, async bench |
+| Promote | Models → promote | `recipes/` + `inference-profiles.yaml` |
+| Operate | System + Inference + gateway | engines, `:9000/v1` |
+
+Future polish (post-backlog): cross-tab status chips (explore row → “draft on disk”, models → “open in Inference”) — not separate phases; small links once table/pane UX lands.
 
 ---
 
@@ -56,16 +99,17 @@ spark engine eugr (:8000)  │  spark engine llama (:8081)  │  spark engine ds
 | Inference API perf (lite status, YAML cache) | ✅ 2026-06-22 — models page no longer hangs on poll |
 | eugr stack upgrade notice | ✅ `spark engine eugr check` + portal banner (manual upgrade) |
 | DwarfStar / ds4 engine | ✅ `spark engine ds4` — antirez V4 Flash benched **17.3 tok/s** |
-| MTP (Multi-Token Prediction) | ✅ Scaffold router implemented for eugr and llama.cpp |
-| Hermes Agent | ❌ Phase 5 step 5 (deferred) |
+| MTP (Multi-Token Prediction) | ✅ Scaffold + runners; production MTP recipes bench-validated |
+| Hermes Agent | ✅ Portal nav → `:9119` (iframe + online dot via `/api/gpu`) |
 | Gateway integration | ✅ `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) |
+| Portal UI perf/reliability | ✅ 2026-06-25 — poll guards, backoff, render diffs, nebula sqrt fix |
 
 ---
 
 ## Phase 1 — Visibility ✅
 
 - [x] SSH, hostname `sparky`, LAN `192.168.0.101`
-- [x] Portal http://sparky/ (System · Models · Inference · Chat · Netdata)
+- [x] Portal http://sparky/ (System · Models · Explore · Inference · Hermes · Chat · Netdata)
 - [x] Optional Theme B nebula (constellation toggle)
 - [x] Netdata http://sparky:19999
 - [x] GPU metrics http://sparky/api/gpu
@@ -81,9 +125,8 @@ spark engine eugr (:8000)  │  spark engine llama (:8081)  │  spark engine ds
 - [x] Auto-refresh (`spark models inventory` + inotify)
 - [x] First full shelf push (background)
 - [x] `spark hf login` for Hugging Face
-- [ ] Second shelf push for Gemma 4 trees (after downloads)
 
-Deferred: LRU cache at `/var/lib/spark-model-cache` — not needed with 4 TB local NVMe.
+LRU cache at `/var/lib/spark-model-cache` — not needed with 4 TB local NVMe.
 
 ---
 
@@ -140,8 +183,7 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 9. [x] **eugr upgrade detection** — `spark engine eugr check` / `record`, portal banner, runbook [`eugr-vllm-upgrade.md`](runbooks/eugr-vllm-upgrade.md)
 10. [x] **Gateway integration** — `spark-inference-gateway` on :9000/v1 (forward + ALIASES + auto-switch + streaming) — smallest useful slice implemented
 11. [x] **OpenCode profiles** — 35B MoE @ 256k + 27B DFlash @ 262k for long-context agents
-12. [ ] **Hermes Agent** — install, point at fast local tier (deferred)
-13. [ ] Later: idle eviction, MCP ops agent
+12. [x] **Hermes Agent** — portal nav embeds local Hermes dashboard (`:9119`); status dot from `/api/gpu`
 
 ---
 
@@ -182,8 +224,6 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 3. [x] `POST /api/hf/queue` — background download → `/models/{lab}/{slug}/`
 4. [x] On complete → merge catalog + auto-scaffold draft recipe (eugr/llama today)
 
-**Next (5c polish):** Explore → Model Lab handoff UX, queue visibility on Models page.
-
 **Scaffold router (grow as engines/features land):**
 
 | Signal | Scaffold path |
@@ -206,48 +246,34 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 4. [x] Gemma / generic MTP GGUF — llama.cpp draft model path in scaffold output (`mtp.draft_model`)
 5. [x] DFlash — `scaffold_dflash_recipe` wired through HF queue (`scaffold_kind`) + `POST /api/inference/recipes/scaffold` auto path
 6. [x] Side-by-side bench in Model Lab UI — `renderBenchCompareStrip` on Models page; DFlash/MTP badges on Models + Inference tabs
-
-**Remaining (data plane / runners, not 5d control plane):** llama.cpp MTP draft wiring in `spark-llama`; eugr MTP bench validation on hardware.
+7. [x] **llama.cpp + eugr MTP runners** — scaffold emits recipes; MTP profiles switch and pass agent bench
 
 **Agent rule:** If scaffold fails (`scaffold_error` on queue item), fix routing or add a scaffold branch — do not paste a recipe YAML unless the architecture is genuinely one-off.
 
 ---
 
-## Phase 6 — Closet / 10Gb ⏸
+## Backlog (next features)
 
-Deferred until desk setup is stable.
+**Agent workflow:** [`roadmap/README.md`](roadmap/README.md) — work on **techno**, **one PR per task**, merge **in sequence**, then deploy to sparky for smoke.
+
+| Seq | Task | Status | One PR | Doc |
+|-----|------|--------|--------|-----|
+| 1 | Portal foundation — CSS extract, defer scripts, models poll fixes | ready | yes | [TASK-006](roadmap/tasks/TASK-006-portal-foundation.md) |
+| 2 | Shared inventory grid module | ready | yes | [TASK-007](roadmap/tasks/TASK-007-shared-inventory-grid.md) |
+| 3 | Client activity dashboard (System tab) | ready | yes | [TASK-001](roadmap/tasks/TASK-001-client-activity-dashboard.md) |
+| 4 | Models inventory UX — sortable table + detail side pane | ready | yes | [TASK-002](roadmap/tasks/TASK-002-models-inventory-ux.md) |
+| 5 | Inference page — flat recipe grid, ctx labeling | ready | yes | [TASK-005](roadmap/tasks/TASK-005-inference-page-ux.md) |
+| 6 | Explore queue — shortlist compare overhaul | ready | yes | [TASK-004](roadmap/tasks/TASK-004-explore-queue-overhaul.md) |
+
+**How to run one main agent:** point it at `docs/ROADMAP.md` + `docs/roadmap/README.md`. It picks **Seq 1**, implements the full task file, opens **one PR** to `origin`, stops. After you review/merge and deploy, it picks **Seq 2**, and so on. No parallel PRs; no splitting a task across PRs.
+
+**Superseded:** old split Models tasks → single [TASK-002-models-inventory-ux.md](roadmap/tasks/TASK-002-models-inventory-ux.md).
 
 ---
 
-## Deferred / later
+## UI polish (remaining)
 
-- **DwarfStar MTP / thinking-mode benches** — optional; default bench disables thinking
-- Tailscale remote access
-- Portal TPS / vLLM `/metrics` scrape
-- Netdata vLLM integration
-- Always-on small + on-demand heavy (only if VRAM headroom proven)
-- Status cache hardening — YAML cache locks, single-flight coalesce, deepcopy on cache hit (review follow-ups)
-
-## UI & Performance Improvements (New Feature Ideas)
-
-### Performance Enhancements
-- **Polling Optimization** — Implement adaptive polling based on user activity (reduce polling frequency when tab is not active)
-- **CSS and JavaScript Loading** — Separate critical CSS from non-critical CSS, defer non-critical JavaScript execution
-- **Caching Strategy** — Implement appropriate caching headers for static assets and API responses that don't need to be completely fresh
-
-### Reliability Enhancements
-- **Error Handling and Fallbacks** — Add specific error handling and user feedback when API calls fail
-- **State Management** — Implement a more robust state management approach to ensure UI state matches backend state
-- **Loading States and Feedback** — Ensure all user actions that trigger backend operations provide clear loading indicators
-
-### Code-Level Improvements
-- **Event Listener Optimization** — Use event delegation where possible instead of attaching listeners to individual elements
-- **DOM Manipulation Efficiency** — Use more efficient DOM manipulation techniques or a lightweight templating system
-- **API Response Handling** — Implement more specific error handling for different types of API failures
-
-### Network and API Improvements
-- **Request Batching** — Batch related requests where possible to reduce network overhead
-- **Connection Management** — Consider connection pooling or keeping connections alive for frequently accessed endpoints
+Most Opus items shipped 2026-06-25 ([`reference/ui-improvements-opus.md`](reference/ui-improvements-opus.md)). **Seq 1 (TASK-006)** owns the rest: CSS extract, defer, models poll. Optional AbortController on view switch can ride along or stay deferred.
 
 ---
 
@@ -266,6 +292,7 @@ CLI guide (humans + agents): [`reference/spark-cli.md`](reference/spark-cli.md)
 | eugr stack check | — | `spark engine eugr check` |
 | llama.cpp | http://sparky:8081/v1 | `spark engine llama up/down/status` |
 | DwarfStar | http://sparky:8000/v1 | `spark engine ds4 up/down/status` |
+| Hermes Agent | http://sparky:9119/ | docker (`spark-bot`) |
 | Open WebUI | http://sparky:3000 | docker |
 | Netdata | http://sparky:19999/v3/ | — |
 | Shelf | — | `spark shelf push`, `spark shelf pull` |

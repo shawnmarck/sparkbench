@@ -27,39 +27,82 @@ Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`):
 
 **Generated (gitignored):** `portal/models.json`, `logs/`, `run/`, `venv/`
 
-## Development workflow (techno → GitHub → sparky)
+## Development workflow
+
+Two valid sync paths — pick based on where you are editing.
 
 ```mermaid
-flowchart LR
-  A["Edit on techno<br/>~/projects/sparky"] --> B["git commit + push<br/>GitHub main"]
-  B --> C["scripts/deploy-sparky.sh"]
-  C --> D["sparky /opt/spark<br/>git pull code only"]
-  D --> E["Ops via ssh<br/>inference, audit, logs"]
+flowchart TB
+  subgraph techno["Techno (primary code path)"]
+    A["Edit ~/projects/sparky"] --> B["git commit + push"]
+    B --> C["./scripts/deploy-sparky.sh"]
+    C --> D["sparky /opt/spark<br/>pull + runtime backup/restore"]
+  end
+  subgraph sparky["Sparky (local dev + on-box agent)"]
+    E["Edit /opt/spark locally"] --> F{"Ready to sync?"}
+    F --> G["git fetch origin"]
+    G --> H["pull / rebase / merge"]
+    H --> I["bash scripts/sparky-protect-runtime.sh"]
+  end
+  B --> G
+  D --> J["Ops: inference, audit, logs"]
+  I --> J
 ```
 
 | Layer | Path | Role | Git on sparky |
 |-------|------|------|---------------|
-| Dev clone | `~/projects/sparky` on techno | Cursor agent, commit, push | — |
-| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth for **code** | — |
-| Install code | `/opt/spark` scripts, recipes, services… | Deploy pulls from GitHub | `git pull` |
-| **Runtime data** | `/opt/spark/data/*.yaml` (verify, bench, profiles) | Live on sparky only | **`skip-worktree`** — never pull |
+| Dev clone | `~/projects/sparky` on techno | Primary Cursor agent; commit, push | — |
+| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth for **shared code** | — |
+| Install | `/opt/spark` on sparky | Runtime + optional **local dev** | pull / rebase / merge |
+| **Runtime data** | `/opt/spark/data/*.yaml` | Live audit/bench state | **`skip-worktree`** — never overwrite from git |
 
 See **`docs/runbooks/sparky-live-sync.md`** for the full anti-regression model.
 
-**Rules for agents**
+### Path A — techno agent (default for shared code)
 
-1. **Code** (scripts, recipes, portal, docs): change on techno → commit → `./scripts/deploy-sparky.sh`. Do not `scp` to `/opt/spark` except emergencies (then commit immediately).
-2. **Ops** (inference up/down, golden audit, log tails): `ssh sparky '…'` — expected from techno sessions.
-3. **Runtime data** on sparky (`data/model-verification.yaml`, benchmarks, enabled profiles): owned by audits/bench on sparky — **never reset from git**. Protected via `scripts/sparky-protect-runtime.sh`.
-4. **Model recipes/services must be in git** before deploy. Deploy refuses if active profile recipe is missing.
-5. After deploy: `./scripts/deploy-sparky.sh --status`.
+1. Edit on techno → commit → push.
+2. `./scripts/deploy-sparky.sh` (or `SKIP_PUSH=1` if already pushed).
+3. Deploy backs up runtime YAML, pulls code, restores runtime, runs patches.
+
+### Path B — agent on sparky (local dev on the box)
+
+Local experimentation on sparky is OK. An agent **running on sparky** can sync when ready:
+
+```bash
+cd /opt/spark
+bash scripts/sparky-protect-runtime.sh          # once, or before every sync
+git fetch origin
+git status                                        # review local commits + dirty tree
+spark inference status                            # know what's live before recipe changes
+
+# Pick one when ready (runtime YAML is skip-worktree / backed up):
+git pull --ff-only origin main                  # no local commits — simplest
+git rebase origin/main                          # local commits replayed on top of origin
+git merge origin/main                           # merge origin into local branch
+```
+
+**Rules for sparky-local agents**
+
+1. **Protect runtime data first** — `bash scripts/sparky-protect-runtime.sh`. Never `git checkout -- data/*.yaml` from origin.
+2. **Never `git stash -u`** on `recipes/` or `services/` — can delete host-only files (learned the hard way).
+3. **Check active inference** — `spark inference status` before changing recipes/services for the loaded profile.
+4. **Local commits on sparky are a staging area** — cherry-pick or re-apply on techno and push to GitHub when the change is real; don't let sparky-only commits drift forever.
+5. **Prefer ff-only pull** when sparky has no local commits; use rebase or merge only when you intentionally have local work to keep.
+6. **Vendor/build drift** (`vendor/`, `bin/llama-*`) — ignore or reset to origin; not shared via git.
+
+**Rules for techno agents**
+
+1. **Shared code** (scripts, recipes, portal, docs): change on techno → commit → push → `./scripts/deploy-sparky.sh`. Do not `scp` except emergencies (then commit immediately).
+2. **Ops** (inference up/down, golden audit, logs): `ssh sparky '…'` or sparky-local agent.
+3. **Runtime data** on sparky: owned by audits/bench — never reset from git on techno deploy without backup (deploy handles this automatically).
+4. **Model recipes/services must be in git** before relying on deploy from techno.
+5. After techno deploy: `./scripts/deploy-sparky.sh --status`.
 
 ```bash
 # From ~/projects/sparky on techno
-./scripts/deploy-sparky.sh                    # push + pull + apply patches
-SKIP_PUSH=1 ./scripts/deploy-sparky.sh        # pull only (already pushed)
-REGENERATE_INVENTORY=1 ./scripts/deploy-sparky.sh
 ./scripts/deploy-sparky.sh --status
+./scripts/deploy-sparky.sh
+SKIP_PUSH=1 ./scripts/deploy-sparky.sh
 ```
 
 Emergency stash on sparky from a deploy: `ssh sparky 'cd /opt/spark && git stash list'`.

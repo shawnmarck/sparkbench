@@ -56,4 +56,4 @@ Install: `sudo bash /opt/spark/install/23-inference-gateway.sh`
 | `opencode-qwen27-dflash-262k` | `qwen3.6-27b-dflash` | Architecture / design @ 262k |
 | `antirez-deepseek-v4-flash-ds4` | (ds4 served name) | DeepSeek V4 Flash via ds4 |
 
-Point OpenCode at `http://sparky:9000/v1` and run `sync-sparky-models` after profile switches.
+Point OpenCode at `http://sparky:9000/v1` (use model `sparky` or the served name) and run `sync-sparky-models` after profile switches. The gateway always advertises a stable `sparky` model id via `/v1/models`.

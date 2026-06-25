@@ -1,4 +1,4 @@
-# OpenCode long-ctx DFlash: flashinfer + fp8 KV (flash_attn rejects fp8 kv)
+# OpenCode long-ctx DFlash: flashinfer + fp8 KV (flash_attn rejects fp8 kv; drafter has causal SWA per z-lab HF)
 recipe_version: "1"
 name: OpenCode Qwen3.6 27B DFlash
 description: DFlash speculative 27B dense for OpenCode agent (262k ctx)
@@ -13,7 +13,7 @@ defaults:
   gpu_memory_utilization: 0.85
   max_model_len: 262144
   max_num_seqs: 6
-  max_num_batched_tokens: 8192
+  max_num_batched_tokens: 32768
 
 command: |
   vllm serve /models/qwen/qwen3.6-27b/fp8 \
@@ -34,4 +34,4 @@ command: |
     --max-num-batched-tokens {max_num_batched_tokens} \
     --enable-chunked-prefill \
     --load-format auto \
-    --speculative-config '{{"method": "dflash", "model": "/models/z-lab/qwen3.6-27b/dflash", "num_speculative_tokens": 15}}'
+    --speculative-config '{{"method": "dflash", "model": "/models/z-lab/qwen3.6-27b/dflash", "num_speculative_tokens": 5}}'

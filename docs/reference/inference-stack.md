@@ -180,7 +180,7 @@ Scaffold: `spark recipe scaffold antirez/deepseek-v4-flash ds4` or auto-detect w
 
 ## OpenCode production profiles (agent coding)
 
-Promoted recipes for **OpenCode** and other long-context agents via the stable gateway (`http://sparky:9000/v1`). Sync client model lists after switching profiles.
+Promoted recipes for **OpenCode**, **Grok**, and other agents via the stable gateway (`http://sparky:9000/v1`). Use model `sparky` (or `sparky-think`) for always-current active; sync client lists after switches only if using concrete served names.
 
 | Profile ID | Served name | Context | Role |
 |------------|-------------|---------|------|
@@ -219,7 +219,9 @@ base_url = "http://sparky:9000/v1"
 Test:
 ```
 curl http://sparky:9000/v1/models
-curl -X POST http://sparky:9000/v1/chat/completions -d '{"model":"qwen-local", ...}'
+# stable current model (recommended for Grok etc.):
+#   model: "sparky"  or "sparky-think"
+curl -X POST http://sparky:9000/v1/chat/completions -d '{"model":"sparky", ...}'
 ```
 
 ### Next for fuller gateway

@@ -194,6 +194,7 @@
               <div class="exp-detail" id="exp-detail" hidden>
                 <div class="exp-detail-title" id="exp-detail-title">—</div>
                 <div class="exp-detail-meta" id="exp-detail-meta">—</div>
+                <div class="exp-spark-warning" id="exp-spark-warning" hidden></div>
                 <div class="exp-variants-wrap">
                   <div class="exp-variants-head">Download options · single DGX Spark (128GB)</div>
                   <div class="exp-variants-scroll">
@@ -370,6 +371,7 @@
       let expSelectedRepo = null;
       let expVariants = [];
       let expSelectedVariantId = null;
+      let expSparkWarning = null;
       let expStatus = null;
       let expBrowseBusy = false;
       let expSearchTimer = null;
@@ -1615,6 +1617,7 @@
 
       function expBadgeHtml(m) {
         const badges = [];
+        if (m.spark_warning) badges.push('<span class="exp-badge incompatible">No Spark</span>');
         if (m.has_gguf) badges.push('<span class="exp-badge gguf">GGUF</span>');
         if (m.has_nvfp4) badges.push('<span class="exp-badge nvfp4">NVFP4</span>');
         if (m.has_moe) badges.push('<span class="exp-badge moe">MoE</span>');
@@ -1641,6 +1644,23 @@
         if (!el) return;
         el.textContent = text || '';
         el.className = 'exp-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function renderExpSparkWarning(warning) {
+        expSparkWarning = warning || null;
+        const el = $('exp-spark-warning');
+        const saveBtn = $('exp-save-explore');
+        if (!el) return;
+        if (!warning || !warning.message) {
+          el.hidden = true;
+          el.innerHTML = '';
+          if (saveBtn) saveBtn.disabled = false;
+          return;
+        }
+        el.hidden = false;
+        el.innerHTML = '<strong>' + escHtml(warning.title || 'Does not work on Spark') + '</strong>'
+          + escHtml(warning.message);
+        if (saveBtn) saveBtn.disabled = true;
       }
 
       function expFormatState(state) {
@@ -1835,7 +1855,8 @@
           const badges = expBadgeHtml(m);
           const released = fmtExpDate(m.release_date);
           const sel = repo === expSelectedRepo ? ' selected' : '';
-          return '<article class="exp-model' + sel + '" data-repo="' + attrEsc(repo) + '" tabindex="0" role="button">'
+          const incompatible = m.spark_warning ? ' exp-model-incompatible' : '';
+          return '<article class="exp-model' + sel + incompatible + '" data-repo="' + attrEsc(repo) + '" tabindex="0" role="button">'
             + '<div class="exp-model-head"><span class="exp-model-repo">' + escHtml(repo) + '</span>'
             + '<span class="exp-model-stats"><span class="exp-model-dl">↓ ' + escHtml(fmtDownloads(m.downloads)) + '</span>'
             + (released ? '<span class="exp-model-date">' + escHtml(released) + '</span>' : '')
@@ -1874,7 +1895,8 @@
         }
         body.innerHTML = expVariants.map((v) => {
           const sel = v.id === expSelectedVariantId ? ' selected' : '';
-          const disabled = (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') ? ' disabled' : '';
+          const blocked = expSparkWarning || v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended';
+          const disabled = blocked ? ' disabled' : '';
           return '<tr class="exp-variant-row' + sel + '" data-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
             + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
             + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
@@ -1931,6 +1953,7 @@
         $('exp-detail-meta').textContent = 'Loading variants…';
         $('exp-hf-link').href = 'https://huggingface.co/' + repo;
         setExpDetailMsg('');
+        renderExpSparkWarning(null);
         expSelectedVariantId = null;
         renderExpVariants([]);
         try {
@@ -1938,6 +1961,7 @@
           const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
           const d = await res.json();
           if (!res.ok) throw new Error(d.error || 'model fetch failed');
+          renderExpSparkWarning(d.spark_warning || null);
           const m = d.model || {};
           const arch = [];
           if (m.has_moe) arch.push('MoE');
@@ -1953,9 +1977,13 @@
           if (!m.accessible) lines.push('access restricted');
           $('exp-detail-meta').textContent = lines.join(' · ') || '—';
           renderExpVariants(d.variants || []);
-          const picks = (d.variants || []).filter((v) => v.spark_fit === 'recommended').length;
-          if (picks) {
-            setExpDetailMsg(picks + ' Spark pick' + (picks === 1 ? '' : 's') + ' — ★ rows are good defaults for 128GB', 'ok');
+          if (d.spark_warning) {
+            setExpDetailMsg(d.spark_warning.title || 'Does not work on Spark', 'err');
+          } else {
+            const picks = (d.variants || []).filter((v) => v.spark_fit === 'recommended').length;
+            if (picks) {
+              setExpDetailMsg(picks + ' Spark pick' + (picks === 1 ? '' : 's') + ' — ★ rows are good defaults for 128GB', 'ok');
+            }
           }
         } catch (e) {
           $('exp-detail-meta').textContent = 'Failed to load model';
@@ -1970,6 +1998,10 @@
       async function expQueueVariant(variantId) {
         const v = expVariantById(variantId);
         if (!v || !expSelectedRepo) return;
+        if (expSparkWarning) {
+          setExpDetailMsg(expSparkWarning.message || 'This model does not work on Spark', 'err');
+          return;
+        }
         if (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') {
           setExpDetailMsg('This variant is not recommended for Spark', 'warn');
           return;
@@ -2063,6 +2095,10 @@
 
       async function expSaveExplore() {
         if (!expSelectedRepo) return;
+        if (expSparkWarning) {
+          setExpDetailMsg(expSparkWarning.message || 'This model does not work on Spark', 'err');
+          return;
+        }
         const v = expVariantById(expSelectedVariantId) || expVariants[0];
         const intent = (v && v.intent) || 'gguf_best';
         try {

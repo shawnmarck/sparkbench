@@ -25,6 +25,7 @@ HF_BIN = ROOT / "venv" / "bin" / "hf"
 CATALOG_FILE = DATA_DIR / "model-catalog.yaml"
 DOWNLOAD_QUEUE_FILE = DATA_DIR / "hf-download-queue.yaml"
 EXPLORE_QUEUE_FILE = DATA_DIR / "hf-explore-queue.yaml"
+EXPLORE_WARNINGS_FILE = DATA_DIR / "spark-explore-warnings.yaml"
 HF_CACHE_FILE = RUN_DIR / "hf-explore-cache.json"
 DOWNLOAD_PID_FILE = RUN_DIR / "hf-download.pid"
 DOWNLOAD_LOG_FILE = LOG_DIR / "hf-download-latest.log"
@@ -983,7 +984,7 @@ def _model_card(m: Any) -> dict[str, Any]:
     created = getattr(m, "created_at", None)
     modified = getattr(m, "lastModified", None)
     traits = _model_traits(repo, tags, pipeline_tag)
-    return {
+    card = {
         "repo": repo,
         "author": getattr(m, "author", None),
         "downloads": getattr(m, "downloads", None),
@@ -995,6 +996,10 @@ def _model_card(m: Any) -> dict[str, Any]:
         **traits,
         "hf_url": f"https://huggingface.co/{repo}" if repo else None,
     }
+    warning = explore_warning_for_repo(repo)
+    if warning:
+        card["spark_warning"] = warning
+    return card
 
 
 def _iso(val: Any) -> str | None:
@@ -1066,6 +1071,42 @@ def save_download_queue(data: dict[str, Any]) -> None:
     save_yaml(DOWNLOAD_QUEUE_FILE, data)
 
 
+def load_explore_warnings() -> dict[str, dict[str, Any]]:
+    data = load_yaml(EXPLORE_WARNINGS_FILE)
+    repos = data.get("repos")
+    if not isinstance(repos, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for repo_id, entry in repos.items():
+        if not isinstance(entry, dict):
+            continue
+        key = str(repo_id).strip()
+        if key:
+            out[key] = entry
+    return out
+
+
+def explore_warning_for_repo(repo_id: str) -> dict[str, Any] | None:
+    repo_id = (repo_id or "").strip()
+    if not repo_id:
+        return None
+    entry = load_explore_warnings().get(repo_id)
+    if not entry:
+        return None
+    return {
+        "status": str(entry.get("status") or "incompatible"),
+        "title": str(entry.get("title") or "Not compatible with Spark"),
+        "message": str(entry.get("message") or "").strip(),
+    }
+
+
+def _ensure_explore_download_allowed(repo: str) -> None:
+    warning = explore_warning_for_repo(repo)
+    if warning:
+        msg = warning.get("message") or warning.get("title") or "incompatible with Spark"
+        raise ValueError(f"blocked: {msg}")
+
+
 def load_explore_queue() -> dict[str, Any]:
     data = load_yaml(EXPLORE_QUEUE_FILE)
     items = data.get("items")
@@ -1121,6 +1162,7 @@ def queue_add_download(
     repo = validate_repo_id(repo)
     if not repo:
         raise ValueError("invalid repo")
+    _ensure_explore_download_allowed(repo)
     plan = plan_download(repo, intent, files=files, inventory_path=inventory_path)
     dest = Path(plan["dest"])
     missing = [f for f in plan["files"] if not (dest / f).is_file()]
@@ -1167,6 +1209,7 @@ def queue_add_explore(
     repo = validate_repo_id(repo)
     if not repo:
         raise ValueError("invalid repo")
+    _ensure_explore_download_allowed(repo)
     item: dict[str, Any] = {
         "id": str(uuid.uuid4()),
         "repo": repo,
@@ -1552,12 +1595,16 @@ def api_dispatch(
             except ValueError:
                 variants = []
             default_plan = variants[0] if variants else None
-            return 200, {
+            warning = explore_warning_for_repo(repo)
+            payload: dict[str, Any] = {
                 "ok": True,
                 "model": meta,
                 "variants": variants,
                 "default_plan": default_plan,
             }
+            if warning:
+                payload["spark_warning"] = warning
+            return 200, payload
         return None
 
     if method != "POST":

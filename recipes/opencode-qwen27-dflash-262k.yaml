@@ -1,5 +1,5 @@
 id: opencode-qwen27-dflash-262k
-name: "OpenCode · Qwen3.6 27B DFlash 262k"
+name: "OpenCode \xB7 Qwen3.6 27B DFlash 262k"
 catalog_id: qwen/qwen3.6-27b
 inventory_path: qwen/qwen3.6-27b
 engine: eugr
@@ -19,7 +19,7 @@ speculative:
   method: dflash
   sidecar_inventory: z-lab/qwen3.6-27b
   sidecar_path: /models/z-lab/qwen3.6-27b/dflash
-  num_speculative_tokens: 15
+  num_speculative_tokens: 5
   target_weight_format: fp8
 context:
   default: 262144
@@ -27,17 +27,21 @@ context:
   native: 262144
   presets:
     agent:
-      label: "OpenCode agent (262k)"
+      label: OpenCode agent (262k)
       ctx: 262144
       kv: fp8
     balanced:
-      label: "Balanced (128k)"
+      label: Balanced (128k)
       ctx: 131072
       kv: fp8
-notes: |
-  Dense Qwen3.6-27B + DFlash speculative decoding for architecture/design agent work.
-  Target fp8 weights + z-lab DFlash sidecar (~29 tok/s bench vs ~8 tok/s baseline).
-  Launch: spark inference up opencode-qwen27-dflash-262k
-  OpenCode: http://sparky:9000/v1 — sync-sparky-models after switch.
-  Non-reasoning: chat_template_kwargs.enable_thinking=false.
-promoted_at: "2026-06-23T00:00:00+00:00"
+notes: "Dense Qwen3.6-27B + DFlash speculative decoding for architecture/design agent\
+  \ work.\nTarget fp8 weights + z-lab DFlash sidecar (block diffusion drafter).\n\
+  HF: z-lab/Qwen3.6-27B-DFlash (drafter only; pair w/ Qwen/Qwen3.6-27B). Paper arXiv:2602.06036.\n\
+  Notes: drafter uses causal SWA (window~2k on most layers); may need vLLM SWA PRs\
+  \ for full.\nUsing num=5 + batch 32k + flashinfer (fp8 KV compat) + custom eugr\
+  \ build. Live metrics (n=5): mean acc len 2.57-3.33 (avg draft rate 31-46%). Quick\
+  \ gen ~14.5 tok/s (128 tok short prompt). Historical full bench 3.7-27+ tok/s depending on ctx fill.\n\
+  Launch: spark inference up opencode-qwen27-dflash-262k\nOpenCode / Grok: http://sparky:9000/v1\
+  \ (model: sparky or qwen3.6-27b-dflash) \u2014 sync after switch if using concrete\
+  \ names.\nNon-reasoning: chat_template_kwargs.enable_thinking=false.\n"
+promoted_at: '2026-06-23T00:00:00+00:00'

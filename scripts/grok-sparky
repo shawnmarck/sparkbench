@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+# grok-sparky — one-shot wrapper for xAI Grok + current Sparky inference.
+#
+# Talks to the gateway, builds a TEMPORARY config (using GROK_HOME) containing
+# the live models with their full served names, then execs grok.
+#
+# Usage:
+#   grok-sparky
+#   grok-sparky "your prompt here"
+#   SPARKY_HOST=sparky grok-sparky -p "headless prompt" --model sparky-qwen3.6-27b-dflash
+#
+#   grok-sparky --print-config     # show what it would inject (for debugging)
+#
+# The temp dir is cleaned on exit. Your real ~/.grok/* state is symlinked in.
+#
+# Install: copy scripts/grok-sparky to ~/bin/grok-sparky on your client machine.
+
+set -euo pipefail
+
+usage() {
+    cat <<EOF
+grok-sparky — launch Grok with live models from Sparky (temp config only)
+
+Usage:
+  grok-sparky [args...]
+  grok-sparky --print-config
+  SPARKY_HOST=... grok-sparky ...
+
+It queries Sparky for the current active profile name (what you see in the inference UI).
+
+Builds a *temporary* config only (GROK_HOME + copy; permanent config untouched).
+
+Uses short keys from the actual served model (e.g. qwen3.6-27b-dflash and -thinking, per your shorter suggestion) so the picker shows visible text (not blank, not "sparky").
+
+Sets `name` to the full profile name ("OpenCode - Qwen3-6 27B DFlash 262k") for tab/completion.
+
+Internal model= "sparky"/"sparky-think".
+
+Sanitizes + nukes cache. Re-run after switches. Temp cleaned on exit.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+PRINT_CONFIG=0
+if [[ "${1:-}" == "--print-config" ]]; then
+    PRINT_CONFIG=1
+    shift
+fi
+
+SPARKY_HOST="${SPARKY_HOST:-sparky}"
+GATEWAY="http://${SPARKY_HOST}:9000/v1"
+
+GROK_BIN="${GROK_BIN:-$HOME/.grok/bin/grok}"
+REAL_GROK_DIR="${GROK_HOME:-$HOME/.grok}"
+REAL_CONFIG="$REAL_GROK_DIR/config.toml"
+
+die() { echo "grok-sparky: $*" >&2; exit 1; }
+
+[[ -x "$GROK_BIN" ]] || die "grok binary not found at $GROK_BIN (set GROK_BIN=...)"
+
+echo "grok-sparky: fetching current profile from Sparky..." >&2
+
+if ! MODELS_JSON=$(curl -fsS --max-time 8 "${GATEWAY}/models" 2>/dev/null); then
+    echo "grok-sparky: warning: could not reach gateway, using stable sparky only" >&2
+    MODELS_JSON='{"data":[{"id":"sparky","name":"sparky (offline)"}]}'
+fi
+
+# Try to get the nice profile name from inference status (what the UI shows)
+STATUS_JSON=$(curl -fsS --max-time 5 "http://${SPARKY_HOST}/api/inference/status" 2>/dev/null || echo '{}')
+PROFILE_NAME=$(python3 -c '
+import sys, json
+try:
+    d = json.loads(sys.stdin.read())
+    active = (d.get("active") or {})
+    name = active.get("name") or active.get("profile") or "Sparky"
+    print(name)
+except:
+    print("Sparky")
+' <<< "$STATUS_JSON" 2>/dev/null || echo "Sparky")
+
+# Sanitized display name for the `name` field (shown in picker where possible, and for tab/completion).
+DISPLAY_NAME=$(python3 -c '
+import sys, re
+name = sys.stdin.read().strip()
+clean = re.sub(r"[^ -~]", "-", name)
+clean = re.sub(r"\.", "-", clean)
+clean = re.sub(r" +", " ", clean).strip()
+print(clean)
+' <<< "$PROFILE_NAME")
+
+# Base served model ID from Sparky (e.g. "qwen3.6-27b-dflash").
+# Use short keys derived from this (as you suggested: qwen3.6-27b* style) so the picker list shows visible text.
+# These are the actual model variants the gateway is serving.
+BASE_ID=$(python3 -c '
+import sys, json
+try:
+    d = json.loads(sys.stdin.read())
+    active = d.get("active") or {}
+    served = active.get("served_name") or active.get("model") or ""
+    if served:
+        print(served)
+        sys.exit(0)
+except:
+    pass
+print("")
+' <<< "$STATUS_JSON")
+
+if [[ -z "$BASE_ID" ]]; then
+    BASE_ID=$(python3 -c '
+import sys, json
+data = json.loads(sys.stdin.read())
+for m in data.get("data", []):
+    mid = str(m.get("id", ""))
+    if mid and mid != "sparky" and not mid.endswith("-think"):
+        print(mid)
+        break
+' <<< "$MODELS_JSON")
+fi
+if [[ -z "$BASE_ID" ]]; then
+    BASE_ID="qwen3.6-27b-dflash"
+fi
+
+# Sanitize for TOML key (replace . and other to -, no spaces/special).
+KEY_MAIN=$(python3 -c '
+import sys, re
+print(re.sub(r"[^a-z0-9]+", "-", sys.stdin.read().strip().lower()).strip("-"))
+' <<< "$BASE_ID")
+KEY_THINK="${KEY_MAIN}-thinking"
+
+TMPDIR=$(mktemp -d /tmp/grok-sparky.XXXXXX)
+cleanup() { rm -rf "$TMPDIR"; }
+trap cleanup EXIT
+
+# --- Build patched config.toml ---
+# 1. Take the real config (if any)
+# 2. Strip any previous [model.sparky*] sections
+# 3. Append fresh ones based on what the gateway is serving right now
+
+if [[ -f "$REAL_CONFIG" ]]; then
+    python3 - "$REAL_CONFIG" > "$TMPDIR/config.toml" <<'PYSTRIP'
+import sys, re
+content = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+# Remove any previous custom Sparky model blocks (old script runs, previous profiles, sparky keys etc.)
+# We match blocks that contain a base_url pointing at the sparky gateway.
+def remove_sparky_blocks(text):
+    # Find all [model.xxx] ... until next [ or end
+    pattern = r'(?ms)(^\s*\[model\.[^\]]+\][^\[]*?base_url\s*=\s*["\'][^"\']*sparky:9000[^"\']*["\'][^\[]*)'
+    return re.sub(pattern, '', text)
+clean = remove_sparky_blocks(content)
+# Also clean any direct sparky keys as fallback
+clean = re.sub(r'(?ms)^\s*\[model\.sparky[^\]]*\].*?(?=^\s*\[|\Z)', '', clean)
+sys.stdout.write(clean.rstrip() + "\n\n")
+PYSTRIP
+else
+    cat > "$TMPDIR/config.toml" <<'EOF'
+# grok-sparky generated base
+[cli]
+EOF
+fi
+
+# Now append the two models.
+# - Use a simple safe slug key (PROFILE_KEY) for the section. The picker list will show this as the label.
+# - Set `name` to the human-readable actual model name (DISPLAY_NAME) so it is available for completion/tab and other displays.
+# This way you see a recognizable actual-model-derived name in the list (not "sparky"), and tab reveals the full human name.
+python3 - "$SPARKY_HOST" "$DISPLAY_NAME" "$KEY_MAIN" "$KEY_THINK" >> "$TMPDIR/config.toml" <<'PYDYN'
+import sys
+
+host = sys.argv[1]
+display_name = sys.argv[2]
+key_main = sys.argv[3]
+key_think = sys.argv[4]
+
+lines = []
+
+# Non-thinking using short key from actual served model (e.g. qwen3.6-27b-dflash)
+# name = the profile name (what you see in Sparky UI)
+lines.append(f'[model.{key_main}]')
+lines.append('model = "sparky"')
+lines.append(f'base_url = "http://{host}:9000/v1"')
+lines.append('api_key = "local"')
+lines.append(f'name = "{display_name}"')
+lines.append("context_window = 262144")
+lines.append("")
+
+# Thinking
+think_name = f"{display_name} (thinking)"
+lines.append(f'[model.{key_think}]')
+lines.append('model = "sparky-think"')
+lines.append(f'base_url = "http://{host}:9000/v1"')
+lines.append('api_key = "local"')
+lines.append(f'name = "{think_name}"')
+lines.append("context_window = 262144")
+lines.append("")
+
+for line in lines:
+    print(line)
+
+PYDYN
+
+# Patch [models] default to the main short key.
+python3 - "$TMPDIR/config.toml" "$KEY_MAIN" > "$TMPDIR/config.toml.tmp" <<'PYPATCH'
+import sys, re
+content = open(sys.argv[1]).read()
+new_default = sys.argv[2]
+content = re.sub(
+    r'(?m)^(\s*default\s*=\s*)["\']?[^"\']*["\']?',
+    lambda m: m.group(1) + f'"{new_default}"',
+    content,
+    count=1
+)
+sys.stdout.write(content)
+PYPATCH
+mv "$TMPDIR/config.toml.tmp" "$TMPDIR/config.toml"
+
+# --- Preserve state by symlinking important directories ---
+for sub in sessions memory skills plugins agents lsp.json; do
+    src="$REAL_GROK_DIR/$sub"
+    if [[ -e "$src" ]]; then
+        ln -s "$src" "$TMPDIR/$sub" 2>/dev/null || true
+    fi
+done
+
+# Nuke the models cache in the temp dir. This forces Grok to re-read the custom model
+# definitions (the actual names) from the temp config.toml instead of using stale cached data.
+rm -f "$TMPDIR/models_cache.json" 2>/dev/null || true
+
+# Debug / inspection mode
+if (( PRINT_CONFIG )); then
+    echo "# === grok-sparky temp config that would be used ==="
+    cat "$TMPDIR/config.toml"
+    echo "# (GROK_HOME would be $TMPDIR)"
+    cleanup
+    trap - EXIT
+    exit 0
+fi
+
+echo "grok-sparky: launching with temp config (GROK_HOME=$TMPDIR)" >&2
+echo "grok-sparky: registered short keys (from actual served model):" >&2
+echo "  - $KEY_MAIN (name: $DISPLAY_NAME)" >&2
+echo "  - $KEY_THINK (name: $DISPLAY_NAME (thinking))" >&2
+echo "grok-sparky: (use tab in picker for full name; internal uses sparky/sparky-think)" >&2
+echo "grok-sparky: live from ${GATEWAY}" >&2
+
+export GROK_HOME="$TMPDIR"
+exec "$GROK_BIN" "$@"

@@ -23,8 +23,7 @@ download_repo() {
 
 download_repo z-lab/Qwen3.6-27B-DFlash /models/z-lab/qwen3.6-27b/dflash
 download_repo rdtand/Qwen3.6-27B-PrismaQuant-5.5bit-vllm /models/rdtand/qwen3.6-27b/prismaquant
-download_repo z-lab/Qwen3.6-35B-A3B-DFlash /models/z-lab/qwen3.6-35b-a3b/dflash
 
 echo
 echo "==> Extras finished $(date -Is)"
-du -sh /models/z-lab/qwen3.6-27b/* /models/rdtand/qwen3.6-27b/* /models/z-lab/qwen3.6-35b-a3b/* 2>/dev/null | sort -hr || true
+du -sh /models/z-lab/qwen3.6-27b/* /models/rdtand/qwen3.6-27b/* 2>/dev/null | sort -hr || true

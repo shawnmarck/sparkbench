@@ -292,7 +292,6 @@ def eugr_qwen_agent_lines(model_dir: Path) -> str:
         "    --tool-call-parser qwen3_xml \\\n"
     )
 
-
 def eugr_language_model_only_line(model_dir: Path) -> str:
     if is_language_model_only(model_dir):
         return "    --language-model-only \\\n"
@@ -1352,6 +1351,7 @@ def cmd_status() -> int:
         f"  tier:   {recipe.get('tier', '')}",
         f"  port:   {recipe.get('port', '')}",
         f"  model:  {recipe.get('served_name', '')}",
+        f"  client: http://sparky:9000/v1  (use model=sparky for Grok etc.)",
     ]
     if active.get("state") and active["state"].get("started_at"):
         lines.append(f"  since:  {active['state']['started_at']}")

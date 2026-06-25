@@ -7,7 +7,8 @@ Forwards to the active engine (eugr/ds4 on :8000 or llama on :8081).
 - Returns 503 + Retry-After while no active or switching.
 - Basic normalization (e.g. ds4 thinking disabled).
 - Streaming-aware forwarding for SSE / completions.
-- Passthrough most /v1/* ; models list adds Qwen fast/thinking variants; chat applies them.
+- Passthrough most /v1/* ; models list adds Qwen fast/thinking variants + stable "sparky" alias; chat applies them.
+- "sparky" (and "sparky-think") in /v1/models and chat always uses the active served model (no auto-switch).
 
 Usage:
   python scripts/spark-inference-gateway.py --serve --port 9000
@@ -51,6 +52,10 @@ ALIASES: dict[str, str] = {
     "qwen3.6-27b-dflash": "opencode-qwen27-dflash-262k",
     "step-3-7-flash": "stepfun-ai-step-3-7-flash-llama",
 }
+
+# Stable model id that always maps to the *currently active* served model (no switch).
+# Clients (e.g. Grok ~/.grok/config.toml) can use a fixed [model.sparky] entry pointing at this.
+SPARKY_MODEL_ID = "sparky"
 
 THINKING_DISABLED_ENGINES = {"ds4"}
 THINKING_VARIANT_SUFFIX = "-think"
@@ -137,16 +142,29 @@ def _thinking_variant_ids(served: str) -> tuple[str, str]:
 
 
 def _resolve_thinking_variant(model: str, served: str | None, engine: str | None) -> tuple[str, bool | None]:
-    """Map gateway model id -> upstream served id + optional enable_thinking override."""
-    model = str(model or "").strip()
-    if not model or not served or not _is_qwen_active(engine, served):
-        return model, None
+    """Map gateway model id -> upstream served id + optional enable_thinking override.
+
+    Supports the stable "sparky" / "sparky-think" / "sparky-fast" ids in addition
+    to concrete served names and their -think/-fast variants.
+    """
+    m = str(model or "").strip()
+    if not m or not served or not _is_qwen_active(engine, served):
+        return m, None
     fast_id, think_id = _thinking_variant_ids(served)
-    if model == think_id:
-        return served, True
-    if model == fast_id:
+    ml = m.lower()
+    if ml in ("sparky", "sparky-fast") or m == served or m == fast_id:
         return served, False
-    return model, None
+    if ml == "sparky-think" or m == think_id:
+        return served, True
+    if ml == think_id.lower():
+        return served, True
+    if ml == fast_id.lower():
+        return served, False
+    if m == think_id:
+        return served, True
+    if m == fast_id:
+        return served, False
+    return m, None
 
 
 def _apply_thinking_variant(payload: dict[str, Any], orig_model: str, served: str | None, engine: str | None) -> dict[str, Any]:
@@ -202,6 +220,59 @@ def _expand_models_payload(payload: dict[str, Any], served: str | None, engine: 
             seen.add(mid)
     payload = dict(payload)
     payload["data"] = out
+    return payload
+
+
+def _inject_sparky_alias(
+    payload: dict[str, Any], served: str | None, profile: str | None
+) -> dict[str, Any]:
+    """Ensure a stable 'sparky' entry is present in /v1/models pointing at the active model.
+
+    This allows Grok (and other static-config clients) to configure a single
+    [model.sparky] entry using model="sparky" that always resolves to whatever
+    profile is currently loaded on the gateway.
+    """
+    if not served:
+        return payload
+    data = payload.get("data")
+    if not isinstance(data, list):
+        data = []
+    # Already present?
+    for item in data:
+        if isinstance(item, dict) and str(item.get("id") or "") == SPARKY_MODEL_ID:
+            return payload
+
+    # Clone metadata from any entry (prefer one whose id matches served or a fast variant)
+    base: dict[str, Any] | None = None
+    fast_id, think_id = _thinking_variant_ids(served) if served else (None, None)
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        mid = str(item.get("id") or "")
+        if mid == served or mid == fast_id or mid == think_id or served in mid:
+            base = item
+            break
+    if base is None:
+        for item in data:
+            if isinstance(item, dict):
+                base = item
+                break
+
+    entry: dict[str, Any] = dict(base) if base else {
+        "id": SPARKY_MODEL_ID,
+        "object": "model",
+        "created": 0,
+        "owned_by": "spark",
+    }
+    entry = dict(entry)
+    entry["id"] = SPARKY_MODEL_ID
+    entry["name"] = f"sparky ({served})"
+    if profile:
+        entry["spark_profile"] = profile
+    # Put the stable alias first so it is prominent for clients that list models
+    new_data: list[Any] = [entry] + [d for d in data]
+    payload = dict(payload)
+    payload["data"] = new_data
     return payload
 
 
@@ -426,6 +497,7 @@ class Handler(BaseHTTPRequestHandler):
                 payload = json.loads(resp.read().decode())
             if isinstance(payload, dict):
                 payload = _expand_models_payload(payload, served, engine)
+                payload = _inject_sparky_alias(payload, served, prof)
             body = json.dumps(payload).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -538,6 +610,7 @@ def main() -> int:
     print(f"spark-inference-gateway listening on http://{args.host}:{args.port}/v1")
     print(f"  Stable client endpoint: http://sparky:{args.port}/v1")
     print(f"  Aliases configured: {list(ALIASES.keys())}")
+    print(f"  Stable model ids (always current): {SPARKY_MODEL_ID}, {SPARKY_MODEL_ID}-think, {SPARKY_MODEL_ID}-fast")
     print("  Forwarding to active engine per spark inference state.")
     server.serve_forever()
     return 0

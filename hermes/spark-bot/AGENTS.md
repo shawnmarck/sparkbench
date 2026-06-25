@@ -70,17 +70,52 @@ Tokens persist in `/opt/hermes/data/spark-bot/data/auth.json`.
 
 ## Grok → Sparky (local inference)
 
-When Model Lab has a profile loaded, point Grok at the gateway (not raw vLLM):
+### Recommended: use the `grok-sparky` wrapper (temp config)
 
-```toml
-# ~/.grok/config.toml
-[model.sparky-agentworld]
-model = "qwen-agentworld-35b-a3b"   # must match active served_name
-base_url = "http://sparky:9000/v1"
-api_key = "local"
-context_window = 256000
+Copy `scripts/grok-sparky` from this repo onto your client machine and put it in `$PATH` (e.g. `~/bin/grok-sparky`).
+
+```bash
+grok-sparky                  # starts Grok pointed at the current Sparky profile
+grok-sparky "do the thing"   # headless + prompt
+SPARKY_HOST=192.168.0.101 grok-sparky
 ```
 
-Active profile must expose Qwen tool-call flags (`--enable-auto-tool-choice`, `--tool-call-parser qwen3_xml`) or Grok agent turns fail with 400. See `docs/runbooks/new-model-golden-benchmark.md`.
+What it does:
+- Fetches the current active profile name (exactly what you see in the inference UI).
+- Builds a **temporary** config using `GROK_HOME=/tmp/grok-sparky.$$` (your permanent config is untouched).
+- Creates two entries with safe ASCII keys derived from the real model + `name` set to a sanitized version of the actual profile name ("OpenCode - Qwen3.6 27B DFlash 262k" etc.). We sanitize special chars (· etc.) because they can cause blank entries or parsing problems in Grok's model picker.
+- The picker will show the real Sparky model name (not "sparky").
+- Gateway does the thinking/non-thinking switch based on the model id sent.
+- Symlinks your data and cleans the temp dir after exit.
+
+Re-run after profile switches.
+
+### Manual / persistent alternative
+
+If you prefer not using the wrapper, add these two entries to `~/.grok/config.toml`:
+
+```toml
+[model.sparky]
+model = "sparky"
+base_url = "http://sparky:9000/v1"
+api_key = "local"
+name = "Sparky (current profile)"
+context_window = 262144
+
+[model.sparky-think]
+model = "sparky-think"
+base_url = "http://sparky:9000/v1"
+api_key = "local"
+name = "Sparky (current profile, thinking)"
+context_window = 262144
+```
+
+The gateway maps `model="sparky"` → normal and `model="sparky-think"` → thinking.
+
+### Switching profiles
+
+After `spark inference up <profile>`, just run `grok-sparky` again. It will pick up the new profile name from the inference status and give you clean entries matching the UI.
+
+Active profile must expose Qwen tool-call flags (`--enable-auto-tool-choice`, `--tool-call-parser qwen3_xml`) when using Qwen-family models, or Grok agent turns fail with 400. See `docs/runbooks/new-model-golden-benchmark.md`.
 
 Do **not** restart inference from Hermes chat unless explicitly asked.

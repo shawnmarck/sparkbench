@@ -675,6 +675,7 @@
           infFilterQ,
           [...infFilterChips].sort().join(','),
           infGroupByFamily ? 'family' : 'flat',
+          [infCtxSelection.preset, infCtxSelection.ctx, infCtxSelection.kv].join(':'),
           parts.join('|'),
         ].join(';');
       }
@@ -2517,15 +2518,18 @@
           kv: btn.getAttribute('data-ctx-kv') || 'auto',
         };
         renderInfContextPanel();
+        rerenderInfProfiles();
       });
       $('inf-ctx-custom').addEventListener('input', () => {
         infCtxSelection.preset = null;
         const v = parseInt($('inf-ctx-custom').value, 10);
         infCtxSelection.ctx = Number.isNaN(v) ? null : v;
+        rerenderInfProfiles();
       });
       $('inf-ctx-kv').addEventListener('change', () => {
         infCtxSelection.kv = $('inf-ctx-kv').value;
         infCtxSelection.preset = null;
+        rerenderInfProfiles();
       });
 
       $('inf-switch').addEventListener('click', infSwitch);

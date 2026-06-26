@@ -1,3 +1,5 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
 :root { color-scheme: dark; --bg: #0f1117; --card: #1a1d27; --text: #e6e6e6; --muted: #9aa0a6; --accent: #76b900; --border: #2a2f3a; --ok: #6bc46d; --warn: #e8b84a; --down: #c85c5c; --nav-h: 52px; }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -550,3 +552,104 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
   padding: 1rem !important; text-align: center; color: var(--muted);
   font-family: ui-monospace, monospace; font-size: .72rem;
 }
+
+body { overflow: visible; display: block; padding: 1.4rem; }
+.render-wrap { max-width: 980px; margin: 0 auto; }
+.note { color: var(--muted); font-size: .72rem; margin-bottom: .8rem; font-family: ui-monospace,monospace; }
+</style></head><body>
+<div class="render-wrap">
+  <div class="note">System tab &mdash; rendered from <code>/api/activity?window=1h</code> fixture (TASK-001)</div>
+  <div class="card">
+    <div class="section-title">Client activity</div>
+    <div class="status-row" id="activity-summary"></div>
+    <div class="activity-recent-wrap" id="activity-recent-wrap">
+      <div class="activity-recent-head">Recent sessions</div>
+      <div class="activity-table-scroll" id="activity-table-scroll">
+        <table class="activity-table" id="activity-table">
+          <thead><tr>
+            <th>Time</th><th>App</th><th>IP</th><th>Model</th><th>Engine</th>
+            <th>Tok/s</th><th>Tokens</th><th>Ms</th><th>Stream</th><th>Status</th>
+          </tr></thead>
+          <tbody id="activity-tbody">
+            <tr><td colspan="10" class="activity-empty">No activity data &mdash; API starting up</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:1.4rem">Client activity &mdash; API offline (graceful empty state)</div>
+    <div class="status-row" id="activity-summary-off"></div>
+    <div class="activity-recent-wrap" id="activity-recent-wrap-off">
+      <div class="activity-recent-head">Recent sessions</div>
+      <div class="activity-table-scroll">
+        <table class="activity-table"><thead><tr>
+          <th>Time</th><th>App</th><th>IP</th><th>Model</th><th>Engine</th>
+          <th>Tok/s</th><th>Tokens</th><th>Ms</th><th>Stream</th><th>Status</th>
+        </tr></thead>
+        <tbody id="activity-tbody-off">
+          <tr><td colspan="10" class="activity-empty">No activity data &mdash; API offline</td></tr>
+        </tbody>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var DATA = {"summary": {"active_clients": 2, "sessions_1h": 5, "sessions_24h": 11, "avg_tok_s": 147.5}, "active": [{"ip": "10.0.0.7", "app": "opencode", "last_seen": 1782430946.871213}, {"ip": "10.0.0.1", "app": "hermes", "last_seen": 1782430826.871213}], "recent": [{"id": "a1", "at": "2026-06-25T23:42:26Z", "client_ip": "10.0.0.7", "app": "opencode", "model": "qwen3-6-27b", "profile": "qwen-dflash-262k", "engine": "eugr", "stream": true, "status": "200", "duration_ms": 1820, "prompt_tokens": 1240, "completion_tokens": 512, "tok_s": 281.3}, {"id": "a2", "at": "2026-06-25T23:40:26Z", "client_ip": "10.0.0.1", "app": "hermes", "model": "hermes-14b", "profile": "hermes-4-14b", "engine": "eugr", "stream": true, "status": "200", "duration_ms": 4200, "prompt_tokens": 880, "completion_tokens": 640, "tok_s": 152.4}, {"id": "a3", "at": "2026-06-25T23:35:26Z", "client_ip": "10.0.0.2", "app": "open-webui", "model": "sparky", "profile": "qwen-dflash-262k", "engine": "vllm", "stream": false, "status": "200", "duration_ms": 980, "prompt_tokens": 60, "completion_tokens": 142, "tok_s": 144.9}, {"id": "a4", "at": "2026-06-25T23:31:26Z", "client_ip": "10.0.0.1", "app": "hermes", "model": "hermes-14b", "profile": "hermes-4-14b", "engine": "eugr", "stream": true, "status": "200", "duration_ms": 350, "prompt_tokens": 12, "completion_tokens": 0, "tok_s": 0}, {"id": "a5", "at": "2026-06-25T23:21:26Z", "client_ip": "10.0.0.3", "app": "script", "model": "sparky", "profile": "qwen-dflash-262k", "engine": "llamacpp", "stream": false, "status": "500", "duration_ms": 12, "prompt_tokens": 0, "completion_tokens": 0, "tok_s": 0}]};
+function $(id) { return document.getElementById(id); }
+function escHtml(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c) {
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function escAttr(s) { return escHtml(s); }
+function fmtActivityTokens(n) {
+  if (n == null || Number(n) === 0) return '0';
+  var v = Number(n);
+  if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+  if (v >= 1000) return (v / 1000).toFixed(0) + 'k';
+  return String(v);
+}
+function renderClientActivity(data, idp) {
+  var p = idp || '';
+  var sumEl = $('activity-summary'+p);
+  var bodyEl = $('activity-tbody'+p);
+  var wrapEl = $('activity-recent-wrap'+p);
+  if (!data || !data.summary) {
+    sumEl.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Activity API unavailable</span>';
+    bodyEl.innerHTML = '<tr><td colspan="10" class="activity-empty">No activity data &mdash; API offline</td></tr>';
+    if (wrapEl) wrapEl.style.display = 'none';
+    return;
+  }
+  var s = data.summary;
+  sumEl.innerHTML =
+    '<span class="pill up"><span class="pill-dot"></span>Active clients: ' + (s.active_clients || 0) + '</span>'
+    + '<span class="pill"><span class="pill-dot"></span>Sessions 1h: ' + (s.sessions_1h || 0)
+    + ' &middot; 24h: ' + (s.sessions_24h || 0) + '</span>'
+    + '<span class="pill"><span class="pill-dot"></span>Avg tok/s: ' + (s.avg_tok_s != null ? s.avg_tok_s : '—') + '</span>';
+  var rows = data.recent || [];
+  if (wrapEl) wrapEl.style.display = '';
+  if (!rows.length) { bodyEl.innerHTML = '<tr><td colspan="10" class="activity-empty">No sessions yet</td></tr>'; return; }
+  bodyEl.innerHTML = rows.map(function (r) {
+    var t = (r.at || '').slice(11, 19);
+    var app = r.app || '?'; var ip = r.client_ip || '?';
+    var model = r.model || '?'; var eng = r.engine || '?';
+    var tokS = r.tok_s != null ? Math.round(r.tok_s) + ' tok/s' : '—';
+    var totalT = fmtActivityTokens((r.prompt_tokens || 0) + (r.completion_tokens || 0));
+    var dur = r.duration_ms != null ? r.duration_ms + 'ms' : '—';
+    var stream = r.stream ? 'yes' : 'no';
+    var status = r.status || '—';
+    var statusCls = parseInt(status) >= 400 ? ' class="activity-status-err"' : '';
+    return '<tr>'
+      + '<td class="activity-time">' + escHtml(t) + '</td>'
+      + '<td><span class="activity-app activity-app-' + escHtml(app) + '">' + escHtml(app) + '</span></td>'
+      + '<td class="activity-ip">' + escHtml(ip) + '</td>'
+      + '<td class="activity-model" title="' + escAttr(r.profile || '') + '">' + escHtml(model) + '</td>'
+      + '<td>' + escHtml(eng) + '</td>'
+      + '<td>' + escHtml(tokS) + '</td>'
+      + '<td>' + escHtml(totalT) + '</td>'
+      + '<td>' + escHtml(dur) + '</td>'
+      + '<td>' + escHtml(stream) + '</td>'
+      + '<td' + statusCls + '>' + escHtml(status) + '</td>'
+      + '</tr>';
+  }).join('');
+}
+renderClientActivity(DATA, '');
+renderClientActivity(null, '-off');
+</script>
+</body></html>

@@ -138,6 +138,7 @@ Emergency stash on sparky from a deploy: `ssh sparky 'cd /opt/spark && git stash
 | Metrics API | http://sparky/api/gpu |
 | Inference API | http://sparky/api/inference/status (nginx → :8767) |
 | **Inference gateway** | http://sparky:9000/v1 (OpenAI-compatible; aliases + auto-switch) |
+| Activity API | http://sparky/api/activity (nginx → :8769; per-client summary + recent sessions) |
 | Shelf API | http://sparky/api/shelf/status |
 | vLLM | http://sparky:8000/v1 |
 | llama.cpp | http://sparky:8081/v1 |

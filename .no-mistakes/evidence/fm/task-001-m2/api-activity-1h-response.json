@@ -1,0 +1,85 @@
+{
+  "summary": {
+    "active_clients": 2,
+    "sessions_1h": 5,
+    "sessions_24h": 7,
+    "avg_tok_s": 147.5
+  },
+  "active": [
+    {
+      "ip": "10.0.0.7",
+      "app": "opencode",
+      "last_seen": 1782430856.0
+    },
+    {
+      "ip": "10.0.0.1",
+      "app": "hermes",
+      "last_seen": 1782430796.0
+    }
+  ],
+  "recent": [
+    {
+      "id": "r0",
+      "at": "2026-06-25T23:40:56Z",
+      "client_ip": "10.0.0.7",
+      "app": "opencode",
+      "model": "m",
+      "stream": false,
+      "status": "200",
+      "duration_ms": 800,
+      "prompt_tokens": 4,
+      "completion_tokens": 0
+    },
+    {
+      "id": "r1",
+      "at": "2026-06-25T23:39:56Z",
+      "client_ip": "10.0.0.1",
+      "app": "hermes",
+      "model": "m",
+      "tok_s": 150.0,
+      "stream": true,
+      "status": "200",
+      "duration_ms": 1000,
+      "prompt_tokens": 5,
+      "completion_tokens": 150
+    },
+    {
+      "id": "r2",
+      "at": "2026-06-25T23:31:56Z",
+      "client_ip": "10.0.0.2",
+      "app": "open-webui",
+      "model": "m",
+      "tok_s": 145.0,
+      "stream": false,
+      "status": "200",
+      "duration_ms": 2000,
+      "prompt_tokens": 5,
+      "completion_tokens": 290
+    },
+    {
+      "id": "r3",
+      "at": "2026-06-25T23:01:56Z",
+      "client_ip": "10.0.0.1",
+      "app": "hermes",
+      "model": "m",
+      "tok_s": 0,
+      "stream": true,
+      "status": "200",
+      "duration_ms": 500,
+      "prompt_tokens": 0,
+      "completion_tokens": 0
+    },
+    {
+      "id": "r4",
+      "at": "2026-06-25T22:46:56Z",
+      "client_ip": "10.0.0.3",
+      "app": "script",
+      "model": "m",
+      "stream": false,
+      "status": "500",
+      "duration_ms": 10,
+      "prompt_tokens": 0,
+      "completion_tokens": 0
+    }
+  ]
+}

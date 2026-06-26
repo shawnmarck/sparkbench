@@ -179,10 +179,11 @@ Prefer HTTP when the agent has no shell or needs JSON without parsing tables:
 | Recipe lifecycle | `GET/POST http://sparky/api/inference/recipes/*` (scaffold, testing, promote) |
 | Log tail | `GET http://sparky/api/inference/logs?profile=<id>` |
 | **OpenAI inference (stable)** | `GET/POST http://sparky:9000/v1/*` · `spark gateway --list-aliases` |
+| Client activity | `GET http://sparky/api/activity` (summary + recent sessions; `?window=1h\|24h`) |
 | Shelf job status | `GET http://sparky/api/shelf/status` or `spark shelf status` |
 | Portal inventory | `GET http://sparky/models.json` (after `spark models inventory`) |
 
-Internal listener: `127.0.0.1:8767` (`spark-inference-api.service`). Portal nginx proxies `/api/inference/*` to it.
+Internal listeners: `127.0.0.1:8767` (`spark-inference-api.service`, proxied as `/api/inference/*`) and `127.0.0.1:8769` (`spark-client-activity.service`, proxied as `/api/activity`).
 
 Gateway/agents mapping many model names → one profile: see `docs/reference/inference-stack.md` (503 + retry during cold start).
 

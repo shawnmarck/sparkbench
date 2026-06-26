@@ -1271,16 +1271,19 @@ def queue_add_explore(
     dedup_key = (repo, intent, inv or "")
     kept = []
     replaced_id = None
+    replaced_added_at = None
     for existing in items:
         ex_inv = str(existing.get("inventory_path") or "").strip("/")
         ex_key = (existing.get("repo", ""), existing.get("intent", ""), ex_inv)
         if ex_key == dedup_key:
             replaced_id = existing.get("id")
+            replaced_added_at = existing.get("added_at")
         else:
             kept.append(existing)
     if replaced_id:
         item["id"] = replaced_id  # keep stable id so UI selections survive
-        item["added_at"] = utc_now()
+        if replaced_added_at:
+            item["added_at"] = replaced_added_at
     data["items"] = kept + [item]
     save_explore_queue(data)
     return item

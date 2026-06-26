@@ -2225,20 +2225,25 @@
       async function expShortlistBulkDownload() {
         const ids = [...expShortlistSelected];
         if (!ids.length) return;
-        const warnItems = ids.map((id) => expShortlistItems.find((i) => i.id === id))
-          .filter((i) => i && (i.snapshot || {}).spark_fit === 'too_large');
-        if (warnItems.length) {
-          setExpMsg('Warning: ' + warnItems.length + ' selected item(s) exceed Spark capacity', 'warn');
-        }
+        const all = ids.map((id) => expShortlistItems.find((i) => i.id === id)).filter(Boolean);
+        const skipped = all.filter((i) => {
+          const fit = (i.snapshot || {}).spark_fit;
+          return fit === 'too_large' || fit === 'not_recommended';
+        });
+        const queueIds = all.filter((i) => skipped.indexOf(i) === -1).map((i) => i.id);
         let queued = 0;
-        for (const id of ids) {
+        for (const id of queueIds) {
           try {
             const res = await fetch('/api/hf/queue/' + encodeURIComponent(id) + '/download', { method: 'POST' });
             if (res.ok) queued++;
           } catch (_) { /* ignore */ }
         }
         expShortlistSelected.clear();
-        setExpMsg('Queued ' + queued + ' download' + (queued === 1 ? '' : 's'));
+        const parts = ['Queued ' + queued + ' download' + (queued === 1 ? '' : 's')];
+        if (skipped.length) {
+          parts.push('skipped ' + skipped.length + ' not Spark-ready: ' + skipped.map((i) => i.repo).join(', '));
+        }
+        setExpMsg(parts.join(' · '), skipped.length ? 'warn' : '');
         expTick();
       }
 
@@ -2461,36 +2466,6 @@
             + '<td><button type="button" class="exp-var-dl" data-variant-dl="' + attrEsc(v.id) + '"' + disabled
             + '>Download</button></td></tr>';
         }).join('');
-      }
-
-      async function expOpenRepo(repo) {
-        if (!repo || !onExplore) return;
-        const qEl = $('exp-q');
-        if (qEl) qEl.value = repo;
-        $('exp-results-label').textContent = 'Search: ' + repo;
-        $('exp-results').innerHTML = '<div class="exp-empty">Loading…</div>';
-        try {
-          const filter = expFilterQuery();
-          const res = await fetch(
-            '/api/hf/search?q=' + encodeURIComponent(repo) + '&limit=30&filter=' + encodeURIComponent(filter),
-            { cache: 'no-store' }
-          );
-          const d = await res.json();
-          if (!res.ok) throw new Error(d.error || 'search failed');
-          expResults = d.models || [];
-          if (!expResults.some((m) => m.repo === repo)) {
-            expResults.unshift({ repo: repo });
-          }
-          renderExpResults(expResults);
-          await expShowDetail(repo);
-          const card = document.querySelector('.exp-model[data-repo="' + CSS.escape(repo) + '"]');
-          if (card && card.scrollIntoView) {
-            requestAnimationFrame(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
-          }
-        } catch (e) {
-          $('exp-results').innerHTML = '<div class="exp-empty">' + escHtml(String(e.message || e)) + '</div>';
-          setExpMsg(String(e.message || e), 'err');
-        }
       }
 
       async function expShowDetail(repo) {

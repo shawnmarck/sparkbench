@@ -1,0 +1,93 @@
+{
+  "flat_view": {
+    "headCells": [
+      "Recipe",
+      "Model path",
+      "Engine",
+      "Tier",
+      "Lifecycle",
+      "Ctx",
+      "Bench",
+      "Status",
+      ""
+    ],
+    "rowCount": 6,
+    "summary": "Showing 6 of 8",
+    "groupActionsHidden": true,
+    "activeRowName": "qwen3-coder-sled",
+    "activeRowHasActiveLabel": true,
+    "draftRowCount": 0,
+    "flatToggleActive": true,
+    "familyToggleActive": false,
+    "profilesContainerClass": "inf-grid-inventory"
+  },
+  "family_view": {
+    "groupCount": 3,
+    "groupNames": [
+      "DeepSeek",
+      "Gemma",
+      "Qwen"
+    ],
+    "groupCounts": [
+      "(2)",
+      "(1)",
+      "(3)"
+    ],
+    "groupActionsHidden": false,
+    "rowCount": 6,
+    "detailsCount": 3,
+    "flatToggleActive": false,
+    "familyToggleActive": true
+  },
+  "ctx_override": {
+    "selectedProfile": "qwen3-coder-llamacpp",
+    "ctxOverrideCellPresent": true,
+    "ctxOverrideText": "128k",
+    "selectedRowCells": [
+      {
+        "cls": "inf-gcell g-name",
+        "text": "qwen3-coder-llamacppselected"
+      },
+      {
+        "cls": "inf-gcell",
+        "text": "qwen3-coder-llamacpp"
+      },
+      {
+        "cls": "inf-gcell",
+        "text": "GGUF"
+      },
+      {
+        "cls": "inf-gcell",
+        "text": "fast"
+      },
+      {
+        "cls": "inf-gcell",
+        "text": "testing"
+      },
+      {
+        "cls": "inf-gcell g-ctx-override",
+        "text": "128k"
+      },
+      {
+        "cls": "inf-gcell g-bench",
+        "text": "71 tok/s"
+      },
+      {
+        "cls": "inf-gcell",
+        "text": "idle"
+      },
+      {
+        "cls": "inf-gcell",
+        "text": ""
+      }
+    ],
+    "summary": "Showing 6 of 8",
+    "selectValue": "qwen3-coder-llamacpp",
+    "customCtxInput": "131072",
+    "panelInfo": {
+      "panelVisible": true,
+      "hasInput": true
+    }
+  },
+  "viewMode_persisted_after_family_toggle": "{\"q\":\"\",\"chips\":[\"switchable\"],\"viewMode\":\"family\"}"
+}

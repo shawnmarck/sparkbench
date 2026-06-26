@@ -1217,7 +1217,7 @@
         const snap = infStatusSnapshot(infStatus);
         const prev = lastInfSnapshot;
         lastInfSnapshot = snap;
-        if (prev && snap !== prev && (selectedModelId || highlightPath) && !document.hidden) refreshPane();
+        if (prev && snap !== prev && (selectedModelId || highlightPath) && !document.hidden && !paneInputFocused()) refreshPane();
       } catch (_) {}
     }
 

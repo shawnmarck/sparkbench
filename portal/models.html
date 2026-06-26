@@ -30,6 +30,7 @@
       --warn: #e8b84a;
       --ok: #6bc46d;
       --dl: #6eb5ff;
+      --down: #e85858;
       --control-bg: #141820;
       --control-bg-hover: #171b24;
       --control-text: #c5cad3;
@@ -42,7 +43,7 @@
     body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; }
     body.embedded .portal-link, body.embedded .page-head { display: none; }
     body.embedded main { padding-top: .85rem; }
-    main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    main { max-width: 1600px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
     a { color: var(--accent); }
     .top { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1.25rem; }
     h1 { font-size: 1.5rem; margin: 0; }
@@ -72,10 +73,7 @@
       border-color: rgba(255, 255, 255, 0.11);
       box-shadow: none;
     }
-    select option, select optgroup {
-      background: var(--menu-bg);
-      color: var(--control-text);
-    }
+    select option, select optgroup { background: var(--menu-bg); color: var(--control-text); }
     input[type=search] { min-width: 180px; flex: 1; }
     .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; width: 100%; }
     .chip-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-right: .15rem; }
@@ -88,162 +86,176 @@
     .chip.active.spark-pending-delete { border-color: #5a2a2a; background: #241010; color: #e87878; }
     .meta-warn { color: var(--warn); }
     .meta-danger { color: var(--down); }
-    .meta { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+    .meta { color: var(--muted); font-size: .82rem; margin-bottom: .65rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
     .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-    .model-list { display: flex; flex-direction: column; gap: .35rem; }
-    .model-family-groups { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
-    .model-family-group { border: 1px solid var(--border); border-radius: 10px; background: #0a0c10; overflow: hidden; }
-    .model-family-group summary {
-      cursor: pointer; list-style: none; display: flex; align-items: center; gap: .4rem;
-      padding: .38rem .55rem; font-size: .72rem; color: var(--muted); font-family: ui-monospace, monospace;
-      user-select: none;
-    }
-    .model-family-group summary::-webkit-details-marker { display: none; }
-    .model-family-group summary::before { content: '▸'; color: var(--accent); font-size: .62rem; transition: transform .12s; flex-shrink: 0; }
-    .model-family-group[open] summary::before { transform: rotate(90deg); }
-    .model-family-group-name { color: #c5cdd8; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .model-family-group-meta { color: var(--muted); font-size: .64rem; flex-shrink: 0; opacity: .85; }
-    .model-family-group-count { color: var(--muted); font-size: .66rem; flex-shrink: 0; margin-left: auto; }
-    .model-family-group.has-active { border-color: #3a4a2a; }
-    .model-family-group.has-active summary .model-family-group-name { color: var(--accent); }
-    .model-family-group.has-local summary .model-family-group-name { color: #d0d8e0; }
-    .model-family-group-active-tag { color: var(--ok); font-size: .64rem; font-weight: 600; flex-shrink: 0; }
-    .model-group-rows { display: flex; flex-direction: column; gap: .28rem; padding: .2rem 0 .32rem; }
-    .model-row { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .model-row.nested { border-radius: 8px; }
-    .model-row.pending-delete { border-left: 3px solid var(--down); }
-    .model-row.open { border-color: #3a4a3a; }
-    .model-inventory {
-      --rail-spark: 4.4rem;
-      --rail-dl: 5.4rem;
-      --rail-arch: 3.5rem;
-      --rail-engine: 3.6rem;
-      --rail-inf: 7.2rem;
-      --rail-bench: 3.4rem;
-      --rail-flag: 1.8rem;
-      --rail-template: var(--rail-spark) var(--rail-dl) var(--rail-arch) var(--rail-engine) var(--rail-inf) var(--rail-bench) var(--rail-flag);
-    }
-    .model-grid-head {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) var(--rail-template) 1.1rem;
-      gap: 0 .45rem;
-      padding: .2rem .85rem .38rem;
-      font-size: .6rem;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-      margin-bottom: .3rem;
-      font-family: ui-monospace, monospace;
-    }
-    .grid-head-title { min-width: 0; }
-    .grid-head-rail { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .grid-head-rail.bench { text-align: right; }
-    .grid-head-rail.flag { text-align: center; }
-    .grid-head-spacer { width: 1.1rem; }
-    .model-rows { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
-    .row-main {
-      width: 100%; display: grid;
-      grid-template-columns: minmax(0, 1fr) var(--rail-template) 1.1rem;
-      gap: 0 .45rem; align-items: center;
-      padding: .58rem .85rem; background: transparent; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
-    }
-    .row-main:hover { background: #12151c; }
-    .row-title { min-width: 0; grid-column: 1; }
-    .row-rail { display: contents; }
-    .rail-cell {
-      display: flex; align-items: center; min-width: 0; font-size: .68rem; line-height: 1.2;
-    }
-    .rail-cell.bench { justify-content: flex-end; font-family: ui-monospace, monospace; color: #9ec8ff; }
-    .rail-cell.flag { justify-content: center; }
-    .rail-cell .badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: .1rem .32rem; font-size: .66rem; }
-    .rail-empty { color: var(--muted); opacity: .4; font-family: ui-monospace, monospace; }
-    .rail-flag-del { color: #e87878; font-size: .72rem; font-weight: 700; }
-    .row-main > .chevron { grid-column: -1; justify-self: center; }
-    .row-title strong { display: block; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .row-lab {
-      display: inline-block; font-size: .66rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-      color: var(--accent); border: 1px solid #3a4a2a; background: #141a10; border-radius: 4px;
-      padding: .04rem .32rem; margin-right: .4rem; vertical-align: middle;
-    }
-    .row-variant { color: #c5cdd8; }
-    .row-path { display: block; font-size: .74rem; color: var(--muted); font-family: ui-monospace, monospace; margin-top: .12rem; }
-    .row-path-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; opacity: .65; margin-right: .35rem; }
-    .row-meta { grid-column: 1 / -1; font-size: .76rem; color: var(--muted); font-family: ui-monospace, monospace; display: flex; flex-wrap: wrap; gap: .65rem 1rem; margin-top: .15rem; }
-    .row-meta b { color: #c5cdd8; font-weight: 500; }
-    .chevron { color: var(--muted); font-size: .85rem; transition: transform .15s; }
-    .model-row.open .chevron { transform: rotate(90deg); }
-    .row-detail { display: none; padding: 0 .85rem .85rem; border-top: 1px solid var(--border); }
-    .model-row.open .row-detail { display: block; }
-    .badge { font-size: .7rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
-    .badge.cap { border-color: #3a4a2a; color: #b8d88a; }
-    .badge.hf-task { border-color: #3a4a5a; color: #9ec8ff; font-weight: 500; }
-    .tag-block { padding: .6rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); font-size: .82rem; line-height: 1.45; }
-    .tag-line { display: flex; gap: .55rem; align-items: baseline; margin-top: .35rem; }
-    .tag-line:first-child { margin-top: 0; }
-    .tag-line-label { flex-shrink: 0; width: 5.5rem; font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    .tag-line-val { color: #c8cdd4; min-width: 0; }
-    .tag-more { margin-top: .45rem; font-size: .76rem; color: var(--muted); line-height: 1.4; }
-    .tag-more summary { cursor: pointer; color: #9aa0a6; list-style: none; }
-    .tag-more summary::-webkit-details-marker { display: none; }
-    .tag-more summary::before { content: '▸ '; font-size: .7rem; }
-    .tag-more[open] summary::before { content: '▾ '; }
+
+    /* tag picker */
     .tag-picker { position: relative; }
     .tag-picker-btn {
-      min-width: 7.5rem;
-      text-align: left;
-      background: var(--control-bg);
-      border: 1px solid var(--control-border);
-      color: var(--control-text);
-      border-radius: 8px;
-      padding: .5rem .75rem;
-      font: inherit;
-      font-size: .9rem;
-      cursor: pointer;
-      transition: background .15s, border-color .15s;
+      min-width: 7.5rem; text-align: left; background: var(--control-bg); border: 1px solid var(--control-border);
+      color: var(--control-text); border-radius: 8px; padding: .5rem .75rem; font: inherit; font-size: .9rem;
+      cursor: pointer; transition: background .15s, border-color .15s;
     }
-    .tag-picker-btn:hover { background: var(--control-bg-hover); border-color: rgba(255, 255, 255, 0.09); }
-    .tag-picker-btn[aria-expanded="true"] { background: var(--control-bg-hover); border-color: rgba(255, 255, 255, 0.1); }
+    .tag-picker-btn:hover { background: var(--control-bg-hover); border-color: rgba(255,255,255,0.09); }
+    .tag-picker-btn[aria-expanded="true"] { background: var(--control-bg-hover); border-color: rgba(255,255,255,0.1); }
     .tag-picker-menu {
-      position: absolute;
-      top: calc(100% + .25rem);
-      left: 0;
-      z-index: 12;
-      min-width: 14rem;
-      max-width: 18rem;
-      max-height: 14rem;
-      overflow: auto;
-      padding: .4rem;
-      border-radius: 10px;
-      border: 1px solid var(--menu-border);
-      background: var(--menu-bg);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+      position: absolute; top: calc(100% + .25rem); left: 0; z-index: 12;
+      min-width: 14rem; max-width: 18rem; max-height: 14rem; overflow: auto;
+      padding: .4rem; border-radius: 10px; border: 1px solid var(--menu-border);
+      background: var(--menu-bg); box-shadow: 0 6px 18px rgba(0,0,0,.32);
     }
     .tag-picker-menu[hidden] { display: none; }
-    .tag-picker-search {
-      width: 100%;
-      margin-bottom: .35rem;
-      padding: .38rem .5rem;
-      font-size: .82rem;
-      background: rgba(0, 0, 0, 0.22);
-      border-color: var(--menu-border);
-      color: var(--control-text);
-    }
-    .tag-picker-item {
-      display: flex;
-      align-items: center;
-      gap: .45rem;
-      padding: .3rem .4rem;
-      border-radius: 6px;
-      font-size: .82rem;
-      color: var(--control-text);
-      cursor: pointer;
-    }
+    .tag-picker-search { width: 100%; margin-bottom: .35rem; padding: .38rem .5rem; font-size: .82rem; background: rgba(0,0,0,.22); border-color: var(--menu-border); color: var(--control-text); }
+    .tag-picker-item { display: flex; align-items: center; gap: .45rem; padding: .3rem .4rem; border-radius: 6px; font-size: .82rem; color: var(--control-text); cursor: pointer; }
     .tag-picker-item:hover { background: var(--menu-hover); }
     .tag-picker-item input { accent-color: #5a9200; }
     .tag-picker-foot { display: flex; justify-content: space-between; gap: .35rem; margin-top: .35rem; padding-top: .35rem; border-top: 1px solid var(--menu-border); }
     .tag-picker-foot button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .74rem; cursor: pointer; padding: .15rem 0; }
     .tag-picker-foot button:hover { color: var(--accent); }
+
+    /* ── MODELS SPLIT LAYOUT ─────────────────────────────── */
+    .models-layout {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      min-width: 0;
+    }
+    .models-table-wrap {
+      flex: 1;
+      min-width: 0;
+      overflow-x: auto;
+    }
+
+    /* ── SORTABLE TABLE ──────────────────────────────────── */
+    .models-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .82rem;
+    }
+    .models-table thead th {
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 2;
+      padding: .35rem .55rem;
+      text-align: left;
+      font-size: .63rem;
+      font-family: ui-monospace, monospace;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .models-table thead th.sortable { cursor: pointer; }
+    .models-table thead th.sortable:hover { color: var(--text); }
+    .models-table thead th[aria-sort] { color: var(--accent); }
+    .models-table thead th.col-local,
+    .models-table thead th.col-shelf,
+    .models-table thead th.col-ctx,
+    .models-table thead th.col-params,
+    .models-table thead th.col-active,
+    .models-table thead th.col-bench { text-align: right; }
+
+    .models-table tbody tr.model-row {
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    .models-table tbody tr.model-row:hover td { background: #12151c; }
+    .models-table tbody tr.model-row.selected td { background: #131a10; border-bottom-color: #2a3a1a; }
+    .models-table tbody tr.model-row.highlight td { background: #10161a; }
+    .models-table tbody tr.model-row.pending-delete .col-model { border-left: 3px solid var(--down); }
+
+    .models-table td {
+      padding: .42rem .55rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .models-table td.col-model { white-space: normal; min-width: 160px; max-width: 280px; }
+    .col-local, .col-shelf, .col-ctx, .col-params, .col-active, .col-bench { text-align: right; }
+    .col-local, .col-shelf { font-family: ui-monospace, monospace; font-size: .76rem; color: #c8cdd4; }
+    .col-ctx, .col-params, .col-active { font-family: ui-monospace, monospace; font-size: .76rem; color: #c8cdd4; }
+    .col-bench { font-family: ui-monospace, monospace; font-size: .76rem; color: #9ec8ff; }
+    .col-caps { max-width: 120px; }
+
+    .model-name { display: block; font-size: .88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .model-path { display: block; font-size: .66rem; color: var(--muted); font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: .08rem; }
+    .row-lab {
+      display: inline-block; font-size: .64rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--accent); border: 1px solid #3a4a2a; background: #141a10; border-radius: 4px;
+      padding: .03rem .28rem; margin-right: .35rem; vertical-align: middle;
+    }
+    .row-variant { color: #c5cdd8; }
+    .pending-del-tag { color: #e87878; font-size: .62rem; font-weight: 700; margin-left: .3rem; }
+    .rail-empty { color: var(--muted); opacity: .4; font-family: ui-monospace, monospace; }
+
+    /* ── FAMILY GROUPING IN TABLE ────────────────────────── */
+    tr.family-head-row td {
+      padding: .3rem .55rem;
+      background: #0a0c10;
+      color: var(--muted);
+      font-size: .68rem;
+      font-family: ui-monospace, monospace;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    tr.family-head-row:hover td { background: #0d1015; }
+    .family-toggle { appearance: none; border: 0; background: transparent; color: var(--accent); font-size: .6rem; cursor: pointer; padding: 0 .3rem 0 0; transition: transform .12s; vertical-align: middle; }
+    tr.family-head-row:not(.collapsed) .family-toggle { transform: rotate(90deg); }
+    .family-name { color: #c5cdd8; font-weight: 600; margin-right: .4rem; }
+    .family-meta { color: var(--muted); font-size: .63rem; }
+    .family-count { color: var(--muted); font-size: .62rem; margin-left: .3rem; }
+    tr.family-head-row.has-active .family-name { color: var(--accent); }
+    .family-active-tag { color: var(--ok); font-size: .62rem; font-weight: 600; margin-left: .4rem; }
+
+    /* ── DETAIL PANE ─────────────────────────────────────── */
+    #model-detail-pane {
+      width: 420px;
+      min-width: 320px;
+      flex-shrink: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      position: sticky;
+      top: 1rem;
+      max-height: calc(100vh - 80px);
+      display: none;
+      flex-direction: column;
+    }
+    body[data-pane] #model-detail-pane { display: flex; }
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .6rem .85rem .5rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: .5rem;
+    }
+    .pane-title { font-size: .84rem; font-weight: 600; color: #c5cdd8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+    .pane-close { appearance: none; border: 0; background: transparent; color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; padding: .1rem .2rem; flex-shrink: 0; }
+    .pane-close:hover { color: var(--text); }
+    .pane-body { padding: .65rem .85rem .85rem; overflow-y: auto; flex: 1; }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 3px; }
+
+    /* ── MOBILE BACKDROP ─────────────────────────────────── */
+    #pane-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 49;
+    }
+
+    /* ── BADGES, ACTIONS, DETAIL SECTIONS ────────────────── */
+    .badge { font-size: .7rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+    .badge.cap { border-color: #3a4a2a; color: #b8d88a; }
+    .badge.hf-task { border-color: #3a4a5a; color: #9ec8ff; font-weight: 500; }
     .badge.status-ready { border-color: #2a4a2a; color: var(--ok); }
     .badge.status-downloading { border-color: #2a3a4a; color: var(--dl); }
     .badge.status-partial, .badge.status-missing, .badge.status-shelf-only { border-color: #4a402a; color: var(--warn); }
@@ -263,39 +275,21 @@
     .badge.life-testing { border-color: #2a3a4a; color: var(--dl); }
     .badge.life-works, .badge.life-production { border-color: #2a4a2a; color: var(--ok); }
     .badge.sidecar-req { border-color: #3a3a5a; color: #b8b8ff; font-size: .62rem; }
-    .row-sidecar-note { color: var(--muted); font-size: .68rem; margin-top: .15rem; }
-    .recipe-lab-create { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); }
-    .recipe-lab-create select { font-size: .8rem; padding: .35rem .5rem; }
     .badge.tier-heavy { border-color: #4a402a; color: var(--warn); }
     .badge.spec-dflash { border-color: #2a4a5a; color: #9ec8ff; background: #101820; }
     .badge.spec-mtp { border-color: #4a2a6a; color: #c49cff; background: #140c1a; }
     .badge.arch-moe { border-color: #6a4020; color: #f0a060; background: #1a140c; }
     .badge.arch-dense { border-color: #2a5858; color: #70b8b0; background: #0c1818; }
-    .bench-compare-strip { display: flex; flex-wrap: wrap; gap: .35rem .55rem; align-items: center; margin: 0 0 .65rem; padding: .45rem .55rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
-    .bench-compare-label { color: var(--muted); font-weight: 600; margin-right: .15rem; }
-    .bench-compare-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .45rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
-    .bench-compare-chip strong { color: var(--accent); font-weight: 600; }
-    .bench-compare-pct { color: var(--muted); font-size: .72rem; }
-    .inference-block { padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
-    .inference-block h4 { margin: 0 0 .45rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
-    .inf-profile-row { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: center; justify-content: space-between; padding: .45rem 0; border-top: 1px solid var(--border); font-size: .82rem; }
-    .inf-profile-row:first-of-type { border-top: 0; padding-top: 0; }
-    .inf-profile-info { min-width: 0; flex: 1; }
-    .inf-profile-info strong { display: block; font-size: .84rem; }
-    .inf-profile-info code { font-size: .72rem; color: var(--muted); }
-    .inf-profile-actions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
-    .inf-profile-block { border-top: 1px solid var(--border); padding: .45rem 0 0; }
-    .inf-profile-block:first-of-type { border-top: 0; padding-top: 0; }
-    .inf-profile-block .inf-profile-row { border-top: 0; padding-top: 0; padding-bottom: .35rem; }
-    details.bench-history { margin: 0 0 .35rem; font-size: .78rem; }
-    details.bench-history summary { cursor: pointer; color: var(--dl); user-select: none; }
-    .bench-history-table { width: 100%; border-collapse: collapse; margin-top: .35rem; font-size: .75rem; }
-    .bench-history-table th, .bench-history-table td { text-align: left; padding: .25rem .35rem; border-top: 1px solid var(--border); vertical-align: top; }
-    .bench-history-table th { color: var(--muted); font-weight: 600; font-size: .68rem; text-transform: uppercase; }
-    .bench-history-table tr.latest td { background: #151a22; }
-    .bench-note-input { width: 100%; min-width: 8rem; font-size: .75rem; padding: .2rem .35rem; background: #0e1014; border: 1px solid var(--border); border-radius: 4px; color: inherit; }
-    .bench-note-save { font-size: .7rem; padding: .15rem .4rem; margin-top: .2rem; }
-    .model-row.highlight { border-color: #3a4a3a; box-shadow: 0 0 0 1px #3a4a3a; }
+    .tag-block { padding: .6rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); font-size: .82rem; line-height: 1.45; }
+    .tag-line { display: flex; gap: .55rem; align-items: baseline; margin-top: .35rem; }
+    .tag-line:first-child { margin-top: 0; }
+    .tag-line-label { flex-shrink: 0; width: 5.5rem; font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .tag-line-val { color: #c8cdd4; min-width: 0; }
+    .tag-more { margin-top: .45rem; font-size: .76rem; color: var(--muted); line-height: 1.4; }
+    .tag-more summary { cursor: pointer; color: #9aa0a6; list-style: none; }
+    .tag-more summary::-webkit-details-marker { display: none; }
+    .tag-more summary::before { content: '▸ '; font-size: .7rem; }
+    .tag-more[open] summary::before { content: '▾ '; }
     .release-est { opacity: .75; font-style: italic; }
     .detail-section { margin-top: .75rem; }
     .badges { display: flex; flex-wrap: wrap; gap: .35rem; }
@@ -323,7 +317,6 @@
     .btn.verify.active-wip { border-color: #2a3a4a; color: var(--dl); background: #141c24; }
     .btn.verify.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
     .verify-note, .queue-note { font-size: .78rem; color: var(--muted); font-style: italic; margin-top: .35rem; }
-    .badge.tok-s { border-color: #2a3a4a; color: #8ec8ff; }
     .model-about h4 { margin: 0 0 .45rem; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
     .model-summary { max-height: 9rem; overflow-y: auto; font-size: .88rem; line-height: 1.5; color: #c8cdd4; padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); white-space: pre-wrap; }
     .model-summary::-webkit-scrollbar { width: 8px; }
@@ -335,15 +328,58 @@
     code { background: #12151c; padding: .1rem .35rem; border-radius: 4px; font-size: .85em; }
     .job-banner { display: none; margin-bottom: 1rem; padding: .65rem .85rem; border-radius: 10px; border: 1px solid #2a3a4a; background: #121a24; color: #c5d4e8; font-size: .84rem; font-family: ui-monospace, monospace; }
     .job-banner.active { display: block; }
+    .bench-compare-strip { display: flex; flex-wrap: wrap; gap: .35rem .55rem; align-items: center; margin: 0 0 .65rem; padding: .45rem .55rem; background: #12151c; border: 1px solid var(--border); border-radius: 8px; font-size: .78rem; }
+    .bench-compare-label { color: var(--muted); font-weight: 600; margin-right: .15rem; }
+    .bench-compare-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .45rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
+    .bench-compare-chip strong { color: var(--accent); font-weight: 600; }
+    .bench-compare-pct { color: var(--muted); font-size: .72rem; }
+    .inference-block { padding: .65rem .75rem; background: #12151c; border-radius: 8px; border: 1px solid var(--border); }
+    .inference-block h4 { margin: 0 0 .45rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+    .inf-profile-row { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: center; justify-content: space-between; padding: .45rem 0; border-top: 1px solid var(--border); font-size: .82rem; }
+    .inf-profile-row:first-of-type { border-top: 0; padding-top: 0; }
+    .inf-profile-info { min-width: 0; flex: 1; }
+    .inf-profile-info strong { display: block; font-size: .84rem; }
+    .inf-profile-info code { font-size: .72rem; color: var(--muted); }
+    .inf-profile-actions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .inf-profile-block { border-top: 1px solid var(--border); padding: .45rem 0 0; }
+    .inf-profile-block:first-of-type { border-top: 0; padding-top: 0; }
+    .inf-profile-block .inf-profile-row { border-top: 0; padding-top: 0; padding-bottom: .35rem; }
+    details.bench-history { margin: 0 0 .35rem; font-size: .78rem; }
+    details.bench-history summary { cursor: pointer; color: var(--dl); user-select: none; }
+    .bench-history-table { width: 100%; border-collapse: collapse; margin-top: .35rem; font-size: .75rem; }
+    .bench-history-table th, .bench-history-table td { text-align: left; padding: .25rem .35rem; border-top: 1px solid var(--border); vertical-align: top; }
+    .bench-history-table th { color: var(--muted); font-weight: 600; font-size: .68rem; text-transform: uppercase; }
+    .bench-history-table tr.latest td { background: #151a22; }
+    .bench-note-input { width: 100%; min-width: 8rem; font-size: .75rem; padding: .2rem .35rem; background: #0e1014; border: 1px solid var(--border); border-radius: 4px; color: inherit; }
+    .bench-note-save { font-size: .7rem; padding: .15rem .4rem; margin-top: .2rem; }
+    .recipe-lab-create { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); }
+    .recipe-lab-create select { font-size: .8rem; padding: .35rem .5rem; }
+    .row-sidecar-note { color: var(--muted); font-size: .68rem; margin-top: .15rem; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 1200px) {
+      .col-active, .col-caps { display: none; }
+    }
     @media (max-width: 900px) {
-      .model-inventory { --rail-arch: 0fr; --rail-engine: 0fr; --rail-bench: 0fr; --rail-flag: 0fr; }
-      .grid-head-rail.arch, .grid-head-rail.engine, .grid-head-rail.bench, .grid-head-rail.flag,
-      .rail-cell.arch, .rail-cell.engine, .rail-cell.bench, .rail-cell.flag { display: none; }
+      .col-arch, .col-engine { display: none; }
+      #model-detail-pane {
+        position: fixed;
+        left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        max-height: 82vh;
+        border-radius: 14px 14px 0 0;
+        transform: translateY(100%);
+        transition: transform .22s ease;
+        z-index: 50;
+        display: flex;
+      }
+      body[data-pane] #model-detail-pane { transform: translateY(0); }
+      body[data-pane] #pane-backdrop { display: block; }
     }
     @media (max-width: 640px) {
-      .model-inventory { --rail-inf: 0fr; }
-      .grid-head-rail.inf, .rail-cell.inf { display: none; }
-      .row-main { padding: .5rem .65rem; }
+      .col-shelf, .col-params, .col-inf { display: none; }
     }
     html.theme-b body { background: #000 !important; }
     html.theme-b body.embedded { height: 100%; min-height: 100%; }
@@ -384,7 +420,7 @@
     <div class="top page-head">
       <div>
         <h1 class="page-title-line">Model inventory <span class="title-sep">·</span> <span id="summary" class="title-summary">Loading…</span></h1>
-        <p class="sub">Column grid for status · toggle family grouping · expand rows for actions</p>
+        <p class="sub">Sortable table · click row for details · family grouping toggle</p>
       </div>
       <a href="/" class="portal-link" target="_top">← Portal</a>
     </div>
@@ -398,25 +434,6 @@
       <div class="control-group">
         <label for="status">Download</label>
         <select id="status"><option value="">All</option></select>
-      </div>
-      <div class="control-group">
-        <label for="sort">Sort</label>
-        <select id="sort">
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="name-asc">Name A→Z</option>
-          <option value="name-desc">Name Z→A</option>
-          <option value="size-desc">Largest on disk</option>
-          <option value="size-asc">Smallest on disk</option>
-          <option value="ctx-desc">Max context ↓</option>
-          <option value="ctx-asc">Max context ↑</option>
-          <option value="params-desc">Parameters ↓</option>
-          <option value="params-asc">Parameters ↑</option>
-          <option value="bench-desc">Speed (fastest first)</option>
-          <option value="bench-asc">Speed (slowest first)</option>
-          <option value="lab">Lab A→Z</option>
-          <option value="path">Path (flat)</option>
-        </select>
       </div>
       <div class="control-group tag-filter-group">
         <label for="tag-picker-btn">Capabilities</label>
@@ -455,9 +472,27 @@
       <span id="shelf-meta"></span>
       <span><span class="live-dot"></span> 30s refresh</span>
     </div>
-    <div class="model-list" id="list"></div>
+
+    <div class="models-layout">
+      <div class="models-table-wrap">
+        <table class="models-table" id="models-table">
+          <thead id="models-thead"></thead>
+          <tbody id="models-tbody"></tbody>
+        </table>
+        <div class="empty" id="models-empty" hidden>No models match filters.</div>
+      </div>
+      <aside id="model-detail-pane" aria-label="Model details">
+        <div class="pane-header">
+          <div class="pane-title" id="pane-title"></div>
+          <button type="button" class="pane-close" id="pane-close" aria-label="Close details">✕</button>
+        </div>
+        <div class="pane-body" id="pane-body"></div>
+      </aside>
+    </div>
+    <div id="pane-backdrop"></div>
   </main>
   </div>
+  <script src="/assets/spark-inventory-grid.js" defer></script>
   <script src="/assets/sparky-theme.js" defer></script>
   <script>document.addEventListener('DOMContentLoaded', () => {
     if (document.documentElement.classList.contains('embedded-pending')) {
@@ -469,14 +504,13 @@
   <script>
     let all = [], shelfMounted = false, activeJob = { running: false };
     let infStatus = null, highlightPath = null;
-    let expandedId = null, pollTimer = null, jobTimer = null, infPollTimer = null;
+    let selectedModelId = null, pollTimer = null, jobTimer = null, infPollTimer = null;
     let lastInfSnapshot = '';
-    let suppressBenchHistoryToggle = false;
-    let suppressModelGroupToggle = false;
     const benchHistoryOpen = new Set();
     const modelGroupsOpen = new Set();
     const benchHistoryCache = {};
     let benchNoteDrafts = {};
+    let sortCol = 'release_date', sortDir = 'desc';
     const REFRESH_MS = 30000, JOB_POLL_MS = 2000, INF_POLL_MS = 10000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
     const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'GGUF' };
@@ -497,24 +531,39 @@
 
     const $ = (id) => document.getElementById(id);
 
+    /* ── TABLE COLUMNS ──────────────────────────────────── */
+    const TABLE_COLS = [
+      { key: 'model',   label: 'Model',     sortable: true  },
+      { key: 'local',   label: 'Local',     sortable: true  },
+      { key: 'shelf',   label: 'Shelf',     sortable: true  },
+      { key: 'ctx',     label: 'Max CTX',   sortable: true  },
+      { key: 'params',  label: 'Params',    sortable: true  },
+      { key: 'active',  label: 'Active',    sortable: true  },
+      { key: 'spark',   label: 'Spark',     sortable: true  },
+      { key: 'dl',      label: 'Download',  sortable: true  },
+      { key: 'arch',    label: 'Arch',      sortable: false },
+      { key: 'engine',  label: 'Engine',    sortable: false },
+      { key: 'inf',     label: 'Inference', sortable: false },
+      { key: 'bench',   label: 'Bench',     sortable: true  },
+      { key: 'caps',    label: 'Caps',      sortable: false },
+    ];
+
+    /* ── HELPERS ─────────────────────────────────────────── */
     function gotoInference(opts) {
       opts = opts || {};
       const msg = { type: 'sparky-portal-nav', view: 'inference', infLogFocus: !!opts.infLogFocus };
       try {
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage(msg, location.origin);
-          return;
-        }
+        if (window.parent && window.parent !== window) { window.parent.postMessage(msg, location.origin); return; }
       } catch (_) {}
       location.href = '/#inference';
     }
-
     document.addEventListener('click', (e) => {
       const link = e.target.closest('[data-portal-nav="inference"]');
       if (!link) return;
       e.preventDefault();
       gotoInference({ infLogFocus: link.dataset.infLogFocus === '1' });
     });
+
     const tagKey = (t) => (t || '').toLowerCase();
     const formatTagLabel = (tag) => {
       if (!tag) return '';
@@ -530,13 +579,11 @@
     const catalogCapabilities = (m) => m.capabilities || [];
     const catalogTagSet = (m) => new Set(catalogCapabilities(m).map(tagKey));
     const notableHfTags = (m) => {
-      const seen = new Set();
-      const out = [];
+      const seen = new Set(); const out = [];
       (m.tags || []).forEach((t) => {
         const k = tagKey(t);
         if (isNoiseTag(t) || k === tagKey(m.pipeline_tag) || seen.has(k)) return;
-        seen.add(k);
-        out.push(t);
+        seen.add(k); out.push(t);
       });
       return out.sort((a, b) => formatTagLabel(a).localeCompare(formatTagLabel(b)));
     };
@@ -562,9 +609,6 @@
       if (m.engines && m.engines.length) return m.engines;
       return [...new Set((m.variants || []).map(v => v.engine).filter(Boolean))];
     };
-    const engineBadgeHtml = (m) => modelEngines(m).map(e =>
-      `<span class="badge engine engine-${esc(engineCssClass(e))}" title="${esc(engineTitle(e))}">${esc(engineLabels[e] || e)}</span>`
-    ).join('');
     const fmtTime = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString(); } catch { return ''; } };
     const fmtCtx = (n) => !n ? '—' : n >= 1000 ? (n / 1000).toFixed(0) + 'K' : String(n);
     const fmtParams = (m) => {
@@ -574,52 +618,6 @@
     };
     const sparkStatus = (m) => (m.spark_verify && m.spark_verify.spark_status) || 'unverified';
     const removalPending = (m) => !!(m.spark_verify && m.spark_verify.removal_pending);
-
-    function loadSparkFilters(stored) {
-      if (Array.isArray(stored.sparkFilters)) {
-        return stored.sparkFilters
-          .map((f) => (f === 'queued' ? 'pending-delete' : f))
-          .filter((f) => SPARK_FILTER_OPTS.includes(f));
-      }
-      if (stored.worksOnly) return ['works'];
-      const legacy = stored.sparkFilter || '';
-      return legacy && SPARK_FILTER_OPTS.includes(legacy) ? [legacy] : [];
-    }
-
-    function modelMatchesSparkFilter(m) {
-      if (!sparkFilters.length) return true;
-      return sparkFilters.some((f) => {
-        if (f === 'pending-delete') return removalPending(m);
-        return sparkStatus(m) === f;
-      });
-    }
-
-    function updateSparkFilterChips() {
-      document.querySelectorAll('#filter-chips .chip[data-spark]').forEach((chip) => {
-        const val = chip.dataset.spark;
-        const on = val === '' ? !sparkFilters.length : sparkFilters.includes(val);
-        chip.classList.toggle('active', on);
-        chip.classList.toggle('spark-works', on && val === 'works');
-        chip.classList.toggle('spark-failed', on && val === 'failed');
-        chip.classList.toggle('spark-wip', on && val === 'wip');
-        chip.classList.toggle('spark-pending-delete', on && val === 'pending-delete');
-      });
-    }
-
-    function updateViewChips() {
-      document.querySelectorAll('#filter-chips .chip[data-group]').forEach((chip) => {
-        const mode = chip.dataset.group;
-        chip.classList.toggle('active', mode === (groupByFamily ? 'family' : 'flat'));
-      });
-    }
-
-    function setGroupByFamily(on) {
-      groupByFamily = !!on;
-      updateViewChips();
-      savePrefs();
-      applyFilters();
-    }
-    const parseDate = (iso) => { const t = Date.parse(iso || ''); return Number.isNaN(t) ? 0 : t; };
     const localSize = (m) => {
       if (m.model_kind === 'speculative_sidecar' && m.combined_size_human) return m.combined_size_human;
       return (m.local && m.local.present) ? m.local.size_human : '—';
@@ -638,174 +636,36 @@
       return `<span class="badge sidecar-req" title="Speculative add-on — needs base weights on disk">requires ${esc(m.requires_target)}${esc(hint)}</span>`;
     };
     const shelfSize = (m) => (m.shelf && m.shelf.present) ? m.shelf.size_human : '—';
-
     const benchRated = (m) => m.best_bench_tok_s != null && !Number.isNaN(Number(m.best_bench_tok_s));
-
-    function compareBenchSpeed(a, b, desc) {
-      const aRated = benchRated(a);
-      const bRated = benchRated(b);
-      if (aRated !== bRated) return aRated ? -1 : 1;
-      if (!aRated) return a.name.localeCompare(b.name);
-      const diff = Number(a.best_bench_tok_s) - Number(b.best_bench_tok_s);
-      return (desc ? -diff : diff) || a.name.localeCompare(b.name);
-    }
-
-    const sortMode = () => $('sort').value;
-    const nSort = (v) => v == null ? -1 : Number(v);
-
-    function compareModels(a, b, mode) {
-      switch (mode) {
-        case 'newest': return parseDate(b.release_date) - parseDate(a.release_date) || a.name.localeCompare(b.name);
-        case 'oldest': return parseDate(a.release_date) - parseDate(b.release_date) || a.name.localeCompare(b.name);
-        case 'name-desc': return b.name.localeCompare(a.name);
-        case 'name-asc':
-        default: return a.name.localeCompare(b.name);
-        case 'size-desc':
-          return ((b.combined_size_bytes || (b.local && b.local.size_bytes) || b.size_bytes || 0)
-            - (a.combined_size_bytes || (a.local && a.local.size_bytes) || a.size_bytes || 0));
-        case 'size-asc':
-          return ((a.combined_size_bytes || (a.local && a.local.size_bytes) || a.size_bytes || 0)
-            - (b.combined_size_bytes || (b.local && b.local.size_bytes) || b.size_bytes || 0));
-        case 'ctx-desc': return nSort(b.max_context) - nSort(a.max_context) || a.name.localeCompare(b.name);
-        case 'ctx-asc': return nSort(a.max_context) - nSort(b.max_context) || a.name.localeCompare(b.name);
-        case 'params-desc': return nSort(b.param_b) - nSort(a.param_b) || a.name.localeCompare(b.name);
-        case 'params-asc': return nSort(a.param_b) - nSort(b.param_b) || a.name.localeCompare(b.name);
-        case 'bench-desc': return compareBenchSpeed(a, b, true);
-        case 'bench-asc': return compareBenchSpeed(a, b, false);
-        case 'lab': return a.lab.localeCompare(b.lab) || a.name.localeCompare(b.name);
-        case 'path': return (a.rel_path || a.id).localeCompare(b.rel_path || b.id);
-      }
-    }
-
-    function sortModels(models) {
-      const mode = sortMode();
-      const arr = [...models];
-      arr.sort((a, b) => compareModels(a, b, mode));
-      return arr;
-    }
-
-    function modelFamilyKey(m) {
-      return m.slug || (m.rel_path || m.id || '').split('/').pop() || m.id || 'other';
-    }
-
-    function slugFamilyLabel(slug) {
-      return (slug || '').split('-').map((w) => {
-        if (/^\d+(\.\d+)?$/.test(w)) return w;
-        if (/^[a-z]\d/i.test(w)) return w.toUpperCase();
-        return w.charAt(0).toUpperCase() + w.slice(1);
-      }).join(' ');
-    }
-
-    function modelFamilyLabel(items) {
-      const names = items.map((m) => m.name).filter(Boolean);
-      if (!names.length) return slugFamilyLabel(items[0] && items[0].slug);
-      const stripped = names.map((n) => n.replace(/\s*\([^)]*\)\s*$/, '').trim()).filter(Boolean);
-      const pick = [...stripped].sort((a, b) => a.length - b.length)[0];
-      return pick || names[0];
-    }
-
-    function modelVariantTitle(m, familyLabel) {
-      const name = m.name || '';
-      if (!name || name === familyLabel) return '';
-      if (name.startsWith(familyLabel)) {
-        const tail = name.slice(familyLabel.length).trim();
-        return tail.replace(/^\((.+)\)$/, '$1') || tail;
-      }
-      const paren = name.match(/\(([^)]+)\)\s*$/);
-      if (paren) return paren[1];
-      return name;
-    }
-
-    function modelHasLocal(m) {
-      return !!(m.local && m.local.present);
-    }
+    const parseDate = (iso) => { const t = Date.parse(iso || ''); return Number.isNaN(t) ? 0 : t; };
+    const modelHasLocal = (m) => !!(m.local && m.local.present);
+    const modelBusy = (m) => activeJob.running && activeJob.path === m.rel_path;
+    const inferenceSwitching = () => !!(infStatus && infStatus.switch && infStatus.switch.running);
 
     function modelHasActiveInference(m) {
       const activeId = activeProfileId();
       if (!activeId) return false;
       return (m.inference_profiles || []).some((p) => p.id === activeId);
     }
-
-    function groupModels(models) {
-      const groups = new Map();
-      models.forEach((m) => {
-        const key = modelFamilyKey(m);
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(m);
-      });
-      const mode = sortMode();
-      return [...groups.entries()].map(([key, items]) => {
-        const sorted = [...items].sort((a, b) => compareModels(a, b, mode) || a.lab.localeCompare(b.lab));
-        return { key, family: modelFamilyLabel(sorted), items: sorted };
-      }).sort((a, b) => compareModels(a.items[0], b.items[0], mode));
-    }
-
-    function modelGroupShouldOpen(key, multiGroup, group) {
-      if (modelGroupsOpen.has(key)) return true;
-      if (!multiGroup) return true;
-      const hasExpanded = group.items.some((m) => m.id === expandedId);
-      const hasHighlight = highlightPath && group.items.some((m) => m.rel_path === highlightPath || m.id === highlightPath);
-      const hasLocal = group.items.some(modelHasLocal);
-      const hasActive = group.items.some(modelHasActiveInference);
-      return hasExpanded || hasHighlight || hasLocal || hasActive;
-    }
-
-    function locBadge(label, loc, mounted) {
-      if (!mounted && label === 'NAS') return '<span class="loc-badge warn">NAS offline</span>';
-      if (loc && loc.present) return `<span class="loc-badge on">${esc(loc.size_human)}</span>`;
-      return '<span class="loc-badge off">not present</span>';
-    }
-
-    function modelBusy(m) { return activeJob.running && activeJob.path === m.rel_path; }
-
-    function inferenceSwitching() {
-      return !!(infStatus && infStatus.switch && infStatus.switch.running);
-    }
-
-    function parseStartedAt(iso) {
-      if (!iso) return null;
-      const t = Date.parse(iso);
-      return Number.isNaN(t) ? null : t;
-    }
-
+    function activeProfileId() { return infStatus && infStatus.active && infStatus.active.id; }
+    function parseStartedAt(iso) { if (!iso) return null; const t = Date.parse(iso); return Number.isNaN(t) ? null : t; }
     function formatLoadingElapsed(startedAtMs) {
       if (!startedAtMs) return '';
       const s = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
       if (s < 60) return ' (' + s + 's)';
-      const m = Math.floor(s / 60);
-      const r = s % 60;
+      const m = Math.floor(s / 60); const r = s % 60;
       return ' (' + m + 'm ' + r + 's)';
     }
-
-    function loadingPhaseKey(info) {
-      const phase = info && info.phase;
-      return phase === 'model' ? 'starting' : phase;
-    }
-
+    function loadingPhaseKey(info) { const phase = info && info.phase; return phase === 'model' ? 'starting' : phase; }
     function inferenceLoadingInfo() {
       if (!infStatus) return null;
       if (infStatus.loading && infStatus.loading.profile) return infStatus.loading;
       const sw = infStatus.switch;
-      if (sw && sw.running && sw.profile) {
-        return {
-          phase: 'switch',
-          profile: sw.profile,
-          name: sw.profile,
-          started_at: sw.started_at,
-        };
-      }
+      if (sw && sw.running && sw.profile) return { phase: 'switch', profile: sw.profile, name: sw.profile, started_at: sw.started_at };
       const active = infStatus.active;
-      if (active && !active.ready) {
-        return {
-          phase: active.starting ? 'starting' : 'waiting',
-          profile: active.id,
-          name: active.name || active.id,
-          started_at: active.started_at,
-        };
-      }
+      if (active && !active.ready) return { phase: active.starting ? 'starting' : 'waiting', profile: active.id, name: active.name || active.id, started_at: active.started_at };
       return null;
     }
-
     function inferenceLoadingLabel(info) {
       const name = (info && (info.name || info.profile)) || '…';
       const elapsed = formatLoadingElapsed(parseStartedAt(info && info.started_at));
@@ -813,7 +673,6 @@
       const label = (info && info.phase_label) || fallback[loadingPhaseKey(info)] || 'Loading';
       return label + ' · ' + name + elapsed;
     }
-
     function inferenceLoadingTitle(info) {
       if (!info || !info.profile) return 'Inference loading';
       const parts = [];
@@ -826,73 +685,7 @@
       return 'Waiting for engine — ' + name;
     }
 
-    function activeProfileId() {
-      return infStatus && infStatus.active && infStatus.active.id;
-    }
-
-    function inferenceBadge(m) {
-      const profiles = m.inference_profiles || [];
-      if (!profiles.length) return '';
-      const loading = inferenceLoadingInfo();
-      if (loading && loading.profile) {
-        const match = profiles.find((p) => p.id === loading.profile);
-        if (match) {
-          return `<span class="badge inf-loading" title="${esc(inferenceLoadingTitle(loading))}">${esc(inferenceLoadingLabel(loading))}</span>`;
-        }
-      }
-      const activeId = activeProfileId();
-      const active = profiles.find((p) => p.id === activeId);
-      if (active && infStatus.active.ready) {
-        return `<span class="badge inf-active">${esc(active.id)} · active</span>`;
-      }
-      const testing = profiles.filter((p) => p.lifecycle === 'testing').length;
-      if (testing) return `<span class="badge inf-profile">${testing} testing</span>`;
-      return `<span class="badge inf-profile">${profiles.length} recipe${profiles.length === 1 ? '' : 's'}</span>`;
-    }
-
-    function railEmpty() {
-      return '<span class="rail-empty">—</span>';
-    }
-
-    function railEngineCell(m) {
-      const engines = modelEngines(m);
-      if (!engines.length) return railEmpty();
-      const labels = [...new Set(engines.map((e) => engineLabels[e] || e))];
-      const text = labels.length > 1 ? labels.join('+') : labels[0];
-      const tip = labels.map((e, i) => engineTitle(engines[i]) || e).join(' · ');
-      return `<span class="badge engine engine-${esc(engineCssClass(engines[0]))}" title="${esc(tip)}">${esc(text)}</span>`;
-    }
-
-    function railInferenceCell(m) {
-      const profiles = m.inference_profiles || [];
-      if (!profiles.length) return railEmpty();
-      const loading = inferenceLoadingInfo();
-      if (loading && loading.profile) {
-        const match = profiles.find((p) => p.id === loading.profile);
-        if (match) {
-          const short = (loading.phase === 'switch' ? 'Switch' : 'Load');
-          return `<span class="badge inf-loading" title="${esc(inferenceLoadingTitle(loading))}">${esc(short)}</span>`;
-        }
-      }
-      const activeId = activeProfileId();
-      const active = profiles.find((p) => p.id === activeId);
-      if (active && infStatus && infStatus.active && infStatus.active.ready) {
-        return `<span class="badge inf-active" title="${esc(active.id)}">● active</span>`;
-      }
-      const testing = profiles.filter((p) => p.lifecycle === 'testing').length;
-      if (testing) {
-        return `<span class="badge inf-profile" title="${testing} inference recipe${testing === 1 ? '' : 's'} in testing (not production yet)">${testing} testing</span>`;
-      }
-      const n = profiles.length;
-      return `<span class="badge inf-profile" title="${n} inference recipe${n === 1 ? '' : 's'} linked to this model">${n} recipe${n === 1 ? '' : 's'}</span>`;
-    }
-
-    function railBenchCell(m) {
-      if (m.best_bench_tok_s == null || Number.isNaN(Number(m.best_bench_tok_s))) return railEmpty();
-      const n = Math.round(m.best_bench_tok_s);
-      return `<span title="${n} tok/s">${n}</span>`;
-    }
-
+    /* ── ARCH ────────────────────────────────────────────── */
     function modelArchitecture(m) {
       if (m.architecture === 'moe' || m.architecture === 'dense') return m.architecture;
       const caps = new Set((m.capabilities || []).map((c) => String(c).toLowerCase()));
@@ -902,57 +695,335 @@
       if (m.param_b != null && (m.param_active_b == null || m.param_active_b === 0)) return 'dense';
       return null;
     }
-
-    function archLabel(m) {
-      const a = modelArchitecture(m);
-      if (a === 'moe') return 'MoE';
-      if (a === 'dense') return 'Dense';
-      return '—';
-    }
-
+    function archLabel(m) { const a = modelArchitecture(m); return a === 'moe' ? 'MoE' : a === 'dense' ? 'Dense' : '—'; }
     function archTitle(m) {
       const a = modelArchitecture(m);
-      if (a === 'moe') {
-        const active = m.param_active_b != null ? `${m.param_active_b}B active` : 'sparse experts';
-        const total = m.param_b != null ? ` / ${m.param_b}B total` : '';
-        return `Mixture-of-Experts · ${active}${total}`;
-      }
+      if (a === 'moe') { const active = m.param_active_b != null ? `${m.param_active_b}B active` : 'sparse experts'; const total = m.param_b != null ? ` / ${m.param_b}B total` : ''; return `Mixture-of-Experts · ${active}${total}`; }
       if (a === 'dense' && m.param_b != null) return `Dense · ${m.param_b}B parameters per token`;
       if (a === 'dense') return 'Dense architecture';
       return 'Architecture unknown';
     }
 
+    /* ── RAIL CELL RENDERERS (reused in table cells + pane) ── */
+    function railEmpty() { return '<span class="rail-empty">—</span>'; }
+    function railEngineCell(m) {
+      const engines = modelEngines(m);
+      if (!engines.length) return railEmpty();
+      const labels = [...new Set(engines.map((e) => engineLabels[e] || e))];
+      const text = labels.length > 1 ? labels.join('+') : labels[0];
+      const tip = labels.map((e, i) => engineTitle(engines[i]) || e).join(' · ');
+      return `<span class="badge engine engine-${esc(engineCssClass(engines[0]))}" title="${esc(tip)}">${esc(text)}</span>`;
+    }
+    function railInferenceCell(m) {
+      const profiles = m.inference_profiles || [];
+      if (!profiles.length) return railEmpty();
+      const loading = inferenceLoadingInfo();
+      if (loading && loading.profile) {
+        const match = profiles.find((p) => p.id === loading.profile);
+        if (match) { const short = loading.phase === 'switch' ? 'Switch' : 'Load'; return `<span class="badge inf-loading" title="${esc(inferenceLoadingTitle(loading))}">${esc(short)}</span>`; }
+      }
+      const activeId = activeProfileId();
+      const active = profiles.find((p) => p.id === activeId);
+      if (active && infStatus && infStatus.active && infStatus.active.ready) return `<span class="badge inf-active" title="${esc(active.id)}">● active</span>`;
+      const testing = profiles.filter((p) => p.lifecycle === 'testing').length;
+      if (testing) return `<span class="badge inf-profile" title="${testing} inference recipe${testing === 1 ? '' : 's'} in testing">${testing} testing</span>`;
+      const n = profiles.length;
+      return `<span class="badge inf-profile" title="${n} inference recipe${n === 1 ? '' : 's'}">${n} recipe${n === 1 ? '' : 's'}</span>`;
+    }
     function railArchCell(m) {
       const a = modelArchitecture(m);
       if (!a) return railEmpty();
       return `<span class="badge arch-${a}" title="${esc(archTitle(m))}">${esc(archLabel(m))}</span>`;
     }
-
-    function renderStatusRail(m) {
-      const spark = sparkStatus(m);
-      const queued = removalPending(m);
-      return `<div class="row-rail" aria-label="Status">`
-        + `<span class="rail-cell spark"><span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span></span>`
-        + `<span class="rail-cell dl"><span class="badge status-${m.status || 'missing'}">${esc(m.status || 'missing')}</span></span>`
-        + `<span class="rail-cell arch">${railArchCell(m)}</span>`
-        + `<span class="rail-cell engine">${railEngineCell(m)}</span>`
-        + `<span class="rail-cell inf">${railInferenceCell(m)}</span>`
-        + `<span class="rail-cell bench">${railBenchCell(m)}</span>`
-        + `<span class="rail-cell flag">${queued ? '<span class="rail-flag-del" title="Pending delete">✕</span>' : railEmpty()}</span>`
-        + `</div>`;
+    function railBenchCell(m) {
+      if (m.best_bench_tok_s == null || Number.isNaN(Number(m.best_bench_tok_s))) return railEmpty();
+      const n = Math.round(m.best_bench_tok_s);
+      return `<span title="${n} tok/s">${n}</span>`;
     }
 
-    function renderGridHead() {
-      return `<div class="model-grid-head" aria-hidden="true">`
-        + `<span class="grid-head-title">Model</span>`
-        + `<span class="grid-head-rail">Spark</span>`
-        + `<span class="grid-head-rail">Download</span>`
-        + `<span class="grid-head-rail arch">Arch</span>`
-        + `<span class="grid-head-rail engine">Engine</span>`
-        + `<span class="grid-head-rail inf">Inference</span>`
-        + `<span class="grid-head-rail bench">Bench</span>`
-        + `<span class="grid-head-rail flag">!</span>`
-        + `<span class="grid-head-spacer"></span></div>`;
+    /* ── SORT ────────────────────────────────────────────── */
+    function modelSortValue(m, col) {
+      switch (col) {
+        case 'model':   return (m.name || '').toLowerCase();
+        case 'local':   return m.combined_size_bytes || (m.local && m.local.size_bytes) || 0;
+        case 'shelf':   return (m.shelf && m.shelf.size_bytes) || 0;
+        case 'ctx':     return m.max_context || 0;
+        case 'params':  return m.param_b != null ? Number(m.param_b) : -1;
+        case 'active':  return m.param_active_b != null ? Number(m.param_active_b) : -1;
+        case 'spark':   return sparkStatus(m);
+        case 'dl':      return m.status || '';
+        case 'arch':    return modelArchitecture(m) || '';
+        case 'bench':   return m.best_bench_tok_s != null ? Number(m.best_bench_tok_s) : -1;
+        case 'release_date': default: return parseDate(m.release_date);
+      }
+    }
+
+    function compareModelsBySortState(a, b) {
+      const av = modelSortValue(a, sortCol);
+      const bv = modelSortValue(b, sortCol);
+      if (typeof av === 'number' && typeof bv === 'number') {
+        if (av < 0 && bv >= 0) return 1;
+        if (bv < 0 && av >= 0) return -1;
+      }
+      let r;
+      if (typeof av === 'string' && typeof bv === 'string') {
+        r = av.localeCompare(bv);
+      } else {
+        r = av < bv ? -1 : av > bv ? 1 : 0;
+      }
+      if (sortDir === 'desc') r = -r;
+      return r || (a.name || '').localeCompare(b.name || '');
+    }
+
+    function sortModels(models) { return [...models].sort(compareModelsBySortState); }
+
+    function handleColumnSort(col) {
+      if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortCol = col; sortDir = 'asc';
+      }
+      savePrefs();
+      applyFilters();
+    }
+
+    /* ── SPARK FILTER ────────────────────────────────────── */
+    function loadSparkFilters(stored) {
+      if (Array.isArray(stored.sparkFilters)) return stored.sparkFilters.map((f) => f === 'queued' ? 'pending-delete' : f).filter((f) => SPARK_FILTER_OPTS.includes(f));
+      if (stored.worksOnly) return ['works'];
+      const legacy = stored.sparkFilter || '';
+      return legacy && SPARK_FILTER_OPTS.includes(legacy) ? [legacy] : [];
+    }
+    function modelMatchesSparkFilter(m) {
+      if (!sparkFilters.length) return true;
+      return sparkFilters.some((f) => { if (f === 'pending-delete') return removalPending(m); return sparkStatus(m) === f; });
+    }
+    function updateSparkFilterChips() {
+      document.querySelectorAll('#filter-chips .chip[data-spark]').forEach((chip) => {
+        const val = chip.dataset.spark;
+        const on = val === '' ? !sparkFilters.length : sparkFilters.includes(val);
+        chip.classList.toggle('active', on);
+        chip.classList.toggle('spark-works', on && val === 'works');
+        chip.classList.toggle('spark-failed', on && val === 'failed');
+        chip.classList.toggle('spark-wip', on && val === 'wip');
+        chip.classList.toggle('spark-pending-delete', on && val === 'pending-delete');
+      });
+    }
+    function updateViewChips() {
+      document.querySelectorAll('#filter-chips .chip[data-group]').forEach((chip) => {
+        chip.classList.toggle('active', chip.dataset.group === (groupByFamily ? 'family' : 'flat'));
+      });
+    }
+    function setGroupByFamily(on) { groupByFamily = !!on; updateViewChips(); savePrefs(); applyFilters(); }
+    function toggleSparkFilter(value) {
+      if (!value) { sparkFilters = []; }
+      else if (sparkFilters.includes(value)) { sparkFilters = sparkFilters.filter((f) => f !== value); }
+      else { sparkFilters = [...sparkFilters, value]; }
+      updateSparkFilterChips(); applyFilters();
+    }
+
+    /* ── FAMILY GROUPING ─────────────────────────────────── */
+    function modelFamilyKey(m) { return m.slug || (m.rel_path || m.id || '').split('/').pop() || m.id || 'other'; }
+    function slugFamilyLabel(slug) {
+      return (slug || '').split('-').map((w) => {
+        if (/^\d+(\.\d+)?$/.test(w)) return w;
+        if (/^[a-z]\d/i.test(w)) return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+    }
+    function modelFamilyLabel(items) {
+      const names = items.map((m) => m.name).filter(Boolean);
+      if (!names.length) return slugFamilyLabel(items[0] && items[0].slug);
+      const stripped = names.map((n) => n.replace(/\s*\([^)]*\)\s*$/, '').trim()).filter(Boolean);
+      const pick = [...stripped].sort((a, b) => a.length - b.length)[0];
+      return pick || names[0];
+    }
+    function modelVariantTitle(m, familyLabel) {
+      const name = m.name || '';
+      if (!name || name === familyLabel) return '';
+      if (name.startsWith(familyLabel)) { const tail = name.slice(familyLabel.length).trim(); return tail.replace(/^\((.+)\)$/, '$1') || tail; }
+      const paren = name.match(/\(([^)]+)\)\s*$/);
+      if (paren) return paren[1];
+      return name;
+    }
+    function groupModels(models) {
+      const groups = new Map();
+      models.forEach((m) => { const key = modelFamilyKey(m); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(m); });
+      return [...groups.entries()].map(([key, items]) => {
+        const sorted = [...items].sort((a, b) => compareModelsBySortState(a, b) || a.lab.localeCompare(b.lab));
+        return { key, family: modelFamilyLabel(sorted), items: sorted };
+      }).sort((a, b) => compareModelsBySortState(a.items[0], b.items[0]));
+    }
+    function modelGroupShouldOpen(key, multiGroup, group) {
+      if (modelGroupsOpen.has(key)) return true;
+      if (!multiGroup) return true;
+      const hasExpanded = group.items.some((m) => m.id === selectedModelId);
+      const hasHighlight = highlightPath && group.items.some((m) => m.rel_path === highlightPath || m.id === highlightPath);
+      const hasLocal = group.items.some(modelHasLocal);
+      const hasActive = group.items.some(modelHasActiveInference);
+      return hasExpanded || hasHighlight || hasLocal || hasActive;
+    }
+
+    /* ── TABLE RENDER ────────────────────────────────────── */
+    function renderTableHead() {
+      const cells = TABLE_COLS.map((col) => {
+        const isSorted = sortCol === col.key;
+        const dir = isSorted ? sortDir : '';
+        const ind = isSorted ? (dir === 'desc' ? ' ↓' : ' ↑') : '';
+        const ariaSort = isSorted ? ` aria-sort="${dir === 'desc' ? 'descending' : 'ascending'}"` : '';
+        const sortable = col.sortable ? ' sortable' : '';
+        const sortAttr = col.sortable ? ` data-sort-col="${col.key}"` : '';
+        return `<th class="col-${col.key}${sortable}"${ariaSort}${sortAttr}>${esc(col.label)}${ind}</th>`;
+      }).join('');
+      $('models-thead').innerHTML = `<tr>${cells}</tr>`;
+    }
+
+    function renderModelTableRow(m, opts) {
+      opts = opts || {};
+      const grouped = !!opts.grouped;
+      const familyLabel = opts.familyLabel || '';
+      const id = esc(m.id);
+      const queued = removalPending(m);
+      const highlighted = highlightPath && (m.rel_path === highlightPath || m.id === highlightPath);
+      const selected = selectedModelId === m.id;
+
+      let modelCell;
+      if (grouped) {
+        const variant = modelVariantTitle(m, familyLabel);
+        const variantHtml = variant ? `<span class="row-variant"> ${esc(variant)}</span>` : '';
+        modelCell = `<span class="model-name" title="${esc(m.name)}"><span class="row-lab">${esc(m.lab)}</span>${variantHtml}</span>`
+          + `<span class="model-path" title="${esc(m.rel_path || m.id)}">${esc(m.rel_path || m.id)}</span>`;
+      } else {
+        modelCell = `<span class="model-name" title="${esc(m.name)}">${esc(m.name)}</span>`
+          + `<span class="model-path" title="${esc(m.rel_path || m.id)}">${esc(m.rel_path || m.id)}</span>`;
+      }
+      if (queued) modelCell += `<span class="pending-del-tag">✕ delete</span>`;
+      if (requiresTargetLine(m)) modelCell += requiresTargetLine(m);
+
+      const spark = sparkStatus(m);
+      const paramsVal = m.param_b ? m.param_b + 'B' : '—';
+      const activeVal = m.param_active_b ? m.param_active_b + 'B' : '—';
+      const caps = catalogCapabilities(m).slice(0, 3);
+      const capsHtml = caps.length ? caps.map(c => `<span class="badge cap">${esc(formatTagLabel(c))}</span>`).join('') : '<span class="rail-empty">—</span>';
+
+      const cls = ['model-row', selected ? 'selected' : '', queued ? 'pending-delete' : '', highlighted ? 'highlight' : '', grouped ? 'family-member' : ''].filter(Boolean).join(' ');
+      const familyAttr = opts.familyKey ? ` data-family-key="${esc(opts.familyKey)}"` : '';
+      const hiddenAttr = opts.hidden ? ' hidden' : '';
+
+      return `<tr class="${cls}" data-id="${id}" data-path="${esc(m.rel_path || m.id)}"${familyAttr}${hiddenAttr}>
+        <td class="col-model">${modelCell}</td>
+        <td class="col-local">${esc(localSize(m))}</td>
+        <td class="col-shelf">${esc(shelfSize(m))}</td>
+        <td class="col-ctx">${esc(fmtCtx(m.max_context))}</td>
+        <td class="col-params">${esc(paramsVal)}</td>
+        <td class="col-active">${esc(activeVal)}</td>
+        <td class="col-spark"><span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span></td>
+        <td class="col-dl"><span class="badge status-${esc(m.status || 'missing')}">${esc(m.status || 'missing')}</span></td>
+        <td class="col-arch">${railArchCell(m)}</td>
+        <td class="col-engine">${railEngineCell(m)}</td>
+        <td class="col-inf">${railInferenceCell(m)}</td>
+        <td class="col-bench">${railBenchCell(m)}</td>
+        <td class="col-caps">${capsHtml}</td>
+      </tr>`;
+    }
+
+    function renderTable(models) {
+      const empty = $('models-empty');
+      const table = $('models-table');
+      if (!models.length) {
+        table.hidden = true; empty.hidden = false;
+        $('models-tbody').innerHTML = '';
+        return;
+      }
+      table.hidden = false; empty.hidden = true;
+
+      renderTableHead();
+
+      let rows = '';
+      if (groupByFamily) {
+        const groups = groupModels(models);
+        const multiGroup = groups.length > 1;
+        groups.forEach((g) => {
+          if (g.items.length === 1) {
+            rows += renderModelTableRow(g.items[0]);
+            return;
+          }
+          const hasActive = g.items.some(modelHasActiveInference);
+          const hasLocal = g.items.some(modelHasLocal);
+          if (hasActive) modelGroupsOpen.add(g.key);
+          const open = modelGroupShouldOpen(g.key, multiGroup, g);
+          const localCount = g.items.filter(modelHasLocal).length;
+          const localHint = localCount ? ` · ${localCount} local` : '';
+          const activeTag = hasActive ? `<span class="family-active-tag">● active</span>` : '';
+          const headCls = ['family-head-row', hasActive ? 'has-active' : '', !open ? 'collapsed' : ''].filter(Boolean).join(' ');
+          rows += `<tr class="${headCls}" data-family-key="${esc(g.key)}">
+            <td colspan="${TABLE_COLS.length}">
+              <button type="button" class="family-toggle" aria-label="Toggle family">▸</button>
+              <span class="family-name">${esc(g.family)}</span>
+              <span class="family-meta">${g.items.length} models${localHint}</span>
+              ${activeTag}
+            </td>
+          </tr>`;
+          g.items.forEach((m) => {
+            rows += renderModelTableRow(m, { grouped: true, familyLabel: g.family, familyKey: g.key, hidden: !open });
+          });
+        });
+      } else {
+        rows = models.map((m) => renderModelTableRow(m)).join('');
+      }
+      $('models-tbody').innerHTML = rows;
+      scrollToHighlight();
+    }
+
+    function render(models) {
+      benchNoteDrafts = captureBenchNoteDrafts();
+      renderTable(models);
+      renderJobBanner();
+    }
+
+    /* ── DETAIL PANE ─────────────────────────────────────── */
+    function openPane(modelId) {
+      const model = all.find((m) => m.id === modelId);
+      if (!model) return;
+      selectedModelId = modelId;
+      document.body.dataset.pane = '1';
+      $('pane-title').textContent = model.name || model.id;
+      $('pane-body').innerHTML = renderDetail(model);
+      restoreOpenBenchHistories();
+      updateSelectedRow();
+    }
+
+    function closePane() {
+      selectedModelId = null;
+      delete document.body.dataset.pane;
+      $('pane-title').textContent = '';
+      $('pane-body').innerHTML = '';
+      updateSelectedRow();
+    }
+
+    function updateSelectedRow() {
+      document.querySelectorAll('tr.model-row.selected').forEach((tr) => tr.classList.remove('selected'));
+      if (selectedModelId) {
+        const tr = document.querySelector(`tr.model-row[data-id="${CSS.escape(selectedModelId)}"]`);
+        if (tr) tr.classList.add('selected');
+      }
+    }
+
+    function refreshPane() {
+      if (!selectedModelId) return;
+      const model = all.find((m) => m.id === selectedModelId);
+      if (!model) { closePane(); return; }
+      benchNoteDrafts = captureBenchNoteDrafts();
+      $('pane-title').textContent = model.name || model.id;
+      $('pane-body').innerHTML = renderDetail(model);
+      restoreOpenBenchHistories();
+    }
+
+    /* ── DETAIL CONTENT RENDERERS ────────────────────────── */
+    function locBadge(label, loc, mounted) {
+      if (!mounted && label === 'NAS') return '<span class="loc-badge warn">NAS offline</span>';
+      if (loc && loc.present) return `<span class="loc-badge on">${esc(loc.size_human)}</span>`;
+      return '<span class="loc-badge off">not present</span>';
     }
 
     function lifeBadge(lifecycle) {
@@ -964,12 +1035,8 @@
       const tags = new Set((p.tags || []).map((t) => String(t).toLowerCase()));
       const spec = p.speculative || {};
       let html = '';
-      if (spec.method === 'dflash' || tags.has('dflash')) {
-        html += '<span class="badge spec-dflash">DFlash</span>';
-      }
-      if (p.mtp || spec.method === 'mtp' || tags.has('mtp')) {
-        html += '<span class="badge spec-mtp">MTP</span>';
-      }
+      if (spec.method === 'dflash' || tags.has('dflash')) html += '<span class="badge spec-dflash">DFlash</span>';
+      if (p.mtp || spec.method === 'mtp' || tags.has('mtp')) html += '<span class="badge spec-mtp">MTP</span>';
       return html;
     }
 
@@ -981,9 +1048,7 @@
       const cells = sorted.map((p) => {
         const n = Math.round(Number(p.tok_s));
         const pct = Math.round((n / best) * 100);
-        return `<span class="bench-compare-chip" title="${esc(p.id)}">`
-          + `${recipeFeatureBadges(p)}<strong>${n}</strong> tok/s`
-          + `<span class="bench-compare-pct">${pct}%</span></span>`;
+        return `<span class="bench-compare-chip" title="${esc(p.id)}">${recipeFeatureBadges(p)}<strong>${n}</strong> tok/s<span class="bench-compare-pct">${pct}%</span></span>`;
       }).join('');
       return `<div class="bench-compare-strip"><span class="bench-compare-label">Recipe compare</span>${cells}</div>`;
     }
@@ -997,57 +1062,37 @@
       const rows = profiles.map((p) => {
         const lc = p.lifecycle || (p.enabled ? 'production' : 'draft');
         const tier = p.tier === 'heavy' ? '<span class="badge tier-heavy">heavy</span>' : '<span class="badge">fast</span>';
-        const tokBadge = p.tok_s != null
-          ? `<span class="badge tok-s">${Math.round(p.tok_s)} tok/s</span>`
-          : '<span class="badge tok-s unbench">not benchmarked</span>';
+        const tokBadge = p.tok_s != null ? `<span class="badge tok-s">${Math.round(p.tok_s)} tok/s</span>` : '<span class="badge tok-s unbench">not benchmarked</span>';
         const note = p.notes ? `<div class="verify-note">${esc(p.notes)}</div>` : '';
         let actions = '';
         if (lc === 'draft') {
-          actions = `<button type="button" class="btn primary" data-action="recipe-testing" data-profile="${esc(p.id)}">Mark testing</button>`
-            + `<button type="button" class="btn" data-action="recipe-discard" data-profile="${esc(p.id)}">Discard</button>`;
+          actions = `<button type="button" class="btn primary" data-action="recipe-testing" data-profile="${esc(p.id)}">Mark testing</button><button type="button" class="btn" data-action="recipe-discard" data-profile="${esc(p.id)}">Discard</button>`;
         } else if (p.id === activeId) {
           const ready = infStatus && infStatus.active && infStatus.active.ready;
           const loadInfo = inferenceLoadingInfo();
           actions = ready
             ? '<span class="badge status-ready">active</span><a href="#" data-portal-nav="inference">Inference ↗</a>'
-            : '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span>'
-              + '<a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
+            : '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span><a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
         } else if (switching && infStatus.switch && infStatus.switch.profile === p.id) {
           const loadInfo = inferenceLoadingInfo();
-          actions = '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span>'
-            + '<a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
+          actions = '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span><a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
         } else if (switching) {
           actions = '<button type="button" class="btn" disabled>Switch in progress</button>';
         } else if (lc === 'testing' || p.enabled) {
           actions = `<button type="button" class="btn primary" data-action="start-profile" data-profile="${esc(p.id)}" data-tier="${esc(p.tier || '')}">Start</button>`
-            + (lc === 'testing'
-              ? `<button type="button" class="btn" data-action="recipe-promote" data-profile="${esc(p.id)}">Promote</button>`
-                + `<button type="button" class="btn" data-action="recipe-discard" data-profile="${esc(p.id)}">Discard</button>`
-              : '');
+            + (lc === 'testing' ? `<button type="button" class="btn" data-action="recipe-promote" data-profile="${esc(p.id)}">Promote</button><button type="button" class="btn" data-action="recipe-discard" data-profile="${esc(p.id)}">Discard</button>` : '');
         } else {
           actions = '<span class="badge">off</span>';
         }
         const runCount = p.bench_run_count || 0;
-        const histSummary = runCount
-          ? `Benchmark history (${runCount})`
-          : 'Benchmark history';
+        const histSummary = runCount ? `Benchmark history (${runCount})` : 'Benchmark history';
         const histOpen = benchHistoryOpen.has(p.id) ? ' open' : '';
-        return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong>`
-          + `<code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div>`
-          + `<div class="inf-profile-actions">${lifeBadge(lc)}${recipeFeatureBadges(p)}${tier}${tokBadge}${actions}</div></div>`
-          + `<details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary>`
-          + `<div class="bench-history-panel"></div></details></div>`;
+        return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong><code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div><div class="inf-profile-actions">${lifeBadge(lc)}${recipeFeatureBadges(p)}${tier}${tokBadge}${actions}</div></div><details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary><div class="bench-history-panel"></div></details></div>`;
       }).join('');
-      const create = onDisk && !isSidecarModel(m) ? `<div class="recipe-lab-create">`
-        + `<span class="verify-label">New recipe</span>`
-        + `<button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, MTP, DFlash)">Auto-scaffold</button>`
-        + `</div>` : (isSidecarModel(m) ? '<div class="verify-note">Sidecar — recipes are managed from the base model; this row shows the linked DFlash bench.</div>' : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>');
-      return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4>`
-        + `<div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote. Spark status syncs on mark testing.</div>`
-        + renderBenchCompareStrip(profiles)
-        + (rows || '<div class="meta-warn">No recipes yet.</div>')
-        + create
-        + '<div class="actions" style="margin-top:.55rem"><a href="#" data-portal-nav="inference">Open Inference tab ↗</a></div></div>';
+      const create = onDisk && !isSidecarModel(m)
+        ? `<div class="recipe-lab-create"><span class="verify-label">New recipe</span><button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, MTP, DFlash)">Auto-scaffold</button></div>`
+        : (isSidecarModel(m) ? '<div class="verify-note">Sidecar — recipes are managed from the base model.</div>' : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>');
+      return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4><div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote.</div>${renderBenchCompareStrip(profiles)}${rows || '<div class="meta-warn">No recipes yet.</div>'}${create}<div class="actions" style="margin-top:.55rem"><a href="#" data-portal-nav="inference">Open Inference tab ↗</a></div></div>`;
     }
 
     function renderDetail(m) {
@@ -1060,10 +1105,7 @@
         const label = s === 'unverified' ? 'Untested' : s === 'wip' ? 'Testing' : s === 'works' ? 'Works' : 'Failed';
         return `<button type="button" class="btn verify${spark === s ? ' active active-' + s : ''}" data-verify="${s}" data-path="${rel}">${label}</button>`;
       }).join('');
-      const vars = (m.variants || []).length ? `<div class="variants detail-section"><table>
-        <tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th></tr>
-        ${m.variants.map(v => `<tr><td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td><td>${esc(v.status)}</td></tr>`).join('')}
-      </table></div>` : '';
+      const vars = (m.variants || []).length ? `<div class="variants detail-section"><table><tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th></tr>${m.variants.map(v => `<tr><td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td><td>${esc(v.status)}</td></tr>`).join('')}</table></div>` : '';
       const queueBtn = queued
         ? `<button type="button" class="btn danger active" data-action="queue-removal" data-pending="0" data-path="${rel}">Cancel removal</button>`
         : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) ? 'disabled' : ''}>Queue removal</button>`;
@@ -1072,301 +1114,12 @@
       const hfTags = notableHfTags(m);
       const hfPreview = hfTags.slice(0, 4);
       const hfExtra = hfTags.slice(4);
-      const tagBlock = (caps.length || task || hfPreview.length) ? `<div class="detail-section tag-block">
-          ${caps.length ? `<div class="tag-line"><span class="tag-line-label">Catalog</span><span class="tag-line-val">${tagLine(caps)}</span></div>` : ''}
-          ${task ? `<div class="tag-line"><span class="tag-line-label">HF task</span><span class="tag-line-val">${task ? `<span class="badge hf-task">${esc(formatTagLabel(task))}</span>` : '—'}</span></div>` : ''}
-          ${hfPreview.length ? `<div class="tag-line"><span class="tag-line-label">HF tags</span><span class="tag-line-val">${tagLine(hfPreview)}</span></div>` : ''}
-          ${hfExtra.length ? `<details class="tag-more"><summary>${hfExtra.length} more HF tag${hfExtra.length === 1 ? '' : 's'}</summary>${tagLine(hfExtra)}</details>` : ''}
-          ${m.hf_url ? `<div class="tag-line" style="margin-top:.5rem"><span class="tag-line-label"></span><span class="tag-line-val"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">All tags on Hugging Face ↗</a></span></div>` : ''}
-        </div>` : '';
-      return `
-        ${tagBlock}
-        ${summaryBlock(m)}
-        ${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter. Start the DFlash recipe from the base model's recipe list, or from Inference when this sidecar is linked.</div></div>` : ''}
-        ${inferenceSection(m)}
-        <div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>
-        ${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}
-        <div class="detail-section storage">
-          ${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}${sidecarSizeDetail(m) ? ' <span class="row-sidecar-note">(' + esc(sidecarSizeDetail(m)) + ')</span>' : ''}</span></div>
-          <div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>
-          ${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}
-          <div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div>
-          <div class="actions">
-            <button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button>
-            <button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>
-            ${queueBtn}
-            <button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete now</button>
-          </div>
-          ${queued ? '<div class="queue-note">Pending delete — local copy purges daily at 03:00. NAS shelf copy is kept.</div>' : ''}
-        </div>
-        ${vars}`;
+      const tagBlock = (caps.length || task || hfPreview.length) ? `<div class="detail-section tag-block">${caps.length ? `<div class="tag-line"><span class="tag-line-label">Catalog</span><span class="tag-line-val">${tagLine(caps)}</span></div>` : ''}${task ? `<div class="tag-line"><span class="tag-line-label">HF task</span><span class="tag-line-val"><span class="badge hf-task">${esc(formatTagLabel(task))}</span></span></div>` : ''}${hfPreview.length ? `<div class="tag-line"><span class="tag-line-label">HF tags</span><span class="tag-line-val">${tagLine(hfPreview)}</span></div>` : ''}${hfExtra.length ? `<details class="tag-more"><summary>${hfExtra.length} more HF tag${hfExtra.length === 1 ? '' : 's'}</summary>${tagLine(hfExtra)}</details>` : ''}${m.hf_url ? `<div class="tag-line" style="margin-top:.5rem"><span class="tag-line-label"></span><span class="tag-line-val"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">All tags on Hugging Face ↗</a></span></div>` : ''}</div>` : '';
+      return `${tagBlock}${summaryBlock(m)}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions"><button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete now</button></div>${queued ? '<div class="queue-note">Pending delete — local copy purges daily at 03:00. NAS shelf copy is kept.</div>' : ''}</div>${vars}`;
     }
 
-    function renderModelRow(m, opts) {
-      opts = opts || {};
-      const grouped = !!opts.grouped;
-      const familyLabel = opts.familyLabel || '';
-      const id = esc(m.id);
-      const open = expandedId === m.id;
-      const queued = removalPending(m);
-      const highlighted = highlightPath && (m.rel_path === highlightPath || m.id === highlightPath);
-      let titleHtml;
-      if (grouped) {
-        const variant = modelVariantTitle(m, familyLabel);
-        const variantHtml = variant ? `<span class="row-variant">${esc(variant)}</span>` : '';
-        titleHtml = `<strong title="Lab variant"><span class="row-lab">${esc(m.lab)}</span>${variantHtml}</strong>`
-          + `<span class="row-path" title="Canonical shelf path on Spark and NAS"><span class="row-path-label">path</span>${esc(m.rel_path || m.id)}</span>`;
-      } else {
-        titleHtml = `<strong title="Display name">${esc(m.name)}</strong>`
-          + `<span class="row-path" title="Canonical shelf path on Spark and NAS"><span class="row-path-label">path</span>${esc(m.rel_path || m.id)}</span>`;
-      }
-      const nested = grouped ? ' nested' : '';
-      const sidecarDetail = sidecarSizeDetail(m);
-      const localLabel = isSidecarModel(m) ? 'Combined' : 'Local';
-      const localMeta = sidecarDetail
-        ? `<span><b>${localLabel}</b> ${esc(localSize(m))} <span class="row-sidecar-note">(${esc(sidecarDetail)})</span></span>`
-        : `<span><b>${localLabel}</b> ${esc(localSize(m))}</span>`;
-      return `<article class="model-row${nested}${open ? ' open' : ''}${queued ? ' pending-delete' : ''}${highlighted ? ' highlight' : ''}${isSidecarModel(m) ? ' sidecar-model' : ''}" data-id="${id}" data-path="${esc(m.rel_path || m.id)}">
-        <button type="button" class="row-main" data-expand="${id}">
-          <div class="row-title">${titleHtml}${requiresTargetLine(m)}</div>
-          ${renderStatusRail(m)}
-          <span class="chevron">▸</span>
-          <div class="row-meta">
-            ${localMeta}
-            <span><b>Shelf</b> ${esc(shelfSize(m))}</span>
-            <span><b>Released</b> ${fmtRelease(m)}</span>
-            <span><b>Ctx</b> ${fmtCtx(m.max_context)}</span>
-            <span><b>Params</b> ${fmtParams(m)}</span>
-            <span><b>Arch</b> ${esc(archLabel(m))}</span>
-          </div>
-        </button>
-        <div class="row-detail">${open ? renderDetail(m) : ''}</div>
-      </article>`;
-    }
-
-    function renderModelGroup(group, multiGroup) {
-      const hasActive = group.items.some(modelHasActiveInference);
-      const hasLocal = group.items.some(modelHasLocal);
-      if (hasActive) modelGroupsOpen.add(group.key);
-      const open = modelGroupShouldOpen(group.key, multiGroup, group);
-      const localCount = group.items.filter(modelHasLocal).length;
-      const localHint = localCount
-        ? `<span class="model-family-group-meta">${localCount} local</span>` : '';
-      const activeTag = hasActive ? '<span class="model-family-group-active-tag">● active</span>' : '';
-      const groupCls = 'model-family-group'
-        + (hasActive ? ' has-active' : '')
-        + (hasLocal ? ' has-local' : '');
-      const rows = group.items.map((m) => renderModelRow(m, { grouped: true, familyLabel: group.family })).join('');
-      return `<details class="${groupCls}" data-model-group="${esc(group.key)}"${open ? ' open' : ''}>`
-        + `<summary><span class="model-family-group-name">${esc(group.family)}</span>`
-        + activeTag + localHint
-        + `<span class="model-family-group-count">(${group.items.length})</span></summary>`
-        + `<div class="model-group-rows">${rows}</div></details>`;
-    }
-
-    function patchExpandedRow(prevId, nextId) {
-      if (prevId && prevId !== nextId) {
-        const prevRow = document.querySelector('[data-id="' + CSS.escape(prevId) + '"]');
-        if (prevRow) {
-          prevRow.classList.remove('open');
-          const detail = prevRow.querySelector('.row-detail');
-          if (detail) detail.innerHTML = '';
-        }
-      }
-      if (!nextId) return true;
-      const model = all.find((m) => m.id === nextId);
-      if (!model) return false;
-      const row = document.querySelector('[data-id="' + CSS.escape(nextId) + '"]');
-      if (!row) return false;
-      row.classList.add('open');
-      const detail = row.querySelector('.row-detail');
-      if (detail) detail.innerHTML = renderDetail(model);
-      return true;
-    }
-
-    function render(models) {
-      const list = $('list');
-      list.className = 'model-list model-inventory';
-      if (!models.length) { list.innerHTML = '<div class="empty">No models match filters.</div>'; return; }
-      suppressBenchHistoryToggle = true;
-      suppressModelGroupToggle = true;
-      let body = '';
-      if (groupByFamily) {
-        const groups = groupModels(models);
-        const multiGroup = groups.length > 1;
-        body = '<div class="model-family-groups">' + groups.map((g) => {
-          if (g.items.length === 1) return renderModelRow(g.items[0]);
-          return renderModelGroup(g, multiGroup);
-        }).join('') + '</div>';
-      } else {
-        body = models.map((m) => renderModelRow(m)).join('');
-      }
-      list.innerHTML = renderGridHead() + '<div class="model-rows">' + body + '</div>';
-      suppressModelGroupToggle = false;
-      suppressBenchHistoryToggle = false;
-      renderJobBanner();
-      scrollToHighlight();
-      restoreOpenBenchHistories();
-    }
-
-    function scrollToHighlight() {
-      if (!highlightPath) return;
-      const row = $('list').querySelector('[data-path="' + CSS.escape(highlightPath) + '"]');
-      if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-
-    function renderJobBanner() {
-      const el = $('job-banner');
-      if (!activeJob.running) { el.classList.remove('active'); el.textContent = ''; return; }
-      const tail = (activeJob.log_tail || []).slice(-2).join(' · ');
-      el.classList.add('active');
-      el.textContent = `${jobLabels[activeJob.action] || activeJob.action} ${activeJob.path || '…'} (pid ${activeJob.pid})${tail ? ' — ' + tail : ''}`;
-    }
-
-    function readPrefs() {
-      try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
-    }
-
-    function savePrefs() {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({
-        q: $('q').value, lab: $('lab').value, status: $('status').value,
-        sort: $('sort').value, sparkFilters, tagFilter, hfTaskFilter, groupByFamily,
-      }));
-    }
-
-    function updateTagPickerButton() {
-      const btn = $('tag-picker-btn');
-      if (!tagFilter.length) btn.textContent = 'All';
-      else if (tagFilter.length === 1) btn.textContent = formatTagLabel(tagFilter[0]);
-      else btn.textContent = `${tagFilter.length} selected`;
-    }
-
-    function renderTagPickerList(available, query) {
-      const list = $('tag-picker-list');
-      const q = (query || '').toLowerCase();
-      list.innerHTML = '';
-      available.filter((t) => !q || formatTagLabel(t).toLowerCase().includes(q) || tagKey(t).includes(q)).forEach((tag) => {
-        const k = tagKey(tag);
-        const row = document.createElement('label');
-        row.className = 'tag-picker-item';
-        row.innerHTML = `<input type="checkbox" value="${esc(k)}" ${tagFilter.includes(k) ? 'checked' : ''}><span>${esc(formatTagLabel(tag))}</span>`;
-        row.querySelector('input').addEventListener('change', (e) => {
-          if (e.target.checked) {
-            if (!tagFilter.includes(k)) tagFilter = [...tagFilter, k];
-          } else {
-            tagFilter = tagFilter.filter((t) => t !== k);
-          }
-          updateTagPickerButton();
-          applyFilters();
-        });
-        list.appendChild(row);
-      });
-      if (!list.children.length) list.innerHTML = '<div class="tag-picker-item" style="cursor:default;color:var(--muted)">No matches</div>';
-    }
-
-    function setTagFilter(next) {
-      tagFilter = [...next].map(tagKey);
-      updateTagPickerButton();
-      renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value);
-      applyFilters();
-    }
-
-    function closeTagPicker() {
-      $('tag-picker-menu').hidden = true;
-      $('tag-picker-btn').setAttribute('aria-expanded', 'false');
-    }
-
-    function openTagPicker() {
-      renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value);
-      $('tag-picker-menu').hidden = false;
-      $('tag-picker-btn').setAttribute('aria-expanded', 'true');
-      $('tag-picker-search').focus();
-    }
-
-    function toggleSparkFilter(value) {
-      if (!value) {
-        sparkFilters = [];
-      } else if (sparkFilters.includes(value)) {
-        sparkFilters = sparkFilters.filter((f) => f !== value);
-      } else {
-        sparkFilters = [...sparkFilters, value];
-      }
-      updateSparkFilterChips();
-      applyFilters();
-    }
-
-    function applyFilters() {
-      const q = $('q').value.toLowerCase();
-      const lab = $('lab').value, status = $('status').value;
-      hfTaskFilter = tagKey($('hf-task').value);
-      savePrefs();
-      let filtered = all.filter(m => {
-        if (lab && m.lab !== lab) return false;
-        if (tagFilter.length && !tagFilter.every((t) => catalogTagSet(m).has(t))) return false;
-        if (hfTaskFilter && tagKey(m.pipeline_tag) !== hfTaskFilter) return false;
-        if (status && m.status !== status) return false;
-        if (!modelMatchesSparkFilter(m)) return false;
-        if (q) {
-          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, modelSummary(m), m.pipeline_tag, ...catalogCapabilities(m), ...notableHfTags(m)].join(' ').toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      });
-      filtered = sortModels(filtered);
-      const queuedTotal = all.filter(removalPending).length;
-      const queuedPart = queuedTotal ? ` · ${queuedTotal} pending delete` : '';
-      const filterBits = [];
-      if (tagFilter.length) filterBits.push(tagFilter.map((t) => formatTagLabel(t)).join(' + '));
-      if (hfTaskFilter) filterBits.push(formatTagLabel(hfTaskFilter));
-      const tagPart = filterBits.length ? ` · ${filterBits.join(' · ')}` : '';
-      $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${tagPart}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
-      if (queuedTotal) $('summary').classList.add('meta-danger'); else $('summary').classList.remove('meta-danger');
-      benchNoteDrafts = captureBenchNoteDrafts();
-      render(filtered);
-    }
-
-    function populateFilters(models, preserve) {
-      const stored = readPrefs();
-      const storedTags = (stored.tagFilter || (stored.cap ? [stored.cap] : [])).map(tagKey);
-      const prev = preserve ? {
-        lab: $('lab').value, status: $('status').value, hfTaskFilter,
-        sort: $('sort').value, q: $('q').value, sparkFilters, tagFilter, groupByFamily,
-      } : {
-        sort: 'newest',
-        sparkFilters: loadSparkFilters(stored),
-        q: stored.q || '', lab: stored.lab || '', status: stored.status || '',
-        tagFilter: storedTags,
-        hfTaskFilter: tagKey(stored.hfTaskFilter || ''),
-        groupByFamily: !!stored.groupByFamily,
-      };
-      const fill = (id, key, items, fn) => {
-        const el = $(id), first = el.options[0].outerHTML;
-        el.innerHTML = first;
-        items.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = fn ? fn(v) : v; el.appendChild(o); });
-        if (prev[key] && [...el.options].some(o => o.value === prev[key])) el.value = prev[key];
-      };
-      fill('lab', 'lab', [...new Set(models.map(m => m.lab))].sort(), v => v.split(/[-_]/).map(w => w[0].toUpperCase() + w.slice(1)).join(' '));
-      fill('status', 'status', [...new Set(models.map(m => m.status))].sort(), null);
-      fill('hf-task', 'hfTaskFilter', collectHfTasks(models), (v) => formatTagLabel(v));
-      const catalogKeys = new Set(collectCatalogTags(models).map(tagKey));
-      tagFilter = (prev.tagFilter || []).map(tagKey).filter((k) => catalogKeys.has(k));
-      hfTaskFilter = prev.hfTaskFilter || '';
-      if (hfTaskFilter && ![...$('hf-task').options].some((o) => o.value === hfTaskFilter)) hfTaskFilter = '';
-      $('hf-task').value = hfTaskFilter;
-      updateTagPickerButton();
-      renderTagPickerList(collectCatalogTags(models), '');
-      $('sort').value = prev.sort || 'newest';
-      $('q').value = prev.q || '';
-      sparkFilters = prev.sparkFilters || [];
-      groupByFamily = !!prev.groupByFamily;
-      updateSparkFilterChips();
-      updateViewChips();
-    }
-
-    function formatBenchWhen(iso) {
-      if (!iso) return '—';
-      return String(iso).slice(0, 19).replace('T', ' ');
-    }
+    /* ── BENCH HISTORY ───────────────────────────────────── */
+    function formatBenchWhen(iso) { if (!iso) return '—'; return String(iso).slice(0, 19).replace('T', ' '); }
 
     function captureBenchNoteDrafts() {
       const drafts = {};
@@ -1377,38 +1130,18 @@
       return drafts;
     }
 
-    function infStatusSnapshot(data) {
-      if (!data) return '';
-      const a = data.active;
-      const loading = data.loading;
-      return [
-        a && a.id, a && a.ready, a && a.starting,
-        data.switch && data.switch.running, data.switch && data.switch.profile,
-        loading && loading.profile, loading && loading.phase,
-        data.bench && data.bench.running,
-      ].join(';');
-    }
-
     function renderBenchHistoryPanel(panel, data, profile) {
       const runs = data.runs || [];
-      if (!runs.length) {
-        panel.innerHTML = '<div class="meta-warn">No runs yet — bench on Inference tab.</div>';
-        panel.dataset.loaded = '1';
-        return;
-      }
+      if (!runs.length) { panel.innerHTML = '<div class="meta-warn">No runs yet — bench on Inference tab.</div>'; panel.dataset.loaded = '1'; return; }
       const latestId = (data.latest || {}).latest_run_id;
       const rows = runs.map((run) => {
         const tok = run.tok_s != null ? Math.round(run.tok_s) + ' tok/s' : '—';
-        const range = (run.tok_s_min != null && run.tok_s_max != null)
-          ? ` (${Math.round(run.tok_s_min)}–${Math.round(run.tok_s_max)})` : '';
+        const range = (run.tok_s_min != null && run.tok_s_max != null) ? ` (${Math.round(run.tok_s_min)}–${Math.round(run.tok_s_max)})` : '';
         const sys = run.system_note ? `<div class="verify-note">${esc(run.system_note)}</div>` : '';
         const cls = run.id === latestId ? 'latest' : '';
         const draftKey = profile + ':' + run.id;
         const noteVal = benchNoteDrafts[draftKey] != null ? benchNoteDrafts[draftKey] : (run.note || '');
-        return `<tr class="${cls}"><td>${esc(formatBenchWhen(run.measured_at))}</td>`
-          + `<td>${esc(tok + range)}<br><code>${esc(run.method || '')}</code>${sys}</td>`
-          + `<td><textarea class="bench-note-input" rows="2" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">${esc(noteVal)}</textarea>`
-          + `<button type="button" class="btn bench-note-save" data-action="bench-note-save" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">Save note</button></td></tr>`;
+        return `<tr class="${cls}"><td>${esc(formatBenchWhen(run.measured_at))}</td><td>${esc(tok + range)}<br><code>${esc(run.method || '')}</code>${sys}</td><td><textarea class="bench-note-input" rows="2" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">${esc(noteVal)}</textarea><button type="button" class="btn bench-note-save" data-action="bench-note-save" data-profile="${esc(profile)}" data-run-id="${esc(run.id)}">Save note</button></td></tr>`;
       }).join('');
       panel.innerHTML = `<table class="bench-history-table"><thead><tr><th>When</th><th>Speed</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>`;
       panel.dataset.loaded = '1';
@@ -1420,10 +1153,7 @@
       const panel = detailsEl.querySelector('.bench-history-panel');
       if (!profile || !panel) return;
       const cached = benchHistoryCache[profile];
-      if (!opts.force && cached) {
-        renderBenchHistoryPanel(panel, cached, profile);
-        return;
-      }
+      if (!opts.force && cached) { renderBenchHistoryPanel(panel, cached, profile); return; }
       panel.dataset.loaded = '0';
       panel.innerHTML = '<div class="meta-warn">Loading…</div>';
       try {
@@ -1439,7 +1169,7 @@
     }
 
     function restoreOpenBenchHistories() {
-      document.querySelectorAll('details.bench-history[open]').forEach((det) => {
+      document.querySelectorAll('#pane-body details.bench-history[open]').forEach((det) => {
         const panel = det.querySelector('.bench-history-panel');
         if (panel && panel.dataset.loaded === '1') return;
         loadBenchHistory(det);
@@ -1449,29 +1179,23 @@
     async function saveBenchNote(profile, runId, note, btn) {
       btn.disabled = true;
       try {
-        const res = await fetch(
-          '/api/inference/benchmarks/' + encodeURIComponent(profile) + '/runs/' + encodeURIComponent(runId),
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ note }),
-          }
-        );
+        const res = await fetch('/api/inference/benchmarks/' + encodeURIComponent(profile) + '/runs/' + encodeURIComponent(runId), {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note }),
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
         const cache = benchHistoryCache[profile];
-        if (cache && cache.runs) {
-          const run = cache.runs.find((r) => r.id === runId);
-          if (run) run.note = note;
-        }
+        if (cache && cache.runs) { const run = cache.runs.find((r) => r.id === runId); if (run) run.note = note; }
         delete benchNoteDrafts[profile + ':' + runId];
-        btn.textContent = 'Saved';
-        setTimeout(() => { btn.textContent = 'Save note'; }, 1500);
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        btn.disabled = false;
-      }
+        btn.textContent = 'Saved'; setTimeout(() => { btn.textContent = 'Save note'; }, 1500);
+      } catch (err) { alert(err.message); } finally { btn.disabled = false; }
+    }
+
+    /* ── INFERENCE STATUS ────────────────────────────────── */
+    function infStatusSnapshot(data) {
+      if (!data) return '';
+      const a = data.active; const loading = data.loading;
+      return [a && a.id, a && a.ready, a && a.starting, data.switch && data.switch.running, data.switch && data.switch.profile, loading && loading.profile, loading && loading.phase, data.bench && data.bench.running].join(';');
     }
 
     async function refreshInferenceStatus() {
@@ -1482,12 +1206,11 @@
         const snap = infStatusSnapshot(infStatus);
         const prev = lastInfSnapshot;
         lastInfSnapshot = snap;
-        if (prev && snap !== prev && (expandedId || highlightPath) && !document.hidden) {
-          applyFilters();
-        }
+        if (prev && snap !== prev && (selectedModelId || highlightPath) && !document.hidden) refreshPane();
       } catch (_) {}
     }
 
+    /* ── RECIPE PATCHING ─────────────────────────────────── */
     function patchRecipeOnModel(recipe) {
       if (!recipe || !recipe.id) return;
       const inv = recipe.inventory_path;
@@ -1496,91 +1219,53 @@
       if (!model) return;
       const profiles = [...(model.inference_profiles || [])];
       const i = profiles.findIndex((p) => p.id === recipe.id);
-      const base = i >= 0 ? profiles[i] : {
-        id: recipe.id,
-        name: recipe.name,
-        engine: recipe.engine,
-        tier: recipe.tier,
-      };
-      const updated = {
-        ...base,
-        lifecycle: recipe.lifecycle,
-        enabled: recipe.lifecycle === 'production' || recipe.lifecycle === 'works',
-      };
-      if (i >= 0) profiles[i] = updated;
-      else profiles.push(updated);
+      const base = i >= 0 ? profiles[i] : { id: recipe.id, name: recipe.name, engine: recipe.engine, tier: recipe.tier };
+      const updated = { ...base, lifecycle: recipe.lifecycle, enabled: recipe.lifecycle === 'production' || recipe.lifecycle === 'works' };
+      if (i >= 0) profiles[i] = updated; else profiles.push(updated);
       model.inference_profiles = profiles;
-      if (recipe.lifecycle === 'testing') {
-        const sv = model.spark_verify || {};
-        const st = sv.spark_status || 'unverified';
-        if (st === 'unverified') {
-          model.spark_verify = { ...sv, spark_status: 'wip' };
-        }
-      }
+      if (recipe.lifecycle === 'testing') { const sv = model.spark_verify || {}; const st = sv.spark_status || 'unverified'; if (st === 'unverified') model.spark_verify = { ...sv, spark_status: 'wip' }; }
       applyFilters();
+      refreshPane();
     }
-
     function removeRecipeFromModel(profileId) {
       for (const model of all) {
         const profiles = model.inference_profiles;
         if (!profiles || !profiles.some((p) => p.id === profileId)) continue;
         model.inference_profiles = profiles.filter((p) => p.id !== profileId);
-        applyFilters();
-        return;
+        applyFilters(); refreshPane(); return;
       }
     }
 
+    /* ── API ACTIONS ─────────────────────────────────────── */
     async function recipeApi(path, body, btn) {
-      btn.disabled = true;
-      btn.classList.add('busy');
+      btn.disabled = true; btn.classList.add('busy');
       try {
-        const res = await fetch(path, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ confirm: true, ...body }),
-        });
+        const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true, ...body }) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
         if (data.recipe) patchRecipeOnModel(data.recipe);
         else if (path.includes('/discard') && body.profile) removeRecipeFromModel(body.profile);
         await refreshInferenceStatus();
-        setTimeout(() => loadData(true).catch(() => {}), 2000); // scaffold worker writes models.json async
+        setTimeout(() => loadData(true).catch(() => {}), 2000);
         return data;
-      } catch (err) {
-        alert(err.message);
-        return null;
-      } finally {
-        btn.disabled = false;
-        btn.classList.remove('busy');
-      }
+      } catch (err) { alert(err.message); return null; }
+      finally { btn.disabled = false; btn.classList.remove('busy'); }
     }
 
     async function startProfile(profileId, tier, btn) {
-      if (tier === 'heavy') {
-        const ok = confirm('Heavy profile (“' + profileId + '”) may take several minutes to load.\n\nContinue?');
-        if (!ok) return;
-      }
-      btn.disabled = true;
-      btn.classList.add('busy');
+      if (tier === 'heavy') { if (!confirm('Heavy profile ("' + profileId + '") may take several minutes to load.\n\nContinue?')) return; }
+      btn.disabled = true; btn.classList.add('busy');
       try {
         const body = { profile: profileId, confirm: true };
         if (tier === 'heavy') body.confirm_heavy = true;
-        const res = await fetch('/api/inference/switch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
+        const res = await fetch('/api/inference/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
         await refreshInferenceStatus();
         applyFilters();
         gotoInference();
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        btn.disabled = false;
-        btn.classList.remove('busy');
-      }
+      } catch (err) { alert(err.message); }
+      finally { btn.disabled = false; btn.classList.remove('busy'); }
     }
 
     async function setSparkVerify(path, spark_status, btn) {
@@ -1591,16 +1276,13 @@
         if (!res.ok) throw new Error(data.error || res.statusText);
         const model = all.find(m => (m.rel_path || m.id) === path);
         if (model) model.spark_verify = data.spark_verify;
-        applyFilters();
+        applyFilters(); refreshPane();
       } catch (err) { alert(err.message); } finally { btn.disabled = false; }
     }
 
     async function setRemovalQueue(path, pending, btn) {
-      if (pending && btn.dataset.shelf === '—') {
-        if (!confirm(`"${btn.dataset.name}" is NOT on NAS shelf.\n\nQueue ${btn.dataset.local} for deletion anyway?`)) return;
-      } else if (pending) {
-        if (!confirm(`Queue "${btn.dataset.name}" (${btn.dataset.local}) for removal?\n\nPurges at 03:00. NAS copy (${btn.dataset.shelf}) kept.`)) return;
-      }
+      if (pending && btn.dataset.shelf === '—') { if (!confirm(`"${btn.dataset.name}" is NOT on NAS shelf.\n\nQueue ${btn.dataset.local} for deletion anyway?`)) return; }
+      else if (pending) { if (!confirm(`Queue "${btn.dataset.name}" (${btn.dataset.local}) for removal?\n\nPurges at 03:00. NAS copy (${btn.dataset.shelf}) kept.`)) return; }
       btn.disabled = true;
       try {
         const res = await fetch('/api/models/removal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, pending }) });
@@ -1608,7 +1290,7 @@
         if (!res.ok) throw new Error(data.error || res.statusText);
         const model = all.find(m => (m.rel_path || m.id) === path);
         if (model) model.spark_verify = data.spark_verify;
-        applyFilters();
+        applyFilters(); refreshPane();
       } catch (err) { alert(err.message); } finally { btn.disabled = false; }
     }
 
@@ -1651,15 +1333,181 @@
       } catch (_) {}
     }
 
-    $('list').addEventListener('toggle', (e) => {
-      const grp = e.target.closest('details.model-family-group');
-      if (grp && grp.dataset.modelGroup && grp.isConnected) {
-        if (suppressModelGroupToggle) return;
-        if (grp.open) modelGroupsOpen.add(grp.dataset.modelGroup);
-        else modelGroupsOpen.delete(grp.dataset.modelGroup);
+    /* ── FILTERS & PREFS ─────────────────────────────────── */
+    function readPrefs() { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; } }
+    function savePrefs() {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ q: $('q').value, lab: $('lab').value, status: $('status').value, sparkFilters, tagFilter, hfTaskFilter, groupByFamily, sortCol, sortDir }));
+    }
+
+    function readSortPrefs(stored) {
+      if (stored.sortCol) return { col: stored.sortCol, dir: stored.sortDir || 'asc' };
+      const legacyMap = { 'newest': { col: 'release_date', dir: 'desc' }, 'oldest': { col: 'release_date', dir: 'asc' }, 'name-asc': { col: 'model', dir: 'asc' }, 'name-desc': { col: 'model', dir: 'desc' }, 'size-desc': { col: 'local', dir: 'desc' }, 'size-asc': { col: 'local', dir: 'asc' }, 'ctx-desc': { col: 'ctx', dir: 'desc' }, 'ctx-asc': { col: 'ctx', dir: 'asc' }, 'params-desc': { col: 'params', dir: 'desc' }, 'params-asc': { col: 'params', dir: 'asc' }, 'bench-desc': { col: 'bench', dir: 'desc' }, 'bench-asc': { col: 'bench', dir: 'asc' } };
+      return legacyMap[stored.sort] || { col: 'release_date', dir: 'desc' };
+    }
+
+    function updateTagPickerButton() { const btn = $('tag-picker-btn'); if (!tagFilter.length) btn.textContent = 'All'; else if (tagFilter.length === 1) btn.textContent = formatTagLabel(tagFilter[0]); else btn.textContent = `${tagFilter.length} selected`; }
+    function renderTagPickerList(available, query) {
+      const list = $('tag-picker-list'); const q = (query || '').toLowerCase(); list.innerHTML = '';
+      available.filter((t) => !q || formatTagLabel(t).toLowerCase().includes(q) || tagKey(t).includes(q)).forEach((tag) => {
+        const k = tagKey(tag); const row = document.createElement('label'); row.className = 'tag-picker-item';
+        row.innerHTML = `<input type="checkbox" value="${esc(k)}" ${tagFilter.includes(k) ? 'checked' : ''}><span>${esc(formatTagLabel(tag))}</span>`;
+        row.querySelector('input').addEventListener('change', (e) => {
+          if (e.target.checked) { if (!tagFilter.includes(k)) tagFilter = [...tagFilter, k]; } else { tagFilter = tagFilter.filter((t) => t !== k); }
+          updateTagPickerButton(); applyFilters();
+        });
+        list.appendChild(row);
+      });
+      if (!list.children.length) list.innerHTML = '<div class="tag-picker-item" style="cursor:default;color:var(--muted)">No matches</div>';
+    }
+    function setTagFilter(next) { tagFilter = [...next].map(tagKey); updateTagPickerButton(); renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value); applyFilters(); }
+    function closeTagPicker() { $('tag-picker-menu').hidden = true; $('tag-picker-btn').setAttribute('aria-expanded', 'false'); }
+    function openTagPicker() { renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value); $('tag-picker-menu').hidden = false; $('tag-picker-btn').setAttribute('aria-expanded', 'true'); $('tag-picker-search').focus(); }
+
+    function applyFilters() {
+      const q = $('q').value.toLowerCase();
+      const lab = $('lab').value, status = $('status').value;
+      hfTaskFilter = tagKey($('hf-task').value);
+      savePrefs();
+      let filtered = all.filter(m => {
+        if (lab && m.lab !== lab) return false;
+        if (tagFilter.length && !tagFilter.every((t) => catalogTagSet(m).has(t))) return false;
+        if (hfTaskFilter && tagKey(m.pipeline_tag) !== hfTaskFilter) return false;
+        if (status && m.status !== status) return false;
+        if (!modelMatchesSparkFilter(m)) return false;
+        if (q) {
+          const hay = [m.name, m.lab, m.slug, m.hf_repo, m.why_downloaded, modelSummary(m), m.pipeline_tag, ...catalogCapabilities(m), ...notableHfTags(m)].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      filtered = sortModels(filtered);
+      const queuedTotal = all.filter(removalPending).length;
+      const queuedPart = queuedTotal ? ` · ${queuedTotal} pending delete` : '';
+      const filterBits = [];
+      if (tagFilter.length) filterBits.push(tagFilter.map((t) => formatTagLabel(t)).join(' + '));
+      if (hfTaskFilter) filterBits.push(formatTagLabel(hfTaskFilter));
+      const tagPart = filterBits.length ? ` · ${filterBits.join(' · ')}` : '';
+      $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${tagPart}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
+      if (queuedTotal) $('summary').classList.add('meta-danger'); else $('summary').classList.remove('meta-danger');
+      render(filtered);
+      // close pane if selected model no longer in filtered set
+      if (selectedModelId && !filtered.some(m => m.id === selectedModelId)) closePane();
+      else updateSelectedRow();
+    }
+
+    function populateFilters(models, preserve) {
+      const stored = readPrefs();
+      const storedTags = (stored.tagFilter || (stored.cap ? [stored.cap] : [])).map(tagKey);
+      const prev = preserve ? {
+        lab: $('lab').value, status: $('status').value, hfTaskFilter,
+        q: $('q').value, sparkFilters, tagFilter, groupByFamily,
+        sortCol, sortDir,
+      } : {
+        sparkFilters: loadSparkFilters(stored),
+        q: stored.q || '', lab: stored.lab || '', status: stored.status || '',
+        tagFilter: storedTags, hfTaskFilter: tagKey(stored.hfTaskFilter || ''),
+        groupByFamily: !!stored.groupByFamily,
+        ...readSortPrefs(stored),
+      };
+      const fill = (id, key, items, fn) => {
+        const el = $(id), first = el.options[0].outerHTML;
+        el.innerHTML = first;
+        items.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = fn ? fn(v) : v; el.appendChild(o); });
+        if (prev[key] && [...el.options].some(o => o.value === prev[key])) el.value = prev[key];
+      };
+      fill('lab', 'lab', [...new Set(models.map(m => m.lab))].sort(), v => v.split(/[-_]/).map(w => w[0].toUpperCase() + w.slice(1)).join(' '));
+      fill('status', 'status', [...new Set(models.map(m => m.status))].sort(), null);
+      fill('hf-task', 'hfTaskFilter', collectHfTasks(models), (v) => formatTagLabel(v));
+      const catalogKeys = new Set(collectCatalogTags(models).map(tagKey));
+      tagFilter = (prev.tagFilter || []).map(tagKey).filter((k) => catalogKeys.has(k));
+      hfTaskFilter = prev.hfTaskFilter || '';
+      if (hfTaskFilter && ![...$('hf-task').options].some((o) => o.value === hfTaskFilter)) hfTaskFilter = '';
+      $('hf-task').value = hfTaskFilter;
+      updateTagPickerButton();
+      renderTagPickerList(collectCatalogTags(models), '');
+      $('q').value = prev.q || '';
+      sparkFilters = prev.sparkFilters || [];
+      groupByFamily = !!prev.groupByFamily;
+      if (prev.sortCol) { sortCol = prev.sortCol; sortDir = prev.sortDir || 'asc'; }
+      else if (prev.col) { sortCol = prev.col; sortDir = prev.dir || 'asc'; }
+      updateSparkFilterChips();
+      updateViewChips();
+    }
+
+    function renderJobBanner() {
+      const el = $('job-banner');
+      if (!activeJob.running) { el.classList.remove('active'); el.textContent = ''; return; }
+      const tail = (activeJob.log_tail || []).slice(-2).join(' · ');
+      el.classList.add('active');
+      el.textContent = `${jobLabels[activeJob.action] || activeJob.action} ${activeJob.path || '…'} (pid ${activeJob.pid})${tail ? ' — ' + tail : ''}`;
+    }
+
+    function scrollToHighlight() {
+      if (!highlightPath) return;
+      const row = document.querySelector(`tr.model-row[data-path="${CSS.escape(highlightPath)}"]`);
+      if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    /* ── EVENT HANDLERS ──────────────────────────────────── */
+
+    // Table: row clicks + family group toggles
+    $('models-tbody').addEventListener('click', (e) => {
+      const familyHead = e.target.closest('tr.family-head-row');
+      if (familyHead) {
+        const key = familyHead.dataset.familyKey;
+        if (!key) return;
+        const collapsed = familyHead.classList.contains('collapsed');
+        if (collapsed) { modelGroupsOpen.add(key); } else { modelGroupsOpen.delete(key); }
+        familyHead.classList.toggle('collapsed', !collapsed);
+        document.querySelectorAll(`tr.family-member[data-family-key="${CSS.escape(key)}"]`).forEach((tr) => { tr.hidden = !collapsed; });
         return;
       }
-      if (suppressBenchHistoryToggle) return;
+      const modelRow = e.target.closest('tr.model-row');
+      if (modelRow) {
+        const id = modelRow.dataset.id;
+        if (!id) return;
+        if (selectedModelId === id) { closePane(); return; }
+        openPane(id);
+        // open family group if in family view
+        const familyKey = modelRow.dataset.familyKey;
+        if (familyKey) modelGroupsOpen.add(familyKey);
+        return;
+      }
+    });
+
+    // Table thead: column sort
+    $('models-thead').addEventListener('click', (e) => {
+      const th = e.target.closest('th[data-sort-col]');
+      if (th) handleColumnSort(th.dataset.sortCol);
+    });
+
+    // Pane: all actions
+    $('model-detail-pane').addEventListener('click', (e) => {
+      const vbtn = e.target.closest('[data-verify]');
+      if (vbtn) { e.stopPropagation(); setSparkVerify(vbtn.dataset.path, vbtn.dataset.verify, vbtn); return; }
+      const qbtn = e.target.closest('[data-action="queue-removal"]');
+      if (qbtn && !qbtn.disabled) { e.stopPropagation(); setRemovalQueue(qbtn.dataset.path, qbtn.dataset.pending === '1', qbtn); return; }
+      const scaffoldBtn = e.target.closest('[data-action="recipe-scaffold"]');
+      if (scaffoldBtn && !scaffoldBtn.disabled) { e.stopPropagation(); recipeApi('/api/inference/recipes/scaffold', { inventory_path: scaffoldBtn.dataset.path, auto: true }, scaffoldBtn); return; }
+      const testBtn = e.target.closest('[data-action="recipe-testing"]');
+      if (testBtn && !testBtn.disabled) { e.stopPropagation(); recipeApi('/api/inference/recipes/testing', { profile: testBtn.dataset.profile }, testBtn); return; }
+      const promoteBtn = e.target.closest('[data-action="recipe-promote"]');
+      if (promoteBtn && !promoteBtn.disabled) { e.stopPropagation(); if (!confirm('Mark recipe "' + promoteBtn.dataset.profile + '" as works?')) return; recipeApi('/api/inference/recipes/promote', { profile: promoteBtn.dataset.profile }, promoteBtn); return; }
+      const discardBtn = e.target.closest('[data-action="recipe-discard"]');
+      if (discardBtn && !discardBtn.disabled) { e.stopPropagation(); if (!confirm('Discard draft recipe "' + discardBtn.dataset.profile + '"?')) return; recipeApi('/api/inference/recipes/discard', { profile: discardBtn.dataset.profile }, discardBtn); return; }
+      const sbtn = e.target.closest('[data-action="start-profile"]');
+      if (sbtn && !sbtn.disabled) { e.stopPropagation(); startProfile(sbtn.dataset.profile, sbtn.dataset.tier, sbtn); return; }
+      const noteBtn = e.target.closest('[data-action="bench-note-save"]');
+      if (noteBtn && !noteBtn.disabled) { e.stopPropagation(); const row = noteBtn.closest('td'); const input = row ? row.querySelector('.bench-note-input') : null; const note = input ? input.value.trim() : ''; saveBenchNote(noteBtn.dataset.profile, noteBtn.dataset.runId, note, noteBtn); return; }
+      const btn = e.target.closest('[data-action]');
+      if (!btn || btn.disabled) return;
+      e.stopPropagation();
+      const extra = (btn.dataset.action === 'remove-local' && (!btn.dataset.shelf || btn.dataset.shelf === '—')) ? { force: true } : {};
+      modelAction(btn.dataset.action, btn.dataset.path, btn, extra);
+    });
+
+    // Pane: bench history toggle
+    $('model-detail-pane').addEventListener('toggle', (e) => {
       const det = e.target.closest('details.bench-history');
       if (!det || !det.dataset.profile || !det.isConnected) return;
       if (det.open) {
@@ -1670,109 +1518,32 @@
       }
     }, true);
 
-    $('list').addEventListener('click', (e) => {
-      const expand = e.target.closest('[data-expand]');
-      if (expand) {
-        const id = expand.dataset.expand;
-        const prevId = expandedId;
-        const nextId = expandedId === id ? null : id;
-        const model = all.find((m) => m.id === id);
-        if (model) modelGroupsOpen.add(modelFamilyKey(model));
-        expandedId = nextId;
-        if (!patchExpandedRow(prevId, nextId)) applyFilters();
-        return;
-      }
-      const vbtn = e.target.closest('[data-verify]');
-      if (vbtn) { e.stopPropagation(); setSparkVerify(vbtn.dataset.path, vbtn.dataset.verify, vbtn); return; }
-      const qbtn = e.target.closest('[data-action="queue-removal"]');
-      if (qbtn && !qbtn.disabled) { e.stopPropagation(); setRemovalQueue(qbtn.dataset.path, qbtn.dataset.pending === '1', qbtn); return; }
-      const scaffoldBtn = e.target.closest('[data-action="recipe-scaffold"]');
-      if (scaffoldBtn && !scaffoldBtn.disabled) {
-        e.stopPropagation();
-        recipeApi(
-          '/api/inference/recipes/scaffold',
-          { inventory_path: scaffoldBtn.dataset.path, auto: true },
-          scaffoldBtn
-        );
-        return;
-      }
-      const testBtn = e.target.closest('[data-action="recipe-testing"]');
-      if (testBtn && !testBtn.disabled) {
-        e.stopPropagation();
-        recipeApi('/api/inference/recipes/testing', { profile: testBtn.dataset.profile }, testBtn);
-        return;
-      }
-      const promoteBtn = e.target.closest('[data-action="recipe-promote"]');
-      if (promoteBtn && !promoteBtn.disabled) {
-        e.stopPropagation();
-        if (!confirm('Mark recipe works “' + promoteBtn.dataset.profile + '” as works?')) return;
-        recipeApi('/api/inference/recipes/promote', { profile: promoteBtn.dataset.profile }, promoteBtn);
-        return;
-      }
-      const discardBtn = e.target.closest('[data-action="recipe-discard"]');
-      if (discardBtn && !discardBtn.disabled) {
-        e.stopPropagation();
-        if (!confirm('Discard draft recipe “' + discardBtn.dataset.profile + '”?')) return;
-        recipeApi('/api/inference/recipes/discard', { profile: discardBtn.dataset.profile }, discardBtn);
-        return;
-      }
-      const sbtn = e.target.closest('[data-action="start-profile"]');
-      if (sbtn && !sbtn.disabled) {
-        e.stopPropagation();
-        startProfile(sbtn.dataset.profile, sbtn.dataset.tier, sbtn);
-        return;
-      }
-      const noteBtn = e.target.closest('[data-action="bench-note-save"]');
-      if (noteBtn && !noteBtn.disabled) {
-        e.stopPropagation();
-        const row = noteBtn.closest('td');
-        const input = row ? row.querySelector('.bench-note-input') : null;
-        const note = input ? input.value.trim() : '';
-        saveBenchNote(noteBtn.dataset.profile, noteBtn.dataset.runId, note, noteBtn);
-        return;
-      }
-      const btn = e.target.closest('[data-action]');
-      if (!btn || btn.disabled) return;
-      e.stopPropagation();
-      const extra = (btn.dataset.action === 'remove-local' && (!btn.dataset.shelf || btn.dataset.shelf === '—')) ? { force: true } : {};
-      modelAction(btn.dataset.action, btn.dataset.path, btn, extra);
-    });
+    // Pane close button
+    $('pane-close').addEventListener('click', () => closePane());
+    $('pane-backdrop').addEventListener('click', () => closePane());
 
+    // Controls
     let filterDebounce = null;
-    function scheduleApplyFilters() {
-      clearTimeout(filterDebounce);
-      filterDebounce = setTimeout(() => applyFilters(), 120);
-    }
-    ['q'].forEach(id => {
-      $(id).addEventListener('input', scheduleApplyFilters);
-      $(id).addEventListener('change', applyFilters);
-    });
-    ['lab','status','sort','hf-task'].forEach(id => {
+    function scheduleApplyFilters() { clearTimeout(filterDebounce); filterDebounce = setTimeout(() => applyFilters(), 120); }
+    $('q').addEventListener('input', scheduleApplyFilters);
+    $('q').addEventListener('change', applyFilters);
+    ['lab', 'status', 'hf-task'].forEach(id => {
       $(id).addEventListener('input', applyFilters);
       $(id).addEventListener('change', applyFilters);
     });
-
     $('filter-chips').addEventListener('click', (e) => {
       const groupChip = e.target.closest('[data-group]');
-      if (groupChip) {
-        setGroupByFamily(groupChip.dataset.group === 'family');
-        return;
-      }
+      if (groupChip) { setGroupByFamily(groupChip.dataset.group === 'family'); return; }
       const sparkChip = e.target.closest('[data-spark]');
       if (sparkChip) toggleSparkFilter(sparkChip.dataset.spark);
     });
-
-    $('tag-picker-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      if ($('tag-picker-menu').hidden) openTagPicker();
-      else closeTagPicker();
-    });
+    $('tag-picker-btn').addEventListener('click', (e) => { e.stopPropagation(); if ($('tag-picker-menu').hidden) openTagPicker(); else closeTagPicker(); });
     $('tag-picker-clear').addEventListener('click', () => setTagFilter([]));
     $('tag-picker-done').addEventListener('click', () => closeTagPicker());
     $('tag-picker-search').addEventListener('input', (e) => renderTagPickerList(collectCatalogTags(all), e.target.value));
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.tag-picker')) closeTagPicker();
-    });
+    document.addEventListener('click', (e) => { if (!e.target.closest('.tag-picker')) closeTagPicker(); });
+
+    /* ── DATA LOADING ────────────────────────────────────── */
     function loadData(preserve) {
       return fetch('models.json?' + Date.now(), { cache: 'no-store' })
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -1783,12 +1554,13 @@
           if (highlightPath) {
             const hit = all.find((m) => m.rel_path === highlightPath || m.id === highlightPath);
             if (hit) {
-              expandedId = hit.id;
+              selectedModelId = hit.id;
               modelGroupsOpen.add(modelFamilyKey(hit));
             }
           }
           populateFilters(all, preserve);
           applyFilters();
+          if (highlightPath && selectedModelId) openPane(selectedModelId);
           refreshShelfStatus();
           refreshInferenceStatus();
         });
@@ -1798,7 +1570,8 @@
 
     loadData(false).catch(err => {
       $('summary').textContent = 'Failed to load models.json';
-      $('list').innerHTML = `<div class="empty">${esc(String(err))}</div>`;
+      $('models-empty').textContent = String(err);
+      $('models-empty').hidden = false;
     });
     pollTimer = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
@@ -1806,10 +1579,7 @@
     }, REFRESH_MS);
     infPollTimer = setInterval(() => refreshInferenceStatus(), INF_POLL_MS);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        loadData(true).catch(() => {});
-        refreshInferenceStatus();
-      }
+      if (document.visibilityState === 'visible') { loadData(true).catch(() => {}); refreshInferenceStatus(); }
     });
   </script>
 </body>

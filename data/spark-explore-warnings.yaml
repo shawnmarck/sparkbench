@@ -7,4 +7,4 @@ repos:
     message: >-
       Z Lab DFlash sidecar for Qwen3.6-35B MoE fails on our DGX Spark — NVFP4 MoE
       target hits KV cache page-size mismatch in vLLM (load fails). Use
-      z-lab/Qwen3.6-27B-DFlash instead (~29 tok/s with qwen/qwen3.6-27b target).
+      z-lab/Qwen3.6-27B-DFlash instead (~3.7 tok/s agent bench v2 on opencode-qwen27-dflash-262k).

@@ -3,7 +3,7 @@ name: qwen3.6-27b DFlash (eugr)
 inventory_path: qwen/qwen3.6-27b
 engine: eugr
 tier: heavy
-lifecycle: works
+lifecycle: deprecated
 served_name: qwen3.6-27b-dflash
 port: 8000
 tags:

@@ -2159,7 +2159,7 @@
               const pick = variants.find((v) => v.spark_fit === 'recommended') || variants[0];
               if (!pick) return;
               const badges = expBadgesForModel(d.model || {});
-              item.snapshot = {
+              const snap = {
                 format: pick.format,
                 engine: pick.engine,
                 size_bytes: pick.size_bytes,
@@ -2169,11 +2169,25 @@
                 badges: badges,
                 downloads: (d.model || {}).downloads,
               };
-              if (!item.variant_label && pick.label) item.variant_label = pick.label;
-              if (!item.intent || item.intent === 'gguf_best') item.intent = pick.intent || item.intent;
+              const variantLabel = item.variant_label || pick.label || null;
+              // Persist the snapshot back to server so it survives expTick reassignment
+              await fetch('/api/hf/queue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'explore',
+                  repo: item.repo,
+                  intent: item.intent || 'gguf_best',
+                  files: item.files,
+                  inventory_path: item.inventory_path,
+                  variant_label: variantLabel,
+                  snapshot: snap,
+                }),
+              });
             } catch (_) { /* ignore per-item errors */ }
           }));
-          renderShortlist();
+          // Refresh queue to get server-persisted snapshots
+          expTick();
         } finally {
           expShortlistEnriching = false;
         }

@@ -123,7 +123,6 @@
     .models-table-wrap {
       flex: 1;
       min-width: 0;
-      overflow-x: auto;
     }
 
     /* ── SORTABLE TABLE ──────────────────────────────────── */
@@ -748,12 +747,12 @@
         case 'local':   return m.combined_size_bytes || (m.local && m.local.size_bytes) || 0;
         case 'shelf':   return (m.shelf && m.shelf.size_bytes) || 0;
         case 'ctx':     return m.max_context || 0;
-        case 'params':  return m.param_b != null ? Number(m.param_b) : -1;
-        case 'active':  return m.param_active_b != null ? Number(m.param_active_b) : -1;
+        case 'params':  return m.param_b != null ? Number(m.param_b) : null;
+        case 'active':  return m.param_active_b != null ? Number(m.param_active_b) : null;
         case 'spark':   return sparkStatus(m);
         case 'dl':      return m.status || '';
         case 'arch':    return modelArchitecture(m) || '';
-        case 'bench':   return m.best_bench_tok_s != null ? Number(m.best_bench_tok_s) : -1;
+        case 'bench':   return m.best_bench_tok_s != null ? Number(m.best_bench_tok_s) : null;
         case 'release_date': default: return parseDate(m.release_date);
       }
     }
@@ -761,10 +760,14 @@
     function compareModelsBySortState(a, b) {
       const av = modelSortValue(a, sortCol);
       const bv = modelSortValue(b, sortCol);
-      if (typeof av === 'number' && typeof bv === 'number') {
-        if (av < 0 && bv >= 0) return 1;
-        if (bv < 0 && av >= 0) return -1;
+      if (window.SparkInventoryGrid) {
+        const r = SparkInventoryGrid.compareValues({ _v: av }, { _v: bv }, '_v', sortDir);
+        return r || (a.name || '').localeCompare(b.name || '');
       }
+      // fallback without module
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
       let r;
       if (typeof av === 'string' && typeof bv === 'string') {
         r = av.localeCompare(bv);
@@ -1387,8 +1390,14 @@
       if (tagFilter.length) filterBits.push(tagFilter.map((t) => formatTagLabel(t)).join(' + '));
       if (hfTaskFilter) filterBits.push(formatTagLabel(hfTaskFilter));
       const tagPart = filterBits.length ? ` · ${filterBits.join(' · ')}` : '';
-      $('summary').innerHTML = `Showing ${filtered.length} of ${all.length}${tagPart}${queuedPart} · updated ${fmtDate(window.__generated)} ${fmtTime(window.__generated)}`;
-      if (queuedTotal) $('summary').classList.add('meta-danger'); else $('summary').classList.remove('meta-danger');
+      const dateStr = window.__generated ? `${fmtDate(window.__generated)} ${fmtTime(window.__generated)}` : '';
+      const suffix = `${tagPart}${queuedPart}${dateStr ? ' · updated ' + dateStr : ''}`.trim();
+      if (window.SparkInventoryGrid) {
+        SparkInventoryGrid.renderSummary($('summary'), { filtered: filtered.length, total: all.length, suffix });
+      } else {
+        $('summary').textContent = `Showing ${filtered.length} of ${all.length} ${suffix}`;
+      }
+      $('summary').classList.toggle('meta-danger', !!queuedTotal);
       render(filtered);
       // close pane if selected model no longer in filtered set
       if (selectedModelId && !filtered.some(m => m.id === selectedModelId)) closePane();

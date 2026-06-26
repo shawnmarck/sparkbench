@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ready |
+| **Status** | done |
 | **Priority** | Seq 5 |
 | **Owner** | — |
 | **PR policy** | **One PR** — flat recipe grid + ctx labeling + view toggle |
@@ -37,12 +37,12 @@ Context window picker works well. Log functionality stays as-is.
 
 ## Acceptance criteria
 
-- [ ] Default view is flat column grid (no collapsed family groups)
-- [ ] Flat / By family toggle persists
-- [ ] Showing A of B matches Models pattern
-- [ ] Recipe meta not default yellow; launch override visible on selected row
-- [ ] Context picker behavior unchanged
-- [ ] Log section and overlay unchanged (heavy/ds4 switch still opens overlay)
+- [x] Default view is flat column grid (no collapsed family groups)
+- [x] Flat / By family toggle persists
+- [x] Showing A of B matches Models pattern
+- [x] Recipe meta not default yellow; launch override visible on selected row
+- [x] Context picker behavior unchanged
+- [x] Log section and overlay unchanged (heavy/ds4 switch still opens overlay)
 
 ## Test plan
 
@@ -66,4 +66,4 @@ Suggested columns: Recipe, Model path, Engine, Tier, Lifecycle, Ctx (default), B
 
 | Date | Owner | Result | Commit |
 |------|-------|--------|--------|
-| — | — | — | — |
+| 2026-06-26 | fm/task-005-7v | done | fm/task-005-7v |

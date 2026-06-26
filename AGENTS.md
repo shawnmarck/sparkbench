@@ -10,7 +10,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 API: `renderSummary(el, {filtered, total, suffix})`, `compareValues(a, b, col, dir)`, `renderTable(container, opts)`, `renderChips(container, chips, active, onToggle)`, `toggleGrouped(wrapEl, flat, grouped, onRender)`.
 
-Consumed by TASK-002 (Models — done). Remaining consumers that should migrate: TASK-005 (Inference full migration), TASK-004 (Explore). See the module header comment for integration examples.
+Consumed by TASK-002 (Models — done) and TASK-005 (Inference — done; uses `renderSummary` for the count line + `compareValues` for sort, grid rows rendered inline like Models). Remaining consumer: TASK-004 (Explore). See the module header comment for integration examples.
 
 ## Client activity (TASK-001)
 

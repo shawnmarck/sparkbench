@@ -1,0 +1,34 @@
+== 1. _explore_item_status() priority chain ==
+  [PASS] downloading wins
+  [PASS] download_queued
+  [PASS] gated
+  [PASS] on_disk (resolved via inventory_path)
+  [PASS] saved (default)
+  [PASS] ignores dl item with mismatched inventory_path
+
+== 2. queue_list() enriches explore items with status ==
+  [PASS] queue_list returns explore items
+  [PASS] every explore item has status
+  [PASS] explore item status is 'saved' when idle
+
+== 3. queue_add_explore() stores whitelisted snapshot keys only ==
+  [PASS] snapshot persisted
+  [PASS] only whitelisted snapshot keys kept
+  [PASS] evil_key dropped
+  [PASS] snapshot cannot overwrite item id
+
+== 4. queue_add_explore() dedupe preserves stable id + added_at ==
+  [PASS] first add has id+added_at
+  [PASS] dedupe keeps stable id
+  [PASS] dedupe preserves added_at
+  [PASS] dedupe updates snapshot
+  [PASS] dedupe does not duplicate row
+  [PASS] different intent creates new row
+  [PASS] different inventory_path creates new row
+
+== 5. new item gets a fresh uuid id on first save ==
+  [PASS] first-save id is a valid uuid
+
+====================================================
+RESULT: 21 passed, 0 failed
+ALL BACKEND CHECKS PASSED

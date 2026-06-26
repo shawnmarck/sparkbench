@@ -185,43 +185,105 @@
               <div class="exp-status-banner" id="exp-status-banner">Loading HF status…</div>
               <pre class="exp-download-log" id="exp-download-log" hidden></pre>
             </div>
-            <div class="exp-toolbar">
-              <input type="search" id="exp-q" placeholder="Search Hugging Face models…" autocomplete="off" aria-label="Search models">
-              <div class="exp-mode-row">
-                <button type="button" class="exp-mode-btn active" data-exp-mode="trending" title="HF Hub trending (recent momentum, not all-time downloads)">Trending</button>
-                <button type="button" class="exp-mode-btn" data-exp-mode="new">New</button>
+
+            <!-- Sub-nav: Browse | Shortlist | Downloads -->
+            <div class="exp-subnav" id="exp-subnav" role="tablist">
+              <button type="button" class="exp-subnav-btn active" id="exp-tab-browse" role="tab" aria-selected="true" data-exp-tab="browse">Browse</button>
+              <button type="button" class="exp-subnav-btn" id="exp-tab-shortlist" role="tab" aria-selected="false" data-exp-tab="shortlist">Shortlist <span class="exp-shortlist-count" id="exp-shortlist-count"></span></button>
+              <button type="button" class="exp-subnav-btn" id="exp-tab-downloads" role="tab" aria-selected="false" data-exp-tab="downloads">Downloads <span class="exp-shortlist-count" id="exp-downloads-count"></span></button>
+            </div>
+
+            <!-- Browse pane -->
+            <div class="exp-tabpane" id="exp-pane-browse" role="tabpanel">
+              <div class="exp-toolbar">
+                <input type="search" id="exp-q" placeholder="Search Hugging Face models…" autocomplete="off" aria-label="Search models">
+                <div class="exp-mode-row">
+                  <button type="button" class="exp-mode-btn active" data-exp-mode="trending" title="HF Hub trending (recent momentum, not all-time downloads)">Trending</button>
+                  <button type="button" class="exp-mode-btn" data-exp-mode="new">New</button>
+                </div>
+                <div class="exp-chip-row" id="exp-filter-chips">
+                  <button type="button" class="exp-chip" data-exp-chip="gguf">GGUF</button>
+                  <button type="button" class="exp-chip" data-exp-chip="nvfp4">NVFP4</button>
+                  <button type="button" class="exp-chip" data-exp-chip="moe">MoE</button>
+                  <button type="button" class="exp-chip active" data-exp-chip="fits_spark">Fits Spark</button>
+                </div>
+                <div class="exp-chip-legend" aria-label="Model card chip colors">
+                  <span class="exp-chip-legend-label">Cards</span>
+                  <span class="exp-badge gguf">GGUF</span>
+                  <span class="exp-badge nvfp4">NVFP4</span>
+                  <span class="exp-badge moe">MoE</span>
+                  <span class="exp-badge dense">Dense</span>
+                  <span class="exp-badge mtp">MTP</span>
+                  <span class="exp-badge vision">Vision</span>
+                  <span class="exp-badge diffusion">Diffusion</span>
+                </div>
               </div>
-              <div class="exp-chip-row" id="exp-filter-chips">
-                <button type="button" class="exp-chip" data-exp-chip="gguf">GGUF</button>
-                <button type="button" class="exp-chip" data-exp-chip="nvfp4">NVFP4</button>
-                <button type="button" class="exp-chip" data-exp-chip="moe">MoE</button>
-                <button type="button" class="exp-chip active" data-exp-chip="fits_spark">Fits Spark</button>
-              </div>
-              <div class="exp-chip-legend" aria-label="Model card chip colors">
-                <span class="exp-chip-legend-label">Cards</span>
-                <span class="exp-badge gguf">GGUF</span>
-                <span class="exp-badge nvfp4">NVFP4</span>
-                <span class="exp-badge moe">MoE</span>
-                <span class="exp-badge dense">Dense</span>
-                <span class="exp-badge mtp">MTP</span>
-                <span class="exp-badge vision">Vision</span>
-                <span class="exp-badge diffusion">Diffusion</span>
+              <div class="exp-main">
+                <div class="exp-results-panel">
+                  <div class="exp-results-head">
+                    <span id="exp-results-label">Trending on HF</span>
+                    <span id="exp-results-count">—</span>
+                  </div>
+                  <div class="exp-results-scroll" id="exp-results">
+                    <div class="exp-empty">Loading…</div>
+                  </div>
+                </div>
+                <div class="exp-detail" id="exp-detail" hidden>
+                  <div class="exp-detail-title" id="exp-detail-title">—</div>
+                  <div class="exp-detail-meta" id="exp-detail-meta">—</div>
+                  <div class="exp-spark-warning" id="exp-spark-warning" hidden></div>
+                  <div class="exp-variants-wrap">
+                    <div class="exp-variants-head">Download options · single DGX Spark (128GB)</div>
+                    <div class="exp-variants-scroll">
+                      <table class="exp-variants-table">
+                        <thead>
+                          <tr>
+                            <th>Variant</th>
+                            <th>Engine</th>
+                            <th>Size</th>
+                            <th>Spark</th>
+                            <th>Notes</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody id="exp-variants-body">
+                          <tr><td colspan="6" class="exp-empty">Select a model</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="exp-detail-actions">
+                    <button type="button" class="inf-btn" id="exp-save-explore">Save to Shortlist</button>
+                    <a href="#" id="exp-hf-link" target="_blank" rel="noopener">Open on Hugging Face ↗</a>
+                  </div>
+                  <div class="exp-msg" id="exp-detail-msg"></div>
+                </div>
               </div>
             </div>
-            <div class="exp-main">
-              <div class="exp-results-panel">
-                <div class="exp-results-head">
-                  <span id="exp-results-label">Trending on HF</span>
-                  <span id="exp-results-count">—</span>
+
+            <!-- Shortlist pane -->
+            <div class="exp-tabpane" id="exp-pane-shortlist" role="tabpanel" hidden>
+              <div class="exp-shortlist-toolbar" id="exp-shortlist-toolbar">
+                <div class="exp-shortlist-actions" id="exp-shortlist-bulk-actions" hidden>
+                  <span class="exp-shortlist-sel-label" id="exp-shortlist-sel-label"></span>
+                  <button type="button" class="exp-shortlist-btn danger" id="exp-bulk-remove">Remove selected</button>
+                  <button type="button" class="exp-shortlist-btn" id="exp-bulk-download">Download selected</button>
                 </div>
-                <div class="exp-results-scroll" id="exp-results">
-                  <div class="exp-empty">Loading…</div>
+                <div class="exp-shortlist-sort-row">
+                  <span class="exp-shortlist-summary" id="exp-shortlist-summary"></span>
+                  <button type="button" class="exp-shortlist-btn small" id="exp-shortlist-select-all">Select all</button>
                 </div>
               </div>
-              <div class="exp-detail" id="exp-detail" hidden>
-                <div class="exp-detail-title" id="exp-detail-title">—</div>
-                <div class="exp-detail-meta" id="exp-detail-meta">—</div>
-                <div class="exp-spark-warning" id="exp-spark-warning" hidden></div>
+              <div class="exp-shortlist-table-wrap" id="exp-shortlist-table-wrap">
+                <div class="exp-empty">No models in Shortlist yet. Browse HF and click "Save to Shortlist".</div>
+              </div>
+              <!-- Shortlist detail drawer -->
+              <div class="exp-shortlist-drawer" id="exp-shortlist-drawer" hidden>
+                <div class="exp-shortlist-drawer-head">
+                  <span class="exp-detail-title" id="exp-sl-detail-title">—</span>
+                  <button type="button" class="exp-shortlist-drawer-close" id="exp-sl-drawer-close" title="Close">×</button>
+                </div>
+                <div class="exp-detail-meta" id="exp-sl-detail-meta">—</div>
                 <div class="exp-variants-wrap">
                   <div class="exp-variants-head">Download options · single DGX Spark (128GB)</div>
                   <div class="exp-variants-scroll">
@@ -236,29 +298,27 @@
                           <th></th>
                         </tr>
                       </thead>
-                      <tbody id="exp-variants-body">
-                        <tr><td colspan="6" class="exp-empty">Select a model</td></tr>
+                      <tbody id="exp-sl-variants-body">
+                        <tr><td colspan="6" class="exp-empty">Loading…</td></tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
                 <div class="exp-detail-actions">
-                  <button type="button" class="inf-btn" id="exp-save-explore">Save to explore queue</button>
-                  <a href="#" id="exp-hf-link" target="_blank" rel="noopener">Open on Hugging Face ↗</a>
+                  <a href="#" id="exp-sl-hf-link" target="_blank" rel="noopener">Open on Hugging Face ↗</a>
                 </div>
-                <div class="exp-msg" id="exp-detail-msg"></div>
+                <div class="exp-msg" id="exp-sl-detail-msg"></div>
               </div>
             </div>
-            <div class="exp-queues">
-              <div class="exp-queue-panel">
-                <div class="exp-queue-head">Explore queue</div>
-                <div class="exp-queue-scroll" id="exp-explore-queue"><div class="exp-empty">Empty</div></div>
-              </div>
-              <div class="exp-queue-panel">
+
+            <!-- Downloads pane -->
+            <div class="exp-tabpane" id="exp-pane-downloads" role="tabpanel" hidden>
+              <div class="exp-dl-pane">
                 <div class="exp-queue-head">Download queue</div>
-                <div class="exp-queue-scroll" id="exp-download-queue"><div class="exp-empty">Empty</div></div>
+                <div class="exp-queue-scroll exp-dl-scroll" id="exp-download-queue"><div class="exp-empty">Empty</div></div>
               </div>
             </div>
+
             <div class="exp-msg" id="exp-msg"></div>
           </div>
         </div>
@@ -407,6 +467,16 @@
       let expStatus = null;
       let expBrowseBusy = false;
       let expSearchTimer = null;
+      // Shortlist state
+      const EXP_TAB_KEY = 'sparky-explore-tab';
+      let expTab = localStorage.getItem(EXP_TAB_KEY) || 'browse';
+      let expShortlistItems = [];
+      let expShortlistSelected = new Set();
+      let expShortlistSort = { col: 'added_at', dir: 'desc' };
+      let expShortlistEnriching = false;
+      // Shortlist drawer state (separate from browse detail)
+      let expSlVariants = [];
+      let expSlSelectedVariantId = null;
       let lastInfStatus = null;
       let lastInfNavStatus = null;
       let lastInfNavFetchAt = 0;
@@ -1949,26 +2019,350 @@
         }
       }
 
+      // ─── Shortlist / Compare view ───────────────────────────────────────────
+
+      function expSparkFitOrder(fit) {
+        return { recommended: 0, ok: 1, tight: 2, too_large: 3, not_recommended: 4 }[fit] ?? 5;
+      }
+
+      function expShortlistSortItems(items) {
+        const { col, dir } = expShortlistSort;
+        return items.slice().sort((a, b) => {
+          let av, bv;
+          if (col === 'spark_fit') {
+            av = expSparkFitOrder((a.snapshot || {}).spark_fit);
+            bv = expSparkFitOrder((b.snapshot || {}).spark_fit);
+          } else if (col === 'size_bytes') {
+            av = (a.snapshot || {}).size_bytes ?? null;
+            bv = (b.snapshot || {}).size_bytes ?? null;
+          } else if (col === 'added_at') {
+            av = a.added_at || '';
+            bv = b.added_at || '';
+          } else if (col === 'repo') {
+            av = (a.repo || '').toLowerCase();
+            bv = (b.repo || '').toLowerCase();
+          } else if (col === 'engine') {
+            av = ((a.snapshot || {}).engine || '').toLowerCase();
+            bv = ((b.snapshot || {}).engine || '').toLowerCase();
+          } else if (col === 'status') {
+            av = a.status || '';
+            bv = b.status || '';
+          } else {
+            av = null; bv = null;
+          }
+          if (window.SparkInventoryGrid) {
+            return SparkInventoryGrid.compareValues({ _v: av }, { _v: bv }, '_v', dir);
+          }
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          const r = av < bv ? -1 : av > bv ? 1 : 0;
+          return dir === 'desc' ? -r : r;
+        });
+      }
+
+      function expShortlistStatusBadge(status) {
+        const map = {
+          downloading: '<span class="exp-status-chip downloading">downloading</span>',
+          download_queued: '<span class="exp-status-chip queued">queued</span>',
+          gated: '<span class="exp-status-chip gated">gated</span>',
+          on_disk: '<span class="exp-status-chip on-disk">on disk</span>',
+          saved: '<span class="exp-status-chip saved">shortlisted</span>',
+        };
+        return map[status] || '<span class="exp-status-chip saved">shortlisted</span>';
+      }
+
+      function renderShortlist() {
+        const wrap = $('exp-shortlist-table-wrap');
+        if (!wrap) return;
+        const items = expShortlistSortItems(expShortlistItems);
+        const total = items.length;
+        const summEl = $('exp-shortlist-summary');
+        if (summEl) summEl.textContent = total ? total + ' model' + (total === 1 ? '' : 's') + ' in Shortlist' : '';
+        const selCount = expShortlistSelected.size;
+        const bulkEl = $('exp-shortlist-bulk-actions');
+        const selLabel = $('exp-shortlist-sel-label');
+        if (bulkEl) bulkEl.hidden = selCount === 0;
+        if (selLabel) selLabel.textContent = selCount + ' selected';
+
+        if (!items.length) {
+          wrap.innerHTML = '<div class="exp-empty">No models in Shortlist yet. Browse HF and click "Save to Shortlist".</div>';
+          return;
+        }
+        const cols = [
+          { key: 'repo', label: 'Repo' },
+          { key: 'badges', label: 'Tags', sortable: false },
+          { key: 'variant', label: 'Variant', sortable: false },
+          { key: 'engine', label: 'Engine' },
+          { key: 'size_bytes', label: 'Size' },
+          { key: 'spark_fit', label: 'Spark fit' },
+          { key: 'status', label: 'Status' },
+          { key: 'added_at', label: 'Added' },
+          { key: 'actions', label: '', sortable: false },
+        ];
+        const sortDir = (col) => expShortlistSort.col === col
+          ? (expShortlistSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+        const thCls = (col) => 'exp-sl-th' + (col !== 'badges' && col !== 'variant' && col !== 'actions' ? ' sortable' : '');
+        const thead = '<thead><tr>'
+          + cols.map((c) => '<th class="' + escHtml(thCls(c.key)) + '" data-sl-sort="' + escHtml(c.key) + '">'
+            + escHtml(c.label) + escHtml(sortDir(c.key)) + '</th>').join('')
+          + '</tr></thead>';
+
+        const tbody = '<tbody>'
+          + items.map((item) => {
+            const snap = item.snapshot || {};
+            const sel = expShortlistSelected.has(item.id);
+            const status = item.status || 'saved';
+            const badges = Array.isArray(snap.badges) ? snap.badges : [];
+            const badgeHtml = badges.map((b) => '<span class="exp-badge ' + escHtml(b) + '">' + escHtml(b.toUpperCase()) + '</span>').join('');
+            const sparkFit = snap.spark_fit || '';
+            const sparkLabel = snap.spark_fit_label || sparkFit;
+            const sparkStar = sparkFit === 'recommended' ? '★ ' : '';
+            const sparkCell = sparkFit
+              ? '<span class="exp-spark-badge ' + escHtml(sparkFit) + '">' + escHtml(sparkStar + sparkLabel) + '</span>'
+              : '—';
+            const addedDate = item.added_at ? item.added_at.slice(0, 10) : '—';
+            return '<tr class="exp-sl-row' + (sel ? ' selected' : '') + '" data-sl-id="' + attrEsc(item.id) + '" data-sl-repo="' + attrEsc(item.repo) + '">'
+              + '<td class="exp-sl-td exp-sl-repo"><label class="exp-sl-check-wrap">'
+              + '<input type="checkbox" class="exp-sl-check" data-sl-check="' + attrEsc(item.id) + '"' + (sel ? ' checked' : '') + '>'
+              + '<span class="exp-sl-repo-name" title="' + attrEsc(item.repo) + '">' + escHtml(item.repo) + '</span></label></td>'
+              + '<td class="exp-sl-td">' + (badgeHtml || '—') + '</td>'
+              + '<td class="exp-sl-td exp-sl-variant">' + escHtml(item.variant_label || item.intent || '—') + '</td>'
+              + '<td class="exp-sl-td">' + escHtml(engineLabel(snap.engine, snap.format) || '—') + '</td>'
+              + '<td class="exp-sl-td exp-sl-size">' + escHtml(snap.size_human || '—') + '</td>'
+              + '<td class="exp-sl-td">' + sparkCell + '</td>'
+              + '<td class="exp-sl-td">' + expShortlistStatusBadge(status) + '</td>'
+              + '<td class="exp-sl-td exp-sl-date">' + escHtml(addedDate) + '</td>'
+              + '<td class="exp-sl-td exp-sl-actions">'
+              + '<button type="button" class="exp-sl-action-btn" data-sl-dl="' + attrEsc(item.id) + '" title="Queue download">↓</button>'
+              + '<button type="button" class="exp-sl-action-btn danger" data-sl-rm="' + attrEsc(item.id) + '" title="Remove">✕</button>'
+              + '</td></tr>';
+          }).join('')
+          + '</tbody>';
+
+        wrap.innerHTML = '<div class="exp-shortlist-scroll"><table class="exp-sl-table">' + thead + tbody + '</table></div>';
+      }
+
+      async function expEnrichShortlistItems() {
+        if (expShortlistEnriching) return;
+        const needsEnrich = expShortlistItems.filter((i) => !i.snapshot).slice(0, 10);
+        if (!needsEnrich.length) return;
+        expShortlistEnriching = true;
+        try {
+          await Promise.all(needsEnrich.map(async (item) => {
+            try {
+              const repoPath = item.repo.split('/').map(encodeURIComponent).join('/');
+              const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
+              if (!res.ok) return;
+              const d = await res.json();
+              const variants = d.variants || [];
+              const pick = variants.find((v) => v.spark_fit === 'recommended') || variants[0];
+              if (!pick) return;
+              const badges = expBadgesForModel(d.model || {});
+              const snap = {
+                format: pick.format,
+                engine: pick.engine,
+                size_bytes: pick.size_bytes,
+                size_human: pick.size_human,
+                spark_fit: pick.spark_fit,
+                spark_fit_label: pick.spark_fit_label,
+                badges: badges,
+                downloads: (d.model || {}).downloads,
+              };
+              const variantLabel = item.variant_label || pick.label || null;
+              // Persist the snapshot back to server so it survives expTick reassignment
+              await fetch('/api/hf/queue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'explore',
+                  repo: item.repo,
+                  intent: item.intent || 'gguf_best',
+                  files: item.files,
+                  inventory_path: item.inventory_path,
+                  variant_label: variantLabel,
+                  snapshot: snap,
+                }),
+              });
+            } catch (_) { /* ignore per-item errors */ }
+          }));
+          // Refresh queue to get server-persisted snapshots
+          expTick();
+        } finally {
+          expShortlistEnriching = false;
+        }
+      }
+
+      function expBadgesForModel(m) {
+        const badges = [];
+        if (m.has_gguf) badges.push('gguf');
+        if (m.has_nvfp4) badges.push('nvfp4');
+        if (m.has_moe) badges.push('moe');
+        else if (m.has_dense) badges.push('dense');
+        if (m.has_mtp) badges.push('mtp');
+        if (m.has_vision) badges.push('vision');
+        if (m.has_diffusion) badges.push('diffusion');
+        return badges;
+      }
+
+      async function expShortlistBulkRemove() {
+        const ids = [...expShortlistSelected];
+        if (!ids.length) return;
+        for (const id of ids) {
+          try {
+            await fetch('/api/hf/queue/' + encodeURIComponent(id) + '/remove', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ queue: 'explore' }),
+            });
+          } catch (_) { /* ignore errors; refresh will clean up */ }
+        }
+        expShortlistSelected.clear();
+        setExpMsg('Removed ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') + ' from Shortlist');
+        expTick();
+      }
+
+      async function expShortlistBulkDownload() {
+        const ids = [...expShortlistSelected];
+        if (!ids.length) return;
+        const all = ids.map((id) => expShortlistItems.find((i) => i.id === id)).filter(Boolean);
+        const skipped = all.filter((i) => {
+          const fit = (i.snapshot || {}).spark_fit;
+          return fit === 'too_large' || fit === 'not_recommended';
+        });
+        const queueIds = all.filter((i) => skipped.indexOf(i) === -1).map((i) => i.id);
+        let queued = 0;
+        for (const id of queueIds) {
+          try {
+            const res = await fetch('/api/hf/queue/' + encodeURIComponent(id) + '/download', { method: 'POST' });
+            if (res.ok) queued++;
+          } catch (_) { /* ignore */ }
+        }
+        expShortlistSelected.clear();
+        const parts = ['Queued ' + queued + ' download' + (queued === 1 ? '' : 's')];
+        if (skipped.length) {
+          parts.push('skipped ' + skipped.length + ' not Spark-ready: ' + skipped.map((i) => i.repo).join(', '));
+        }
+        setExpMsg(parts.join(' · '), skipped.length ? 'warn' : '');
+        expTick();
+      }
+
+      function expShortlistSetTab(tab) {
+        if (tab !== 'browse' && tab !== 'shortlist' && tab !== 'downloads') tab = 'browse';
+        expTab = tab;
+        localStorage.setItem(EXP_TAB_KEY, tab);
+        ['browse', 'shortlist', 'downloads'].forEach((t) => {
+          const btn = $('exp-tab-' + t);
+          const pane = $('exp-pane-' + t);
+          if (btn) { btn.classList.toggle('active', t === tab); btn.setAttribute('aria-selected', String(t === tab)); }
+          if (pane) pane.hidden = t !== tab;
+        });
+        if (tab === 'shortlist') {
+          renderShortlist();
+          expEnrichShortlistItems();
+        }
+      }
+
+      async function expSlShowDetail(repo) {
+        const drawer = $('exp-shortlist-drawer');
+        if (!drawer) return;
+        drawer.hidden = false;
+        $('exp-sl-detail-title').textContent = repo;
+        $('exp-sl-detail-meta').textContent = 'Loading variants…';
+        $('exp-sl-hf-link').href = 'https://huggingface.co/' + repo;
+        setExpSlMsg('');
+        expSlSelectedVariantId = null;
+        $('exp-sl-variants-body').innerHTML = '<tr><td colspan="6" class="exp-empty">Loading…</td></tr>';
+        try {
+          const repoPath = repo.split('/').map(encodeURIComponent).join('/');
+          const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'model fetch failed');
+          const m = d.model || {};
+          const lines = [];
+          if (m.release_date) lines.push('released ' + fmtExpDate(m.release_date));
+          if (m.downloads != null) lines.push('↓ ' + fmtDownloads(m.downloads));
+          if (m.gated) lines.push('gated — accept license on HF first');
+          $('exp-sl-detail-meta').textContent = lines.join(' · ') || '—';
+          expSlVariants = d.variants || [];
+          const firstPick = expSlVariants.find((v) => v.spark_fit === 'recommended') || expSlVariants[0];
+          expSlSelectedVariantId = firstPick ? firstPick.id : null;
+          renderExpSlVariants();
+        } catch (e) {
+          $('exp-sl-detail-meta').textContent = 'Failed to load model';
+          setExpSlMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function renderExpSlVariants() {
+        const body = $('exp-sl-variants-body');
+        if (!body) return;
+        if (!expSlVariants.length) {
+          body.innerHTML = '<tr><td colspan="6" class="exp-empty">No downloadable variants found</td></tr>';
+          return;
+        }
+        body.innerHTML = expSlVariants.map((v) => {
+          const sel = v.id === expSlSelectedVariantId ? ' selected' : '';
+          return '<tr class="exp-variant-row' + sel + '" data-sl-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
+            + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
+            + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
+            + '<td class="exp-var-size">' + escHtml(v.size_human || '—') + '</td>'
+            + '<td>' + sparkBadgeHtml(v) + '</td>'
+            + '<td class="exp-var-note">' + escHtml(v.explanation || '') + '</td>'
+            + '<td><button type="button" class="exp-var-dl" data-sl-variant-dl="' + attrEsc(v.id) + '"'
+            + (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended' ? ' disabled' : '')
+            + '>Download</button></td></tr>';
+        }).join('');
+      }
+
+      async function expSlQueueVariant(variantId) {
+        const v = expSlVariants.find((vv) => vv.id === variantId);
+        if (!v) return;
+        const drawer = $('exp-shortlist-drawer');
+        const repo = drawer ? $('exp-sl-detail-title').textContent : null;
+        if (!repo) return;
+        if (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') {
+          setExpSlMsg('This variant is not recommended for Spark', 'warn');
+          return;
+        }
+        setExpSlMsg('Queueing ' + v.label + '…', 'warn');
+        try {
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo, intent: v.intent || 'files', files: v.files, inventory_path: v.inventory_path }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'queue failed');
+          setExpSlMsg('Queued ' + v.label, 'ok');
+          expTick();
+        } catch (e) {
+          setExpSlMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function setExpSlMsg(msg, cls) {
+        const el = $('exp-sl-detail-msg');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.className = 'exp-msg' + (cls ? ' ' + cls : '');
+      }
+
+      // ─── (end Shortlist) ─────────────────────────────────────────────────────
+
       function renderExpQueues(data) {
         const explore = (data && data.queue && data.queue.explore) || [];
         const download = (data && data.queue && data.queue.download) || [];
-        const exEl = $('exp-explore-queue');
+        // Update shortlist items for rendering
+        expShortlistItems = explore;
+        // Update badge counts in sub-nav
+        const scEl = $('exp-shortlist-count');
+        if (scEl) scEl.textContent = explore.length ? String(explore.length) : '';
+        const dcEl = $('exp-downloads-count');
+        if (dcEl) dcEl.textContent = download.length ? String(download.length) : '';
+        // If shortlist tab is active, re-render
+        if (expTab === 'shortlist') renderShortlist();
         const dlEl = $('exp-download-queue');
-        if (exEl) {
-          exEl.innerHTML = explore.length ? explore.slice().reverse().map((item) => {
-            const sel = item.repo === expSelectedRepo ? ' selected' : '';
-            const variant = item.variant_label ? ' · ' + item.variant_label : '';
-            return '<div class="exp-queue-item pickable' + sel + '" data-exp-repo="' + attrEsc(item.repo) + '"'
-              + ' data-exp-id="' + attrEsc(item.id) + '" tabindex="0" role="button"'
-              + ' title="Open in search">'
-              + '<div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
-              + '<div class="exp-queue-meta">' + escHtml(item.intent || 'gguf_best') + escHtml(variant) + '</div>'
-              + '<div class="exp-queue-actions">'
-              + '<button type="button" data-exp-dl-explore="' + attrEsc(item.id) + '">Download</button>'
-              + '<button type="button" data-exp-rm-explore="' + attrEsc(item.id) + '">Remove</button>'
-              + '</div></div>';
-          }).join('') : '<div class="exp-empty">Empty</div>';
-        }
         if (dlEl) {
           const activeItem = expActiveDownloadInfo(data);
           dlEl.innerHTML = download.length ? download.slice().reverse().map((item) => {
@@ -2073,36 +2467,6 @@
         }).join('');
       }
 
-      async function expOpenRepo(repo) {
-        if (!repo || !onExplore) return;
-        const qEl = $('exp-q');
-        if (qEl) qEl.value = repo;
-        $('exp-results-label').textContent = 'Search: ' + repo;
-        $('exp-results').innerHTML = '<div class="exp-empty">Loading…</div>';
-        try {
-          const filter = expFilterQuery();
-          const res = await fetch(
-            '/api/hf/search?q=' + encodeURIComponent(repo) + '&limit=30&filter=' + encodeURIComponent(filter),
-            { cache: 'no-store' }
-          );
-          const d = await res.json();
-          if (!res.ok) throw new Error(d.error || 'search failed');
-          expResults = d.models || [];
-          if (!expResults.some((m) => m.repo === repo)) {
-            expResults.unshift({ repo: repo });
-          }
-          renderExpResults(expResults);
-          await expShowDetail(repo);
-          const card = document.querySelector('.exp-model[data-repo="' + CSS.escape(repo) + '"]');
-          if (card && card.scrollIntoView) {
-            requestAnimationFrame(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
-          }
-        } catch (e) {
-          $('exp-results').innerHTML = '<div class="exp-empty">' + escHtml(String(e.message || e)) + '</div>';
-          setExpMsg(String(e.message || e), 'err');
-        }
-      }
-
       async function expShowDetail(repo) {
         expSelectedRepo = repo;
         document.querySelectorAll('.exp-model').forEach((n) => {
@@ -2195,7 +2559,7 @@
       }
 
       async function expBrowse() {
-        if (expBrowseBusy || !onExplore) return;
+        if (expBrowseBusy || !onExplore || expTab !== 'browse') return;
         expBrowseBusy = true;
         const q = ($('exp-q') && $('exp-q').value || '').trim();
         const filter = expFilterQuery();
@@ -2266,6 +2630,16 @@
         }
         const v = expVariantById(expSelectedVariantId) || expVariants[0];
         const intent = (v && v.intent) || 'gguf_best';
+        const snapshot = v ? {
+          format: v.format,
+          engine: v.engine,
+          size_bytes: v.size_bytes,
+          size_human: v.size_human,
+          spark_fit: v.spark_fit,
+          spark_fit_label: v.spark_fit_label,
+          badges: expBadgesForCurrentDetail(),
+          dest: v.dest,
+        } : null;
         try {
           const res = await fetch('/api/hf/queue', {
             method: 'POST',
@@ -2277,15 +2651,32 @@
               files: v && v.files,
               inventory_path: v && v.inventory_path,
               variant_label: v && v.label,
+              snapshot: snapshot,
             }),
           });
           const d = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(d.error || 'save failed');
-          setExpDetailMsg('Saved to explore queue', 'ok');
+          setExpDetailMsg('Saved to Shortlist', 'ok');
           expTick();
         } catch (e) {
           setExpDetailMsg(String(e.message || e), 'err');
         }
+      }
+
+      function expBadgesForCurrentDetail() {
+        const metaText = ($('exp-detail-meta') && $('exp-detail-meta').textContent) || '';
+        const badges = [];
+        if (metaText.includes('MoE')) badges.push('moe');
+        else if (metaText.includes('Dense')) badges.push('dense');
+        if (metaText.includes('MTP')) badges.push('mtp');
+        if (metaText.includes('Vision')) badges.push('vision');
+        if (metaText.includes('Diffusion')) badges.push('diffusion');
+        const v = expVariantById(expSelectedVariantId) || expVariants[0];
+        if (v) {
+          if (v.format === 'gguf' || (v.intent && v.intent.startsWith('gguf'))) badges.push('gguf');
+          if (v.format === 'nvfp4') badges.push('nvfp4');
+        }
+        return [...new Set(badges)];
       }
 
       async function expRecheck(itemId) {
@@ -2316,14 +2707,14 @@
         }
       }
 
-      async function expDownloadExploreItem(itemId) {
+      async function expDownloadExploreItem(itemId, warnMsg) {
         try {
           const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/download', {
             method: 'POST',
           });
           const d = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(d.error || 'download queue failed');
-          setExpMsg('Download queued');
+          setExpMsg(warnMsg || 'Download queued', warnMsg ? 'warn' : '');
           expTick();
         } catch (e) {
           setExpMsg(String(e.message || e), 'err');
@@ -2388,8 +2779,9 @@
         dashboard.style.display = '';
         hideAllViews();
         exploreCard.hidden = false;
+        expShortlistSetTab(expTab);
         expTick();
-        expBrowse();
+        if (expTab === 'browse') expBrowse();
       }
 
       function showInference(btn) {
@@ -2658,29 +3050,92 @@
         if (!btn) return;
         expRecheck(btn.dataset.expRecheck);
       });
-      $('exp-explore-queue').addEventListener('click', (e) => {
-        const dl = e.target.closest('[data-exp-dl-explore]');
+
+      // Sub-nav tabs
+      $('exp-subnav').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-exp-tab]');
+        if (!btn) return;
+        expShortlistSetTab(btn.dataset.expTab);
+        if (btn.dataset.expTab === 'browse' && !expResults.length) expBrowse();
+      });
+
+      // Shortlist table events (delegated from table-wrap)
+      $('exp-shortlist-table-wrap').addEventListener('click', (e) => {
+        const th = e.target.closest('[data-sl-sort]');
+        if (th) {
+          const col = th.dataset.slSort;
+          if (col && col !== 'badges' && col !== 'variant' && col !== 'actions') {
+            if (expShortlistSort.col === col) {
+              expShortlistSort.dir = expShortlistSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+              expShortlistSort = { col, dir: 'asc' };
+            }
+            renderShortlist();
+          }
+          return;
+        }
+        const check = e.target.closest('[data-sl-check]');
+        if (check) {
+          const id = check.dataset.slCheck;
+          if (check.checked) expShortlistSelected.add(id);
+          else expShortlistSelected.delete(id);
+          renderShortlist();
+          return;
+        }
+        const dlBtn = e.target.closest('[data-sl-dl]');
+        if (dlBtn) {
+          e.stopPropagation();
+          const id = dlBtn.dataset.slDl;
+          const item = expShortlistItems.find((i) => i.id === id);
+          const fit = item && (item.snapshot || {}).spark_fit;
+          const warnMsg = item && item.repo && (fit === 'too_large' || fit === 'not_recommended')
+            ? 'Warning: ' + item.repo + ' may not work on Spark — queued anyway'
+            : '';
+          expDownloadExploreItem(id, warnMsg);
+          return;
+        }
+        const rmBtn = e.target.closest('[data-sl-rm]');
+        if (rmBtn) {
+          e.stopPropagation();
+          expRemoveQueueItem(rmBtn.dataset.slRm, 'explore');
+          return;
+        }
+        // Row click → open drawer (not on checkbox or action button)
+        const row = e.target.closest('.exp-sl-row[data-sl-repo]');
+        if (!row) return;
+        expSlShowDetail(row.dataset.slRepo);
+      });
+
+      // Bulk action buttons
+      $('exp-bulk-remove').addEventListener('click', expShortlistBulkRemove);
+      $('exp-bulk-download').addEventListener('click', expShortlistBulkDownload);
+      $('exp-shortlist-select-all').addEventListener('click', () => {
+        if (expShortlistSelected.size === expShortlistItems.length && expShortlistItems.length > 0) {
+          expShortlistSelected.clear();
+        } else {
+          expShortlistItems.forEach((i) => expShortlistSelected.add(i.id));
+        }
+        renderShortlist();
+      });
+
+      // Shortlist drawer events
+      $('exp-sl-drawer-close').addEventListener('click', () => {
+        const drawer = $('exp-shortlist-drawer');
+        if (drawer) drawer.hidden = true;
+      });
+      $('exp-sl-variants-body').addEventListener('click', (e) => {
+        const dl = e.target.closest('[data-sl-variant-dl]');
         if (dl) {
           e.stopPropagation();
-          expDownloadExploreItem(dl.dataset.expDlExplore);
+          expSlQueueVariant(dl.dataset.slVariantDl);
           return;
         }
-        const rm = e.target.closest('[data-exp-rm-explore]');
-        if (rm) {
-          e.stopPropagation();
-          expRemoveQueueItem(rm.dataset.expRmExplore, 'explore');
-          return;
-        }
-        const item = e.target.closest('.exp-queue-item[data-exp-repo]');
-        if (!item) return;
-        expOpenRepo(item.dataset.expRepo);
-      });
-      $('exp-explore-queue').addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        const item = e.target.closest('.exp-queue-item[data-exp-repo]');
-        if (!item) return;
-        e.preventDefault();
-        expOpenRepo(item.dataset.expRepo);
+        const row = e.target.closest('.exp-variant-row[data-sl-variant-id]');
+        if (!row) return;
+        expSlSelectedVariantId = row.dataset.slVariantId;
+        document.querySelectorAll('#exp-sl-variants-body .exp-variant-row').forEach((r) => {
+          r.classList.toggle('selected', r.dataset.slVariantId === expSlSelectedVariantId);
+        });
       });
 
       $('inference-status').addEventListener('click', (e) => {

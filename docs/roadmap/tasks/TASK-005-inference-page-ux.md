@@ -56,7 +56,7 @@ Context window picker works well. Log functionality stays as-is.
 
 Refactor `renderInfProfiles()` using Models patterns: `renderGridHead`, flat vs grouped branch, `infGroupByFamily` (default `false`).
 
-Use `SparkInventoryGrid` from TASK-007 where applicable (summary line, sort, flat/grouped toggle already wired for the Inference count line).
+Use `SparkInventoryGrid` from TASK-007 where applicable (summary line, flat/grouped toggle already wired for the Inference count line). Sort is implemented via local `compareInfValues()` / `infSortValue()` in `index.html` rather than `SparkInventoryGrid.compareValues`, because the inference columns need domain-specific value extraction (TASK-010).
 
 Extend `infProfilesSnapshot()` with view mode. Hidden `#inf-select` + `pickInfProfile()` unchanged.
 

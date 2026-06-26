@@ -73,4 +73,4 @@ Use `SparkInventoryGrid` from TASK-007 where applicable (sortable compare table,
 
 | Date | Owner | Result | Commit |
 |------|-------|--------|--------|
-| 2026-06-26 | fm/task-004-f6 | Phase A+B shipped: Browse\|Shortlist\|Downloads sub-nav; compare table with sort, multi-select, bulk remove/download, status chips, drawer; API snapshot+dedupe+status enrichment | feat/TASK-004-explore-queue-overhaul |
+| 2026-06-26 | fm/task-004-f6 | Phase A+B shipped: Browse\|Shortlist\|Downloads sub-nav; compare table with sort, multi-select, bulk remove/download, status chips, drawer; API snapshot+dedupe+status enrichment | fm/task-004-f6 |

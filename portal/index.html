@@ -2362,7 +2362,6 @@
         if (dcEl) dcEl.textContent = download.length ? String(download.length) : '';
         // If shortlist tab is active, re-render
         if (expTab === 'shortlist') renderShortlist();
-        // Legacy: keep exp-explore-queue hidden element for backward compat (no longer rendered)
         const dlEl = $('exp-download-queue');
         if (dlEl) {
           const activeItem = expActiveDownloadInfo(data);

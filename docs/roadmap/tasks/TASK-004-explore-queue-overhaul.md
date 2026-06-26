@@ -42,13 +42,13 @@ Extend explore queue items with `snapshot` (format, engine, size, spark_fit, bad
 
 ## Acceptance criteria
 
-- [ ] 3+ queued models visible in one screen with size, engine, Spark fit
-- [ ] Sort by size and Spark fit
-- [ ] Multi-select remove and download
-- [ ] Status column reflects download/disk state
-- [ ] Row opens detail without hiding compare table
-- [ ] Dedupe on save
-- [ ] Browse mode unchanged (search, trending, variant download)
+- [x] 3+ queued models visible in one screen with size, engine, Spark fit
+- [x] Sort by size and Spark fit
+- [x] Multi-select remove and download
+- [x] Status column reflects download/disk state
+- [x] Row opens detail without hiding compare table
+- [x] Dedupe on save
+- [x] Browse mode unchanged (search, trending, variant download)
 
 ## Test plan
 

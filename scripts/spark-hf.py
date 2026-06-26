@@ -1133,13 +1133,48 @@ def prune_download_queue(*, persist: bool = True) -> int:
     return removed
 
 
+def _explore_item_status(item: dict[str, Any], dl_items: list[dict[str, Any]]) -> str:
+    """Derive shortlist status for an explore item from download queue + disk state."""
+    repo = item.get("repo", "")
+    inv_path = item.get("inventory_path", "")
+    # Check download queue for this item's repo+inventory_path
+    for dl in dl_items:
+        dl_plan = dl.get("plan") or {}
+        if dl.get("repo") != repo:
+            continue
+        if inv_path and dl_plan.get("inventory_path") and dl_plan["inventory_path"] != inv_path:
+            continue
+        state = dl.get("state", "")
+        if state == STATE_DOWNLOADING or state == STATE_CHECKING:
+            return "downloading"
+        if state == STATE_QUEUED:
+            return "download_queued"
+        if state == STATE_AWAITING:
+            return "gated"
+    # Check disk: if item has a snapshot with dest or can resolve via inventory_path
+    snap = item.get("snapshot") or {}
+    dest_str = snap.get("dest") or (
+        str(MODELS_ROOT / inv_path) if inv_path else None
+    )
+    if dest_str and Path(dest_str).is_dir() and any(Path(dest_str).iterdir()):
+        return "on_disk"
+    return "saved"
+
+
 def queue_list() -> dict[str, Any]:
     prune_download_queue()
     dq = load_download_queue()
     eq = load_explore_queue()
+    dl_items = dq.get("items", [])
+    explore_items = eq.get("items", [])
+    enriched = []
+    for item in explore_items:
+        it = dict(item)
+        it["status"] = _explore_item_status(item, dl_items)
+        enriched.append(it)
     return {
-        "download": dq.get("items", []),
-        "explore": eq.get("items", []),
+        "download": dl_items,
+        "explore": enriched,
         "active": active_hf_download(),
         "can_start": can_start_download(),
     }
@@ -1205,11 +1240,13 @@ def queue_add_explore(
     files: list[str] | None = None,
     inventory_path: str | None = None,
     variant_label: str | None = None,
+    snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     repo = validate_repo_id(repo)
     if not repo:
         raise ValueError("invalid repo")
     _ensure_explore_download_allowed(repo)
+    inv = str(inventory_path or "").strip().strip("/") or None
     item: dict[str, Any] = {
         "id": str(uuid.uuid4()),
         "repo": repo,
@@ -1218,12 +1255,33 @@ def queue_add_explore(
     }
     if files:
         item["files"] = [str(f) for f in files if str(f).strip()]
-    if inventory_path:
-        item["inventory_path"] = str(inventory_path).strip().strip("/")
+    if inv:
+        item["inventory_path"] = inv
     if variant_label:
         item["variant_label"] = str(variant_label).strip()
+    if snapshot and isinstance(snapshot, dict):
+        item["snapshot"] = {
+            k: v for k, v in snapshot.items()
+            if k in ("format", "engine", "size_bytes", "size_human", "spark_fit",
+                      "spark_fit_label", "badges", "dest", "downloads")
+        }
     data = load_explore_queue()
-    data.setdefault("items", []).append(item)
+    items = data.setdefault("items", [])
+    # Dedupe: replace existing item with same repo + intent + inventory_path
+    dedup_key = (repo, intent, inv or "")
+    kept = []
+    replaced_id = None
+    for existing in items:
+        ex_inv = str(existing.get("inventory_path") or "").strip("/")
+        ex_key = (existing.get("repo", ""), existing.get("intent", ""), ex_inv)
+        if ex_key == dedup_key:
+            replaced_id = existing.get("id")
+        else:
+            kept.append(existing)
+    if replaced_id:
+        item["id"] = replaced_id  # keep stable id so UI selections survive
+        item["added_at"] = utc_now()
+    data["items"] = kept + [item]
     save_explore_queue(data)
     return item
 
@@ -1615,12 +1673,14 @@ def api_dispatch(
         if action == "explore":
             try:
                 files = body.get("files") if isinstance(body.get("files"), list) else None
+                snap = body.get("snapshot")
                 item = queue_add_explore(
                     repo=str(body.get("repo", "")),
                     intent=str(body.get("intent", "gguf_best")),
                     files=files,
                     inventory_path=body.get("inventory_path"),
                     variant_label=body.get("variant_label"),
+                    snapshot=snap if isinstance(snap, dict) else None,
                 )
             except ValueError as exc:
                 return 400, {"ok": False, "error": str(exc)}

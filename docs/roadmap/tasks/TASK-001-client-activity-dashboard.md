@@ -51,13 +51,13 @@ The System dashboard shows GPU, memory, inference profile pills, and containers 
 
 ## Acceptance criteria
 
-- [ ] `curl http://sparky/api/activity` returns `summary` + `recent[]`
-- [ ] Gateway POST to `:9000/v1/chat/completions` creates a session row within 2s
-- [ ] Streaming completions produce **one** session row at stream end
-- [ ] System tab shows Client activity section; updates on visible System view
-- [ ] API down → graceful empty state; `gpuPoll` unaffected
-- [ ] Events survive gateway restart (jsonl on disk)
-- [ ] Install script + nginx location documented; `AGENT.md` updated
+- [x] `curl http://sparky/api/activity` returns `summary` + `recent[]`
+- [x] Gateway POST to `:9000/v1/chat/completions` creates a session row within 2s
+- [x] Streaming completions produce **one** session row at stream end
+- [x] System tab shows Client activity section; updates on visible System view
+- [x] API down → graceful empty state; `gpuPoll` unaffected
+- [x] Events survive gateway restart (jsonl on disk)
+- [x] Install script + nginx location documented; `AGENT.md` updated
 
 ## Test plan
 
@@ -79,7 +79,7 @@ Clients → spark-inference-gateway :9000  (instrument)
          nginx /api/activity → portal widget
 ```
 
-Insert widget in System card after "Inference & containers" (`portal/index.html`). Use snapshot-diff render like `renderNavHermes`.
+Insert widget in System card after "Model storage" (`portal/index.html`). Use snapshot-diff render like `renderNavHermes`.
 
 **Session schema (draft):** `id`, `at`, `client_ip`, `app`, `user_agent`, `model`, `profile`, `engine`, `duration_ms`, `prompt_tokens`, `completion_tokens`, `tok_s`, `stream`, `status`.
 

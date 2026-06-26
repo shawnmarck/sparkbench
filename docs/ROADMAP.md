@@ -287,6 +287,7 @@ CLI guide (humans + agents): [`reference/spark-cli.md`](reference/spark-cli.md)
 | Models | http://sparky/models.html | `spark models inventory` |
 | Inference API | http://sparky/api/inference/status | `spark inference status` |
 | Inference API (lite) | http://sparky/api/inference/status?lite=1 | nav/models polls only |
+| Activity API | http://sparky/api/activity | System-tab client activity widget |
 | HF Explorer API | http://sparky/api/hf/status | Explore tab |
 | vLLM | http://sparky:8000/v1 | `spark engine eugr up/down/status` |
 | eugr stack check | — | `spark engine eugr check` |

@@ -28,7 +28,6 @@ import argparse
 import importlib.util
 import json
 import os
-import re
 import sys
 import threading
 import time
@@ -751,9 +750,6 @@ class Handler(BaseHTTPRequestHandler):
                 extra={"port": port, "profile": prof},
             )
             return
-
-        recipe = (active or {}).get("recipe", {}) or {}
-        engine = recipe.get("engine")
 
         upstream = f"http://{UPSTREAM_HOST}:{port}{path}"
         headers: dict[str, str] = {}

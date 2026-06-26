@@ -582,6 +582,9 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 .inf-gcell.g-bench { text-align: right; color: #9ec8ff; }
 .inf-gcell.g-active-label { color: var(--ok); }
 .inf-gcell.g-ctx-override { color: var(--accent); font-style: italic; }
+.inf-grid-head .inf-gh-sort { cursor: pointer; user-select: none; }
+.inf-grid-head .inf-gh-sort:hover { color: var(--text); }
+.inf-grid-head [aria-sort] { color: var(--accent); }
 .inf-model-family-groups .inf-model-group > summary { padding-left: .85rem; }
 .inf-model-family-groups .inf-grid-rows { padding: .3rem 0; }
 

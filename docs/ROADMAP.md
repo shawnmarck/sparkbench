@@ -263,7 +263,7 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 | 3 | Client activity dashboard (System tab) | done | yes | [TASK-001](roadmap/tasks/TASK-001-client-activity-dashboard.md) |
 | 4 | Models inventory UX — sortable table + detail side pane | done | yes | [TASK-002](roadmap/tasks/TASK-002-models-inventory-ux.md) |
 | 5 | Inference page — flat recipe grid, ctx labeling | done | yes | [TASK-005](roadmap/tasks/TASK-005-inference-page-ux.md) |
-| 6 | Explore queue — shortlist compare overhaul | ready | yes | [TASK-004](roadmap/tasks/TASK-004-explore-queue-overhaul.md) |
+| 6 | Explore queue — shortlist compare overhaul | done | yes | [TASK-004](roadmap/tasks/TASK-004-explore-queue-overhaul.md) |
 
 **How to run one main agent:** point it at `docs/ROADMAP.md` + `docs/roadmap/README.md`. It picks **Seq 1**, implements the full task file, opens **one PR** to `origin`, stops. After you review/merge and deploy, it picks **Seq 2**, and so on. No parallel PRs; no splitting a task across PRs.
 

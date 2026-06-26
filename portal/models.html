@@ -360,7 +360,7 @@
       .col-active, .col-caps { display: none; }
     }
     @media (max-width: 900px) {
-      .col-arch, .col-engine { display: none; }
+      .col-arch, .col-engine, .col-release_date { display: none; }
       #model-detail-pane {
         position: fixed;
         left: 0; right: 0; bottom: 0; top: auto;
@@ -540,6 +540,7 @@
       { key: 'active',  label: 'Active',    sortable: true  },
       { key: 'spark',   label: 'Spark',     sortable: true  },
       { key: 'dl',      label: 'Download',  sortable: true  },
+      { key: 'release_date', label: 'Released', sortable: true },
       { key: 'arch',    label: 'Arch',      sortable: false },
       { key: 'engine',  label: 'Engine',    sortable: false },
       { key: 'inf',     label: 'Inference', sortable: false },
@@ -922,6 +923,7 @@
         <td class="col-active">${esc(activeVal)}</td>
         <td class="col-spark"><span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span></td>
         <td class="col-dl"><span class="badge status-${esc(m.status || 'missing')}">${esc(m.status || 'missing')}</span></td>
+        <td class="col-release_date">${fmtRelease(m)}</td>
         <td class="col-arch">${railArchCell(m)}</td>
         <td class="col-engine">${railEngineCell(m)}</td>
         <td class="col-inf">${railInferenceCell(m)}</td>
@@ -1020,6 +1022,12 @@
       $('pane-title').textContent = model.name || model.id;
       $('pane-body').innerHTML = renderDetail(model);
       restoreOpenBenchHistories();
+    }
+
+    function paneInputFocused() {
+      const el = document.activeElement;
+      return !!el && el.closest && el.closest('#pane-body') &&
+        (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
     }
 
     /* ── DETAIL CONTENT RENDERERS ────────────────────────── */
@@ -1570,6 +1578,7 @@
           populateFilters(all, preserve);
           applyFilters();
           if (highlightPath && selectedModelId) openPane(selectedModelId);
+          else if (selectedModelId && !paneInputFocused()) refreshPane();
           refreshShelfStatus();
           refreshInferenceStatus();
         });

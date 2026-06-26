@@ -317,14 +317,18 @@
                   <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
                   <button type="button" class="inf-chip" data-inf-chip="drafts">Drafts</button>
                 </div>
-                <div class="inf-group-actions">
+                <div class="inf-view-toggle" id="inf-view-toggle">
+                  <button type="button" class="inf-chip active" data-inf-view="flat">Flat list</button>
+                  <button type="button" class="inf-chip" data-inf-view="family">By family</button>
+                </div>
+                <div class="inf-group-actions" id="inf-group-actions" hidden>
                   <button type="button" class="inf-link-btn" id="inf-expand-all">Expand all</button>
                   <span class="inf-group-actions-sep">·</span>
                   <button type="button" class="inf-link-btn" id="inf-collapse-all">Collapse all</button>
                 </div>
               </div>
               <div class="inf-recipes-scroll" id="inf-recipes-scroll">
-                <div class="inf-model-groups" id="inf-profiles"></div>
+                <div class="inf-grid-inventory" id="inf-profiles"></div>
               </div>
             </div>
 
@@ -425,6 +429,7 @@
         return engineDisplay(engine);
       };
       let infFilterChips = new Set(['switchable']);
+      let infGroupByFamily = false;
       let infCtxPlan = null;
       let infCtxSelection = { preset: 'default', ctx: null, kv: null };
 
@@ -533,6 +538,7 @@
         localStorage.setItem(INF_PREFS_KEY, JSON.stringify({
           q: infFilterQ,
           chips: [...infFilterChips],
+          viewMode: infGroupByFamily ? 'family' : 'flat',
         }));
       }
 
@@ -542,9 +548,11 @@
         const chips = Array.isArray(stored.chips)
           ? stored.chips.filter((c) => INF_CHIP_OPTS.includes(c)) : [];
         infFilterChips = new Set(chips.length ? chips : ['switchable']);
+        infGroupByFamily = stored.viewMode === 'family';
         const qEl = $('inf-q');
         if (qEl) qEl.value = infFilterQ;
         syncInfFilterChips();
+        syncInfViewToggle();
       }
 
       function syncInfFilterChips() {
@@ -552,6 +560,15 @@
           const val = chip.dataset.infChip;
           chip.classList.toggle('active', infFilterChips.has(val));
         });
+      }
+
+      function syncInfViewToggle() {
+        const mode = infGroupByFamily ? 'family' : 'flat';
+        document.querySelectorAll('#inf-view-toggle [data-inf-view]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.infView === mode);
+        });
+        const ga = $('inf-group-actions');
+        if (ga) ga.hidden = !infGroupByFamily;
       }
 
       function toggleInfChip(name) {
@@ -657,6 +674,7 @@
           data.bench && data.bench.running,
           infFilterQ,
           [...infFilterChips].sort().join(','),
+          infGroupByFamily ? 'family' : 'flat',
           parts.join('|'),
         ].join(';');
       }
@@ -1099,45 +1117,84 @@
         return body;
       }
 
-      function renderInfProfileRow(p, selectedId) {
+      function renderInfGridHead() {
+        return '<div class="inf-grid-head" aria-hidden="true">'
+          + '<span class="grid-head-title">Recipe</span>'
+          + '<span class="grid-head-rail">Model path</span>'
+          + '<span class="grid-head-rail">Engine</span>'
+          + '<span class="grid-head-rail">Tier</span>'
+          + '<span class="grid-head-rail">Lifecycle</span>'
+          + '<span class="grid-head-rail">Ctx</span>'
+          + '<span class="grid-head-rail bench">Bench</span>'
+          + '<span class="grid-head-rail">Status</span>'
+          + '<span class="grid-head-spacer"></span>'
+          + '</div>';
+      }
+
+      function renderInfGridRow(p, selectedId) {
         const lc = p.lifecycle || 'works';
         const canPick = p.switchable !== false && lc !== 'draft';
-        const cls = 'inf-profile compact' + (p.active ? ' active' : '') + (lc === 'draft' ? ' draft' : '')
-          + (p.id === selectedId && !p.active ? ' selected' : '')
+        const isActive = !!p.active;
+        const isSelected = p.id === selectedId && !isActive;
+        const cls = 'inf-grid-row'
+          + (isActive ? ' active' : '')
+          + (lc === 'draft' ? ' draft' : '')
+          + (isSelected ? ' selected' : '')
           + (canPick ? ' pickable' : '');
-        const tierCls = p.tier === 'heavy' ? ' tier-heavy' : '';
-        const state = p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
-        const tok = p.tok_s != null ? Math.round(p.tok_s) + ' tok/s' : null;
-        const shelf = p.inventory_path ? String(p.inventory_path).split('/').pop() : '';
-        const metaParts = [];
-        if (shelf) metaParts.push(shelf);
-        metaParts.push(engineDisplayMeta(p.engine), p.tier || '?');
-        if (tok) metaParts.push(tok);
-        const ctxLbl = profileCtxLabel(p);
-        if (ctxLbl) metaParts.push('ctx ' + ctxLbl);
-        metaParts.push(state);
-        const metaShort = metaParts.join(' · ');
-        const noteHint = p.notes ? ' — ' + truncateNote(p.notes, 80) : '';
-        const metaTitle = p.id + ' · :' + (p.port || '?') + ' · ' + metaShort + noteHint;
         const pickAttrs = canPick
           ? ' data-profile-id="' + attrEsc(p.id) + '" tabindex="0" role="button" title="Select for switch"'
           : '';
-        const displayName = p.id;
-        const statusPill = p.active
+
+        const statusPill = isActive
           ? '<span class="inf-active-pill">ACTIVE</span>'
-          : (p.id === selectedId ? '<span class="inf-selected-pill">selected</span>' : '');
-        return '<div class="' + cls + '"' + pickAttrs + '><div class="inf-profile-row">'
-          + '<span class="name" title="' + attrEsc((p.name || p.id) + noteHint) + '">'
-          + infLifeBadge(lc) + infRecipeFeatureBadges(p) + escHtml(displayName) + statusPill + '</span>'
-          + '<span class="meta' + tierCls + '" title="' + attrEsc(metaTitle) + '">' + escHtml(metaShort) + '</span>'
-          + '</div></div>';
+          : (isSelected ? '<span class="inf-selected-pill">selected</span>' : '');
+        const nameCell = '<span class="inf-gcell g-name">'
+          + infRecipeFeatureBadges(p)
+          + '<span class="g-name-text" title="' + attrEsc(p.id) + '">' + escHtml(p.id) + '</span>'
+          + statusPill + '</span>';
+
+        const shelf = p.inventory_path ? String(p.inventory_path).split('/').pop() : '—';
+        const pathCell = '<span class="inf-gcell" title="' + attrEsc(p.inventory_path || '') + '">' + escHtml(shelf) + '</span>';
+
+        const engineCell = '<span class="inf-gcell">' + escHtml(engineDisplay(p.engine) || '—') + '</span>';
+
+        const tierCell = '<span class="inf-gcell">' + escHtml(p.tier || '—') + '</span>';
+
+        const lcCell = '<span class="inf-gcell">' + infLifeBadge(lc) + '</span>';
+
+        let ctxText = profileCtxLabel(p) || '—';
+        let ctxCls = 'inf-gcell';
+        if (isSelected && infCtxPlan && infCtxPlan.profile === p.id) {
+          const selCtx = infCtxSelection.ctx;
+          const selKv = infCtxSelection.kv;
+          const hasOverride = selCtx != null || (selKv && selKv !== 'auto');
+          if (hasOverride) {
+            const parts = [];
+            if (selCtx != null) parts.push(fmtCtx(selCtx));
+            if (selKv && selKv !== 'auto') parts.push('kv ' + selKv);
+            ctxText = parts.join(' · ');
+            ctxCls = 'inf-gcell g-ctx-override';
+          }
+        }
+        const ctxCell = '<span class="' + ctxCls + '">' + escHtml(ctxText) + '</span>';
+
+        const tok = p.tok_s != null ? Math.round(p.tok_s) + ' tok/s' : '—';
+        const benchCell = '<span class="inf-gcell g-bench">' + escHtml(tok) + '</span>';
+
+        const state = isActive ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
+        const statusCls = 'inf-gcell' + (isActive && p.ready ? ' g-active-label' : '');
+        const statusCell = '<span class="' + statusCls + '">' + escHtml(state) + '</span>';
+
+        return '<div class="' + cls + '"' + pickAttrs + '>'
+          + nameCell + pathCell + engineCell + tierCell + lcCell + ctxCell + benchCell + statusCell
+          + '<span class="inf-gcell"></span>'
+          + '</div>';
       }
 
       function renderInfProfiles(profiles, activeId, switching) {
         const all = (profiles || []).slice();
         const switchable = all.filter((p) => p.switchable !== false);
         const filtered = filterInfProfiles(all, activeId);
-        const groups = groupInfProfiles(filtered);
 
         const sel = $('inf-select');
         const prev = sel.value;
@@ -1153,9 +1210,7 @@
 
         const countEl = $('inf-recipes-count');
         if (countEl) {
-          const sw = switchable.length;
-          const suffix = sw !== all.length ? '· ' + sw + ' switchable' : '';
-          SparkInventoryGrid.renderSummary(countEl, { filtered: filtered.length, total: all.length, suffix });
+          SparkInventoryGrid.renderSummary(countEl, { filtered: filtered.length, total: all.length });
         }
 
         const selectedId = sel.value;
@@ -1166,31 +1221,33 @@
         } else if (!filtered.length) {
           listEl.innerHTML = '<div class="inf-empty-filter">No recipes match — '
             + '<button type="button" class="inf-link-btn" data-inf-clear-filters>Clear filters</button></div>';
-        } else {
+        } else if (infGroupByFamily) {
+          const groups = groupInfProfiles(filtered);
           const multiGroup = groups.length > 1;
           suppressInfGroupToggle = true;
-          listEl.innerHTML = groups.map((g) => {
+          const groupsHtml = groups.map((g) => {
             const hasActive = g.items.some((p) => p.active);
             const hasSelected = g.items.some((p) => p.id === selectedId);
             if (hasActive) infModelGroupsOpen.add(g.family);
             const open = modelGroupShouldOpen(g.family, multiGroup, hasActive, hasSelected);
-            const rows = g.items.map((p) => renderInfProfileRow(p, selectedId)).join('');
+            const rows = g.items.map((p) => renderInfGridRow(p, selectedId)).join('');
             const groupCls = 'inf-model-group' + (hasActive ? ' has-active' : '');
             const activeTag = hasActive ? '<span class="inf-model-group-active-tag">● active</span>' : '';
-            const shelfCount = new Set(g.items.map((p) => p.inventory_path).filter(Boolean)).size;
-            const shelfHint = shelfCount > 1
-              ? '<span class="inf-model-group-shelves">' + shelfCount + ' shelves</span>' : '';
             return '<details class="' + groupCls + '" data-model-group="' + attrEsc(g.family) + '"'
               + (open ? ' open' : '') + '>'
               + '<summary><span class="inf-model-group-name">' + escHtml(g.family) + '</span>'
-              + activeTag + shelfHint
+              + activeTag
               + '<span class="inf-model-group-count">(' + g.items.length + ')</span></summary>'
-              + '<div class="inf-profile-grid">' + rows + '</div></details>';
+              + '<div class="inf-grid-rows">' + rows + '</div></details>';
           }).join('');
+          listEl.innerHTML = renderInfGridHead() + '<div class="inf-model-family-groups">' + groupsHtml + '</div>';
           suppressInfGroupToggle = false;
+        } else {
+          const rows = filtered.slice().sort(infProfileSort).map((p) => renderInfGridRow(p, selectedId)).join('');
+          listEl.innerHTML = renderInfGridHead() + '<div class="inf-grid-rows">' + rows + '</div>';
         }
 
-        const activeRow = listEl.querySelector('.inf-profile.active');
+        const activeRow = listEl.querySelector('.inf-grid-row.active');
         if (activeRow && activeRow.scrollIntoView) {
           requestAnimationFrame(() => activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
         }
@@ -2497,16 +2554,24 @@
           clearInfFilters();
           return;
         }
-        const row = e.target.closest('.inf-profile.pickable[data-profile-id]');
+        const row = e.target.closest('.inf-profile.pickable[data-profile-id], .inf-grid-row.pickable[data-profile-id]');
         if (!row) return;
         pickInfProfile(row.dataset.profileId);
       });
       $('inf-profiles').addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
-        const row = e.target.closest('.inf-profile.pickable[data-profile-id]');
+        const row = e.target.closest('.inf-profile.pickable[data-profile-id], .inf-grid-row.pickable[data-profile-id]');
         if (!row) return;
         e.preventDefault();
         pickInfProfile(row.dataset.profileId);
+      });
+      $('inf-view-toggle').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-inf-view]');
+        if (!btn) return;
+        infGroupByFamily = btn.dataset.infView === 'family';
+        syncInfViewToggle();
+        saveInfPrefs();
+        rerenderInfProfiles();
       });
       $('inf-select').addEventListener('change', () => {
         infCtxSelection = { preset: 'default', ctx: null, kv: null };

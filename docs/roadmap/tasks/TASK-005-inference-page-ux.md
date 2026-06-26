@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ready |
+| **Status** | done |
 | **Priority** | Seq 5 |
 | **Owner** | — |
 | **PR policy** | **One PR** — flat recipe grid + ctx labeling + view toggle |
@@ -66,4 +66,4 @@ Suggested columns: Recipe, Model path, Engine, Tier, Lifecycle, Ctx (default), B
 
 | Date | Owner | Result | Commit |
 |------|-------|--------|--------|
-| — | — | — | — |
+| 2026-06-26 | fm/task-005-7v | done | fm/task-005-7v |

@@ -146,6 +146,33 @@
 
           <div class="section-title">Model storage</div>
           <div class="storage-grid" id="storage"></div>
+
+          <div class="section-title">Client activity</div>
+          <div class="status-row" id="activity-summary"></div>
+          <div class="activity-recent-wrap" id="activity-recent-wrap">
+            <div class="activity-recent-head">Recent sessions</div>
+            <div class="activity-table-scroll" id="activity-table-scroll">
+              <table class="activity-table" id="activity-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>App</th>
+                    <th>IP</th>
+                    <th>Model</th>
+                    <th>Engine</th>
+                    <th>Tok/s</th>
+                    <th>Tokens</th>
+                    <th>Ms</th>
+                    <th>Stream</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="activity-tbody">
+                  <tr><td colspan="10" class="activity-empty">No activity data — API starting up</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="card" id="explore-card" hidden>
@@ -405,6 +432,8 @@
       let lastInfProfilesSnapshot = '';
       let lastStorageSnapshot = '';
       let lastContainersSnapshot = '';
+      let lastActivitySnapshot = '';
+      let activityApiOffline = false;
       let lastNavHermesSnapshot = '';
       let lastNavInferenceSnapshot = '';
       const infModelGroupsOpen = new Set();
@@ -858,6 +887,85 @@
             + (eps ? '<div class="svc-eps">' + eps + '</div>' : legacyPorts)
             + '</div>';
         }).join('');
+      }
+
+      // --- Client activity widget ---
+      function fmtActivityTokens(n) {
+        if (n == null || Number(n) === 0) return '0';
+        var v = Number(n);
+        if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+        if (v >= 1000) return (v / 1000).toFixed(0) + 'k';
+        return String(v);
+      }
+
+      function renderClientActivity(data) {
+        var snap = JSON.stringify(data || {});
+        if (snap === lastActivitySnapshot) return;
+        lastActivitySnapshot = snap;
+        var sumEl = $('activity-summary');
+        var bodyEl = $('activity-tbody');
+        var wrapEl = $('activity-recent-wrap');
+
+        if (!data || !data.summary) {
+          if (!activityApiOffline) {
+            sumEl.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Activity API unavailable</span>';
+            bodyEl.innerHTML = '<tr><td colspan="10" class="activity-empty">No activity data — API offline</td></tr>';
+            if (wrapEl) wrapEl.style.display = 'none';
+            activityApiOffline = true;
+          }
+          return;
+        }
+        activityApiOffline = false;
+
+        var s = data.summary;
+        sumEl.innerHTML =
+          '<span class="pill up"><span class="pill-dot"></span>Active clients: ' + (s.active_clients || 0) + '</span>'
+          + '<span class="pill"><span class="pill-dot"></span>Sessions 1h: ' + (s.sessions_1h || 0)
+          + ' · 24h: ' + (s.sessions_24h || 0) + '</span>'
+          + '<span class="pill"><span class="pill-dot"></span>Avg tok/s: ' + (s.avg_tok_s != null ? s.avg_tok_s : '—') + '</span>';
+
+        var rows = data.recent || [];
+        if (wrapEl) wrapEl.style.display = '';
+        if (!rows.length) {
+          bodyEl.innerHTML = '<tr><td colspan="10" class="activity-empty">No sessions yet</td></tr>';
+          return;
+        }
+        bodyEl.innerHTML = rows.map(function (r) {
+          var t = (r.at || '').slice(11, 19);
+          var app = r.app || '?';
+          var ip = r.client_ip || '?';
+          var model = r.model || '?';
+          var eng = r.engine || '?';
+          var tokS = r.tok_s != null ? Math.round(r.tok_s) + ' tok/s' : '—';
+          var totalT = fmtActivityTokens((r.prompt_tokens || 0) + (r.completion_tokens || 0));
+          var dur = r.duration_ms != null ? r.duration_ms + 'ms' : '—';
+          var stream = r.stream ? 'yes' : 'no';
+          var status = r.status || '—';
+          var statusCls = parseInt(status) >= 400 ? ' class="activity-status-err"' : '';
+          return '<tr>'
+            + '<td class="activity-time">' + escHtml(t) + '</td>'
+            + '<td><span class="activity-app activity-app-' + escHtml(app) + '">' + escHtml(app) + '</span></td>'
+            + '<td class="activity-ip">' + escHtml(ip) + '</td>'
+            + '<td class="activity-model" title="' + escAttr(r.profile || '') + '">' + escHtml(model) + '</td>'
+            + '<td>' + escHtml(eng) + '</td>'
+            + '<td>' + escHtml(tokS) + '</td>'
+            + '<td>' + escHtml(totalT) + '</td>'
+            + '<td>' + escHtml(dur) + '</td>'
+            + '<td>' + escHtml(stream) + '</td>'
+            + '<td' + statusCls + '>' + escHtml(status) + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      async function fetchClientActivity() {
+        try {
+          var res = await fetch('/api/activity?window=1h', { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          var data = await res.json();
+          if (onSystem) renderClientActivity(data);
+        } catch (e) {
+          if (onSystem) renderClientActivity(null);
+        }
       }
 
       function setInfMsg(text, kind, force) {
@@ -1578,6 +1686,7 @@
           renderStorage(d.storage || []);
           renderInferencePills(infData);
           renderContainers(d.containers || []);
+          fetchClientActivity();
 
           $('live').classList.remove('live-stale');
           $('live').lastChild.textContent = 'live';
@@ -2207,6 +2316,7 @@
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
         gpuPoll();
+        fetchClientActivity();
       }
 
       function showExplore(btn) {

@@ -45,6 +45,13 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 | `13-llama-cpp-smoke.sh` | Build llama.cpp + `spark engine llama` |
 | `14-openwebui-dual-backend.sh` | Open WebUI dual backend compose |
 
+## Inference gateway & client activity
+
+| Script | Purpose |
+|--------|---------|
+| `23-inference-gateway.sh` | Stable `:9000/v1` OpenAI proxy + systemd (`spark-inference-gateway.service`); instruments `chat/completions` to `run/inference-activity.jsonl` |
+| `24-client-activity-api.sh` | Activity API on `:8769` + systemd + nginx `/api/activity`; reads gateway JSONL for the Portal System-tab widget |
+
 ## Convenience
 
 | Script | Purpose |
@@ -59,5 +66,6 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 02 → 03 → 04 → 05 → 10 → 11 → 12
 16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
 20 (unified `spark` CLI — run once, or chained from 17)
+23 → 24 (stable gateway :9000/v1, then client activity widget) — run after an engine is up
 ```
 - `22-ds4-dwarfstar.sh` — DwarfStar (ds4) cuda-spark build + `spark engine ds4`

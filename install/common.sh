@@ -54,6 +54,12 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location /api/activity {
+        proxy_pass http://127.0.0.1:8769;
+        proxy_http_version 1.1;
+        add_header Cache-Control "no-store";
+    }
+
     location ~* \.css$ {
         add_header Cache-Control "public, max-age=86400";
         try_files \$uri =404;

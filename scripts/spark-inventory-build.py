@@ -23,6 +23,7 @@ INFERENCE_PROFILES = Path("/opt/spark/data/inference-profiles.yaml")
 BENCHMARKS_FILE = Path("/opt/spark/data/inference-benchmarks.yaml")
 BENCHMARK_HISTORY_FILE = Path("/opt/spark/run/inference-benchmark-history.yaml")
 BENCHMARK_HISTORY_LEGACY = Path("/opt/spark/data/inference-benchmark-history.yaml")
+GOLDEN_RECIPES = Path("/opt/spark/data/golden-recipes.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
 HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
@@ -781,21 +782,65 @@ def attach_unlinked_sidecar_metadata(entries: list) -> None:
         entry["combined_size_human"] = human_size(combined) if combined else None
 
 
-def attach_best_bench_tok(entries: list) -> None:
+def load_golden_recipe_maps() -> tuple[dict[str, str], set[str]]:
+    """Return (inventory_path -> golden profile id, deprecated profile ids)."""
+    if yaml is None or not GOLDEN_RECIPES.is_file():
+        return {}, set()
+    try:
+        data = yaml.safe_load(GOLDEN_RECIPES.read_text()) or {}
+    except (OSError, yaml.YAMLError):
+        return {}, set()
+    golden = data.get("golden") or {}
+    inv_to_profile = {
+        str(k): str(v)
+        for k, v in golden.items()
+        if isinstance(k, str) and isinstance(v, str) and k and v
+    }
+    deprecated = {
+        str(p)
+        for p in (data.get("deprecated_profiles") or [])
+        if isinstance(p, str) and p
+    }
+    return inv_to_profile, deprecated
+
+
+def _bench_profile_for_entry(entry: dict, profiles: list[dict], golden_by_inv: dict[str, str]) -> dict | None:
+    """Pick the headline bench profile — golden production recipe, not stale draft max."""
+    rated = [p for p in profiles if p.get("tok_s") is not None]
+    if not rated:
+        return None
+    if entry.get("model_kind") == "speculative_sidecar":
+        target_inv = str(entry.get("requires_target") or "")
+        golden_id = golden_by_inv.get(target_inv)
+        if golden_id:
+            for p in rated:
+                if p.get("id") == golden_id:
+                    return p
+        v2 = [p for p in rated if p.get("bench_method") == "bench-agent-v2"]
+        if v2:
+            return max(v2, key=lambda p: float(p["tok_s"]))
+    return max(rated, key=lambda p: float(p["tok_s"]))
+
+
+def attach_best_bench_tok(entries: list, golden_by_inv: dict[str, str] | None = None) -> None:
+    golden_by_inv = golden_by_inv or {}
     for entry in entries:
         profiles = entry.get("inference_profiles") or []
-        toks = [p["tok_s"] for p in profiles if p.get("tok_s") is not None]
-        entry["best_bench_tok_s"] = max(toks) if toks else None
+        best = _bench_profile_for_entry(entry, profiles, golden_by_inv)
+        entry["best_bench_tok_s"] = best.get("tok_s") if best else None
         entry["latest_bench_tok_s"] = entry["best_bench_tok_s"]
         entry.pop("best_speculative_tok_s", None)
 
 
-def reconcile_spark_verify_with_profiles(entry: dict) -> None:
+def reconcile_spark_verify_with_profiles(
+    entry: dict, golden_by_inv: dict[str, str] | None = None
+) -> None:
     """Align portal spark_verify headline with attributed inference profiles."""
     sv = dict(entry.get("spark_verify") or {})
     profiles = entry.get("inference_profiles") or []
     rated = [p for p in profiles if p.get("tok_s") is not None]
     kind = entry.get("model_kind")
+    golden_by_inv = golden_by_inv or {}
 
     if kind == "speculative_sidecar":
         if entry.get("speculative_blocked") and not rated:
@@ -803,7 +848,9 @@ def reconcile_spark_verify_with_profiles(entry: dict) -> None:
             if entry.get("speculative_blocked_reason"):
                 sv["note"] = str(entry["speculative_blocked_reason"])
         elif rated:
-            best = max(rated, key=lambda p: float(p["tok_s"]))
+            best = _bench_profile_for_entry(entry, profiles, golden_by_inv) or max(
+                rated, key=lambda p: float(p["tok_s"])
+            )
             spec = best.get("speculative") if isinstance(best.get("speculative"), dict) else {}
             sv["spark_status"] = "failed" if spec.get("blocked") else "works"
             sv["tok_s"] = best.get("tok_s")
@@ -834,6 +881,8 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
     if yaml is None or not RECIPES_DIR.is_dir():
         return {}
 
+    _, deprecated_profiles = load_golden_recipe_maps()
+
     enabled: set[str] = set()
     if INFERENCE_PROFILES.is_file():
         try:
@@ -859,11 +908,15 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         recipe_files.extend(sorted(drafts_dir.glob("*.yaml")))
     for recipe_file in recipe_files:
         profile_id = recipe_file.stem
+        if profile_id in deprecated_profiles:
+            continue
         try:
             recipe = yaml.safe_load(recipe_file.read_text()) or {}
         except (OSError, yaml.YAMLError):
             continue
         if not isinstance(recipe, dict):
+            continue
+        if str(recipe.get("lifecycle") or "").lower() == "deprecated":
             continue
         inv_path = recipe.get("inventory_path") or recipe.get("catalog_id")
         if not inv_path:
@@ -1218,6 +1271,7 @@ def main() -> int:
 
     profile_benchmarks = load_profile_benchmarks()
     attach_spark_verify(entries, load_spark_verification(), profile_benchmarks)
+    golden_by_inv, _ = load_golden_recipe_maps()
     profile_map = load_inference_profile_map()
     attach_inference_profiles(entries, profile_map)
     attach_speculative_sidecars(entries, profile_map)
@@ -1226,9 +1280,9 @@ def main() -> int:
         caps = {str(c).lower() for c in (entry.get("capabilities") or [])}
         if entry.get("lab") == "z-lab" and ("dflash" in caps or "speculative" in caps):
             entry.setdefault("model_kind", "speculative_sidecar")
-    attach_best_bench_tok(entries)
+    attach_best_bench_tok(entries, golden_by_inv)
     for entry in entries:
-        reconcile_spark_verify_with_profiles(entry)
+        reconcile_spark_verify_with_profiles(entry, golden_by_inv)
 
     payload = {
         "generated_at": now,

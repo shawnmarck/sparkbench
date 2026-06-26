@@ -1,0 +1,128 @@
+{
+  "rows_rendered": 10,
+  "columns": [
+    "Model",
+    "Local",
+    "Shelf",
+    "Max CTX",
+    "Params",
+    "Active",
+    "Spark",
+    "Download",
+    "Released \u2193",
+    "Arch",
+    "Engine",
+    "Inference",
+    "Bench",
+    "Caps"
+  ],
+  "column_count": 14,
+  "sticky_thead": "sticky",
+  "table_wrap_no_overflow_x": "visible",
+  "grid_module": "compareValues,renderChips,renderSummary,renderTable,toggleGrouped",
+  "summary_text": "Showing 10 of 10 \u00b7 1 pending delete \u00b7 updated Jun 25, 2026 7:00:00 PM",
+  "sort_check_groupByFamily": false,
+  "bench_sort_asc": {
+    "direction": "asc",
+    "order": [
+      "deepseek/r1-671b",
+      "google/gemma-3-4b",
+      "rdtand/qwen3.6-27b",
+      "unsloth/qwen3.6-27b",
+      "z-lab/qwen3.6-27b",
+      "xai/grok-4-fast",
+      "meta/llama-3.3-70b",
+      "mistral/mistral-nemo-12b",
+      "qwen/qwen3.6-27b",
+      "qwen/qwq-32b"
+    ],
+    "non_null_sorted_monotonic": true,
+    "nulls_at_tail": true,
+    "nulls_last": true,
+    "aria": "ascending",
+    "text": "Bench \u2191"
+  },
+  "bench_sort_desc": {
+    "direction": "desc",
+    "order": [
+      "z-lab/qwen3.6-27b",
+      "unsloth/qwen3.6-27b",
+      "rdtand/qwen3.6-27b",
+      "google/gemma-3-4b",
+      "deepseek/r1-671b",
+      "xai/grok-4-fast",
+      "meta/llama-3.3-70b",
+      "mistral/mistral-nemo-12b",
+      "qwen/qwen3.6-27b",
+      "qwen/qwq-32b"
+    ],
+    "non_null_sorted_monotonic": true,
+    "nulls_at_tail": true,
+    "nulls_last": true,
+    "aria": "descending",
+    "text": "Bench \u2193"
+  },
+  "params_sort_asc": {
+    "direction": "asc",
+    "order": [
+      "google/gemma-3-4b",
+      "mistral/mistral-nemo-12b",
+      "unsloth/qwen3.6-27b",
+      "qwen/qwen3.6-27b",
+      "rdtand/qwen3.6-27b",
+      "z-lab/qwen3.6-27b",
+      "qwen/qwq-32b",
+      "meta/llama-3.3-70b",
+      "xai/grok-4-fast",
+      "deepseek/r1-671b"
+    ],
+    "non_null_sorted_monotonic": false,
+    "nulls_at_tail": false,
+    "nulls_last": false
+  },
+  "pane_open": true,
+  "pane_title": "Qwen3.6-27B",
+  "pane_width_px": 420,
+  "pane_position": "sticky",
+  "pane_has_actions": {
+    "verify_buttons": 4,
+    "fetch_push": 2,
+    "queue_removal": 1,
+    "delete_now": 1,
+    "recipe_lifecycle": 3,
+    "scaffold": 1,
+    "bench_history": 2
+  },
+  "pane_selected_row": "unsloth/qwen3.6-27b",
+  "pane_close_works": true,
+  "family_heads": 1,
+  "family_members": 4,
+  "details_in_tbody": 0,
+  "localStorage_prefs": {
+    "q": "",
+    "lab": "",
+    "status": "",
+    "sparkFilters": [],
+    "tagFilter": [],
+    "hfTaskFilter": "",
+    "groupByFamily": true,
+    "sortCol": "release_date",
+    "sortDir": "desc"
+  },
+  "highlight_pane_open": true,
+  "highlight_pane_title": "Qwen3.6-27B",
+  "highlight_row_selected": "unsloth/qwen3.6-27b",
+  "mobile_pane_open": true,
+  "mobile_pane_position": "fixed",
+  "mobile_backdrop_display": "block",
+  "mobile_backdrop_dismiss": true,
+  "console_errors": [
+    {
+      "level": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+    }
+  ],
+  "console_all_levels": [
+    "error"
+  ]
+}

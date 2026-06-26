@@ -212,8 +212,8 @@
 
     /* ── DETAIL PANE ─────────────────────────────────────── */
     #model-detail-pane {
-      width: 420px;
-      min-width: 320px;
+      width: 30vw;
+      min-width: 520px;
       flex-shrink: 0;
       background: var(--card);
       border: 1px solid var(--border);
@@ -356,11 +356,21 @@
     .row-sidecar-note { color: var(--muted); font-size: .68rem; margin-top: .15rem; }
 
     /* ── RESPONSIVE ──────────────────────────────────────── */
-    @media (max-width: 1200px) {
-      .col-active, .col-caps { display: none; }
+    @media (max-width: 1400px) {
+      th[data-col=spark], td[data-col=spark] { display: none; }
+    }
+    @media (max-width: 1280px) {
+      th[data-col=dl], td[data-col=dl] { display: none; }
+    }
+    @media (max-width: 1100px) {
+      th[data-col=shelf], td[data-col=shelf] { display: none; }
     }
     @media (max-width: 900px) {
-      .col-arch, .col-engine, .col-release_date { display: none; }
+      th[data-col=arch], td[data-col=arch],
+      th[data-col=engine], td[data-col=engine],
+      th[data-col=bench], td[data-col=bench],
+      th[data-col=release_date], td[data-col=release_date],
+      th[data-col=ctx], td[data-col=ctx] { display: none; }
       #model-detail-pane {
         position: fixed;
         left: 0; right: 0; bottom: 0; top: auto;
@@ -376,9 +386,6 @@
       }
       body[data-pane] #model-detail-pane { transform: translateY(0); }
       body[data-pane] #pane-backdrop { display: block; }
-    }
-    @media (max-width: 640px) {
-      .col-shelf, .col-params, .col-inf { display: none; }
     }
     html.theme-b body { background: #000 !important; }
     html.theme-b body.embedded { height: 100%; min-height: 100%; }
@@ -877,7 +884,7 @@
         const ariaSort = isSorted ? ` aria-sort="${dir === 'desc' ? 'descending' : 'ascending'}"` : '';
         const sortable = col.sortable ? ' sortable' : '';
         const sortAttr = col.sortable ? ` data-sort-col="${col.key}"` : '';
-        return `<th class="col-${col.key}${sortable}"${ariaSort}${sortAttr}>${esc(col.label)}${ind}</th>`;
+        return `<th class="col-${col.key}${sortable}"${ariaSort}${sortAttr} data-col="${col.key}">${esc(col.label)}${ind}</th>`;
       }).join('');
       $('models-thead').innerHTML = `<tr>${cells}</tr>`;
     }
@@ -915,20 +922,20 @@
       const hiddenAttr = opts.hidden ? ' hidden' : '';
 
       return `<tr class="${cls}" data-id="${id}" data-path="${esc(m.rel_path || m.id)}"${familyAttr}${hiddenAttr}>
-        <td class="col-model">${modelCell}</td>
-        <td class="col-local">${esc(localSize(m))}</td>
-        <td class="col-shelf">${esc(shelfSize(m))}</td>
-        <td class="col-ctx">${esc(fmtCtx(m.max_context))}</td>
-        <td class="col-params">${esc(paramsVal)}</td>
-        <td class="col-active">${esc(activeVal)}</td>
-        <td class="col-spark"><span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span></td>
-        <td class="col-dl"><span class="badge status-${esc(m.status || 'missing')}">${esc(m.status || 'missing')}</span></td>
-        <td class="col-release_date">${fmtRelease(m)}</td>
-        <td class="col-arch">${railArchCell(m)}</td>
-        <td class="col-engine">${railEngineCell(m)}</td>
-        <td class="col-inf">${railInferenceCell(m)}</td>
-        <td class="col-bench">${railBenchCell(m)}</td>
-        <td class="col-caps">${capsHtml}</td>
+        <td class="col-model" data-col="model">${modelCell}</td>
+        <td class="col-local" data-col="local">${esc(localSize(m))}</td>
+        <td class="col-shelf" data-col="shelf">${esc(shelfSize(m))}</td>
+        <td class="col-ctx" data-col="ctx">${esc(fmtCtx(m.max_context))}</td>
+        <td class="col-params" data-col="params">${esc(paramsVal)}</td>
+        <td class="col-active" data-col="active">${esc(activeVal)}</td>
+        <td class="col-spark" data-col="spark"><span class="badge spark-${spark}">${esc(sparkLabels[spark])}</span></td>
+        <td class="col-dl" data-col="dl"><span class="badge status-${esc(m.status || 'missing')}">${esc(m.status || 'missing')}</span></td>
+        <td class="col-release_date" data-col="release_date">${fmtRelease(m)}</td>
+        <td class="col-arch" data-col="arch">${railArchCell(m)}</td>
+        <td class="col-engine" data-col="engine">${railEngineCell(m)}</td>
+        <td class="col-inf" data-col="inf">${railInferenceCell(m)}</td>
+        <td class="col-bench" data-col="bench">${railBenchCell(m)}</td>
+        <td class="col-caps" data-col="caps">${capsHtml}</td>
       </tr>`;
     }
 

@@ -1,0 +1,147 @@
+{
+  "rows": 8,
+  "results": [
+    {
+      "width": 1600,
+      "name": "w1600_all-columns",
+      "hidden": [],
+      "missing": [],
+      "extra": [],
+      "brokenAlways": [],
+      "pane": {
+        "open": true,
+        "width": "520px",
+        "minWidth": "520px",
+        "maxWidth": "none",
+        "position": "sticky",
+        "transform": "none"
+      },
+      "ok": true,
+      "iw": 1600,
+      "rows": 8
+    },
+    {
+      "width": 1350,
+      "name": "w1350_spark-hidden",
+      "hidden": [
+        "spark"
+      ],
+      "missing": [],
+      "extra": [],
+      "brokenAlways": [],
+      "pane": {
+        "open": true,
+        "width": "520px",
+        "minWidth": "520px",
+        "maxWidth": "none",
+        "position": "sticky",
+        "transform": "none"
+      },
+      "ok": true,
+      "iw": 1350,
+      "rows": 8
+    },
+    {
+      "width": 1200,
+      "name": "w1200_spark-dl-hidden",
+      "hidden": [
+        "spark",
+        "dl"
+      ],
+      "missing": [],
+      "extra": [],
+      "brokenAlways": [],
+      "pane": {
+        "open": true,
+        "width": "520px",
+        "minWidth": "520px",
+        "maxWidth": "none",
+        "position": "sticky",
+        "transform": "none"
+      },
+      "ok": true,
+      "iw": 1200,
+      "rows": 8
+    },
+    {
+      "width": 1000,
+      "name": "w1000_shelf-hidden",
+      "hidden": [
+        "shelf",
+        "spark",
+        "dl"
+      ],
+      "missing": [],
+      "extra": [],
+      "brokenAlways": [],
+      "pane": {
+        "open": true,
+        "width": "520px",
+        "minWidth": "520px",
+        "maxWidth": "none",
+        "position": "sticky",
+        "transform": "none"
+      },
+      "ok": true,
+      "iw": 1000,
+      "rows": 8
+    },
+    {
+      "width": 850,
+      "name": "w850_below-900",
+      "hidden": [
+        "shelf",
+        "ctx",
+        "spark",
+        "dl",
+        "release_date",
+        "arch",
+        "engine",
+        "bench"
+      ],
+      "missing": [],
+      "extra": [],
+      "brokenAlways": [],
+      "pane": {
+        "open": true,
+        "width": "850px",
+        "minWidth": "0px",
+        "maxWidth": "100%",
+        "position": "fixed",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)"
+      },
+      "ok": true,
+      "iw": 850,
+      "rows": 8
+    },
+    {
+      "width": 600,
+      "name": "w600_mobile",
+      "hidden": [
+        "shelf",
+        "ctx",
+        "spark",
+        "dl",
+        "release_date",
+        "arch",
+        "engine",
+        "bench"
+      ],
+      "missing": [],
+      "extra": [],
+      "brokenAlways": [],
+      "pane": {
+        "open": true,
+        "width": "600px",
+        "minWidth": "0px",
+        "maxWidth": "100%",
+        "position": "fixed",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)"
+      },
+      "ok": true,
+      "iw": 600,
+      "rows": 8
+    }
+  ],
+  "note": "30vw with min-width 520; at w=1600 30vw=480 so min-width 520 binds"
+}

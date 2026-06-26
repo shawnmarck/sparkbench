@@ -2708,14 +2708,14 @@
         }
       }
 
-      async function expDownloadExploreItem(itemId) {
+      async function expDownloadExploreItem(itemId, warnMsg) {
         try {
           const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/download', {
             method: 'POST',
           });
           const d = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(d.error || 'download queue failed');
-          setExpMsg('Download queued');
+          setExpMsg(warnMsg || 'Download queued', warnMsg ? 'warn' : '');
           expTick();
         } catch (e) {
           setExpMsg(String(e.message || e), 'err');
@@ -3086,7 +3086,13 @@
         const dlBtn = e.target.closest('[data-sl-dl]');
         if (dlBtn) {
           e.stopPropagation();
-          expDownloadExploreItem(dlBtn.dataset.slDl);
+          const id = dlBtn.dataset.slDl;
+          const item = expShortlistItems.find((i) => i.id === id);
+          const fit = item && (item.snapshot || {}).spark_fit;
+          const warnMsg = item && item.repo && (fit === 'too_large' || fit === 'not_recommended')
+            ? 'Warning: ' + item.repo + ' may not work on Spark — queued anyway'
+            : '';
+          expDownloadExploreItem(id, warnMsg);
           return;
         }
         const rmBtn = e.target.closest('[data-sl-rm]');

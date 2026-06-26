@@ -261,7 +261,7 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 | 1 | Portal foundation — CSS extract, defer scripts, models poll fixes | ready | yes | [TASK-006](roadmap/tasks/TASK-006-portal-foundation.md) |
 | 2 | Shared inventory grid module | done | yes | [TASK-007](roadmap/tasks/TASK-007-shared-inventory-grid.md) |
 | 3 | Client activity dashboard (System tab) | done | yes | [TASK-001](roadmap/tasks/TASK-001-client-activity-dashboard.md) |
-| 4 | Models inventory UX — sortable table + detail side pane | ready | yes | [TASK-002](roadmap/tasks/TASK-002-models-inventory-ux.md) |
+| 4 | Models inventory UX — sortable table + detail side pane | done | yes | [TASK-002](roadmap/tasks/TASK-002-models-inventory-ux.md) |
 | 5 | Inference page — flat recipe grid, ctx labeling | ready | yes | [TASK-005](roadmap/tasks/TASK-005-inference-page-ux.md) |
 | 6 | Explore queue — shortlist compare overhaul | ready | yes | [TASK-004](roadmap/tasks/TASK-004-explore-queue-overhaul.md) |
 

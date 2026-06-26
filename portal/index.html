@@ -500,6 +500,8 @@
       };
       let infFilterChips = new Set(['switchable']);
       let infGroupByFamily = false;
+      let infSortCol = null;
+      let infSortDir = 'asc';
       let infCtxPlan = null;
       let infCtxSelection = { preset: 'default', ctx: null, kv: null };
 
@@ -609,6 +611,8 @@
           q: infFilterQ,
           chips: [...infFilterChips],
           viewMode: infGroupByFamily ? 'family' : 'flat',
+          sortCol: infSortCol,
+          sortDir: infSortDir,
         }));
       }
 
@@ -619,6 +623,8 @@
           ? stored.chips.filter((c) => INF_CHIP_OPTS.includes(c)) : [];
         infFilterChips = new Set(chips.length ? chips : ['switchable']);
         infGroupByFamily = stored.viewMode === 'family';
+        infSortCol = stored.sortCol || null;
+        infSortDir = stored.sortDir || 'asc';
         const qEl = $('inf-q');
         if (qEl) qEl.value = infFilterQ;
         syncInfFilterChips();
@@ -745,6 +751,7 @@
           infFilterQ,
           [...infFilterChips].sort().join(','),
           infGroupByFamily ? 'family' : 'flat',
+          (infSortCol || '') + ':' + infSortDir,
           [infCtxSelection.preset, infCtxSelection.ctx, infCtxSelection.kv].join(':'),
           parts.join('|'),
         ].join(';');
@@ -1091,6 +1098,39 @@
         return SparkInventoryGrid.compareValues(a, b, 'id', 'asc');
       }
 
+      function infSortValue(p, col) {
+        if (col === 'recipe') return p.id || '';
+        if (col === 'engine') return engineDisplay(p.engine) || '';
+        if (col === 'tier') return p.tier || '';
+        if (col === 'lifecycle') return p.lifecycle || 'works';
+        if (col === 'ctx') {
+          const c = p.context;
+          const v = c && (c.effective != null ? c.effective : c.default);
+          return v != null ? Number(v) : null;
+        }
+        if (col === 'bench') return p.tok_s != null ? Number(p.tok_s) : null;
+        if (col === 'status') {
+          return p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
+        }
+        return null;
+      }
+
+      function compareInfValues(a, b, col, dir) {
+        const av = infSortValue(a, col);
+        const bv = infSortValue(b, col);
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        let r;
+        if (typeof av === 'string' && typeof bv === 'string') {
+          r = av.localeCompare(bv);
+          if (r < 0) r = -1; else if (r > 0) r = 1;
+        } else {
+          r = av < bv ? -1 : av > bv ? 1 : 0;
+        }
+        return dir === 'desc' ? -r : r;
+      }
+
 
       function fmtCtx(n) {
         if (n == null || n === '' || Number.isNaN(Number(n))) return '—';
@@ -1189,17 +1229,26 @@
       }
 
       function renderInfGridHead() {
-        return '<div class="inf-grid-head" aria-hidden="true">'
-          + '<span class="grid-head-title">Recipe</span>'
-          + '<span class="grid-head-rail">Model path</span>'
-          + '<span class="grid-head-rail">Engine</span>'
-          + '<span class="grid-head-rail">Tier</span>'
-          + '<span class="grid-head-rail">Lifecycle</span>'
-          + '<span class="grid-head-rail">Ctx</span>'
-          + '<span class="grid-head-rail bench">Bench</span>'
-          + '<span class="grid-head-rail">Status</span>'
-          + '<span class="grid-head-spacer"></span>'
-          + '</div>';
+        const cols = [
+          { label: 'Recipe', key: 'recipe', cls: 'grid-head-title', sortable: true },
+          { label: 'Model path', key: null, cls: 'grid-head-rail', sortable: false },
+          { label: 'Engine', key: 'engine', cls: 'grid-head-rail', sortable: true },
+          { label: 'Tier', key: 'tier', cls: 'grid-head-rail', sortable: true },
+          { label: 'Lifecycle', key: 'lifecycle', cls: 'grid-head-rail', sortable: true },
+          { label: 'Ctx', key: 'ctx', cls: 'grid-head-rail', sortable: true },
+          { label: 'Bench', key: 'bench', cls: 'grid-head-rail bench', sortable: true },
+          { label: 'Status', key: 'status', cls: 'grid-head-rail', sortable: true },
+        ];
+        const cells = cols.map((c) => {
+          const isSorted = c.key && infSortCol === c.key;
+          const ind = isSorted ? (infSortDir === 'desc' ? ' ↓' : ' ↑') : '';
+          const sortCls = c.sortable ? ' inf-gh-sort' : '';
+          const ariaSort = isSorted ? ' aria-sort="' + (infSortDir === 'desc' ? 'descending' : 'ascending') + '"' : '';
+          const dataAttr = c.sortable && c.key ? ' data-inf-sort-col="' + c.key + '"' : '';
+          return '<span class="' + c.cls + sortCls + '"' + ariaSort + dataAttr + ' role="columnheader">'
+            + escHtml(c.label) + escHtml(ind) + '</span>';
+        }).join('');
+        return '<div class="inf-grid-head">' + cells + '<span class="grid-head-spacer"></span></div>';
       }
 
       function renderInfGridRow(p, selectedId) {
@@ -1314,7 +1363,10 @@
           listEl.innerHTML = renderInfGridHead() + '<div class="inf-model-family-groups">' + groupsHtml + '</div>';
           suppressInfGroupToggle = false;
         } else {
-          const rows = filtered.slice().sort(infProfileSort).map((p) => renderInfGridRow(p, selectedId)).join('');
+          const sortFn = infSortCol
+            ? (a, b) => compareInfValues(a, b, infSortCol, infSortDir) || infProfileSort(a, b)
+            : infProfileSort;
+          const rows = filtered.slice().sort(sortFn).map((p) => renderInfGridRow(p, selectedId)).join('');
           listEl.innerHTML = renderInfGridHead() + '<div class="inf-grid-rows">' + rows + '</div>';
         }
 
@@ -2948,6 +3000,19 @@
       $('inf-profiles').addEventListener('click', (e) => {
         if (e.target.closest('[data-inf-clear-filters]')) {
           clearInfFilters();
+          return;
+        }
+        const sortSpan = e.target.closest('[data-inf-sort-col]');
+        if (sortSpan) {
+          const col = sortSpan.dataset.infSortCol;
+          if (infSortCol === col) {
+            infSortDir = infSortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            infSortCol = col;
+            infSortDir = 'asc';
+          }
+          saveInfPrefs();
+          rerenderInfProfiles();
           return;
         }
         const row = e.target.closest('.inf-profile.pickable[data-profile-id], .inf-grid-row.pickable[data-profile-id]');

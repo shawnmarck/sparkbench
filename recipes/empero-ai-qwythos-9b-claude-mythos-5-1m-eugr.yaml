@@ -27,21 +27,195 @@ context:
       label: Long ctx (viability 781k)
       ctx: 800000
       kv: fp8
+  ladder_rungs:
+  - 262144
+  - 327680
+  - 409600
+  - 512000
+  - 614400
+  - 799744
+  - 1048576
   ctx_ladder:
     version: '1.0'
-    tested_at: '2026-06-27T03:03:24.462750+00:00'
+    tested_at: '2026-06-27T06:44:26.146856+00:00'
     golden_ctx: 799744
     native_ctx: 1048576
     fill_ratio: 0.75
     kv: fp8
     max_viable_ctx: null
+    best_tok_s_ctx: null
     rungs:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+    - ctx: 327680
+      kv: fp8
+      fill_target: 221184
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+    - ctx: 409600
+      kv: fp8
+      fill_target: 276480
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+    - ctx: 512000
+      kv: fp8
+      fill_target: 345600
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+    - ctx: 614400
+      kv: fp8
+      fill_target: 414720
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+    - ctx: 799744
+      kv: fp8
+      fill_target: 539827
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
     - ctx: 1048576
       kv: fp8
       fill_target: 707789
       fill_ratio: 0.75
-      status: bench_fail
-      loaded_ctx: 1048576
-      error: 'HTTP 400: {"error":{"message":"\"auto\" tool choice requires --enable-auto-tool-choice
-        and --tool-call-parser to be set","type":"BadRequestError","param":null,"code":400}}'
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-27T06:44:26.154449+00:00'
+    golden_cell:
+      ctx: 799744
+      kv: fp8
+      tok_s: 12.4
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder:
+      version: '1.0'
+      tested_at: '2026-06-27T06:44:26.146856+00:00'
+      golden_ctx: 799744
+      native_ctx: 1048576
+      fill_ratio: 0.75
+      kv: fp8
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs:
+      - ctx: 262144
+        kv: fp8
+        fill_target: 176947
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+      - ctx: 327680
+        kv: fp8
+        fill_target: 221184
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+      - ctx: 409600
+        kv: fp8
+        fill_target: 276480
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+      - ctx: 512000
+        kv: fp8
+        fill_target: 345600
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+      - ctx: 614400
+        kv: fp8
+        fill_target: 414720
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+      - ctx: 799744
+        kv: fp8
+        fill_target: 539827
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+      - ctx: 1048576
+        kv: fp8
+        fill_target: 707789
+        fill_ratio: 0.75
+        status: load_fail
+        error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+          or directory
+
+          '
+    kv_sweep:
+    - ctx: 799744
+      kv: fp8
+      fill_target: 539827
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-27T06:05:56.373806+00:00'
+    golden_ctx: 799744
+    fill_ratio: 0.75
+    results:
+    - ctx: 799744
+      kv: fp8
+      fill_target: 539827
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
 promoted_at: '2026-06-27T02:41:50.418800+00:00'

@@ -1,5 +1,6 @@
 # Golden recipe map — one production profile per inventory path
 # Used by scripts/golden-inventory-audit.py
+# KV sweep: llamacpp + eugr only; skipped for deepseek/* and ds4 (see spark-golden-bench.py)
 
 bench_standard: "2.0"
 

@@ -1,11 +1,8 @@
-# OpenCode long-ctx DFlash: flashinfer + fp8 KV (flash_attn rejects fp8 kv; drafter has causal SWA per z-lab HF)
-recipe_version: "1"
+recipe_version: '1'
 name: OpenCode Qwen3.6 27B DFlash
 description: DFlash speculative 27B dense for OpenCode agent (262k ctx)
-
 model: qwen3.6-27b-dflash
 container: vllm-node
-
 defaults:
   port: 8000
   host: 0.0.0.0
@@ -14,24 +11,13 @@ defaults:
   max_model_len: 262144
   max_num_seqs: 6
   max_num_batched_tokens: 32768
-
-command: |
-  vllm serve /models/qwen/qwen3.6-27b/fp8 \
-    --host {host} \
-    --port {port} \
-    --served-model-name qwen3.6-27b-dflash \
-    --tensor-parallel-size {tensor_parallel} \
-    --trust-remote-code \
-    --kv-cache-dtype fp8 \
-    --attention-backend flashinfer \
-    --enable-auto-tool-choice \
-    --tool-call-parser qwen3_xml \
-    --reasoning-parser qwen3 \
-    --chat-template fixed_chat_template.jinja \
-    --gpu-memory-utilization {gpu_memory_utilization} \
-    --max-model-len {max_model_len} \
-    --max-num-seqs {max_num_seqs} \
-    --max-num-batched-tokens {max_num_batched_tokens} \
-    --enable-chunked-prefill \
-    --load-format auto \
-    --speculative-config '{{"method": "dflash", "model": "/models/z-lab/qwen3.6-27b/dflash", "num_speculative_tokens": 5}}'
+command: "vllm serve /models/qwen/qwen3.6-27b/fp8 \\\n  --host {host} \\\n  --port\
+  \ {port} \\\n  --served-model-name qwen3.6-27b-dflash \\\n  --tensor-parallel-size\
+  \ {tensor_parallel} \\\n  --trust-remote-code \\\n  --kv-cache-dtype fp8 \\\n  --attention-backend\
+  \ flashinfer \\\n  --enable-auto-tool-choice \\\n  --tool-call-parser qwen3_xml\
+  \ \\\n  --reasoning-parser qwen3 \\\n  --chat-template fixed_chat_template.jinja\
+  \ \\\n  --gpu-memory-utilization {gpu_memory_utilization} \\\n  --max-model-len\
+  \ {max_model_len} \\\n  --max-num-seqs {max_num_seqs} \\\n  --max-num-batched-tokens\
+  \ {max_num_batched_tokens} \\\n  --enable-chunked-prefill \\\n  --load-format auto\
+  \ \\\n  --speculative-config '{{\"method\": \"dflash\", \"model\": \"/models/z-lab/qwen3.6-27b/dflash\"\
+  , \"num_speculative_tokens\": 5}}'\n"

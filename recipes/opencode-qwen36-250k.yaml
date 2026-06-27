@@ -1,5 +1,5 @@
 id: opencode-qwen36-250k
-name: "OpenCode · Qwen3.6 250k NVFP4"
+name: "OpenCode \xB7 Qwen3.6 250k NVFP4"
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
 engine: eugr
@@ -13,6 +13,7 @@ tags:
 - coding
 - nvfp4
 - eugr
+- golden
 lifecycle: works
 context:
   default: 256000
@@ -20,18 +21,22 @@ context:
   native: 262144
   presets:
     agent:
-      label: "OpenCode agent (250k)"
+      label: OpenCode agent (250k)
       ctx: 256000
       kv: fp8
     balanced:
-      label: "Balanced (160k)"
+      label: Balanced (160k)
       ctx: 163840
       kv: fp8
-notes: |
-  OpenCode agent profile for Sparky — 256k ctx, fp8 KV (ctx ladder validated 2026-06-22).
-  Launch: spark inference up opencode-qwen36-250k
-  OpenCode / Grok: http://sparky:9000/v1 (model: sparky) — run sync-sparky-models locally after switch if using concrete names.
-  Gateway model variants (same profile, pick in OpenCode):
-    qwen3.6-35b-a3b-nvfp4       — fast / no thinking
-    qwen3.6-35b-a3b-nvfp4-think  — thinking / orchestration
-promoted_at: "2026-06-22T20:02:00+00:00"
+    golden:
+      label: Golden max fit
+      ctx: 256000
+      kv: fp8
+notes: "OpenCode agent profile for Sparky \u2014 256k ctx, fp8 KV (ctx ladder validated\
+  \ 2026-06-22).\nLaunch: spark inference up opencode-qwen36-250k\nOpenCode / Grok:\
+  \ http://sparky:9000/v1 (model: sparky) \u2014 run sync-sparky-models locally after\
+  \ switch if using concrete names.\nGateway model variants (same profile, pick in\
+  \ OpenCode):\n  qwen3.6-35b-a3b-nvfp4       \u2014 fast / no thinking\n  qwen3.6-35b-a3b-nvfp4-think\
+  \  \u2014 thinking / orchestration\n"
+promoted_at: '2026-06-22T20:02:00+00:00'
+_path: /opt/spark/recipes/opencode-qwen36-250k.yaml

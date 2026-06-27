@@ -1194,17 +1194,21 @@
         presetsEl.innerHTML = (c.presets || []).map((p) => {
           const active = infCtxSelection.preset === p.id ? ' active' : '';
           const rec = recBal && recBal.ctx === p.ctx ? ' rec' : '';
+          const tested = p.source === 'ctx_ladder' ? ' tested' : '';
           const title = p.label + ' · ' + fmtCtx(p.ctx) + (p.kv && p.kv !== 'auto' ? ' kv ' + p.kv : '');
-          return '<button type="button" class="inf-ctx-preset' + active + rec + '" data-ctx-preset="' + attrEsc(p.id)
+          return '<button type="button" class="inf-ctx-preset' + active + rec + tested + '" data-ctx-preset="' + attrEsc(p.id)
             + '" data-ctx-val="' + p.ctx + '" data-ctx-kv="' + attrEsc(p.kv || 'auto') + '" title="' + attrEsc(title) + '">'
             + escHtml(p.label) + ' ' + escHtml(fmtCtx(p.ctx)) + '</button>';
         }).join('');
 
         const kvSel = $('inf-ctx-kv');
-        const allowed = new Set(kvOptionsForEngine(d.engine));
-        Array.from(kvSel.options).forEach((opt) => {
-          opt.hidden = !allowed.has(opt.value);
-        });
+        const testedKv = (c.kv_tested && c.kv_tested.length) ? c.kv_tested : kvOptionsForEngine(d.engine).filter((k) => k !== 'auto');
+        const kvLabels = { auto: 'auto', fp8: 'fp8 (vLLM)', q8_0: 'q8_0 (GGUF)', q4_0: 'q4_0 (GGUF)', f16: 'f16' };
+        kvSel.innerHTML = testedKv.map((k) => {
+          const lab = kvLabels[k] || k;
+          return '<option value="' + attrEsc(k) + '">' + escHtml(lab) + '</option>';
+        }).join('');
+        const allowed = new Set(testedKv);
         const selKv = infCtxSelection.kv || (infCtxSelection.preset && (c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).kv || c.kv_default || 'auto';
         kvSel.value = allowed.has(selKv) ? selKv : 'auto';
 

@@ -71,14 +71,66 @@ def build_rungs(golden_ctx: int, native_ctx: int) -> list[int]:
     return sorted(x for x in candidates if x > golden_ctx)
 
 
+def build_rungs_below(golden_ctx: int, *, floor: int = 32768) -> list[int]:
+    """Rungs below golden — find faster sweet spots when max-fit ctx is slow."""
+    if golden_ctx <= floor:
+        return []
+    milestones = [
+        131072,
+        196608,
+        262144,
+        327680,
+        409600,
+        512000,
+        614400,
+        655360,
+        716800,
+    ]
+    candidates = {m for m in milestones if floor <= m < golden_ctx}
+    c = ((golden_ctx - 131072) // 1024) * 1024
+    while c >= floor:
+        if c < golden_ctx:
+            candidates.add(c)
+        c -= 131072
+    return sorted(candidates)
+
+
+def resolve_rungs(
+    recipe: dict[str, Any],
+    golden_ctx: int,
+    native_ctx: int,
+    *,
+    cli_rungs: list[int] | None = None,
+    include_golden: bool = False,
+    include_below: bool = False,
+) -> list[int]:
+    block = recipe.get("context") or {}
+    if cli_rungs:
+        rungs = sorted({int(x) for x in cli_rungs})
+    elif block.get("ladder_rungs"):
+        rungs = sorted({int(x) for x in block["ladder_rungs"]})
+    else:
+        rungs = list(build_rungs(golden_ctx, native_ctx))
+        if include_below:
+            rungs = build_rungs_below(golden_ctx) + rungs
+        if include_golden:
+            rungs = [golden_ctx] + [r for r in rungs if r != golden_ctx]
+        return sorted(set(rungs))
+    if include_golden and golden_ctx not in rungs:
+        rungs = sorted(set(rungs) | {golden_ctx})
+    return [r for r in rungs if r <= native_ctx or r == golden_ctx]
+
+
 def run_ladder(
     profile_id: str,
     *,
     dry_run: bool = False,
     include_golden: bool = False,
+    include_below: bool = False,
     stop_on_fail: bool = True,
     fill_ratio: float | None = None,
     force: bool = False,
+    cli_rungs: list[int] | None = None,
 ) -> dict[str, Any]:
     gb = _load_golden_bench()
     fill_ratio = fill_ratio if fill_ratio is not None else gb.FILL_RATIO
@@ -87,20 +139,45 @@ def run_ladder(
     recipe = gb.load_recipe(profile_id)
 
     block = recipe.get("context") or {}
-    if not force and block.get("ctx_ladder", {}).get("rungs"):
+    has_plan = bool(block.get("ladder_rungs"))
+    if not force and block.get("ctx_ladder", {}).get("rungs") and not has_plan:
+        prior = block["ctx_ladder"]
         return {
             "profile_id": profile_id,
             "status": "skipped",
             "reason": "ctx_ladder already present (use --force)",
-            "ctx_ladder": block["ctx_ladder"],
+            "ctx_ladder": prior,
         }
+    if (
+        not force
+        and has_plan
+        and block.get("ctx_ladder", {}).get("rungs")
+    ):
+        ok_ctx = {
+            int(r.get("ctx"))
+            for r in block["ctx_ladder"]["rungs"]
+            if r.get("status") == "ok"
+        }
+        needed = {int(x) for x in block["ladder_rungs"]}
+        if needed <= ok_ctx:
+            return {
+                "profile_id": profile_id,
+                "status": "skipped",
+                "reason": "all ladder_rungs already ok",
+                "ctx_ladder": block["ctx_ladder"],
+            }
 
     golden, kv = gb.golden_ctx_and_kv(recipe, ctxmod)
     native = resolve_native_ctx(recipe, ctxmod)
 
-    rungs = build_rungs(golden, native)
-    if include_golden:
-        rungs = [golden] + rungs
+    rungs = resolve_rungs(
+        recipe,
+        golden,
+        native,
+        cli_rungs=cli_rungs,
+        include_golden=include_golden,
+        include_below=include_below,
+    )
 
     report: dict[str, Any] = {
         "profile_id": profile_id,
@@ -122,6 +199,8 @@ def run_ladder(
         return report
 
     max_viable = golden if include_golden else None
+    best_tok_s = 0.0
+    best_tok_s_ctx: int | None = None
     for ctx in rungs:
         log(f"--- rung ctx={ctx} fill~{gb.fill_target_for_ctx(ctx, fill_ratio=fill_ratio)} ---")
         row = gb.probe_cell(
@@ -137,11 +216,16 @@ def run_ladder(
 
         if row["status"] == "ok":
             max_viable = ctx
+            ts = float(row.get("tok_s") or 0)
+            if ts >= best_tok_s:
+                best_tok_s = ts
+                best_tok_s_ctx = ctx
         elif stop_on_fail:
             log(f"stopping ladder after {row['status']} at ctx={ctx}")
             break
 
     report["max_viable_ctx"] = max_viable
+    report["best_tok_s_ctx"] = best_tok_s_ctx
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
 
     recipe = gb.load_recipe(profile_id)
@@ -155,6 +239,7 @@ def run_ladder(
         "fill_ratio": fill_ratio,
         "kv": kv,
         "max_viable_ctx": max_viable,
+        "best_tok_s_ctx": best_tok_s_ctx,
         "rungs": report["results"],
     }
     block["ctx_ladder"] = ladder_doc
@@ -171,6 +256,8 @@ def main() -> int:
     parser.add_argument("profile_id", help="Golden recipe profile id")
     parser.add_argument("--dry-run", action="store_true", help="Plan rungs only")
     parser.add_argument("--include-golden", action="store_true", help="Re-test golden ctx rung")
+    parser.add_argument("--rungs", help="Comma-separated ctx sizes (overrides recipe ladder_rungs)")
+    parser.add_argument("--below-golden", action="store_true", help="Include rungs below golden ctx")
     parser.add_argument("--continue-on-fail", action="store_true", help="Keep climbing after failure")
     parser.add_argument("--force", action="store_true", help="Re-run even if ctx_ladder exists")
     parser.add_argument("--fill-ratio", type=float, default=None, help="Usable ctx fill fraction (default 0.75)")
@@ -178,14 +265,20 @@ def main() -> int:
 
     gb = _load_golden_bench()
     fill_ratio = args.fill_ratio if args.fill_ratio is not None else gb.FILL_RATIO
+    cli_rungs = [int(x.strip()) for x in args.rungs.split(",") if x.strip()] if args.rungs else None
+    recipe = gb.load_recipe(args.profile_id)
+    has_plan = bool(cli_rungs or (recipe.get("context") or {}).get("ladder_rungs"))
+    stop_on_fail = not args.continue_on_fail and not has_plan
 
     report = run_ladder(
         args.profile_id,
         dry_run=args.dry_run,
         include_golden=args.include_golden,
-        stop_on_fail=not args.continue_on_fail,
+        include_below=args.below_golden,
+        stop_on_fail=stop_on_fail,
         fill_ratio=fill_ratio,
         force=args.force,
+        cli_rungs=cli_rungs,
     )
     REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
     REPORT_FILE.write_text(json.dumps(report, indent=2) + "\n")

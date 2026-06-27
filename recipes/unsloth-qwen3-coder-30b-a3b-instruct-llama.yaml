@@ -9,6 +9,7 @@ port: 8081
 tags:
 - lab
 - llamacpp
+- golden
 notes: 'Scaffolded 2026-06-21 from /models/unsloth/qwen3-coder-30b-a3b-instruct. Mark
   testing, switch, bench, then promote.
 
@@ -21,6 +22,16 @@ llamacpp_args:
 - '1'
 - --no-mmap
 - -c
-- '32768'
+- '262144'
 updated_at: '2026-06-22T00:36:21.446008+00:00'
 promoted_at: '2026-06-22T02:48:59.105185+00:00'
+_path: /opt/spark/recipes/unsloth-qwen3-coder-30b-a3b-instruct-llama.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: q8_0

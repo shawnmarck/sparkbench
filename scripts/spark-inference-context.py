@@ -258,6 +258,67 @@ def estimate_max_ctx(
     return max(4096, est)
 
 
+def _fmt_ctx_label(ctx: int) -> str:
+    if ctx >= 1024 and ctx % 1024 == 0:
+        return f"{ctx // 1024}k"
+    if ctx >= 1024:
+        return f"{ctx / 1024:.1f}k"
+    return str(ctx)
+
+
+def tested_kv_options(recipe: dict[str, Any]) -> list[str]:
+    """KV dtypes with successful bench (kv_sweep ok cells, else golden bench)."""
+    block = recipe.get("context") or {}
+    ks = block.get("kv_sweep") or {}
+    results = ks.get("results") if isinstance(ks, dict) else []
+    ok: list[str] = []
+    for row in results or []:
+        if row.get("status") == "ok" and row.get("kv"):
+            kv = str(row["kv"])
+            if kv not in ok:
+                ok.append(kv)
+    if ok:
+        return ok
+    cell = (block.get("bench_matrix") or {}).get("golden_cell") or {}
+    presets = block.get("presets") or {}
+    golden = presets.get("golden") if isinstance(presets, dict) else {}
+    gkv = str(golden.get("kv") or block.get("kv_default") or "")
+    if cell.get("tok_s") and gkv:
+        return [gkv]
+    dk = default_kv(recipe)
+    return [dk] if dk else ["auto"]
+
+
+def enriched_context_presets(recipe: dict[str, Any]) -> list[dict[str, Any]]:
+    """Recipe presets plus one button per successful ctx_ladder rung."""
+    by_id: dict[str, dict[str, Any]] = {}
+    for p in context_presets(recipe):
+        by_id[p["id"]] = dict(p)
+
+    block = recipe.get("context") or {}
+    lad = block.get("ctx_ladder") or {}
+    for row in lad.get("rungs") or []:
+        if row.get("status") != "ok":
+            continue
+        ctx = int(row["ctx"])
+        pid = f"tested_{ctx}"
+        if pid in by_id:
+            continue
+        tok = row.get("tok_s")
+        label = f"Tested {_fmt_ctx_label(ctx)}"
+        if tok:
+            label += f" ({tok}t/s)"
+        by_id[pid] = {
+            "id": pid,
+            "label": label,
+            "ctx": ctx,
+            "kv": str(row.get("kv") or default_kv(recipe)),
+            "source": "ctx_ladder",
+        }
+
+    return sorted(by_id.values(), key=lambda p: int(p["ctx"]))
+
+
 def context_presets(recipe: dict[str, Any]) -> list[dict[str, Any]]:
     block = recipe.get("context") or {}
     if isinstance(block, dict) and isinstance(block.get("presets"), dict):
@@ -349,8 +410,9 @@ def context_public(recipe: dict[str, Any], *, active_profile_id: str | None = No
         "effective": eff.get("ctx"),
         "kv_default": default_kv(recipe),
         "kv_effective": eff.get("kv"),
+        "kv_tested": tested_kv_options(recipe),
         "preset": eff.get("preset"),
-        "presets": context_presets(recipe),
+        "presets": enriched_context_presets(recipe),
         "recommendations": context_recommendations(recipe),
         "weight_gb": estimate_weight_gb(recipe),
         "mem_avail_gb": round(system_mem_avail_gb(), 1),
@@ -364,7 +426,7 @@ def resolve_launch_ctx_kv(
     kv: str | None = None,
     preset: str | None = None,
 ) -> tuple[int, str]:
-    presets = {p["id"]: p for p in context_presets(recipe)}
+    presets = {p["id"]: p for p in enriched_context_presets(recipe)}
     if preset and preset in presets:
         p = presets[preset]
         ctx = int(p["ctx"])

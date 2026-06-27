@@ -11,6 +11,7 @@ tags:
 - reasoning
 - gguf
 - llamacpp
+- golden
 llamacpp_args:
 - -ngl
 - '999'
@@ -18,10 +19,20 @@ llamacpp_args:
 - '1'
 - --no-mmap
 - -c
-- '32768'
+- '262144'
 notes: 'Same Qwen3.6 MoE base as NVFP4 tier, GGUF Q4_K_M via llama-server.
 
   Lighter to cold-start than eugr NVFP4 but still a heavy slot on GB10.
 
   Stop eugr vLLM before switching: spark inference down'
 lifecycle: works
+_path: /opt/spark/recipes/qwen36-q4-llama.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: q8_0

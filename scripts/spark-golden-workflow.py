@@ -86,6 +86,14 @@ def load_recipe(profile_id: str) -> dict[str, Any]:
 def needs_ctx_ladder(profile_id: str) -> bool:
     recipe = load_recipe(profile_id)
     ctx = recipe.get("context") or {}
+    plan = ctx.get("ladder_rungs") or []
+    if plan:
+        ok_ctx = {
+            int(r.get("ctx"))
+            for r in (ctx.get("ctx_ladder") or {}).get("rungs") or []
+            if r.get("status") == "ok"
+        }
+        return {int(x) for x in plan} - ok_ctx != set()
     if ctx.get("ctx_ladder"):
         return False
     native = ctx.get("native")
@@ -291,7 +299,13 @@ def process_model(
             result["phases"]["ctx_ladder"] = run_ctx_ladder_phase(profile_id, force=force)
 
     if only_phase in ("all", "kv_sweep") and not skip_kv_sweep:
-        if resume and not force and phase_done(prior, "kv_sweep"):
+        gb = _load_golden_bench()
+        recipe = gb.load_recipe(profile_id)
+        if not gb.kv_sweep_eligible(recipe, inventory_path=path):
+            reason = gb.kv_sweep_skip_reason(recipe, inventory_path=path)
+            result["phases"]["kv_sweep"] = {"status": "skipped", "reason": reason}
+            log(f"skip kv_sweep: {reason}")
+        elif resume and not force and phase_done(prior, "kv_sweep"):
             result["phases"]["kv_sweep"] = prior["phases"]["kv_sweep"]  # type: ignore[index]
             log("resume: skip kv_sweep")
         else:

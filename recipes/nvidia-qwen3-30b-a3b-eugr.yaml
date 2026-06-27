@@ -9,8 +9,19 @@ port: 8000
 tags:
 - lab
 - eugr
+- golden
 notes: Scaffolded 2026-06-21 from /models/nvidia/qwen3-30b-a3b. Mark testing, switch,
   bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-nvidia-qwen3-30b-a3b-eugr.yaml
 updated_at: '2026-06-22T00:23:54.760541+00:00'
 promoted_at: '2026-06-22T02:48:58.339864+00:00'
+_path: /opt/spark/recipes/nvidia-qwen3-30b-a3b-eugr.yaml
+context:
+  default: 40960
+  native: 40960
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 40960
+      kv: fp8

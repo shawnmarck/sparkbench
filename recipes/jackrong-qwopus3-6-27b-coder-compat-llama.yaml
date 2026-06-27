@@ -32,4 +32,119 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: q8_0
+  ladder_rungs:
+  - 131072
+  - 196608
+  - 262144
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-27T06:44:32.150093+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: q8_0
+      tok_s: 6.9
+      tool_ok: true
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    kv_sweep:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    ctx_ladder:
+      version: '1.0'
+      tested_at: '2026-06-27T06:44:32.136915+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs:
+      - ctx: 131072
+        kv: q8_0
+        fill_target: 88473
+        fill_ratio: 0.75
+        status: load_fail
+        error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      - ctx: 196608
+        kv: q8_0
+        fill_target: 132711
+        fill_ratio: 0.75
+        status: load_fail
+        error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      - ctx: 262144
+        kv: q8_0
+        fill_target: 176947
+        fill_ratio: 0.75
+        status: load_fail
+        error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-27T06:06:24.398937+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+  ctx_ladder:
+    version: '1.0'
+    tested_at: '2026-06-27T06:44:32.136915+00:00'
+    golden_ctx: 262144
+    native_ctx: 262144
+    fill_ratio: 0.75
+    kv: q8_0
+    max_viable_ctx: null
+    best_tok_s_ctx: null
+    rungs:
+    - ctx: 131072
+      kv: q8_0
+      fill_target: 88473
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    - ctx: 196608
+      kv: q8_0
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
 promoted_at: '2026-06-27T02:31:58.128516+00:00'

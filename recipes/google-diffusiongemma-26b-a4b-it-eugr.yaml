@@ -9,8 +9,55 @@ port: 8000
 tags:
 - lab
 - eugr
+- golden
 notes: Scaffolded 2026-06-22 from /models/google/diffusiongemma-26b-a4b-it. Mark testing,
   switch, bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-google-diffusiongemma-26b-a4b-it-eugr.yaml
 updated_at: '2026-06-22T04:08:49.335371+00:00'
-promoted_at: '2026-06-22T04:17:22.293875+00:00'
+promoted_at: '2026-06-27T04:55:37.923016+00:00'
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-27T06:06:01.360722+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: fp8
+      tok_s: 39.3
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    kv_sweep:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-27T06:06:01.356675+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '

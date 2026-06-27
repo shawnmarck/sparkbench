@@ -28,6 +28,30 @@ KV_SWEEP_BY_ENGINE: dict[str, list[str]] = {
     "ds4": ["q8_0"],
 }
 
+# Engines / families where KV dtype is not meaningfully swappable at runtime.
+KV_SWEEP_ENGINES: frozenset[str] = frozenset({"llamacpp", "eugr"})
+
+
+def kv_sweep_eligible(recipe: dict[str, Any], *, inventory_path: str | None = None) -> bool:
+    """True when golden workflow should run kv_sweep for this model."""
+    path = str(inventory_path or recipe.get("inventory_path") or "").lower()
+    if "deepseek" in path:
+        return False
+    engine = str(recipe.get("engine") or "llamacpp")
+    if engine not in KV_SWEEP_ENGINES:
+        return False
+    return len(kv_sweep_options(recipe)) > 0
+
+
+def kv_sweep_skip_reason(recipe: dict[str, Any], *, inventory_path: str | None = None) -> str:
+    path = str(inventory_path or recipe.get("inventory_path") or "").lower()
+    if "deepseek" in path:
+        return "deepseek architecture — KV sweep not applicable"
+    engine = str(recipe.get("engine") or "llamacpp")
+    if engine not in KV_SWEEP_ENGINES:
+        return f"engine={engine} does not support KV cache dtype sweep"
+    return "no KV sweep options"
+
 
 def load_ctxmod():
     spec = importlib.util.spec_from_file_location(
@@ -177,7 +201,9 @@ def probe_cell(
         row["error"] = (up.stderr or up.stdout or "inference up failed")[-500:]
         return row
 
-    timeout = ready_timeout or READY_SECS
+    timeout = ready_timeout
+    if timeout is None:
+        timeout = 1200 if ctx >= 1_048_576 else 900 if ctx >= 524_288 else READY_SECS
     if not wait_ready(port, expected_ctx=ctx, timeout=timeout):
         row["status"] = "load_fail"
         row["error"] = f"/v1/models not ready at ctx={ctx} kv={kv} within {timeout}s"
@@ -191,7 +217,8 @@ def probe_cell(
         return row
 
     try:
-        stats = benchv2._bench_v2_session_once(
+        # Match spark inference bench: retries on 400/413/500, eugr tool fallback.
+        stats = benchv2._bench_v2_session(
             port,
             served,
             fill_target_tokens=fill,
@@ -212,7 +239,7 @@ def probe_cell(
             "decode_tokens": stats.get("decode_completion_tokens"),
             "decode_elapsed_s": round(stats.get("decode_elapsed_s") or 0, 2),
             "tool_ok": stats.get("tool_roundtrip_ok"),
-            "method": "bench-agent-v2-lite",
+            "method": "bench-agent-v2",
         }
     )
     return row

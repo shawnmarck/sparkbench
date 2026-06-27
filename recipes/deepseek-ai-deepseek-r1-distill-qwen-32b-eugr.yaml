@@ -9,8 +9,53 @@ port: 8000
 tags:
 - lab
 - eugr
+- golden
 notes: Scaffolded 2026-06-21 from /models/deepseek-ai/deepseek-r1-distill-qwen-32b.
   Mark testing, switch, bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-deepseek-ai-deepseek-r1-distill-qwen-32b-eugr.yaml
 updated_at: '2026-06-21T23:43:36.365944+00:00'
-promoted_at: '2026-06-22T02:48:57.838841+00:00'
+promoted_at: '2026-06-27T04:31:58.231840+00:00'
+context:
+  default: 131072
+  native: 131072
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 131072
+      kv: fp8
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-27T04:36:10.327151+00:00'
+    golden_cell:
+      ctx: 131072
+      kv: fp8
+      tok_s: 3.6
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    kv_sweep:
+    - ctx: 131072
+      kv: fp8
+      fill_target: 88473
+      fill_ratio: 0.75
+      status: bench_fail
+      loaded_ctx: 131072
+      error: 'HTTP 400: {"error":{"message":"\"auto\" tool choice requires --enable-auto-tool-choice
+        and --tool-call-parser to be set","type":"BadRequestError","param":null,"code":400}}'
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-27T04:36:10.268249+00:00'
+    golden_ctx: 131072
+    fill_ratio: 0.75
+    results:
+    - ctx: 131072
+      kv: fp8
+      fill_target: 88473
+      fill_ratio: 0.75
+      status: bench_fail
+      loaded_ctx: 131072
+      error: 'HTTP 400: {"error":{"message":"\"auto\" tool choice requires --enable-auto-tool-choice
+        and --tool-call-parser to be set","type":"BadRequestError","param":null,"code":400}}'

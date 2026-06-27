@@ -9,6 +9,7 @@ port: 8081
 tags:
 - lab
 - llamacpp
+- golden
 notes: Scaffolded 2026-06-22 from /models/kaitchup/qwen3.6-27b. Mark testing, switch,
   bench, then promote.
 model: /models/kaitchup/qwen3.6-27b/moq/MoQ-5.0.gguf
@@ -19,6 +20,16 @@ llamacpp_args:
 - '1'
 - --no-mmap
 - -c
-- '32768'
+- '262144'
 updated_at: '2026-06-22T04:17:27.075709+00:00'
 promoted_at: '2026-06-22T04:23:27.947397+00:00'
+_path: /opt/spark/recipes/kaitchup-qwen3-6-27b-llama.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: q8_0

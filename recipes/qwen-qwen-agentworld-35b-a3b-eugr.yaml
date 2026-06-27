@@ -27,4 +27,41 @@ context:
       label: Long ctx (viability 250k)
       ctx: 256000
       kv: fp8
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-27T06:14:19.162463+00:00'
+    golden_cell:
+      ctx: 256000
+      kv: fp8
+      tok_s: 27.6
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    kv_sweep:
+    - ctx: 256000
+      kv: fp8
+      fill_target: 172800
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-27T06:14:19.159085+00:00'
+    golden_ctx: 256000
+    fill_ratio: 0.75
+    results:
+    - ctx: 256000
+      kv: fp8
+      fill_target: 172800
+      fill_ratio: 0.75
+      status: load_fail
+      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
+        or directory
+
+        '
 promoted_at: '2026-06-27T02:48:14.944253+00:00'

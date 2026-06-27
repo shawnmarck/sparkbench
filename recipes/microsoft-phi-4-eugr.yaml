@@ -9,8 +9,19 @@ port: 8000
 tags:
 - lab
 - eugr
+- golden
 notes: Scaffolded 2026-06-21 from /models/microsoft/phi-4. Mark testing, switch, bench,
   then promote.
 eugr_recipe: /opt/spark/services/eugr-microsoft-phi-4-eugr.yaml
 updated_at: '2026-06-22T00:08:56.953062+00:00'
 promoted_at: '2026-06-22T02:48:58.148863+00:00'
+_path: /opt/spark/recipes/microsoft-phi-4-eugr.yaml
+context:
+  default: 16384
+  native: 16384
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 16384
+      kv: fp8

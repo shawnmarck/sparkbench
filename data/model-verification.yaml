@@ -4,12 +4,12 @@ models:
     tok_s: 73.5
     tok_s_engine: eugr
     tok_s_profile: qwen36-nvfp4
-    note: agent bench avg 73.5 tok/s over 3 sessions × 3 turns (2304 tok in 31.3s)
+    note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
     updated_at: '2026-06-22T02:48:26.367366+00:00'
     engine: eugr
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
-    note: agent bench avg 48.6 tok/s over 3 sessions × 3 turns (2304 tok in 47.4s)
+    note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
     updated_at: '2026-06-22T02:48:26.395199+00:00'
     tok_s: 48.6
     tok_s_engine: llamacpp
@@ -83,7 +83,8 @@ models:
     spark_status: failed
     updated_at: '2026-06-25T12:00:00+00:00'
     engine: llamacpp
-    note: REAP GGUF load blocked (needs dsv4 llama variant). Demoted — premature audit promote without bench v2.
+    note: "REAP GGUF load blocked (needs dsv4 llama variant). Demoted \u2014 premature\
+      \ audit promote without bench v2."
   qwen/qwen3-coder-next:
     spark_status: works
     updated_at: '2026-06-22T02:48:58.659957+00:00'
@@ -95,7 +96,7 @@ models:
     spark_status: works
     updated_at: '2026-06-24T16:51:09.736611+00:00'
     engine: eugr
-    note: agent bench avg 27.5 tok/s over 3 sessions × 3 turns (2304 tok in 83.8s)
+    note: "agent bench avg 27.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 83.8s)"
     tok_s: 27.5
     tok_s_engine: eugr
     tok_s_profile: opencode-qwen27-dflash-262k
@@ -117,7 +118,8 @@ models:
     spark_status: failed
     updated_at: '2026-06-22T02:22:08.961845+00:00'
     engine: eugr
-    note: 'DFlash sidecar: NVFP4 MoE target hits KV cache page-size mismatch in vLLM (4 load fails). Needs FP8 target or vLLM fix.'
+    note: 'DFlash sidecar: NVFP4 MoE target hits KV cache page-size mismatch in vLLM
+      (4 load fails). Needs FP8 target or vLLM fix.'
   stepfun-ai/step-3.7-flash:
     spark_status: works
     updated_at: '2026-06-22T02:48:58.940989+00:00'

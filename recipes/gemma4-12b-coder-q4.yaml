@@ -1,5 +1,5 @@
 id: gemma4-12b-coder-q4
-name: Gemma 4 12B Coder (Fable5×Composer2.5) Q4
+name: "Gemma 4 12B Coder (Fable5\xD7Composer2.5) Q4"
 catalog_id: yuxinlu1/gemma-4-12b-coder-gguf
 inventory_path: yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1
 engine: llamacpp
@@ -8,19 +8,30 @@ model: /models/yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1/gguf/gemma4-codi
 served_name: gemma4-12b-coder-q4
 port: 8081
 tags:
-  - testing
-  - coding
-  - llamacpp
+- testing
+- coding
+- llamacpp
+- golden
 llamacpp_args:
-  - -ngl
-  - "999"
-  - -fa
-  - "1"
-  - --no-mmap
-  - -c
-  - "32768"
-notes: |
-  Community Gemma 4 12B coding fine-tune (yuxinlu1). Q4_K_M ~6.9GB.
-  Smoke tested 2026-06-21 on GB10: ~21 tok/s, 32k ctx loaded.
-  Thinking-style output — prompt "output ONLY code" for clean content field.
-  Start: SPARK_LLAMA_MODEL=<model> SPARK_LLAMA_NAME=gemma4-12b-coder-q4 spark engine llama up
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '262144'
+notes: "Community Gemma 4 12B coding fine-tune (yuxinlu1). Q4_K_M ~6.9GB.\nSmoke tested\
+  \ 2026-06-21 on GB10: ~21 tok/s, 32k ctx loaded.\nThinking-style output \u2014 prompt\
+  \ \"output ONLY code\" for clean content field.\nStart: SPARK_LLAMA_MODEL=<model>\
+  \ SPARK_LLAMA_NAME=gemma4-12b-coder-q4 spark engine llama up\n"
+lifecycle: works
+_path: /opt/spark/recipes/gemma4-12b-coder-q4.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: q8_0

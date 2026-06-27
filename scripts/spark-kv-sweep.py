@@ -66,6 +66,14 @@ def run_kv_sweep(
         report["results"] = prior.get("results") or []
         return report
 
+    if not gb.kv_sweep_eligible(recipe, inventory_path=recipe.get("inventory_path")):
+        reason = gb.kv_sweep_skip_reason(recipe, inventory_path=recipe.get("inventory_path"))
+        report["status"] = "skipped"
+        report["reason"] = reason
+        report["finished_at"] = datetime.now(timezone.utc).isoformat()
+        log(f"skip kv sweep {profile_id}: {reason}")
+        return report
+
     log(f"=== kv sweep {profile_id} ctx={golden_ctx} kvs={kvs} ===")
 
     if dry_run:

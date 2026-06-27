@@ -14,6 +14,7 @@ tags:
 - architecture
 - dflash
 - eugr
+- golden
 lifecycle: works
 speculative:
   method: dflash
@@ -34,14 +35,19 @@ context:
       label: Balanced (128k)
       ctx: 131072
       kv: fp8
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8
 notes: "Dense Qwen3.6-27B + DFlash speculative decoding for architecture/design agent\
   \ work.\nTarget fp8 weights + z-lab DFlash sidecar (block diffusion drafter).\n\
   HF: z-lab/Qwen3.6-27B-DFlash (drafter only; pair w/ Qwen/Qwen3.6-27B). Paper arXiv:2602.06036.\n\
   Notes: drafter uses causal SWA (window~2k on most layers); may need vLLM SWA PRs\
   \ for full.\nUsing num=5 + batch 32k + flashinfer (fp8 KV compat) + custom eugr\
   \ build. Live metrics (n=5): mean acc len 2.57-3.33 (avg draft rate 31-46%). Quick\
-  \ gen ~14.5 tok/s (128 tok short prompt). Historical full bench 3.7-27+ tok/s depending on ctx fill.\n\
-  Launch: spark inference up opencode-qwen27-dflash-262k\nOpenCode / Grok: http://sparky:9000/v1\
-  \ (model: sparky or qwen3.6-27b-dflash) \u2014 sync after switch if using concrete\
-  \ names.\nNon-reasoning: chat_template_kwargs.enable_thinking=false.\n"
+  \ gen ~14.5 tok/s (128 tok short prompt). Historical full bench 3.7-27+ tok/s depending\
+  \ on ctx fill.\nLaunch: spark inference up opencode-qwen27-dflash-262k\nOpenCode\
+  \ / Grok: http://sparky:9000/v1 (model: sparky or qwen3.6-27b-dflash) \u2014 sync\
+  \ after switch if using concrete names.\nNon-reasoning: chat_template_kwargs.enable_thinking=false.\n"
 promoted_at: '2026-06-23T00:00:00+00:00'
+_path: /opt/spark/recipes/opencode-qwen27-dflash-262k.yaml

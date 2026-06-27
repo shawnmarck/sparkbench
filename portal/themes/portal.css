@@ -256,6 +256,7 @@ body.inf-view .inf-log:not(.inf-log-overlay-log) { max-height: min(200px, 22vh);
 .inf-ctx-preset:hover { border-color: #3a4555; }
 .inf-ctx-preset.active { border-color: var(--accent); color: var(--accent); background: #141c28; }
 .inf-ctx-preset.rec { border-color: #3a5030; }
+.inf-ctx-preset.tested { border-color: #2a4a5a; }
 .inf-ctx-row { display: flex; flex-wrap: wrap; gap: .65rem 1rem; align-items: center; margin-bottom: .35rem; }
 .inf-ctx-row label { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: .72rem; }
 .inf-ctx-row input, .inf-ctx-row select { background: #0e1116; border: 1px solid #2a3340; color: var(--text); border-radius: 6px; padding: .2rem .4rem; font-size: .72rem; font-family: ui-monospace, monospace; min-width: 5.5rem; }

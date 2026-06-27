@@ -9,8 +9,19 @@ port: 8000
 tags:
 - lab
 - eugr
+- golden
 notes: Scaffolded 2026-06-21 from /models/saricles/qwen3-coder-next. Mark testing,
   switch, bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-saricles-qwen3-coder-next-eugr.yaml
 updated_at: '2026-06-21T23:39:09.338688+00:00'
 promoted_at: '2026-06-22T02:48:58.824056+00:00'
+_path: /opt/spark/recipes/saricles-qwen3-coder-next-eugr.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8

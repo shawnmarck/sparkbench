@@ -40,7 +40,9 @@ host.env
 *~
 .vscode/
 .idea/
-.cursor/
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 
 # Internal QA evidence — never ship with releases
 .no-mistakes/

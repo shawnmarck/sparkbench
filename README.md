@@ -62,6 +62,28 @@ sudo bash install/spark-install gateway      # :9000/v1 OpenAI proxy + activity 
 
 After `core`, `spark install …` works too (same orchestrator). Full module index: [install/INSTALL.md](install/INSTALL.md).
 
+## For coding agents
+
+SparkBench exposes **three surfaces** on one box:
+
+| Surface | Use when |
+|---------|----------|
+| **CLI** — `spark` | Shell or SSH on the Spark host (preferred) |
+| **HTTP API** — `/api/inference/*`, `/api/hf/*`, `/api/gpu` | Your harness has `curl` but no shell |
+| **Portal UI** — `http://<host>/` | Visual state, Explore, Model Lab |
+
+Install the **agent skill** once so Claude Code, Cursor, Codex, or similar can install and operate the box without reading the whole repo. In Claude Code, invoke `/sparkbench` or let it auto-load from the description.
+
+**One-liner** (global skill — copy the block):
+
+```bash
+mkdir -p ~/.claude/skills/sparkbench && curl -fsSL -o ~/.claude/skills/sparkbench/SKILL.md https://raw.githubusercontent.com/shawnmarck/sparkbench/main/.claude/skills/sparkbench/SKILL.md && mkdir -p ~/.claude/skills/sparkbench/references && curl -fsSL -o ~/.claude/skills/sparkbench/references/api.md https://raw.githubusercontent.com/shawnmarck/sparkbench/main/.claude/skills/sparkbench/references/api.md
+```
+
+Cursor: use `~/.cursor/skills/sparkbench` instead of `~/.claude/skills/sparkbench`. **Or clone this repo** — project skills ship at [`.claude/skills/sparkbench/`](.claude/skills/sparkbench/SKILL.md) and [`.cursor/skills/sparkbench/`](.cursor/skills/sparkbench/SKILL.md).
+
+Raw skill: `https://raw.githubusercontent.com/shawnmarck/sparkbench/main/.claude/skills/sparkbench/SKILL.md`
+
 ## Use it
 
 One CLI on PATH: `spark`. Designed for humans and coding agents alike.
@@ -157,6 +179,7 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trust
 | Path                                                                                  | Topic                                            |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | [AGENTS.md](AGENTS.md)                                                                | Repo layout, rules, agent quick-start            |
+| [`.claude/skills/sparkbench/SKILL.md`](.claude/skills/sparkbench/SKILL.md)            | Agent skill: install + CLI + API + UI (Claude Code `/sparkbench`) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |
 | [docs/reference/inference-stack.md](docs/reference/inference-stack.md)                | Inference control plane spec                     |
 | [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md)          | Bench v2: long-ctx + tool-use methodology          |

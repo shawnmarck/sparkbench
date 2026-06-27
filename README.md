@@ -1,6 +1,8 @@
-# Spark Home Lab
+# SparkBench
 
-Ops dashboard for a **DGX Spark** (GB10) — portal, model inventory, NAS shelf sync, inference tooling.
+Run this on your **DGX Spark** (GB10) to get a portal, model inventory, inference control plane, and benchmark harness — all running locally on your hardware.
+
+**[sparkbench.dev](https://sparkbench.dev)** — public leaderboard: model rankings, benchmark results, and what runs well on GB10.
 
 > Not affiliated with or endorsed by NVIDIA Corporation.
 

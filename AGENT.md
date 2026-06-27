@@ -1,10 +1,10 @@
-# AGENT.md — Sparky homelab (`/opt/spark`)
+# AGENT.md — SparkBench (`/opt/spark`)
 
 Quick orientation for humans and coding agents working on this repo.
 
 ## What this is
 
-Dashboard + ops tooling for a **DGX Spark** (GB10): portal UI, model inventory, NAS shelf sync, inference smoke stacks. Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine (defaults: `sparky` / `192.168.0.101`).
+**SparkBench** is the tool you clone and run on your own DGX Spark: portal UI, model inventory, NAS shelf sync, inference control plane, benchmark harness. **[sparkbench.dev](https://sparkbench.dev)** is the separate public site (leaderboard, model browser, benchmark results) generated from this repo's data files. Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine (defaults: `sparky` / `192.168.0.101`).
 
 ## Layout
 

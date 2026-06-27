@@ -1,5 +1,7 @@
 # Contributing
 
+SparkBench is the tool you run on your own DGX Spark. The public site at [sparkbench.dev](https://sparkbench.dev) is generated separately from this repo's data — contributions to benchmarks and recipes show up there automatically.
+
 ## Setup
 
 Clone the repo and deploy to your Spark machine:

@@ -17,7 +17,7 @@ Two ways to sync code with GitHub. **Recipes and GB10 perf data travel in git** 
 | **Code** | Yes | `scripts/`, `install/`, `services/`, `portal/`, `docs/` | Update |
 | **Host-local** | skip-worktree on sparky | `data/inference-profiles.yaml`, `data/inference-benchmarks.yaml` | Keep sparky copy |
 | **Host runtime** | gitignored | `run/*`, `logs/`, `portal/models.json`, `data/hf-*-queue.yaml`, legacy `data/inference-benchmark-history.yaml` | Never in git |
-| **Host identity** | `/etc/spark/host.env` (not in git) | `SPARK_HOST`, `SPARK_LAN_IP`, `SPARK_USER` | Manual per box |
+| **Host identity** | `/etc/spark/host.env` or `/opt/spark/host.env` (gitignored) | `SPARK_HOST`, `SPARK_LAN_IP`, `SPARK_USER` | Manual per box |
 | **Secrets** | `/etc/spark/smb-credentials-models` | NAS CIFS credentials | Never in git |
 | **Weights** | No | `/models/*` | Never in git |
 
@@ -40,7 +40,7 @@ bash scripts/sparky-protect-runtime.sh       # skip-worktree on profiles/benchma
 bash scripts/migrate-host-local-data.sh      # move legacy data/ bench history → run/
 ```
 
-Edit `/etc/spark/host.env` if `SPARK_LAN_IP` or `SPARK_USER` differ from the example.
+Edit `/etc/spark/host.env` or `/opt/spark/host.env` if `SPARK_LAN_IP` or `SPARK_USER` differ from the example.
 
 ### Remote alignment
 

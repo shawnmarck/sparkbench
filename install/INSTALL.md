@@ -28,7 +28,7 @@ Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer
 | `agent` | Full passwordless sudo for automation (optional) |
 | `restart inference-api` | Restart inference API only (ops shortcut) |
 | `module <path>` | Run one module under `install/modules/` (surgical fix) |
-| `extras terminal\|shell\|lazydocker` | Maintainer convenience — not core SparkBench |
+| `extras terminal\|shell\|lazydocker\|agent-skill` | Maintainer convenience — `agent-skill` copies harness skill to `~/.claude/skills` and `~/.cursor/skills` |
 
 ## Typical fresh order
 
@@ -64,7 +64,7 @@ nas (optional, any time after clone)
 | `engines/ds4-dwarfstar.sh` | DwarfStar (ds4) cuda-spark |
 | `gateway/inference-gateway.sh` | `:9000/v1` OpenAI proxy + activity JSONL |
 | `gateway/client-activity.sh` | Activity API `:8769` + nginx `/api/activity` |
-| `extras/*` | Maintainer convenience (kitty, p10k, lazydocker) |
+| `extras/*` | Maintainer convenience (kitty, p10k, lazydocker, agent-skill) |
 
 **Surgical module run** (when `spark-install core` is too broad on a live box):
 

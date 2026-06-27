@@ -254,7 +254,7 @@ spark install — host bootstrap (runs install/spark-install via sudo)
   openwebui            Open WebUI compose
   bootstrap|agent      Sudo grants
   restart inference-api   Ops shortcut
-  extras terminal|shell|lazydocker
+  extras terminal|shell|lazydocker|agent-skill
   module <modules/path>   Run one install/modules/*.sh (surgical)
 
   sudo bash install/spark-install list   Same targets without spark on PATH

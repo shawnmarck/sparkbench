@@ -61,7 +61,7 @@ Targets:
   agent                Full passwordless sudo for automation (optional)
   restart inference-api   Restart inference API only (ops shortcut)
   module <modules/path>   Run one install/modules/*.sh (surgical fix)
-  extras terminal|shell|lazydocker   Maintainer convenience (not core product)
+  extras terminal|shell|lazydocker|agent-skill   Maintainer convenience (not core product)
   status               Show systemd + HTTP health for installed services
   list                 List targets (this summary)
   help                 This help
@@ -170,12 +170,13 @@ cmd_module() {
 
 cmd_extras() {
   local extra="${1:-}"
-  [[ -n "$extra" ]] || die "usage: spark-install extras terminal|shell|lazydocker"
+  [[ -n "$extra" ]] || die "usage: spark-install extras terminal|shell|lazydocker|agent-skill"
   case "$extra" in
     terminal) run_module extras/kitty-terminal.sh ;;
     shell) run_module extras/zsh-powerlevel10k.sh ;;
     lazydocker) run_module extras/lazydocker.sh ;;
-    *) die "unknown extra: ${extra} (try: terminal, shell, lazydocker)" ;;
+    agent-skill) run_module extras/agent-skill.sh ;;
+    *) die "unknown extra: ${extra} (try: terminal, shell, lazydocker, agent-skill)" ;;
   esac
 }
 

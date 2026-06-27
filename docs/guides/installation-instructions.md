@@ -35,6 +35,24 @@ After `core`, `spark install …` works too. Module index: `install/INSTALL.md`.
 
 **Live box warning:** Do not run `spark-install core` while inference is serving. Use `spark-install module …` for surgical fixes.
 
+## Optional — Agent harness skill
+
+Skip this if the agent already runs **inside** a clone of `/opt/spark` — project skills live at `.claude/skills/sparkbench/` and `.cursor/skills/sparkbench/`.
+
+When the harness works **outside** the repo (e.g. editing another project but operating Spark over SSH), copy the skill into your home directory:
+
+```bash
+sudo bash install/spark-install extras agent-skill
+```
+
+Or as your user, without sudo:
+
+```bash
+bash install/modules/extras/agent-skill.sh
+```
+
+Installs `SKILL.md` + API reference to `~/.claude/skills/sparkbench/` and `~/.cursor/skills/sparkbench/`. Limit targets with `SPARK_HARNESS=claude`, `cursor`, or `both` (default).
+
 ## Step 2 — Protect host-local state
 
 ```bash

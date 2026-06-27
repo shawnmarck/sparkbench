@@ -1,9 +1,9 @@
 models:
 - id: unsloth/qwen3.6-27b
   lab: unsloth
-  name: Qwen3.6-27B
+  name: Qwen3.6-27B (unsloth)
   slug: qwen3.6-27b
-  hf_repo: Qwen/Qwen3.6-27B
+  hf_repo: unsloth/Qwen3.6-27B
   param_b: 27
   capabilities:
   - general
@@ -170,7 +170,7 @@ models:
   lab: kaitchup
   name: Qwen3.6-27B (MoQ GGUF)
   slug: qwen3.6-27b
-  hf_repo: Qwen/Qwen3.6-27B
+  hf_repo: kaitchup/Qwen3.6-27B-GGUF-MoQ
   param_b: 27
   capabilities:
   - general

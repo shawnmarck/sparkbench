@@ -1,0 +1,40 @@
+# Curated use-case tags shown on sparkbench.dev's leaderboard and "Recipes
+# by task" cards. Source of truth for what each model is good at.
+#
+# The build derives a fallback set from model name + capabilities, but the
+# heuristic is coarse (it can't tell that Phi-4 is a reasoning model or that
+# every Qwen3.6 variant inherits the family's reasoning strength). Anything
+# listed here OVERRIDES the heuristic for that model.
+#
+# Allowed tags: Code, Agents, Reasoning, Multimodal, General.
+# Use multiple per model — most flagship checkpoints belong in 2–3 buckets.
+#
+# Keyed by inventory path (lab/slug as it appears in model-verification.yaml).
+
+models:
+
+  # --- Qwen 3.6 family — strong agents + reasoning, MoE flagship line ---
+  nvidia/qwen3-30b-a3b:                       [Agents, Reasoning, General]
+  nvidia/qwen3.6-35b-a3b:                     [Agents, Reasoning, General]
+  unsloth/qwen3.6-35b-a3b:                    [Agents, Reasoning, General]
+  qwen/qwen3.6-27b:                           [Reasoning, Agents, General]
+  unsloth/qwen3.6-27b:                        [Reasoning, Agents, General]
+  rdtand/qwen3.6-27b:                         [Reasoning, General]
+  kaitchup/qwen3.6-27b:                       [Reasoning, General]
+
+  # --- Coder variants — primary use is code; agentic for tool-use loops ---
+  unsloth/qwen3-coder-30b-a3b-instruct:       [Code, Agents]
+  qwen/qwen3-coder-next:                      [Code, Agents]
+  saricles/qwen3-coder-next:                  [Code, Agents]
+  yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1: [Code]
+
+  # --- Gemma 4 — multimodal-first, but the IT checkpoints reason well ---
+  google/gemma-4-26b-a4b-it:                  [Multimodal, Reasoning, General]
+  google/gemma-4-12b-it:                      [Multimodal, General]
+  google/diffusiongemma-26b-a4b-it:           [Multimodal, Reasoning]
+
+  # --- Specialty / reasoning-tuned ---
+  microsoft/phi-4:                            [Reasoning, General]
+  nousresearch/hermes-4-14b:                  [Agents, Reasoning]
+  deepseek-ai/deepseek-r1-distill-qwen-32b:   [Reasoning]
+  stepfun-ai/step-3.7-flash:                  [Multimodal, Agents]

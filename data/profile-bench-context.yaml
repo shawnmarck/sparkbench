@@ -1,0 +1,58 @@
+profiles:
+  deepreinforce-ai-ornith-1-0-35b-llama:
+    ctx: 32768
+  deepseek-ai-deepseek-r1-distill-qwen-32b-eugr:
+    ctx: 131072
+  empero-ai-qwythos-9b-claude-mythos-5-1m-eugr:
+    ctx: 799744
+  gemma4-12b-agentic-v2-q4:
+    ctx: 32768
+  gemma4-12b-coder-q4:
+    ctx: 32768
+  gemma4-12b-opus-reasoning-q4:
+    ctx: 32768
+  google-diffusiongemma-26b-a4b-it-eugr:
+    ctx: 16384
+  google-gemma-4-12b-it-llama:
+    ctx: 32768
+  google-gemma-4-26b-a4b-it-eugr:
+    ctx: 8192
+  jackrong-qwopus3-6-27b-coder-compat-llama:
+    ctx: 262144
+  kaitchup-qwen3-6-27b-llama:
+    ctx: 32768
+  mellum2-12b-opus-q4:
+    ctx: 32768
+  microsoft-phi-4-eugr:
+    ctx: 16384
+  nousresearch-hermes-4-14b-eugr:
+    ctx: 40960
+  nvidia-qwen3-30b-a3b-eugr:
+    ctx: 40960
+  opencode-qwen27-dflash-262k:
+    ctx: 262144
+  opencode-qwen36-250k:
+    ctx: 256000
+  qwen-qwen-agentworld-35b-a3b-eugr:
+    ctx: 256000
+  qwen-qwen3-6-27b-dflash-eugr:
+    ctx: 16384
+  qwen-qwen3-6-27b-eugr:
+    ctx: 16384
+  qwen-qwen3-coder-next-eugr:
+    ctx: 262144
+  qwen36-nvfp4:
+    ctx: 65536
+  qwen36-q4-llama:
+    ctx: 32768
+  rdtand-qwen3-6-27b-eugr:
+    ctx: 16384
+  saricles-qwen3-coder-next-eugr:
+    ctx: 262144
+  stepfun-ai-step-3-7-flash-llama:
+    ctx: 32768
+  unsloth-qwen3-6-27b-eugr:
+    ctx: 65536
+  unsloth-qwen3-coder-30b-a3b-instruct-llama:
+    ctx: 32768
+

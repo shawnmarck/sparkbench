@@ -266,6 +266,18 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 | 6 | Explore queue — shortlist compare overhaul | done | yes | [TASK-004](roadmap/tasks/TASK-004-explore-queue-overhaul.md) |
 | 7 | Inference grid — sortable column headers | done | yes | [TASK-010](roadmap/tasks/TASK-010-inference-sortable-columns.md) |
 
+### Solo GB10 user / shared cookbook
+
+**Index:** [`roadmap/solo-user-backlog.md`](roadmap/solo-user-backlog.md) — git-traveling recipes + perf; clone → browse golden → fetch models.
+
+| Seq | Task | Status | One PR | Doc |
+|-----|------|--------|--------|-----|
+| 8 | First Spark setup guide | proposed | yes | [TASK-011](roadmap/tasks/TASK-011-first-spark-setup.md) |
+| 9 | `spark models fetch` (HF golden download) | proposed | yes | [TASK-012](roadmap/tasks/TASK-012-spark-models-fetch.md) |
+| 10 | Golden badge + GB10 verified UX | proposed | yes | [TASK-013](roadmap/tasks/TASK-013-golden-badge-portal.md) |
+| 11 | Fleet golden matrix committed to git | proposed | yes | [TASK-014](roadmap/tasks/TASK-014-fleet-golden-matrix.md) |
+| 12 | Recipe perf git policy + sync runbook | proposed | yes | [TASK-015](roadmap/tasks/TASK-015-recipe-perf-git-policy.md) |
+
 **How to run one main agent:** point it at `docs/ROADMAP.md` + `docs/roadmap/README.md`. It picks **Seq 1**, implements the full task file, opens **one PR** to `origin`, stops. After you review/merge and deploy, it picks **Seq 2**, and so on. No parallel PRs; no splitting a task across PRs.
 
 **Superseded:** old split Models tasks → single [TASK-002-models-inventory-ux.md](roadmap/tasks/TASK-002-models-inventory-ux.md).

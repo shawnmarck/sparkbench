@@ -1,6 +1,10 @@
-# New model golden benchmark runbook
+# Golden workflow runbook
 
-Add a model that already exists under `/models/<lab>/<slug>/` (or pull from shelf first).
+**"Golden workflow"** = full layered bench per model: golden cell → KV sweep → ctx ladder → (optional) shelf push.
+
+Orchestrator: `scripts/spark-golden-workflow.py`  
+Report: `/opt/spark/run/golden-workflow-report.json`  
+Log: `/opt/spark/logs/golden-workflow.log`
 
 ## 1. Register golden profile
 
@@ -9,54 +13,89 @@ Edit `/opt/spark/data/golden-recipes.yaml`:
 ```yaml
 golden:
   qwen/qwen-agentworld-35b-a3b: qwen-qwen-agentworld-35b-a3b-eugr
-  empero-ai/qwythos-9b-claude-mythos-5-1m: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
 ```
 
-Mirror the same entries in `scripts/golden-inventory-audit.py` → `DEFAULT_GOLDEN`.
+Mirror in `scripts/golden-inventory-audit.py` → `DEFAULT_GOLDEN`.
 
 ## 2. Scaffold recipe (if missing)
 
 ```bash
 spark recipe scaffold qwen/qwen-agentworld-35b-a3b eugr
-spark recipe list | grep agentworld
 ```
 
-Remove duplicate draft profiles; keep one golden id. Add extras to `deprecated_profiles` in golden-recipes.yaml.
-
-## 3. Run audit
+## 3. Run full golden workflow
 
 ```bash
-/opt/spark/scripts/spark-new-model-golden.sh \
-  qwen/qwen-agentworld-35b-a3b \
-  empero-ai/qwythos-9b-claude-mythos-5-1m
+spark models golden qwen/qwen-agentworld-35b-a3b
+
+# or wrapper
+/opt/spark/scripts/spark-new-model-golden.sh qwen/qwen-agentworld-35b-a3b
+
+# background (long-ctx models may take hours)
+nohup /opt/spark/venv/bin/python3 /opt/spark/scripts/spark-golden-workflow.py \
+  --only "qwen/qwen-agentworld-35b-a3b" --skip-shelf --resume \
+  >> /opt/spark/logs/golden-workflow.log 2>&1 &
 ```
 
-Or directly:
+## 4. Fleet — all golden models
 
 ```bash
-python3 /opt/spark/scripts/golden-inventory-audit.py \
-  --only "qwen/qwen-agentworld-35b-a3b,empero-ai/qwythos-9b-claude-mythos-5-1m" \
-  --skip-shelf
+nohup /opt/spark/venv/bin/python3 /opt/spark/scripts/spark-golden-workflow.py \
+  --all --skip-shelf --resume \
+  >> /opt/spark/logs/golden-workflow.log 2>&1 &
 ```
 
-## 4. Read results
+Use `--resume` to skip phases already complete in the workflow report.
+
+## 5. Layers
+
+| Layer | Measures | Stored on recipe |
+|-------|----------|------------------|
+| Golden | Full bench v2 at optimized ctx/kv | `bench_matrix.golden_cell`, verify `works` |
+| KV sweep | Golden ctx × KV quants @ 75% fill | `kv_sweep`, `bench_matrix.kv_sweep` |
+| Ctx ladder | Golden kv × ctx rungs @ 75% fill | `ctx_ladder`, `bench_matrix.ctx_ladder` |
+| Shelf | NAS rsync | inventory `shelf.present` |
+
+KV options by engine (see `spark-golden-bench.py`):
+
+- **eugr:** `fp8`
+- **llamacpp:** `q8_0`, `q4_0`, `f16`
+- **ds4:** `q8_0`
+
+## 6. Read results
 
 ```bash
+cat /opt/spark/run/golden-workflow-report.json | python3 -m json.tool
 cat /opt/spark/run/golden-audit-report.md
 spark models verify get qwen/qwen-agentworld-35b-a3b
+spark models inventory
 ```
 
-## 5. Optional shelf push
+Portal: Models detail → recipe block shows **KV sweep** and **Context ladder** panels.
 
-After `works` + bench:
+## 7. Optional shelf push
 
 ```bash
 spark shelf push qwen/qwen-agentworld-35b-a3b
+# or re-run workflow without --skip-shelf
 ```
 
 ## Verify policy
 
-`spark models verify set … works` runs **only** after bench v2 returns ok. Failed load/bench → `failed`.
+`works` is set **only** after golden-phase bench v2 succeeds. KV sweep / ctx ladder failures yield workflow status `partial` but do not revoke `works`.
+
+## Single-layer commands
+
+```bash
+# Golden only (legacy audit)
+python3 /opt/spark/scripts/golden-inventory-audit.py --only "lab/slug" --skip-shelf
+
+# KV sweep only
+python3 /opt/spark/scripts/spark-kv-sweep.py <profile-id> --force
+
+# Ctx ladder only
+python3 /opt/spark/scripts/spark-ctx-ladder.py <profile-id> --force
+```
 
 ## Troubleshooting: text-only multimodal checkpoints
 
@@ -64,67 +103,23 @@ Some HF models ship **language weights only** but still declare `vision_config` 
 (e.g. `qwen/qwen-agentworld-35b-a3b` has `"language_model_only": true`).
 
 **Symptom:** vLLM dies during load with `ValueError: Following weights were not initialized
-from checkpoint: {'visual.blocks...', ...}` and audit times out on `/v1/models`.
+from checkpoint: {'visual.blocks...', ...}` and workflow times out on `/v1/models`.
 
-**Fix:** add `--language-model-only` to the eugr service command (scaffold does this automatically
-when `config.json` has `"language_model_only": true`):
-
-```bash
-# one-off repair
-spark recipe scaffold qwen/qwen-agentworld-35b-a3b eugr   # after patch-eugr-language-model-only.py
-# or edit /opt/spark/services/eugr-<profile>.yaml and add:
-#   --language-model-only \
-```
-
-Apply scaffold patch on sparky if missing:
+**Fix:** add `--language-model-only` to the eugr service command:
 
 ```bash
+spark recipe scaffold qwen/qwen-agentworld-35b-a3b eugr
 python3 /opt/spark/scripts/patch-eugr-language-model-only.py
 ```
 
-Then re-run golden audit for that model only.
+Then re-run golden workflow.
 
 ## Grok / agent tools (`tool_choice: auto`)
 
-Grok Build sends OpenAI tools with `tool_choice: auto`. eugr vLLM needs:
+eugr vLLM needs `--enable-auto-tool-choice` and `--tool-call-parser qwen3_xml` on Qwen-family services.
 
-```text
---enable-auto-tool-choice
---tool-call-parser qwen3_xml
-```
-
-Add to `services/eugr-<profile>.yaml` for Qwen-family models, then reload the same profile (`spark inference up … --ctx N --kv fp8`). Without this, gateway returns 400 Bad Request.
-
-## Context ladder (optional, after golden bench)
-
-Probe **higher ctx rungs** above the golden preset: load at each step, fill to **75%** of usable window, measure decode tok/s. Results land in `recipe.context.ctx_ladder` and the Models portal **Context ladder** panel.
-
-```bash
-# Plan rungs (golden 32k → native 131k → rungs 64k, 96k, 128k, …)
-/opt/spark/venv/bin/python3 /opt/spark/scripts/spark-ctx-ladder.py mellum2-12b-opus-q4 --dry-run
-
-# Run ladder (stops on first load/bench failure)
-/opt/spark/venv/bin/python3 /opt/spark/scripts/spark-ctx-ladder.py mellum2-12b-opus-q4
-
-# Report: /opt/spark/run/ctx-ladder-report.json
-spark models inventory   # refresh portal
-```
-
-To promote a higher rung to golden default after review:
+## Promote higher ctx after ladder review
 
 ```bash
 python3 /opt/spark/scripts/update-recipe-ctx.py mellum2-12b-opus-q4 98304 --label "Golden max fit" --note "ctx ladder verified"
 ```
-
-## Context viability (no bench)
-
-After golden bench at safe ctx, ladder to target ctx with load + smoke only:
-
-```bash
-bash /opt/spark/scripts/ctx-viability-test.sh <profile-id> <ctx> fp8 3600
-python3 /opt/spark/scripts/update-recipe-ctx.py <profile-id> <ctx> --label "..." --note "..."
-spark models inventory
-```
-
-Script refreshes `context.native` from HF before launch (stale 16k native otherwise clamps `--ctx`).
-Verify `max_model_len` in `/v1/models` matches requested ctx before updating recipe.

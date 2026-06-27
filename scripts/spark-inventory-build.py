@@ -1067,6 +1067,8 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         tags = recipe.get("tags") or []
         ctx_block = recipe.get("context") if isinstance(recipe.get("context"), dict) else {}
         ctx_ladder = ctx_block.get("ctx_ladder") if isinstance(ctx_block.get("ctx_ladder"), dict) else None
+        kv_sweep = ctx_block.get("kv_sweep") if isinstance(ctx_block.get("kv_sweep"), dict) else None
+        bench_matrix = ctx_block.get("bench_matrix") if isinstance(ctx_block.get("bench_matrix"), dict) else None
         info = {
             "id": profile_id,
             "name": recipe.get("name"),
@@ -1084,6 +1086,8 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             "speculative": spec,
             "mtp": mtp,
             "ctx_ladder": ctx_ladder,
+            "kv_sweep": kv_sweep,
+            "bench_matrix": bench_matrix,
         }
         by_path.setdefault(str(inv_path), []).append(info)
 

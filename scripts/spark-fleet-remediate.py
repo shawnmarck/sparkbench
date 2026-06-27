@@ -21,7 +21,7 @@ ROOT = Path("/opt/spark")
 LOG = ROOT / "logs" / "fleet-remediate.log"
 REPORT = ROOT / "run" / "fleet-remediate-report.json"
 PY = ROOT / "venv/bin/python3"
-AUDIT = ROOT / "scripts/golden-inventory-audit.py"
+WORKFLOW = ROOT / "scripts/spark-golden-workflow.py"
 LADDER = ROOT / "scripts/spark-ctx-ladder.py"
 SPARK = "/usr/local/bin/spark"
 SKIP_INVENTORY = {"0xsero/deepseek-v4-flash-spark"}
@@ -114,17 +114,17 @@ def shelf_missing() -> list[str]:
     return out
 
 
-def golden_audit(paths: list[str], *, skip_shelf: bool) -> dict[str, Any]:
+def golden_workflow(paths: list[str], *, skip_shelf: bool) -> dict[str, Any]:
     if not paths:
         return {"status": "skipped", "paths": []}
     only = ",".join(paths)
-    args = [str(PY), str(AUDIT), "--only", only]
+    args = [str(PY), str(WORKFLOW), "--only", only, "--resume"]
     if skip_shelf:
         args.append("--skip-shelf")
-    r = run(args, timeout=86400)
+    r = run(args, timeout=604800)  # up to 7 days for full matrix fleet
     ok = r.returncode == 0
     if not ok:
-        log(f"golden audit failed: {r.stderr[-2000:]}")
+        log(f"golden workflow failed: {r.stderr[-2000:]}")
     return {"status": "ok" if ok else "failed", "paths": paths, "stderr": r.stderr[-1500:]}
 
 
@@ -256,11 +256,11 @@ def main() -> int:
     report["phases"] = {}
 
     if args.only_phase in ("all", "audit"):
-        log("=== PHASE: golden audit ===")
-        report["phases"]["audit"] = golden_audit(audit_paths, skip_shelf=True)
+        log("=== PHASE: golden workflow ===")
+        report["phases"]["audit"] = golden_workflow(audit_paths, skip_shelf=True)
 
-    if args.only_phase in ("all", "ladder"):
-        log("=== PHASE: ctx ladder ===")
+    if args.only_phase == "ladder":
+        log("=== PHASE: ctx ladder only ===")
         ladder_results = []
         for prof in ladder_profiles:
             ladder_results.append(ctx_ladder(prof))

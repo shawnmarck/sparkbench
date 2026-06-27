@@ -196,7 +196,7 @@ Spec: [`reference/inference-stack.md`](reference/inference-stack.md)
 
 Benchmarks are **per recipe** (profile), not per model weights — same `inventory_path` can have multiple recipes (NVFP4 eugr vs Q4 llama).
 
-**How recipes are created (default path):** Humans rarely hand-write YAML. After a download completes, the **auto-scaffold loop** (`spark-hf` queue worker → `scaffold_recipe` / specialized scaffolds in `spark-inference.py`) should pick engine, tier, and recipe shape from **weights on disk + HF metadata** (format, architecture, catalog `engine` / capabilities). Agents follow the same routing — do not invent recipes when scaffold can derive them. When architecture or engine requirements differ (MoE, multimodal, DFlash sidecar, ds4, MTP), extend the **scaffold router** and document the rule in catalog/AGENT.md — not one-off YAML.
+**How recipes are created (default path):** Humans rarely hand-write YAML. After a download completes, the **auto-scaffold loop** (`spark-hf` queue worker → `scaffold_recipe` / specialized scaffolds in `spark-inference.py`) should pick engine, tier, and recipe shape from **weights on disk + HF metadata** (format, architecture, catalog `engine` / capabilities). Agents follow the same routing — do not invent recipes when scaffold can derive them. When architecture or engine requirements differ (MoE, multimodal, DFlash sidecar, ds4, MTP), extend the **scaffold router** and document the rule in AGENTS.md — not one-off YAML.
 
 ### Build order (5b → 5c → 5d)
 
@@ -320,7 +320,7 @@ CLI guide (humans + agents): [`reference/spark-cli.md`](reference/spark-cli.md)
 
 ```
 /opt/spark/
-├── AGENT.md
+├── AGENTS.md
 ├── portal/
 ├── scripts/           spark CLI + implementation scripts
 ├── install/

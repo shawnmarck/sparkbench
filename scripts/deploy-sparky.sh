@@ -27,7 +27,7 @@ CODE_PATHS=(
   data/golden-recipes.yaml
   data/model-catalog.yaml
   data/model-verification.yaml
-  AGENT.md
+  AGENTS.md
   README.md
 )
 

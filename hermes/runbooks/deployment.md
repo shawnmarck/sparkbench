@@ -4,10 +4,9 @@
 
 | Access | URL |
 |--------|-----|
-| LAN hostname | **http://sparky:9119** |
-| LAN IP | **http://192.168.0.101:9119** |
+| LAN hostname | **http://sparky:9119** (replace `sparky` with your `$SPARK_HOST`) |
 
-**Login:** basic auth — username `techno`, password in `~/secure/sparky-hermes/dashboard-credentials.txt`.
+**Login:** basic auth — credentials set in `config-overlay.yaml` `dashboard.basic_auth`.
 
 Add to your homelab portal manually when ready.
 

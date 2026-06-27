@@ -2,7 +2,7 @@
 
 Quick orientation for coding agents. Humans: start at [README.md](README.md).
 
-**Full harness skill:** [`.claude/skills/sparkbench/SKILL.md`](.claude/skills/sparkbench/SKILL.md) — install, CLI, HTTP API, portal UI. One-liner in README § *For coding agents*.
+Extended workflows (install, CLI, HTTP API, portal): [`.claude/skills/sparkbench/SKILL.md`](.claude/skills/sparkbench/SKILL.md) — also at `.cursor/skills/sparkbench/` when cloned.
 
 ## What this is
 

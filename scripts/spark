@@ -20,6 +20,7 @@ Groups:
   shelf pull|push|rm|status
   engine eugr|llama|ds4 <up|down|logs|status|build>
   gateway                 Unified :9000/v1 front door
+  install                 Host bootstrap (sudo; see install/spark-install)
   gpu                    Metrics JSON (same as /api/gpu)
   bench history|show|note|latest   Benchmark run history (per recipe)
   hf login               Hugging Face token setup
@@ -55,7 +56,7 @@ run_py() {
 
 # --- contextual help (? at any level) ---
 
-SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf gateway)
+SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf gateway install)
 
 resolve_prefix() {
   local word="$1"
@@ -242,6 +243,24 @@ Service: systemctl status spark-inference-gateway
 EOF
 }
 
+help_install() {
+  cat <<'EOF'
+spark install — host bootstrap (runs install/spark-install via sudo)
+
+  core                 Portal, APIs, CLI, inventory (no GPU engine)
+  nas                  Optional CIFS shelf + /models layout
+  engine eugr|llama|ds4   One inference engine
+  gateway              :9000/v1 proxy + client activity widget
+  openwebui            Open WebUI compose
+  bootstrap|agent      Sudo grants
+  restart inference-api   Ops shortcut
+  extras terminal|shell|lazydocker
+  status|list          Health + target list
+
+  sudo bash install/spark-install list   Same targets without spark on PATH
+EOF
+}
+
 help_status() {
   cat <<'EOF'
 spark status — GPU + inference overview
@@ -364,6 +383,9 @@ EOF
       ;;
     gateway)
       help_gateway
+      ;;
+    install)
+      help_install
       ;;
   esac
 }
@@ -526,6 +548,16 @@ cmd_gateway() {
   run "${LIB}/spark-inference-gateway" "$@"
 }
 
+cmd_install() {
+  local installer="${ROOT}/install/spark-install"
+  [[ -f "$installer" ]] || die "missing ${installer} — is SPARK_ROOT=${ROOT} correct?"
+  if [[ "$(id -u)" -eq 0 ]]; then
+    exec bash "$installer" "$@"
+  else
+    exec sudo bash "$installer" "$@"
+  fi
+}
+
 dispatch_group() {
   local group="$1"
   shift
@@ -540,6 +572,7 @@ dispatch_group() {
     bench) cmd_bench "$@" ;;
     hf) cmd_hf "$@" ;;
     gateway) cmd_gateway "$@" ;;
+    install) cmd_install "$@" ;;
     *)
       die "unknown group: $group (run spark --help or spark ?)"
       ;;
@@ -560,7 +593,7 @@ main() {
   case "$cmd" in
     -h|--help|help) usage ;;
     status|gpu|bench) shift; dispatch_group "$cmd" "$@" ;;
-    inference|recipe|models|shelf|engine|hf|gateway) shift; dispatch_group "$cmd" "$@" ;;
+    inference|recipe|models|shelf|engine|hf|gateway|install) shift; dispatch_group "$cmd" "$@" ;;
     *)
       local group
       if group="$(resolve_prefix "$cmd" "${SPARK_GROUPS[@]}")"; then

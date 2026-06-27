@@ -20,16 +20,13 @@ One DGX Spark (`sparky`), one operator. This guide gets you from clone to browsi
 ```bash
 git clone https://github.com/shawnmarck/sparkbench.git /opt/spark
 cd /opt/spark
-sudo bash install/00-grant-install-sudo.sh    # if needed
-sudo bash install/20-spark-cli.sh
-sudo bash install/04-model-inventory.sh
-sudo bash install/11-model-shelf-api.sh
-sudo bash install/17-inference-api.sh
-sudo bash install/23-inference-gateway.sh
-# Engines as needed: install/16-eugr-vllm-qwen36.sh, install/13-llama-cpp-smoke.sh
+sudo bash install/spark-install bootstrap     # optional: passwordless re-runs
+sudo bash install/spark-install core
+sudo bash install/spark-install engine eugr   # or llama / ds4
+sudo bash install/spark-install gateway
 ```
 
-Optional NAS shelf: `install/02-model-shelf-mount.sh`, `03-model-shelf-layout.sh`.
+Optional NAS shelf: `sudo bash install/spark-install nas`.
 
 ### 2. Hugging Face login (for downloads)
 

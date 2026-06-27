@@ -11,7 +11,7 @@ spark inference logs
 spark recipe list          # includes drafts/testing
 ```
 
-Enable/disable profiles in `data/inference-profiles.yaml`. Install CLI: `sudo bash install/20-spark-cli.sh`.
+Enable/disable profiles in `data/inference-profiles.yaml`. Install: `sudo bash install/spark-install core`.
 
 Direct engine control still works:
 

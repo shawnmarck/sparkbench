@@ -8,7 +8,7 @@ Single homelab control command on **sparky** (`/usr/local/bin/spark`). Implement
 | **Coding agents** (Cursor, Hermes, scripts) | [Agent use](#agent-use-non-interactive) |
 | **HTTP / gateway** (no shell) | [APIs instead of CLI](#apis-instead-of-cli) |
 
-Install once: `sudo bash /opt/spark/install/20-spark-cli.sh` (also chained from `install/17-inference-api.sh`).
+Install: `sudo bash /opt/spark/install/spark-install core` (or `spark install core` after first core). See [install/INSTALL.md](../../install/INSTALL.md).
 
 ---
 
@@ -29,6 +29,7 @@ spark <group> <subcommand> [args...]
 | `engine` | Low-level `eugr`, `llama`, or `ds4` (bypass profile switcher) |
 | `gpu` | Metrics JSON |
 | `hf` | Hugging Face login |
+| `install` | Host bootstrap (`core`, `engine`, `gateway`, …) — sudo |
 
 Legacy names (`spark-inference`, `spark-eugr`, …) are **not** on `PATH`. See `scripts/legacy/README.md`.
 
@@ -171,7 +172,7 @@ Inventory build uses venv: `/opt/spark/venv/bin/python` (invoked internally by `
 
 - Passwordless sudo for `install/*.sh` only (`00-grant-install-sudo.sh`).
 - Optional broader agent sudo: `07-grant-agent-sudo.sh`.
-- Inference API code hot-reloads — usually **no** `systemctl restart` after editing `spark-inference.py`; hit `/api/inference/*` or use `install/19-inference-api-restart.sh` if stuck.
+- Inference API code hot-reloads — usually **no** `systemctl restart` after editing `spark-inference.py`; hit `/api/inference/*` or use `spark install restart inference-api` if stuck.
 
 ---
 

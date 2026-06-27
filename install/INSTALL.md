@@ -1,23 +1,55 @@
-# Install script index
+# Install
 
-Run with `sudo bash install/<script>.sh` from `/opt/spark` (or staging copy).
+**Supported path:** `sudo bash install/spark-install <target>` from `/opt/spark` (or staging copy).
+
+After `core`, the same orchestrator is available as `spark install <target>`.
+
+```bash
+sudo bash install/spark-install list      # targets + help
+sudo bash install/spark-install status    # systemd + HTTP health
+```
 
 Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_USER`, `SPARK_HOST`, `SPARK_LAN_IP` — see `common.sh`.
 
-## Bootstrap
+## Orchestrator targets
+
+| Target | Purpose |
+|--------|---------|
+| `core` | Netdata + portal + CLI + `/models` layout + inventory refresh + GPU/shelf/HF/inference APIs + removal cron |
+| `nas` | CIFS shelf mount + re-layout `/models` |
+| `engine eugr\|llama\|ds4` | One GPU inference engine (mutually exclusive) |
+| `gateway` | OpenAI-compatible `:9000/v1` proxy + client activity API |
+| `openwebui` | Open WebUI dual-backend compose |
+| `bootstrap` | Passwordless sudo for install scripts + Netdata/portal base |
+| `agent` | Full passwordless sudo for automation (optional) |
+| `restart inference-api` | Restart inference API only |
+| `extras terminal\|shell\|lazydocker` | Maintainer convenience — not core SparkBench |
+
+## Typical fresh order
+
+```
+bootstrap (optional) → core → engine eugr|llama|ds4 → gateway
+nas (optional, any time after clone)
+```
+
+## Legacy numbered scripts
+
+The scripts below are still idempotent and safe to run individually (agents, surgical fixes). Prefer `spark-install` for new setups.
+
+### Bootstrap
 
 | Script | Purpose |
 |--------|---------|
-| `00-grant-install-sudo.sh` | Passwordless sudo for `install/*.sh` |
+| `00-grant-install-sudo.sh` | Passwordless sudo for `install/*.sh` and `install/spark-install` |
 | `07-grant-agent-sudo.sh` | Agent sudo grants |
 
-## Visibility
+### Visibility
 
 | Script | Purpose |
 |--------|---------|
 | `01-netdata-portal.sh` | Netdata + portal nginx base |
 
-## Model shelf & inventory
+### Model shelf & inventory
 
 | Script | Purpose |
 |--------|---------|
@@ -32,27 +64,34 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_USER`, `SPARK_HO
 | `17-inference-api.sh` | Inference control API + nginx route |
 | `18-inference-api-watch.sh` | Restart API when inference scripts change |
 | `19-inference-api-restart.sh` | Restart inference API only (agent-friendly) |
-| `20-spark-cli.sh` | **Unified `spark` CLI** — binary, completions, zsh `?` help; removes legacy `spark-*` bins. See `docs/reference/spark-cli.md` |
+| `20-spark-cli.sh` | **Unified `spark` CLI** — binary, completions, zsh `?` help |
+| `21-hf-api.sh` | HF Explorer API (portal Explore tab) |
 
-## Inference engines
+### Inference engines
 
 | Script | Purpose |
 |--------|---------|
-| `15-vllm-openwebui-smoke.sh` | Stock vLLM compose smoke (legacy) |
-| `15b-sync-inference-compose.sh` | Sync compose files to `/opt/spark/services` |
-| `16-eugr-vllm-qwen36.sh` | eugr vLLM NVFP4 (`spark engine eugr`) |
-| `16b-fix-spark-eugr.sh` | eugr stack fixes |
 | `13-llama-cpp-smoke.sh` | Build llama.cpp + `spark engine llama` |
 | `14-openwebui-dual-backend.sh` | Open WebUI dual backend compose |
+| `16-eugr-vllm-qwen36.sh` | eugr vLLM NVFP4 (`spark engine eugr`) |
+| `22-ds4-dwarfstar.sh` | DwarfStar (ds4) cuda-spark build + `spark engine ds4` |
 
-## Inference gateway & client activity
+**Legacy (superseded — do not use on new installs):**
+
+| Script | Notes |
+|--------|--------|
+| `15-vllm-openwebui-smoke.sh` | Pre–Phase 5 stock vLLM smoke; use `engine eugr` |
+| `15b-sync-inference-compose.sh` | One-off compose sync; folded into eugr install path |
+| `16b-fix-spark-eugr.sh` | One-off eugr script refresh; re-run `engine eugr` instead |
+
+### Inference gateway & client activity
 
 | Script | Purpose |
 |--------|---------|
-| `23-inference-gateway.sh` | Stable `:9000/v1` OpenAI proxy + systemd (`spark-inference-gateway.service`); instruments `chat/completions` to `run/inference-activity.jsonl` |
-| `24-client-activity-api.sh` | Activity API on `:8769` + systemd + nginx `/api/activity`; reads gateway JSONL for the Portal System-tab widget |
+| `23-inference-gateway.sh` | Stable `:9000/v1` OpenAI proxy + activity JSONL |
+| `24-client-activity-api.sh` | Activity API on `:8769` + nginx `/api/activity` |
 
-## Convenience
+### Convenience (extras)
 
 | Script | Purpose |
 |--------|---------|
@@ -60,13 +99,4 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_USER`, `SPARK_HO
 | `08-zsh-powerlevel10k.sh` | Shell prompt |
 | `09-lazydocker.sh` | lazydocker |
 
-## Typical fresh order
-
-```
-03 → 04 → 05 → 10 → 11 → 12          # core portal + /models (no NAS required)
-02 → 03                              # optional: add NAS shelf mirror
-16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
-20 (unified `spark` CLI — run once, or chained from 17)
-23 → 24 (stable gateway :9000/v1, then client activity widget) — run after an engine is up
-```
-- `22-ds4-dwarfstar.sh` — DwarfStar (ds4) cuda-spark build + `spark engine ds4`
+See also: `docs/reference/spark-cli.md`.

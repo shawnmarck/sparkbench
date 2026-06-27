@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 SUDOERS="/etc/sudoers.d/spark-install"
-RULE="${SPARK_USER} ALL=(ALL) NOPASSWD: ${SPARK_STAGING}/install/*.sh, ${SPARK_ROOT}/install/*.sh"
+RULE="${SPARK_USER} ALL=(ALL) NOPASSWD: ${SPARK_STAGING}/install/*.sh, ${SPARK_ROOT}/install/*.sh, ${SPARK_STAGING}/install/spark-install, ${SPARK_ROOT}/install/spark-install"
 
 echo "This will:"
 echo "  1. Allow passwordless sudo ONLY for install/*.sh scripts (user: ${SPARK_USER})"

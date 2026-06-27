@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# spark-install — idempotent SparkBench host bootstrap orchestrator.
+# Run: sudo bash install/spark-install <target>   (or: spark install <target>)
+set -euo pipefail
+
+INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${INSTALL_DIR}/common.sh"
+
+die() { echo "spark-install: $*" >&2; exit 1; }
+
+require_root() {
+  [[ "$(id -u)" -eq 0 ]] || die "must run as root (sudo bash install/spark-install …)"
+}
+
+run_module() {
+  local script="$1"
+  local path="${INSTALL_DIR}/${script}"
+  [[ -f "$path" ]] || die "missing module: ${script}"
+  echo
+  echo "==> ${script}"
+  bash "$path"
+}
+
+usage() {
+  cat <<'EOF'
+spark-install — SparkBench host bootstrap
+
+Usage: sudo bash install/spark-install <target> [args]
+
+Targets:
+  core                 Portal, APIs, CLI, model inventory (no GPU engine)
+  nas                  Optional CIFS shelf mount + re-layout /models
+  engine eugr|llama|ds4   Install one inference engine (one GPU at a time)
+  gateway              OpenAI gateway :9000 + client activity widget
+  openwebui            Open WebUI dual-backend compose
+  bootstrap            Passwordless sudo for install + Netdata/portal base
+  agent                Full passwordless sudo for automation (optional)
+  restart inference-api   Restart inference API only (ops shortcut)
+  extras terminal|shell|lazydocker   Maintainer convenience (not core product)
+  status               Show systemd + HTTP health for installed services
+  list                 List targets (this summary)
+  help                 This help
+
+Typical fresh box:
+  sudo bash install/spark-install bootstrap    # once, if you want passwordless re-runs
+  sudo bash install/spark-install core
+  sudo bash install/spark-install engine eugr    # or llama / ds4
+  sudo bash install/spark-install gateway
+
+Env: SPARK_ROOT, SPARK_STAGING, SPARK_USER, SPARK_HOST, SPARK_LAN_IP — see install/common.sh
+
+Legacy numbered scripts (install/03-….sh) still work; this orchestrator is the supported path.
+EOF
+}
+
+cmd_core() {
+  echo "spark-install: core (portal + model shelf + HTTP APIs + CLI)"
+  run_module 01-netdata-portal.sh
+  run_module 20-spark-cli.sh
+  run_module 03-model-shelf-layout.sh
+  run_module 03a-shelf-hf-tools.sh
+  run_module 04-model-inventory.sh
+  run_module 05-model-inventory-auto-refresh.sh
+  run_module 10-portal-gpu-widget.sh
+  run_module 11-model-shelf-api.sh
+  run_module 21-hf-api.sh
+  run_module 17-inference-api.sh
+  run_module 12-model-removal-cron.sh
+  echo
+  echo "OK: core install complete — http://${SPARK_HOST}/"
+  echo "Next: sudo bash install/spark-install engine eugr   (or llama / ds4)"
+  echo "Then: sudo bash install/spark-install gateway"
+}
+
+cmd_nas() {
+  echo "spark-install: nas (CIFS shelf + /models layout)"
+  run_module 02-model-shelf-mount.sh
+  run_module 03-model-shelf-layout.sh
+  echo "OK: NAS shelf path configured (when mount succeeds)"
+}
+
+cmd_engine() {
+  local engine="${1:-}"
+  [[ -n "$engine" ]] || die "usage: spark-install engine eugr|llama|ds4"
+  case "$engine" in
+    eugr|vllm)
+      echo "spark-install: engine eugr (eugr vLLM NVFP4)"
+      run_module 16-eugr-vllm-qwen36.sh
+      ;;
+    llama|llamacpp)
+      echo "spark-install: engine llama (llama.cpp GGUF)"
+      run_module 13-llama-cpp-smoke.sh
+      ;;
+    ds4|dwarfstar)
+      echo "spark-install: engine ds4 (DwarfStar cuda-spark)"
+      run_module 22-ds4-dwarfstar.sh
+      ;;
+    *)
+      die "unknown engine: ${engine} (try: eugr, llama, ds4)"
+      ;;
+  esac
+  echo "OK: engine ${engine} install complete"
+}
+
+cmd_gateway() {
+  echo "spark-install: gateway (:9000/v1 + client activity API)"
+  run_module 23-inference-gateway.sh
+  run_module 24-client-activity-api.sh
+  echo "OK: gateway at http://${SPARK_HOST}:9000/v1"
+}
+
+cmd_openwebui() {
+  run_module 14-openwebui-dual-backend.sh
+}
+
+cmd_bootstrap() {
+  run_module 00-grant-install-sudo.sh
+}
+
+cmd_agent() {
+  run_module 07-grant-agent-sudo.sh
+}
+
+cmd_restart() {
+  local what="${1:-}"
+  [[ "$what" == "inference-api" ]] || die "usage: spark-install restart inference-api"
+  run_module 19-inference-api-restart.sh
+}
+
+cmd_extras() {
+  local extra="${1:-}"
+  [[ -n "$extra" ]] || die "usage: spark-install extras terminal|shell|lazydocker"
+  case "$extra" in
+    terminal) run_module 06-kitty-terminal.sh ;;
+    shell) run_module 08-zsh-powerlevel10k.sh ;;
+    lazydocker) run_module 09-lazydocker.sh ;;
+    *) die "unknown extra: ${extra} (try: terminal, shell, lazydocker)" ;;
+  esac
+}
+
+check_unit() {
+  local unit="$1"
+  if systemctl is-active --quiet "$unit" 2>/dev/null; then
+    echo "  ${unit}: active"
+  elif systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+    echo "  ${unit}: enabled but not active"
+  else
+    echo "  ${unit}: not installed"
+  fi
+}
+
+check_http() {
+  local label="$1"
+  local url="$2"
+  if curl -fsS "$url" >/dev/null 2>&1; then
+    echo "  ${label}: OK (${url})"
+  else
+    echo "  ${label}: unreachable (${url})"
+  fi
+}
+
+cmd_status() {
+  echo "spark-install status (SPARK_ROOT=${SPARK_ROOT}, user=${SPARK_USER})"
+  echo
+  echo "systemd:"
+  check_unit netdata.service
+  check_unit nginx.service
+  check_unit spark-gpu-metrics.service
+  check_unit spark-shelf-api.service
+  check_unit spark-hf-api.service
+  check_unit spark-inference-api.service
+  check_unit spark-inference-gateway.service
+  check_unit spark-client-activity.service
+  check_unit spark-inventory-refresh.timer
+  echo
+  echo "HTTP:"
+  check_http portal "http://127.0.0.1/"
+  check_http gpu "http://127.0.0.1/api/gpu"
+  check_http shelf "http://127.0.0.1/api/shelf/status"
+  check_http hf "http://127.0.0.1/api/hf/status"
+  check_http inference "http://127.0.0.1/api/inference/status"
+  check_http activity "http://127.0.0.1/api/activity?window=1h"
+  check_http gateway "http://127.0.0.1:9000/v1/models"
+  echo
+  if [[ -x /usr/local/bin/spark ]]; then
+    echo "  spark CLI: /usr/local/bin/spark"
+  else
+    echo "  spark CLI: not on PATH (run spark-install core or 20-spark-cli.sh)"
+  fi
+}
+
+cmd_list() {
+  usage
+}
+
+main() {
+  local cmd="${1:-}"
+  [[ -n "$cmd" ]] || { usage; exit 0; }
+  shift || true
+  case "$cmd" in
+    list|help|-h|--help) cmd_list ;;
+    status) cmd_status ;;
+    *)
+      require_root
+      case "$cmd" in
+        core) cmd_core ;;
+        nas) cmd_nas ;;
+        engine) cmd_engine "${1:-}" ;;
+        gateway) cmd_gateway ;;
+        openwebui) cmd_openwebui ;;
+        bootstrap) cmd_bootstrap ;;
+        agent) cmd_agent ;;
+        restart) cmd_restart "${1:-}" ;;
+        extras) cmd_extras "${1:-}" ;;
+        *)
+          die "unknown target: ${cmd} (run spark-install list)"
+          ;;
+      esac
+      ;;
+  esac
+}
+
+main "$@"

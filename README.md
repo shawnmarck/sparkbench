@@ -51,22 +51,16 @@ export SPARK_LAN_IP=192.168.1.50
 export SPARK_USER="$USER"
 
 # Core install (idempotent, safe to re-run)
-sudo bash install/03-model-shelf-layout.sh   # /models workspace (no NAS required)
-sudo bash install/20-spark-cli.sh            # spark CLI
-sudo bash install/04-model-inventory.sh      # portal model inventory
-sudo bash install/11-model-shelf-api.sh      # shelf + model HTTP APIs (NAS optional)
-sudo bash install/17-inference-api.sh        # inference control plane
+sudo bash install/spark-install bootstrap    # optional: passwordless install re-runs
+sudo bash install/spark-install core         # portal, APIs, CLI, model inventory
+sudo bash install/spark-install engine eugr  # or: engine llama | engine ds4
+sudo bash install/spark-install gateway      # :9000/v1 OpenAI proxy + activity widget
 
-# Optional: NAS shelf mirror (skip if you have no CIFS share)
-# sudo bash install/02-model-shelf-mount.sh
-
-# Pick the engines you want
-sudo bash install/16-eugr-vllm-qwen36.sh    # vLLM (eugr fork, NVFP4)
-sudo bash install/13-llama-cpp-smoke.sh     # llama.cpp (GGUF)
-sudo bash install/22-ds4-dwarfstar.sh       # ds4 (DeepSeek V4 Flash)
+# Optional NAS shelf mirror (skip if you have no CIFS share)
+# sudo bash install/spark-install nas
 ```
 
-Full script index: [install/INSTALL.md](install/INSTALL.md).
+After `core`, `spark install …` works too (same orchestrator). Full module index: [install/INSTALL.md](install/INSTALL.md).
 
 ## Use it
 

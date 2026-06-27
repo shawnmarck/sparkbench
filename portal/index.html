@@ -1590,7 +1590,7 @@
           } else {
             $('live').classList.add('live-stale');
             $('live').lastChild.textContent = 'offline';
-            setInfMsg('Inference API unavailable — run install/17-inference-api.sh', 'err');
+            setInfMsg('Inference API unavailable — run sudo bash install/spark-install core', 'err');
           }
         } finally {
           infTickInFlight = false;
@@ -2683,7 +2683,7 @@
             renderExpStatusBanner(null);
             $('live').classList.add('live-stale');
             $('live').lastChild.textContent = 'offline';
-            setExpMsg('HF API unavailable — run install/21-hf-api.sh', 'err');
+            setExpMsg('HF API unavailable — run sudo bash install/spark-install core', 'err');
           }
         } finally {
           expTickInFlight = false;

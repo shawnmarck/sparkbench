@@ -102,26 +102,24 @@ spark gpu
 
 ## Install (typical order)
 
-See `install/INSTALL.md` for full index. Core path:
+Orchestrator: `install/spark-install` (or `spark install …` after first `core`). See `install/INSTALL.md`.
 
 ```bash
-sudo bash install/03-model-shelf-layout.sh
-sudo bash install/04-model-inventory.sh
-sudo bash install/05-model-inventory-auto-refresh.sh
-sudo bash install/10-portal-gpu-widget.sh
-sudo bash install/11-model-shelf-api.sh
-# Optional NAS: install/02-model-shelf-mount.sh then re-run 03
+sudo bash install/spark-install core
+sudo bash install/spark-install engine eugr   # or llama / ds4 — one GPU engine at a time
+sudo bash install/spark-install gateway
+# Optional NAS: sudo bash install/spark-install nas
 ```
 
-Inference (pick what you need): `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh`.
+Legacy numbered scripts (`install/03-….sh`) still work; prefer the orchestrator.
 
 ## Inference API reload (agents)
 
 `scripts/spark-inference-api.py` is a thin HTTP shell on **:8767** (proxied as `/api/inference/*`). It reloads `spark-inference.py` on each request — bench, switch, recipe lifecycle, and history routes all live there.
 
 - **Routine changes to `spark-inference.py`:** no restart needed.
-- **Changes to `spark-inference-api.py` itself:** `sudo bash install/19-inference-api-restart.sh`
-- **Auto-restart on script save:** `sudo bash install/18-inference-api-watch.sh`
+- **Changes to `spark-inference-api.py` itself:** `sudo bash install/spark-install restart inference-api` (or `install/19-inference-api-restart.sh`)
+- **Auto-restart on script save:** chained from `spark-install core` via `install/18-inference-api-watch.sh`
 
 ## Golden audit & new models
 

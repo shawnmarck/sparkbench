@@ -19,6 +19,7 @@ Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer
 
 | Target | Purpose |
 |--------|---------|
+| `quickstart` | `bootstrap` + `core` in one target (portal, APIs, CLI — no GPU engine) |
 | `core` | Netdata + portal + CLI + `/models` layout + inventory refresh + GPU/shelf/HF/inference APIs + removal cron |
 | `nas` | CIFS shelf mount + re-layout `/models` |
 | `engine eugr\|llama\|ds4` | One GPU inference engine (mutually exclusive) |
@@ -33,7 +34,8 @@ Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer
 ## Typical fresh order
 
 ```
-bootstrap (optional) → core → engine eugr|llama|ds4 → gateway
+bootstrap (optional) → quickstart (or core) → engine eugr|llama|ds4 → gateway
+# or: curl -fsSL …/scripts/bootstrap-sparkbench.sh | sudo bash  →  engine  →  gateway
 nas (optional, any time after clone)
 ```
 

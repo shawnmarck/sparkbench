@@ -52,6 +52,7 @@ spark-install — SparkBench host bootstrap
 Usage: sudo bash install/spark-install <target> [args]
 
 Targets:
+  quickstart             bootstrap + core (portal, APIs, CLI — no GPU engine)
   core                 Portal, APIs, CLI, model inventory (no GPU engine)
   nas                  Optional CIFS shelf mount + re-layout /models
   engine eugr|llama|ds4   Install one inference engine (one GPU at a time)
@@ -67,6 +68,7 @@ Targets:
   help                 This help
 
 Typical fresh box:
+  curl -fsSL …/scripts/bootstrap-sparkbench.sh | sudo bash   # or manually:
   sudo bash install/spark-install bootstrap    # once, if you want passwordless re-runs
   sudo bash install/spark-install core
   sudo bash install/spark-install engine eugr    # or llama / ds4
@@ -77,6 +79,13 @@ Env: SPARK_ROOT, SPARK_STAGING, SPARK_USER, SPARK_HOST, SPARK_LAN_IP — see ins
 
 Legacy numbered install scripts were removed — use targets above or `module`.
 EOF
+}
+
+cmd_quickstart() {
+  echo "spark-install: quickstart (bootstrap + core — no GPU engine yet)"
+  run_module bootstrap/host-env.sh
+  run_module bootstrap/grant-install-sudo.sh
+  cmd_core
 }
 
 cmd_core() {
@@ -245,6 +254,7 @@ main() {
     *)
       require_root
       case "$cmd" in
+        quickstart) cmd_quickstart ;;
         core) cmd_core ;;
         nas) cmd_nas ;;
         engine) cmd_engine "${1:-}" ;;

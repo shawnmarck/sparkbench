@@ -247,7 +247,8 @@ help_install() {
   cat <<'EOF'
 spark install — host bootstrap (runs install/spark-install via sudo)
 
-  core                 Portal, APIs, CLI, inventory (no GPU engine)
+  quickstart             bootstrap + core (no GPU engine)
+  core                   Portal, APIs, CLI, inventory (no GPU engine)
   nas                  Optional CIFS shelf + /models layout
   engine eugr|llama|ds4   One inference engine
   gateway              :9000/v1 proxy + client activity widget

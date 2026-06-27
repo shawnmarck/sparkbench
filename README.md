@@ -18,6 +18,8 @@ One CLI, one box, no cloud.
   <img src="docs/assets/sparkbench-demo.gif" width="820" alt="SparkBench portal: Inference, Models, and Explore tabs in action">
 </p>
 
+<p align="center"><sub>Portal — switch profiles, browse models, explore HuggingFace. <a href="docs/assets/RECORDING.md">Record CLI / install demos</a></sub></p>
+
 ---
 
 ## What it is
@@ -31,13 +33,28 @@ SparkBench is a self-hosted dashboard and inference control plane for a single D
 - **HuggingFace integration**: Search, queue, download, dedupe; weights land in a canonical tree
 - **NAS shelf sync** (optional): Mirror models to/from a CIFS share when you have one; works fine with local `/models` only
 
-The benchmarks generated here are what populate **[sparkbench.dev](https://sparkbench.dev)**, the public GB10 leaderboard.
+The benchmarks generated here populate **[sparkbench.dev](https://sparkbench.dev)** — the public GB10 leaderboard.
 
 ## Why
 
 DGX Spark is excellent hardware but ships without an opinionated way to run models on it. SparkBench is that opinion: a closed loop from *I saw a new model on HuggingFace* to *it's promoted, benched, and serving on my box at this many tok/s*.
 
 If you own a Spark, run this. If you're considering one, check the [leaderboard](https://sparkbench.dev) to see what it can actually do.
+
+## Why not just vLLM or llama.cpp?
+
+Raw engines are great. SparkBench wraps them for **one GB10 box, one loop**:
+
+| You want… | Raw vLLM / llama.cpp | SparkBench |
+|-----------|----------------------|------------|
+| Run one model | Write compose YAML, pick ports, remember flags | `spark inference up <profile>` |
+| Switch models | Stop container, edit config, restart (minutes) | Same CLI — recipes hold engine-specific flags |
+| Compare tok/s fairly | Roll your own scripts | `spark inference bench` (bench v2: long ctx + tools + agent turns) |
+| Try a new HF model | Download + hand-write serve config | Explore queue → auto-scaffold recipe → bench → promote |
+| Share results | Paste numbers in a gist | Verification YAML → [sparkbench.dev](https://sparkbench.dev) leaderboard |
+| Agent / UI access | Wire OpenAI URL yourself | Gateway `:9000/v1` + portal + HTTP APIs |
+
+SparkBench **uses** eugr vLLM, llama.cpp, and ds4 — it does not replace them. It adds the control plane, inventory, and reproducible benchmark layer on top.
 
 ## Quickstart
 
@@ -51,26 +68,60 @@ curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/v0.1.0/docs/g
 
 ### For Humans
 
+**One command** — clone to `/opt/spark`, bootstrap host env, portal, APIs, and CLI (no GPU engine yet):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/main/scripts/bootstrap-sparkbench.sh | sudo bash
+```
+
+Then pick an engine and the gateway:
+
+```bash
+sudo bash install/spark-install engine eugr   # or llama | ds4
+sudo bash install/spark-install gateway
+bash scripts/sparky-protect-runtime.sh
+spark models inventory
+```
+
+<details>
+<summary>Manual install (same steps, no curl bootstrap)</summary>
+
 ```bash
 git clone https://github.com/shawnmarck/sparkbench.git /opt/spark
 cd /opt/spark
-
-# (optional) match your host and runtime user
-export SPARK_HOST=mybox
-export SPARK_LAN_IP=192.168.1.50
-export SPARK_USER="$USER"
-
-# Core install (idempotent, safe to re-run)
-sudo bash install/spark-install bootstrap    # optional: passwordless install re-runs
-sudo bash install/spark-install core         # portal, APIs, CLI, model inventory
-sudo bash install/spark-install engine eugr  # or: engine llama | engine ds4
-sudo bash install/spark-install gateway      # :9000/v1 OpenAI proxy + activity widget
-
-# Optional NAS shelf mirror (skip if you have no CIFS share)
-# sudo bash install/spark-install nas
+export SPARK_HOST=mybox SPARK_LAN_IP=192.168.1.50 SPARK_USER="$USER"
+sudo bash install/spark-install quickstart    # bootstrap + core
+sudo bash install/spark-install engine eugr
+sudo bash install/spark-install gateway
 ```
 
-After `core`, `spark install …` works too (same orchestrator). Full module index: [install/INSTALL.md](install/INSTALL.md).
+</details>
+
+Open **http://&lt;host&gt;/** · Full module index: [install/INSTALL.md](install/INSTALL.md)
+
+### CLI in action
+
+Example session after `engine` + `gateway` are up (record a GIF: [docs/assets/RECORDING.md](docs/assets/RECORDING.md)):
+
+```text
+$ spark inference list
+  qwen36-nvfp4          eugr     heavy   enabled
+  qwen36-q4-llama       llamacpp heavy   enabled
+
+$ spark inference up qwen36-nvfp4
+  switching… (evicts current engine; may take minutes on NVFP4)
+
+$ spark inference status
+  profile: qwen36-nvfp4   engine: eugr   ready: true
+
+$ spark inference bench
+  bench v2 … decode 142.3 tok/s   ctx 32768   written to run/
+
+$ curl -s http://sparky:9000/v1/models | head
+  … aliases + active profile …
+```
+
+**Before:** docker compose edits, manual restarts, ad-hoc timing. **After:** four commands from discover → serve → measure → gateway.
 
 ## Use it
 
@@ -136,35 +187,46 @@ One GPU at a time. `spark inference up <profile>` evicts the current engine and 
 
 ## Architecture
 
-```
-HuggingFace
-    │
-    ▼
-spark hf  ────────────▶  /models/{lab}/{slug}/   ◀──────  NAS shelf (optional CIFS)
-                              │
-                              ▼
-                        spark inference
-              (recipes → engine → :v1)
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-    eugr :8000           llama.cpp :8081       ds4 :8000
-        │                     │                     │
-        └─────────────────────┴─────────────────────┘
-                              │
-                              ▼
-                Gateway :9000  (OpenAI-compatible,
-                               aliases + auto-switch)
-                              │
-                              ▼
-            Hermes · Open WebUI · Grok · your agents
+```mermaid
+flowchart TB
+  HF[HuggingFace] --> hf[spark hf / Explore API]
+  hf --> models["/models/{lab}/{slug}"]
+  NAS[(NAS shelf optional)] --> models
+  models --> inf[spark inference]
+  inf --> recipes[recipes/ + profiles]
+  recipes --> eugr[eugr vLLM :8000]
+  recipes --> llama[llama.cpp :8081]
+  recipes --> ds4[ds4 :8000]
+  eugr --> gw[Gateway :9000/v1]
+  llama --> gw
+  ds4 --> gw
+  gw --> clients[Open WebUI · agents · curl]
+  inf --> portal[Portal :80]
+  portal --> apis[/api/gpu · inference · hf · activity/]
 ```
 
-Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trusted home network; **don't expose port 80 to the WAN**.
+One GPU engine at a time. Static portal on nginx :80. Mutation APIs are LAN-trusted — don't expose port 80 to the WAN.
+
+<details>
+<summary>ASCII version</summary>
+
+```
+HuggingFace → spark hf → /models/ ← NAS (optional)
+                ↓
+         spark inference (recipes)
+                ↓
+    eugr :8000 · llama :8081 · ds4 :8000
+                ↓
+         Gateway :9000/v1 → agents / Open WebUI
+```
+
+</details>
 
 ## Documentation
 
-| [CHANGELOG.md](CHANGELOG.md)                                                          | Release history                                  |
+| Path | Topic |
+|------|--------|
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [AGENTS.md](AGENTS.md)                                                                | Agent manual: layout, rules, code touchpoints    |
 | [docs/guides/installation-instructions.md](docs/guides/installation-instructions.md)  | Full install + ops guide (LLM agents fetch via README) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |
@@ -178,7 +240,8 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trust
 | [docs/runbooks/smoke-llamacpp.md](docs/runbooks/smoke-llamacpp.md)                    | llama.cpp smoke test                             |
 | [docs/runbooks/smoke-ds4.md](docs/runbooks/smoke-ds4.md)                              | ds4 smoke test                                   |
 | [docs/runbooks/new-model-golden-benchmark.md](docs/runbooks/new-model-golden-benchmark.md) | Golden audit for a new model                 |
-| [install/INSTALL.md](install/INSTALL.md)                                              | Install script index                             |
+| [install/INSTALL.md](install/INSTALL.md) | Install targets + modules |
+| [docs/assets/RECORDING.md](docs/assets/RECORDING.md) | How to capture CLI / install demos |
 
 ## Contributing
 

@@ -16,17 +16,22 @@ Prefer CLI for mutations. Use HTTP when the harness only has `curl`.
 
 ## Step 1 — Clone and install
 
-Run on the Spark box with sudo. Targets are idempotent.
+**One command** (fresh box):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/main/scripts/bootstrap-sparkbench.sh | sudo bash
+```
+
+Or run steps manually on the Spark box with sudo. Targets are idempotent.
 
 ```bash
 git clone https://github.com/shawnmarck/sparkbench.git /opt/spark
 cd /opt/spark
 export SPARK_HOST="$(hostname -s)" SPARK_USER="$USER"
 
-sudo bash install/spark-install bootstrap    # optional: host.env + passwordless install
-sudo bash install/spark-install core         # portal, APIs, CLI, inventory
-sudo bash install/spark-install engine eugr  # or: engine llama | engine ds4
-sudo bash install/spark-install gateway      # :9000/v1 OpenAI proxy + activity API
+sudo bash install/spark-install quickstart       # bootstrap + core
+sudo bash install/spark-install engine eugr      # or: engine llama | engine ds4
+sudo bash install/spark-install gateway          # :9000/v1 OpenAI proxy + activity API
 ```
 
 Optional NAS shelf: `sudo bash install/spark-install nas` (CIFS creds in `/etc/spark/`).

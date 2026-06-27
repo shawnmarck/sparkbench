@@ -95,6 +95,27 @@ Grok Build sends OpenAI tools with `tool_choice: auto`. eugr vLLM needs:
 
 Add to `services/eugr-<profile>.yaml` for Qwen-family models, then reload the same profile (`spark inference up … --ctx N --kv fp8`). Without this, gateway returns 400 Bad Request.
 
+## Context ladder (optional, after golden bench)
+
+Probe **higher ctx rungs** above the golden preset: load at each step, fill to **75%** of usable window, measure decode tok/s. Results land in `recipe.context.ctx_ladder` and the Models portal **Context ladder** panel.
+
+```bash
+# Plan rungs (golden 32k → native 131k → rungs 64k, 96k, 128k, …)
+/opt/spark/venv/bin/python3 /opt/spark/scripts/spark-ctx-ladder.py mellum2-12b-opus-q4 --dry-run
+
+# Run ladder (stops on first load/bench failure)
+/opt/spark/venv/bin/python3 /opt/spark/scripts/spark-ctx-ladder.py mellum2-12b-opus-q4
+
+# Report: /opt/spark/run/ctx-ladder-report.json
+spark models inventory   # refresh portal
+```
+
+To promote a higher rung to golden default after review:
+
+```bash
+python3 /opt/spark/scripts/update-recipe-ctx.py mellum2-12b-opus-q4 98304 --label "Golden max fit" --note "ctx ladder verified"
+```
+
 ## Context viability (no bench)
 
 After golden bench at safe ctx, ladder to target ctx with load + smoke only:

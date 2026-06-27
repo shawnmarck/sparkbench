@@ -46,6 +46,9 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "unsloth/qwen3.6-27b": "unsloth-qwen3-6-27b-eugr",
     "unsloth/qwen3.6-35b-a3b": "qwen36-q4-llama",
     "yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1": "gemma4-12b-coder-q4",
+    "yuxinlu1/gemma-4-12b-agentic-v2": "gemma4-12b-agentic-v2-q4",
+    "yuxinlu1/mellum2-12b-opus-thinking": "mellum2-12b-opus-q4",
+    "yuxinlu1/gemma-4-12b-opus-reasoning": "gemma4-12b-opus-reasoning-q4",
     "qwen/qwen-agentworld-35b-a3b": "qwen-qwen-agentworld-35b-a3b-eugr",
     "empero-ai/qwythos-9b-claude-mythos-5-1m": "empero-ai-qwythos-9b-claude-mythos-5-1m-eugr",
     "0xsero/deepseek-v4-flash-spark": "0xsero-deepseek-v4-flash-spark-llama",
@@ -73,6 +76,7 @@ ARCH_FIXES: dict[str, str] = {
     "qwen/qwen-agentworld-35b-a3b": "moe",
     "empero-ai/qwythos-9b-claude-mythos-5-1m": "dense",
     "z-lab/qwen3.6-27b": "dense",
+    "yuxinlu1/mellum2-12b-opus-thinking": "moe",
 }
 
 

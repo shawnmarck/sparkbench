@@ -1,0 +1,27 @@
+id: empero-ai-qwythos-9b-claude-mythos-5-1m-mtp-llama
+name: qwythos-9b-claude-mythos-5-1m MTP (llama.cpp)
+inventory_path: empero-ai/qwythos-9b-claude-mythos-5-1m
+engine: llamacpp
+tier: fast
+lifecycle: draft
+served_name: qwythos-9b-claude-mythos-5-1m-mtp
+port: 8081
+model: /models/empero-ai/qwythos-9b-claude-mythos-5-1m/hf/Qwythos-9B-Claude-Mythos-5-1M-Q4_K_M.gguf
+tags:
+- lab
+- llamacpp
+- mtp
+mtp:
+  method: mtp
+  draft_model: /models/empero-ai/qwythos-9b-claude-mythos-5-1m/hf/Qwythos-9B-Claude-Mythos-5-1M-MTP-Q4_K_M.gguf
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: 'MTP GGUF scaffold 2026-06-26: main Qwythos-9B-Claude-Mythos-5-1M-Q4_K_M.gguf,
+  draft Qwythos-9B-Claude-Mythos-5-1M-MTP-Q4_K_M.gguf. Wire draft model in spark-llama
+  when runner supports it; bench first.'

@@ -1391,8 +1391,15 @@ def cmd_up(
         )
 
     recipe = load_recipe(profile_id)
+    ctx_i, kv_s = ctxmod.resolve_launch_ctx_kv(recipe, ctx=ctx, kv=kv, preset=preset)
+    explicit_launch = ctx is not None or kv is not None or preset is not None
     active = detect_active_profile()
-    if active and active["profile"] == profile_id:
+    if (
+        not explicit_launch
+        and active
+        and active["profile"] == profile_id
+        and engine_ready(recipe)
+    ):
         print(f"Already active: {profile_id}")
         return cmd_status()
 
@@ -1402,7 +1409,6 @@ def cmd_up(
     path = str(recipe_path(profile_id))
     engine = recipe.get("engine")
     launch_env = ctxmod.prepare_launch(recipe, profile_id, ctx=ctx, kv=kv, preset=preset)
-    ctx_i, kv_s = ctxmod.resolve_launch_ctx_kv(recipe, ctx=ctx, kv=kv, preset=preset)
     print(f"Starting {profile_id} ({engine}) ctx={ctx_i} kv={kv_s}...")
 
     if engine == "eugr":

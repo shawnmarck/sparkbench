@@ -33,7 +33,7 @@ Each task = **one pull request** = full **Definition of Done** for that feature 
 - [ ] `docs/ROADMAP.md` backlog row Status → `done`
 - [ ] Post-merge (human): `./scripts/deploy-sparky.sh` to sparky when the change needs runtime verification
 
-**Runtime data:** never commit sparky-local `data/*.yaml` changes from audits/bench. See [`runbooks/sparky-live-sync.md`](../runbooks/sparky-live-sync.md).
+**Shared cookbook:** commit `recipes/` + `data/golden-recipes.yaml`, `data/model-catalog.yaml`, `data/model-verification.yaml` after golden workflow on sparky. See [`runbooks/sparky-live-sync.md`](../runbooks/sparky-live-sync.md).
 
 ### Sparky verification
 

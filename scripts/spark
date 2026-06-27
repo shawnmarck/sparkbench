@@ -144,6 +144,7 @@ spark models — inventory verification
   verify pending               Models awaiting verification
   removal <lab/slug> on|off [--shelf]  Queue or cancel removal (local; --shelf also queues NAS)
   golden <lab/slug> [lab/slug...]   Full golden workflow (bench + kv sweep + ctx ladder)
+  fetch <lab/slug> [--dry-run] [--variant subpath]  Download golden weights from HF
   inventory                    Rebuild portal/models.json
 EOF
 }
@@ -446,6 +447,11 @@ cmd_models() {
       [[ ${#paths[@]} -ge 1 ]] || die "usage: spark models golden <lab/slug> [lab/slug...]"
       only=$(IFS=,; echo "${paths[*]}")
       run_py "${LIB}/spark-golden-workflow.py" --only "$only" --skip-shelf "${extra[@]}"
+      ;;
+    fetch)
+      shift
+      [[ $# -ge 1 ]] || die "usage: spark models fetch <lab/slug> [--dry-run] [--variant subpath] [--background]"
+      run_py "${LIB}/spark-models-fetch.py" "$@"
       ;;
     *)
       die "unknown models command: $sub (try: verify, removal, inventory, golden)"

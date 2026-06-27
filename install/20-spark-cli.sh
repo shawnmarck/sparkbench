@@ -9,6 +9,9 @@ TARGET="${SPARK_ROOT}"
 
 SPARK_BIN="${TARGET}/scripts/spark"
 chmod +x "${SPARK_BIN}"
+chmod +x "${TARGET}/scripts/spark-inventory-build" \
+  "${TARGET}/scripts/spark-models-fetch.py" \
+  2>/dev/null || true
 chmod +x "${TARGET}/scripts/spark-inference" \
   "${TARGET}/scripts/spark-eugr" \
   "${TARGET}/scripts/spark-llama" \

@@ -81,6 +81,7 @@
     .chip:hover { border-color: #3a4a2a; }
     .chip.active { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
     .chip.active.spark-works { border-color: #2a4a2a; background: #142014; color: var(--ok); }
+    .chip.active.spark-golden { border-color: #4a3a1a; background: #1a1408; color: #d4a84b; }
     .chip.active.spark-failed { border-color: #4a2a2a; background: #241414; color: #e8a0a0; }
     .chip.active.spark-wip { border-color: #2a3a4a; background: #141c24; color: var(--dl); }
     .chip.active.spark-pending-delete { border-color: #5a2a2a; background: #241010; color: #e87878; }
@@ -236,6 +237,7 @@
     }
     .row-variant { color: #c5cdd8; }
     .pending-del-tag { color: #e87878; font-size: .62rem; font-weight: 700; margin-left: .3rem; }
+    .badge.golden-tag { border-color: #4a3a1a; color: #d4a84b; font-size: .62rem; margin-left: .35rem; }
     .rail-empty { color: var(--muted); opacity: .4; font-family: ui-monospace, monospace; }
 
     /* ── FAMILY GROUPING IN TABLE ────────────────────────── */
@@ -609,6 +611,7 @@
         <button type="button" class="chip" data-spark="wip">Testing</button>
         <button type="button" class="chip" data-spark="works">Works</button>
         <button type="button" class="chip" data-spark="failed">Failed</button>
+        <button type="button" class="chip" data-spark="golden">Golden</button>
         <button type="button" class="chip" data-spark="pending-delete">Pending delete</button>
       </div>
     </div>
@@ -667,8 +670,8 @@
       if (e === 'llamacpp') return 'llama.cpp GGUF (port 8081)';
       return e || '';
     };
-    const jobLabels = { pull: 'Fetching', push: 'Pushing', 'remove-local': 'Deleting' };
-    const SPARK_FILTER_OPTS = ['unverified', 'wip', 'works', 'failed', 'pending-delete'];
+    const jobLabels = { pull: 'Fetching', push: 'Pushing', fetch: 'Downloading', 'remove-local': 'Deleting' };
+    const SPARK_FILTER_OPTS = ['unverified', 'wip', 'works', 'failed', 'golden', 'pending-delete'];
     let sparkFilters = [];
     let tagFilter = [];
     let hfTaskFilter = '';
@@ -1195,7 +1198,11 @@
     }
     function modelMatchesSparkFilter(m) {
       if (!sparkFilters.length) return true;
-      return sparkFilters.some((f) => { if (f === 'pending-delete') return removalPending(m); return sparkStatus(m) === f; });
+      return sparkFilters.some((f) => {
+        if (f === 'pending-delete') return removalPending(m);
+        if (f === 'golden') return !!m.is_golden;
+        return sparkStatus(m) === f;
+      });
     }
     function updateSparkFilterChips() {
       document.querySelectorAll('#filter-chips .chip[data-spark]').forEach((chip) => {
@@ -1206,6 +1213,7 @@
         chip.classList.toggle('spark-failed', on && val === 'failed');
         chip.classList.toggle('spark-wip', on && val === 'wip');
         chip.classList.toggle('spark-pending-delete', on && val === 'pending-delete');
+        chip.classList.toggle('spark-golden', on && val === 'golden');
       });
     }
     function updateViewChips() {
@@ -1297,6 +1305,7 @@
           + `<span class="model-path" title="${esc(m.rel_path || m.id)}">${esc(m.rel_path || m.id)}</span>`;
       }
       if (queued) modelCell += `<span class="pending-del-tag">✕ delete</span>`;
+      if (m.is_golden) modelCell += `<span class="badge golden-tag">Golden</span>`;
       if (requiresTargetLine(m)) modelCell += requiresTargetLine(m);
 
       const spark = sparkStatus(m);
@@ -1463,6 +1472,19 @@
       return html;
     }
 
+    function renderGoldenBlock(m) {
+      if (!m.is_golden) return '';
+      const prof = m.golden_profile || '—';
+      const gp = (m.inference_profiles || []).find((p) => p.id === prof);
+      const ctx = gp && gp.ctx_ladder ? gp.ctx_ladder.golden_ctx : (m.max_context || '—');
+      const tok = m.best_bench_tok_s != null ? Math.round(m.best_bench_tok_s) + ' tok/s' : '—';
+      const ladderN = gp && gp.ctx_ladder && gp.ctx_ladder.rungs ? gp.ctx_ladder.rungs.length : 0;
+      const kvN = gp && gp.kv_sweep && gp.kv_sweep.results ? gp.kv_sweep.results.length : 0;
+      const matrixNote = (ladderN || kvN) ? `${ladderN} ctx rung${ladderN === 1 ? '' : 's'} · ${kvN} KV point${kvN === 1 ? '' : 's'} in git` : 'Bench matrix pending — run golden workflow';
+      const localNote = (m.local && m.local.present) ? 'On disk locally' : 'Not downloaded — use Download from HF or NAS Fetch';
+      return `<div class="detail-section golden-block"><h4>GB10 golden recipe</h4><div class="verify-note">${esc(localNote)}</div><div class="storage-row"><span class="storage-label">Profile</span><code>${esc(prof)}</code></div><div class="storage-row"><span class="storage-label">Headline</span><span>${esc(tok)}</span></div><div class="storage-row"><span class="storage-label">Matrix</span><span>${esc(matrixNote)}</span></div></div>`;
+    }
+
     function renderKvSweepPanel(sweep) {
       const rows = sweep && Array.isArray(sweep.results) ? sweep.results : [];
       if (!rows.length) return '';
@@ -1572,12 +1594,16 @@
       const hfPreview = hfTags.slice(0, 4);
       const hfExtra = hfTags.slice(4);
       const tagBlock = (caps.length || task || hfPreview.length) ? `<div class="detail-section tag-block">${caps.length ? `<div class="tag-line"><span class="tag-line-label">Catalog</span><span class="tag-line-val">${tagLine(caps)}</span></div>` : ''}${task ? `<div class="tag-line"><span class="tag-line-label">HF task</span><span class="tag-line-val"><span class="badge hf-task">${esc(formatTagLabel(task))}</span></span></div>` : ''}${hfPreview.length ? `<div class="tag-line"><span class="tag-line-label">HF tags</span><span class="tag-line-val">${tagLine(hfPreview)}</span></div>` : ''}${hfExtra.length ? `<details class="tag-more"><summary>${hfExtra.length} more HF tag${hfExtra.length === 1 ? '' : 's'}</summary>${tagLine(hfExtra)}</details>` : ''}${m.hf_url ? `<div class="tag-line" style="margin-top:.5rem"><span class="tag-line-label"></span><span class="tag-line-val"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">All tags on Hugging Face ↗</a></span></div>` : ''}</div>` : '';
+      const goldenBlock = renderGoldenBlock(m);
+      const fetchBtn = m.is_golden && !(m.local && m.local.present)
+        ? `<button type="button" class="btn primary" data-action="fetch" data-path="${rel}" ${busy ? 'disabled' : ''}>Download from HF</button>`
+        : '';
       const queueNote = queued
         ? (removalShelf(m)
           ? '<div class="queue-note">Pending delete — local + NAS copies purge daily at 03:00.</div>'
           : '<div class="queue-note">Pending delete — local copy purges daily at 03:00. NAS shelf copy is kept.</div>')
         : '';
-      return `${tagBlock}${summaryBlock(m)}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions"><button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete local now</button></div>${queueNote}</div>${vars}`;
+      return `${tagBlock}${summaryBlock(m)}${goldenBlock}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions">${fetchBtn}<button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete local now</button></div>${queueNote}</div>${vars}`;
     }
 
     /* ── BENCH HISTORY ───────────────────────────────────── */
@@ -1771,9 +1797,11 @@
           : `WARNING: "${btn.dataset.name}" is NOT on NAS.\n\nDelete ${btn.dataset.local} immediately?`;
         if (!confirm(msg)) return;
       }
+      if (action === 'fetch' && !confirm(`Download golden weights for ${path} from Hugging Face?\n\nThis may take a long time for large models.`)) return;
       btn.disabled = true; btn.classList.add('busy');
       try {
-        const res = await fetch('/api/shelf/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, confirm: true, ...extra }) });
+        const url = action === 'fetch' ? '/api/models/fetch' : '/api/shelf/' + action;
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, confirm: true, ...extra }) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
         await refreshShelfStatus();

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | proposed |
+| **Status** | done |
 | **Priority** | Seq 10 |
 | **Owner** | — |
 | **PR policy** | One PR |

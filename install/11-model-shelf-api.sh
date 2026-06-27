@@ -13,6 +13,7 @@ chmod +x "${TARGET}/scripts/spark-shelf-pull"
 chmod +x "${TARGET}/scripts/spark-shelf-push"
 chmod +x "${TARGET}/scripts/spark-local-rm"
 chmod +x "${TARGET}/scripts/spark-shelf-rm"
+chmod +x "${TARGET}/scripts/spark-models-fetch.py" 2>/dev/null || true
 chmod +x "${TARGET}/scripts/spark-model-verify"
 chmod +x "${TARGET}/scripts/spark-removal-purge" 2>/dev/null || true
 

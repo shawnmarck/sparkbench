@@ -24,7 +24,7 @@ spark <group> <subcommand> [args...]
 | `inference` | Profile switch (`up` / `down` / `bench`) |
 | `bench` | Per-recipe benchmark **history** (read/write notes) |
 | `recipe` | Model Lab lifecycle |
-| `models` | Inventory verify / removal / rebuild |
+| `models` | Inventory verify / removal / fetch / golden workflow / rebuild |
 | `shelf` | Local disk ↔ NAS |
 | `engine` | Low-level `eugr`, `llama`, or `ds4` (bypass profile switcher) |
 | `gpu` | Metrics JSON |
@@ -103,6 +103,16 @@ spark recipe list
 spark recipe scaffold google/gemma-4-12b-it llamacpp
 spark models verify set google/gemma-4-12b-it works
 spark models inventory
+
+# Solo user: download golden weights from HF (no NAS)
+spark models fetch yuxinlu1/mellum2-12b-opus-thinking --dry-run
+spark models fetch yuxinlu1/mellum2-12b-opus-thinking
+
+# Full golden workflow (golden → ctx ladder → kv sweep)
+spark models golden yuxinlu1/mellum2-12b-opus-thinking
+
+# Matrix completeness report
+/opt/spark/venv/bin/python3 /opt/spark/scripts/spark-golden-matrix-status.py
 ```
 
 ### Don't

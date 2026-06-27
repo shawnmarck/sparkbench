@@ -1434,6 +1434,10 @@ def main() -> int:
     profile_benchmarks = load_profile_benchmarks()
     attach_spark_verify(entries, load_spark_verification(), profile_benchmarks)
     golden_by_inv, _ = load_golden_recipe_maps()
+    for entry in entries:
+        rel = entry.get("rel_path") or ""
+        entry["is_golden"] = rel in golden_by_inv
+        entry["golden_profile"] = golden_by_inv.get(rel)
     profile_map = load_inference_profile_map()
     attach_inference_profiles(entries, profile_map)
     attach_speculative_sidecars(entries, profile_map)

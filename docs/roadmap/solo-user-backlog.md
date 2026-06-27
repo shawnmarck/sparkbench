@@ -6,11 +6,11 @@ This index tracks the four vision gaps and high-leverage next steps. Work **one 
 
 | Seq | Task | Gap / leverage | Status | Doc |
 |-----|------|----------------|--------|-----|
-| 8 | First Spark setup guide | Onboarding | proposed | [TASK-011](tasks/TASK-011-first-spark-setup.md) |
-| 9 | `spark models fetch` | Gap 1 — shelf-less download | proposed | [TASK-012](tasks/TASK-012-spark-models-fetch.md) |
-| 10 | Golden badge in portal | Gap 2 — discoverability | proposed | [TASK-013](tasks/TASK-013-golden-badge-portal.md) |
-| 11 | Fleet golden matrix in git | Gap 3 — perf completeness | proposed | [TASK-014](tasks/TASK-014-fleet-golden-matrix.md) |
-| 12 | Recipe perf git policy | Gap 4 — verify vs recipes + sync doc | proposed | [TASK-015](tasks/TASK-015-recipe-perf-git-policy.md) |
+| 8 | First Spark setup guide | Onboarding | done | [TASK-011](tasks/TASK-011-first-spark-setup.md) |
+| 9 | `spark models fetch` | Gap 1 — shelf-less download | done | [TASK-012](tasks/TASK-012-spark-models-fetch.md) |
+| 10 | Golden badge in portal | Gap 2 — discoverability | done | [TASK-013](tasks/TASK-013-golden-badge-portal.md) |
+| 11 | Fleet golden matrix in git | Gap 3 — perf completeness | done | [TASK-014](tasks/TASK-014-fleet-golden-matrix.md) |
+| 12 | Recipe perf git policy | Gap 4 — verify vs recipes + sync doc | done | [TASK-015](tasks/TASK-015-recipe-perf-git-policy.md) |
 
 ## Vision gap mapping
 

@@ -272,11 +272,11 @@ Benchmarks are **per recipe** (profile), not per model weights — same `invento
 
 | Seq | Task | Status | One PR | Doc |
 |-----|------|--------|--------|-----|
-| 8 | First Spark setup guide | proposed | yes | [TASK-011](roadmap/tasks/TASK-011-first-spark-setup.md) |
-| 9 | `spark models fetch` (HF golden download) | proposed | yes | [TASK-012](roadmap/tasks/TASK-012-spark-models-fetch.md) |
-| 10 | Golden badge + GB10 verified UX | proposed | yes | [TASK-013](roadmap/tasks/TASK-013-golden-badge-portal.md) |
-| 11 | Fleet golden matrix committed to git | proposed | yes | [TASK-014](roadmap/tasks/TASK-014-fleet-golden-matrix.md) |
-| 12 | Recipe perf git policy + sync runbook | proposed | yes | [TASK-015](roadmap/tasks/TASK-015-recipe-perf-git-policy.md) |
+| 8 | First Spark setup guide | done | yes | [TASK-011](roadmap/tasks/TASK-011-first-spark-setup.md) |
+| 9 | `spark models fetch` (HF golden download) | done | yes | [TASK-012](roadmap/tasks/TASK-012-spark-models-fetch.md) |
+| 10 | Golden badge + GB10 verified UX | done | yes | [TASK-013](roadmap/tasks/TASK-013-golden-badge-portal.md) |
+| 11 | Fleet golden matrix committed to git | done | yes | [TASK-014](roadmap/tasks/TASK-014-fleet-golden-matrix.md) |
+| 12 | Recipe perf git policy + sync runbook | done | yes | [TASK-015](roadmap/tasks/TASK-015-recipe-perf-git-policy.md) |
 
 **How to run one main agent:** point it at `docs/ROADMAP.md` + `docs/roadmap/README.md`. It picks **Seq 1**, implements the full task file, opens **one PR** to `origin`, stops. After you review/merge and deploy, it picks **Seq 2**, and so on. No parallel PRs; no splitting a task across PRs.
 

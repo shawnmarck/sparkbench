@@ -40,8 +40,11 @@ sleep 1
 systemctl restart spark-client-activity.service
 
 # Regenerate nginx config (common.sh includes /api/activity location)
-write_nginx_portal_site
+maybe_write_nginx_portal_site
 
 sleep 1
 curl -fsS "http://127.0.0.1:8769/api/activity" >/dev/null
+if ! install_batch_active; then
+  curl -fsS "http://127.0.0.1/api/activity?window=1h" >/dev/null
+fi
 echo "OK: client activity API at http://sparky/api/activity"

@@ -1,4 +1,6 @@
 # Shared install helpers — source from install/*.sh (do not execute directly).
+# SPARK_INSTALL_BATCH=1 — set by install/spark-install during bundled runs; modules call
+# maybe_write_nginx_portal_site instead of write_nginx_portal_site until finalize.
 SPARK_ROOT="${SPARK_ROOT:-/opt/spark}"
 if [[ -z "${SPARK_USER:-}" ]]; then
   if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]]; then
@@ -16,6 +18,18 @@ SPARK_SHELF_MOUNT="${SPARK_SHELF_MOUNT:-/mnt/model-shelf}"
 
 shelf_mounted() {
   mountpoint -q "${SPARK_SHELF_MOUNT}" 2>/dev/null
+}
+
+install_batch_active() {
+  [[ "${SPARK_INSTALL_BATCH:-}" == "1" ]]
+}
+
+# Defer nginx rewrite when spark-install batches modules (finalize once at end).
+maybe_write_nginx_portal_site() {
+  if install_batch_active; then
+    return 0
+  fi
+  write_nginx_portal_site
 }
 
 write_nginx_portal_site() {

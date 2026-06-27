@@ -11,6 +11,8 @@ sudo bash install/spark-install status    # systemd + HTTP health
 
 Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_USER`, `SPARK_HOST`, `SPARK_LAN_IP` — see `common.sh`.
 
+Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer nginx rewrites; the orchestrator calls `write_nginx_portal_site` once at the end. Standalone numbered scripts still refresh nginx immediately.
+
 ## Orchestrator targets
 
 | Target | Purpose |

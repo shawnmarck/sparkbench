@@ -29,8 +29,11 @@ systemctl daemon-reload
 systemctl enable spark-gpu-metrics.service
 systemctl restart spark-gpu-metrics.service
 
-write_nginx_portal_site
+maybe_write_nginx_portal_site
 
 sleep 1
-curl -fsS "http://127.0.0.1/api/gpu" >/dev/null
+curl -fsS "http://127.0.0.1:8765/api/gpu" >/dev/null
+if ! install_batch_active; then
+  curl -fsS "http://127.0.0.1/api/gpu" >/dev/null
+fi
 echo "OK: GPU metrics API at http://sparky/api/gpu"

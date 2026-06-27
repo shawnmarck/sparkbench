@@ -40,9 +40,11 @@ systemctl daemon-reload
 systemctl enable spark-hf-api.service
 systemctl restart spark-hf-api.service
 
-write_nginx_portal_site
+maybe_write_nginx_portal_site
 
 sleep 1
 curl -fsS "http://127.0.0.1:8768/api/hf/status" >/dev/null
-curl -fsS "http://127.0.0.1/api/hf/status" >/dev/null
+if ! install_batch_active; then
+  curl -fsS "http://127.0.0.1/api/hf/status" >/dev/null
+fi
 echo "OK: HF API at http://sparky/api/hf/status"

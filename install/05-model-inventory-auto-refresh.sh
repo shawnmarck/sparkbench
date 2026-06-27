@@ -18,7 +18,7 @@ chmod 1777 "${SPARK_ROOT}/run"
 # CLI: install/20-spark-cli.sh → spark models inventory
 
 echo "==> nginx: portal + API proxies (via common.sh)"
-write_nginx_portal_site
+maybe_write_nginx_portal_site
 
 echo "==> Install inotify-tools (optional watcher)"
 export DEBIAN_FRONTEND=noninteractive

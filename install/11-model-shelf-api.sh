@@ -36,10 +36,13 @@ systemctl daemon-reload
 systemctl enable spark-shelf-api.service
 systemctl restart spark-shelf-api.service
 
-write_nginx_portal_site
+maybe_write_nginx_portal_site
 
 "${TARGET}/scripts/spark-inventory-build" || "${TARGET}/venv/bin/python" "${TARGET}/scripts/spark-inventory-build.py"
 
 sleep 1
-curl -fsS "http://127.0.0.1/api/shelf/status" >/dev/null
+curl -fsS "http://127.0.0.1:8766/api/shelf/status" >/dev/null
+if ! install_batch_active; then
+  curl -fsS "http://127.0.0.1/api/shelf/status" >/dev/null
+fi
 echo "OK: shelf API at http://sparky/api/shelf/status"

@@ -42,10 +42,13 @@ fuser -k 8767/tcp 2>/dev/null || true
 sleep 1
 systemctl restart spark-inference-api.service
 
-write_nginx_portal_site
+maybe_write_nginx_portal_site
 
 sleep 1
-curl -fsS "http://127.0.0.1/api/inference/status" >/dev/null
+curl -fsS "http://127.0.0.1:8767/api/inference/status" >/dev/null
+if ! install_batch_active; then
+  curl -fsS "http://127.0.0.1/api/inference/status" >/dev/null
+fi
 echo "OK: inference API at http://sparky/api/inference/status"
 
 bash "${SCRIPT_DIR}/18-inference-api-watch.sh"

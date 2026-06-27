@@ -22,6 +22,29 @@ run_module() {
   bash "$path"
 }
 
+finalize_nginx_portal_site() {
+  echo
+  echo "==> nginx portal site (batch finalize)"
+  write_nginx_portal_site
+}
+
+verify_core_nginx_routes() {
+  echo
+  echo "==> verify nginx API routes"
+  curl -fsS "http://127.0.0.1/api/gpu" >/dev/null
+  curl -fsS "http://127.0.0.1/api/shelf/status" >/dev/null
+  curl -fsS "http://127.0.0.1/api/hf/status" >/dev/null
+  curl -fsS "http://127.0.0.1/api/inference/status" >/dev/null
+  echo "OK: nginx API routes"
+}
+
+verify_gateway_nginx_routes() {
+  echo
+  echo "==> verify nginx activity route"
+  curl -fsS "http://127.0.0.1/api/activity?window=1h" >/dev/null
+  echo "OK: nginx /api/activity"
+}
+
 usage() {
   cat <<'EOF'
 spark-install — SparkBench host bootstrap
@@ -49,6 +72,7 @@ Typical fresh box:
   sudo bash install/spark-install gateway
 
 Env: SPARK_ROOT, SPARK_STAGING, SPARK_USER, SPARK_HOST, SPARK_LAN_IP — see install/common.sh
+     SPARK_INSTALL_BATCH=1 (set internally by core/gateway bundles; defers nginx until finalize)
 
 Legacy numbered scripts (install/03-….sh) still work; this orchestrator is the supported path.
 EOF
@@ -56,6 +80,7 @@ EOF
 
 cmd_core() {
   echo "spark-install: core (portal + model shelf + HTTP APIs + CLI)"
+  export SPARK_INSTALL_BATCH=1
   run_module 01-netdata-portal.sh
   run_module 20-spark-cli.sh
   run_module 03-model-shelf-layout.sh
@@ -67,6 +92,9 @@ cmd_core() {
   run_module 21-hf-api.sh
   run_module 17-inference-api.sh
   run_module 12-model-removal-cron.sh
+  finalize_nginx_portal_site
+  verify_core_nginx_routes
+  unset SPARK_INSTALL_BATCH
   echo
   echo "OK: core install complete — http://${SPARK_HOST}/"
   echo "Next: sudo bash install/spark-install engine eugr   (or llama / ds4)"
@@ -105,8 +133,12 @@ cmd_engine() {
 
 cmd_gateway() {
   echo "spark-install: gateway (:9000/v1 + client activity API)"
+  export SPARK_INSTALL_BATCH=1
   run_module 23-inference-gateway.sh
   run_module 24-client-activity-api.sh
+  finalize_nginx_portal_site
+  verify_gateway_nginx_routes
+  unset SPARK_INSTALL_BATCH
   echo "OK: gateway at http://${SPARK_HOST}:9000/v1"
 }
 

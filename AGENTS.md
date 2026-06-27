@@ -2,7 +2,7 @@
 
 Quick orientation for coding agents. Humans: start at [README.md](README.md).
 
-Extended workflows (install, CLI, HTTP API, portal): [`.claude/skills/sparkbench/SKILL.md`](.claude/skills/sparkbench/SKILL.md) — also at `.cursor/skills/sparkbench/` when cloned.
+Extended workflows: [docs/guides/installation-instructions.md](docs/guides/installation-instructions.md) (also in `.claude/skills/sparkbench/` when cloned).
 
 ## What this is
 

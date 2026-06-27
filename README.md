@@ -41,7 +41,15 @@ If you own a Spark, run this. If you're considering one, check the [leaderboard]
 
 ## Quickstart
 
-**Coding agents:** [AGENTS.md](AGENTS.md)
+### For LLM Agents
+
+Fetch the full guide and follow it step by step:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/main/docs/guides/installation-instructions.md
+```
+
+### For Humans
 
 ```bash
 git clone https://github.com/shawnmarck/sparkbench.git /opt/spark
@@ -158,7 +166,8 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trust
 
 | Path                                                                                  | Topic                                            |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| [AGENTS.md](AGENTS.md)                                                                | Agent manual: layout, rules, install, CLI, API, UI |
+| [AGENTS.md](AGENTS.md)                                                                | Agent manual: layout, rules, code touchpoints    |
+| [docs/guides/installation-instructions.md](docs/guides/installation-instructions.md)  | Full install + ops guide (LLM agents fetch via README) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |
 | [docs/reference/inference-stack.md](docs/reference/inference-stack.md)                | Inference control plane spec                     |
 | [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md)          | Bench v2: long-ctx + tool-use methodology          |

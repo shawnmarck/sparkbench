@@ -7,8 +7,8 @@ SparkBench is the tool you run on your own DGX Spark. The public site at [sparkb
 Clone the repo and deploy to your Spark machine:
 
 ```bash
-git clone https://github.com/shawnmarck/sparky-dashboard
-cd sparky-dashboard
+git clone https://github.com/shawnmarck/sparkbench
+cd sparkbench
 ./scripts/deploy-sparky.sh
 ```
 

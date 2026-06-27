@@ -52,7 +52,7 @@ flowchart TB
 | Layer | Path | Role | Git on sparky |
 |-------|------|------|---------------|
 | Dev clone | `~/projects/sparky` on techno | Primary Cursor agent; commit, push | — |
-| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth for **shared code** | — |
+| Remote | `github.com/shawnmarck/sparkbench` | Source of truth for **shared code** | — |
 | Install | `/opt/spark` on sparky | Runtime + optional **local dev** | pull / rebase / merge |
 | **Runtime data** | `/opt/spark/data/*.yaml` | Live audit/bench state | **`skip-worktree`** — never overwrite from git |
 

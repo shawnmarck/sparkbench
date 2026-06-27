@@ -1,5 +1,8 @@
 #!/opt/spark/venv/bin/python3
-"""Golden inventory audit — one optimized recipe + bench v2 + shelf per model."""
+"""Golden inventory audit — phase 1 of golden workflow (optimize + bench v2 + works).
+
+Full workflow (golden + kv sweep + ctx ladder): scripts/spark-golden-workflow.py
+"""
 from __future__ import annotations
 
 import argparse

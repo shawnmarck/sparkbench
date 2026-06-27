@@ -27,4 +27,21 @@ context:
       label: Long ctx (viability 781k)
       ctx: 800000
       kv: fp8
+  ctx_ladder:
+    version: '1.0'
+    tested_at: '2026-06-27T03:03:24.462750+00:00'
+    golden_ctx: 799744
+    native_ctx: 1048576
+    fill_ratio: 0.75
+    kv: fp8
+    max_viable_ctx: null
+    rungs:
+    - ctx: 1048576
+      kv: fp8
+      fill_target: 707789
+      fill_ratio: 0.75
+      status: bench_fail
+      loaded_ctx: 1048576
+      error: 'HTTP 400: {"error":{"message":"\"auto\" tool choice requires --enable-auto-tool-choice
+        and --tool-call-parser to be set","type":"BadRequestError","param":null,"code":400}}'
 promoted_at: '2026-06-27T02:41:50.418800+00:00'

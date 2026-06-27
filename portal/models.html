@@ -1463,6 +1463,21 @@
       return html;
     }
 
+    function renderKvSweepPanel(sweep) {
+      const rows = sweep && Array.isArray(sweep.results) ? sweep.results : [];
+      if (!rows.length) return '';
+      const ctx = sweep.golden_ctx;
+      const body = rows.map((r) => {
+        const st = r.status || 'pending';
+        const cls = st === 'ok' ? 'status-ready' : st === 'load_fail' ? 'status-failed' : 'status-wip';
+        const tok = r.tok_s != null ? `${Math.round(r.tok_s)} tok/s` : '—';
+        return `<tr><td>${esc(r.kv || '—')}</td><td>${fmtCtx(ctx)}</td><td><span class="badge ${cls}">${esc(st)}</span></td><td>${tok}</td></tr>`;
+      }).join('');
+      const when = sweep.tested_at ? sweep.tested_at.slice(0, 10) : '';
+      const meta = `golden ctx ${fmtCtx(ctx)} · fill ${Math.round((sweep.fill_ratio || 0.75) * 100)}%`;
+      return `<details class="ctx-ladder"><summary>KV sweep${when ? ' (' + when + ')' : ''}</summary><div class="verify-note">${esc(meta)}</div><table class="ctx-ladder-table"><thead><tr><th>KV</th><th>Ctx</th><th>Status</th><th>Decode</th></tr></thead><tbody>${body}</tbody></table></details>`;
+    }
+
     function renderCtxLadderPanel(ladder) {
       if (!ladder || !Array.isArray(ladder.rungs) || !ladder.rungs.length) return '';
       const maxV = ladder.max_viable_ctx;
@@ -1528,7 +1543,7 @@
         const runCount = p.bench_run_count || 0;
         const histSummary = runCount ? `Benchmark history (${runCount})` : 'Benchmark history';
         const histOpen = benchHistoryOpen.has(p.id) ? ' open' : '';
-        const ladderPanel = renderCtxLadderPanel(p.ctx_ladder);
+        const ladderPanel = renderCtxLadderPanel(p.ctx_ladder) + renderKvSweepPanel(p.kv_sweep);
         return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong><code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div><div class="inf-profile-actions">${lifeBadge(lc)}${recipeFeatureBadges(p)}${tier}${tokBadge}${actions}</div></div>${ladderPanel}<details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary><div class="bench-history-panel"></div></details></div>`;
       }).join('');
       const create = onDisk && !isSidecarModel(m)

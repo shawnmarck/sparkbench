@@ -16,7 +16,7 @@ Groups:
   status                 GPU + inference overview
   inference list|status|up|down|logs|bench
   recipe list|scaffold|testing|works|promote|discard   (Model Lab)
-  models verify|removal|inventory
+  models verify|removal|inventory|golden
   shelf pull|push|rm|status
   engine eugr|llama|ds4 <up|down|logs|status|build>
   gateway                 Unified :9000/v1 front door
@@ -143,6 +143,7 @@ spark models — inventory verification
   verify list                All verified models
   verify pending               Models awaiting verification
   removal <lab/slug> on|off [--shelf]  Queue or cancel removal (local; --shelf also queues NAS)
+  golden <lab/slug> [lab/slug...]   Full golden workflow (bench + kv sweep + ctx ladder)
   inventory                    Rebuild portal/models.json
 EOF
 }
@@ -431,8 +432,23 @@ cmd_models() {
     inventory)
       run "${LIB}/spark-inventory-build" "$@"
       ;;
+    golden)
+      shift
+      [[ $# -ge 1 ]] || die "usage: spark models golden <lab/slug> [lab/slug...] [--skip-shelf] [--resume]"
+      paths=()
+      extra=()
+      for arg in "$@"; do
+        case "$arg" in
+          --*) extra+=("$arg") ;;
+          *) paths+=("$arg") ;;
+        esac
+      done
+      [[ ${#paths[@]} -ge 1 ]] || die "usage: spark models golden <lab/slug> [lab/slug...]"
+      only=$(IFS=,; echo "${paths[*]}")
+      run_py "${LIB}/spark-golden-workflow.py" --only "$only" --skip-shelf "${extra[@]}"
+      ;;
     *)
-      die "unknown models command: $sub (try: verify, removal, inventory)"
+      die "unknown models command: $sub (try: verify, removal, inventory, golden)"
       ;;
   esac
 }

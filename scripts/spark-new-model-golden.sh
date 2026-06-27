@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Run golden audit + bench v2 for one or more inventory paths.
+# Full golden workflow for one or more inventory paths (golden + kv sweep + ctx ladder).
 set -euo pipefail
 ROOT="${SPARK_ROOT:-/opt/spark}"
 PY="${ROOT}/venv/bin/python3"
-AUDIT="${ROOT}/scripts/golden-inventory-audit.py"
-LOG="${ROOT}/logs/golden-audit.log"
+WORKFLOW="${ROOT}/scripts/spark-golden-workflow.py"
+LOG="${ROOT}/logs/golden-workflow.log"
 
 if [[ $# -lt 1 ]]; then
   echo "usage: spark-new-model-golden.sh <lab/slug> [lab/slug ...]" >&2
@@ -13,5 +13,5 @@ if [[ $# -lt 1 ]]; then
 fi
 
 ONLY=$(IFS=,; echo "$*")
-echo "Golden audit --only ${ONLY} (--skip-shelf)"
-exec "${PY}" "${AUDIT}" --only "${ONLY}" --skip-shelf
+echo "Golden workflow --only ${ONLY} (--skip-shelf)"
+exec "${PY}" "${WORKFLOW}" --only "${ONLY}" --skip-shelf

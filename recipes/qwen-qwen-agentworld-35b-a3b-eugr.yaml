@@ -14,7 +14,6 @@ notes: Scaffolded 2026-06-25 from /models/qwen/qwen-agentworld-35b-a3b. Mark tes
   switch, bench, then promote. Viability ctx 256000 verified 2026-06-25. Load + smoke
   at 256k ctx, no bench.
 eugr_recipe: /opt/spark/services/eugr-qwen-qwen-agentworld-35b-a3b-eugr.yaml
-_path: /opt/spark/recipes/qwen-qwen-agentworld-35b-a3b-eugr.yaml
 context:
   default: 256000
   native: 262144
@@ -28,3 +27,4 @@ context:
       label: Long ctx (viability 250k)
       ctx: 256000
       kv: fp8
+promoted_at: '2026-06-27T02:48:14.944253+00:00'

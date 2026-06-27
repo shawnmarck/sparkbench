@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run golden audit one model at a time (survives agent disconnect; logs per model).
+# Run full golden workflow one model at a time (survives agent disconnect).
 set -euo pipefail
 ROOT="${SPARK_ROOT:-/opt/spark}"
 PY="${ROOT}/venv/bin/python3"
-AUDIT="${ROOT}/scripts/golden-inventory-audit.py"
+WORKFLOW="${ROOT}/scripts/spark-golden-workflow.py"
 LOG="${ROOT}/logs/fleet-audit-daemon.log"
 PIDFILE="${ROOT}/run/fleet-audit-daemon.pid"
 
@@ -32,24 +32,22 @@ if [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
 fi
 
 run_queue() {
-  log "=== fleet audit daemon started ==="
+  log "=== fleet golden workflow daemon started ==="
   /usr/local/bin/spark inference down 2>/dev/null || true
   pkill -f 'llama-server.*--port 8081' 2>/dev/null || true
   sleep 2
   for inv in "${MODELS[@]}"; do
-    log ">>> audit $inv"
-    if ! "$PY" "$AUDIT" --only "$inv" --skip-shelf --resume >> "$LOG" 2>&1; then
-      log "!!! audit failed for $inv (continuing)"
+    log ">>> golden workflow $inv"
+    if ! "$PY" "$WORKFLOW" --only "$inv" --skip-shelf --resume >> "$LOG" 2>&1; then
+      log "!!! golden workflow failed for $inv (continuing)"
     fi
     /usr/local/bin/spark inference down 2>/dev/null || true
     sleep 3
   done
-  log "=== golden audits done; starting fleet remediate phases ==="
-  "$PY" "${ROOT}/scripts/spark-fleet-remediate.py" --only-phase ladder --skip-shelf >> "$LOG" 2>&1 || true
-  "$PY" "${ROOT}/scripts/spark-fleet-remediate.py" --only-phase drafts --skip-shelf >> "$LOG" 2>&1 || true
+  log "=== fleet shelf push phase ==="
   "$PY" "${ROOT}/scripts/spark-fleet-remediate.py" --only-phase shelf >> "$LOG" 2>&1 || true
   /usr/local/bin/spark models inventory >> "$LOG" 2>&1 || true
-  log "=== fleet audit daemon finished ==="
+  log "=== fleet golden workflow daemon finished ==="
   rm -f "$PIDFILE"
 }
 

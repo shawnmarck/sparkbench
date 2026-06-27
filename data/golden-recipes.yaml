@@ -4,17 +4,26 @@
 
 bench_standard: "2.0"
 
+# Golden recipe map — one production profile per inventory path
+# Used by scripts/golden-inventory-audit.py
+# KV sweep: llamacpp + eugr only; skipped for deepseek/* and ds4 (see spark-golden-bench.py)
+
+bench_standard: "2.0"
+
+# Permanently hidden from sparkbench.dev leaderboard (models may still run locally).
+leaderboard_exclude:
+  - microsoft/phi-4
+  - nousresearch/hermes-4-14b
+  - deepseek-ai/deepseek-r1-distill-qwen-32b
+
 golden:
   nvidia/qwen3.6-35b-a3b: opencode-qwen36-250k
   qwen/qwen3.6-27b: opencode-qwen27-dflash-262k
   antirez/deepseek-v4-flash: antirez-deepseek-v4-flash-ds4
-  deepseek-ai/deepseek-r1-distill-qwen-32b: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
   google/diffusiongemma-26b-a4b-it: google-diffusiongemma-26b-a4b-it-eugr
   google/gemma-4-12b-it: google-gemma-4-12b-it-llama
   google/gemma-4-26b-a4b-it: google-gemma-4-26b-a4b-it-eugr
   kaitchup/qwen3.6-27b: kaitchup-qwen3-6-27b-llama
-  microsoft/phi-4: microsoft-phi-4-eugr
-  nousresearch/hermes-4-14b: nousresearch-hermes-4-14b-eugr
   nvidia/qwen3-30b-a3b: nvidia-qwen3-30b-a3b-eugr
   qwen/qwen3-coder-next: qwen-qwen3-coder-next-eugr
   rdtand/qwen3.6-27b: rdtand-qwen3-6-27b-eugr

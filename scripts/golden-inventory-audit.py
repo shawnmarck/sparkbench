@@ -6,6 +6,7 @@ Full workflow (golden + kv sweep + ctx ladder): scripts/spark-golden-workflow.py
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import subprocess
@@ -33,13 +34,10 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "nvidia/qwen3.6-35b-a3b": "opencode-qwen36-250k",
     "qwen/qwen3.6-27b": "opencode-qwen27-dflash-262k",
     "antirez/deepseek-v4-flash": "antirez-deepseek-v4-flash-ds4",
-    "deepseek-ai/deepseek-r1-distill-qwen-32b": "deepseek-ai-deepseek-r1-distill-qwen-32b-eugr",
     "google/diffusiongemma-26b-a4b-it": "google-diffusiongemma-26b-a4b-it-eugr",
     "google/gemma-4-12b-it": "google-gemma-4-12b-it-llama",
     "google/gemma-4-26b-a4b-it": "google-gemma-4-26b-a4b-it-eugr",
     "kaitchup/qwen3.6-27b": "kaitchup-qwen3-6-27b-llama",
-    "microsoft/phi-4": "microsoft-phi-4-eugr",
-    "nousresearch/hermes-4-14b": "nousresearch-hermes-4-14b-eugr",
     "nvidia/qwen3-30b-a3b": "nvidia-qwen3-30b-a3b-eugr",
     "qwen/qwen3-coder-next": "qwen-qwen3-coder-next-eugr",
     "rdtand/qwen3.6-27b": "rdtand-qwen3-6-27b-eugr",
@@ -75,7 +73,6 @@ DEPRECATED_PROFILES = [
 ]
 
 ARCH_FIXES: dict[str, str] = {
-    "microsoft/phi-4": "dense",
     "qwen/qwen3-coder-next": "dense",
     "saricles/qwen3-coder-next": "dense",
     "qwen/qwen-agentworld-35b-a3b": "moe",
@@ -433,6 +430,15 @@ def promote_after_bench(core: Any, profile_id: str, dry_run: bool) -> None:
     core.trigger_inventory_rebuild()
 
 
+def _load_site_publish():
+    spec = importlib.util.spec_from_file_location(
+        "site_publish", ROOT / "scripts" / "spark-site-publish.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def process_model(
     core: Any,
     path: str,
@@ -527,7 +533,11 @@ def process_model(
             return result
 
         promote_after_bench(core, profile_id, dry_run=False)
-        run(["/usr/local/bin/spark", "models", "verify", "set", path, "works"], timeout=120)
+        recipe = core.load_recipe(profile_id)
+        try:
+            _load_site_publish().ensure_catalog_entry(path, recipe, dry_run=False)
+        except Exception as exc:
+            log(f"WARN catalog scaffold {path}: {exc}")
         run(["/usr/local/bin/spark", "models", "inventory"], timeout=300)
 
         m = next((x for x in inventory_models() if inv_path(x) == path), {})

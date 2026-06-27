@@ -245,6 +245,15 @@ def probe_cell(
     return row
 
 
+def _load_site_publish():
+    spec = importlib.util.spec_from_file_location(
+        "site_publish", ROOT / "scripts" / "spark-site-publish.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def merge_bench_matrix(
     profile_id: str,
     *,
@@ -252,7 +261,9 @@ def merge_bench_matrix(
     kv_sweep: list[dict[str, Any]] | None = None,
     ctx_ladder: dict[str, Any] | None = None,
     fill_ratio: float = FILL_RATIO,
-) -> None:
+    publish_site: bool = True,
+    skip_site_publish: bool = False,
+) -> dict[str, Any] | None:
     """Persist unified bench_matrix on recipe.context."""
     recipe = load_recipe(profile_id)
     block = recipe.setdefault("context", {})
@@ -271,3 +282,14 @@ def merge_bench_matrix(
     elif block.get("ctx_ladder"):
         matrix["ctx_ladder"] = block["ctx_ladder"]
     save_recipe(profile_id, recipe)
+
+    publish_result = None
+    if golden_cell is not None and publish_site and not skip_site_publish:
+        try:
+            sp = _load_site_publish()
+            publish_result = sp.publish_golden_cell_to_site(
+                profile_id, golden_cell, recipe
+            )
+        except Exception as exc:
+            print(f"WARN site publish {profile_id}: {exc}", flush=True)
+    return publish_result

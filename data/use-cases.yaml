@@ -34,7 +34,4 @@ models:
   google/diffusiongemma-26b-a4b-it:           [Multimodal, Reasoning]
 
   # --- Specialty / reasoning-tuned ---
-  microsoft/phi-4:                            [Reasoning, General]
-  nousresearch/hermes-4-14b:                  [Agents, Reasoning]
-  deepseek-ai/deepseek-r1-distill-qwen-32b:   [Reasoning]
   stepfun-ai/step-3.7-flash:                  [Multimodal, Agents]

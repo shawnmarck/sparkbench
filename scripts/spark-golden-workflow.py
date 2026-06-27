@@ -125,6 +125,7 @@ def run_golden_phase(
     *,
     skip_shelf: bool,
     resume: bool,
+    skip_site_publish: bool = False,
 ) -> dict[str, Any]:
     args = [str(PY), str(AUDIT), "--only", path]
     if skip_shelf:
@@ -159,7 +160,11 @@ def run_golden_phase(
     if entry.get("status") == "ok":
         cell = golden_cell_from_audit_result(entry)
         if cell:
-            _merge_golden_cell(profile_id, cell)
+            pub = _merge_golden_cell(
+                profile_id, cell, skip_site_publish=skip_site_publish
+            )
+            if pub:
+                entry["site_publish"] = pub
     return entry
 
 
@@ -172,9 +177,18 @@ def _load_golden_bench():
     return mod
 
 
-def _merge_golden_cell(profile_id: str, cell: dict[str, Any]) -> None:
+def _merge_golden_cell(
+    profile_id: str,
+    cell: dict[str, Any],
+    *,
+    skip_site_publish: bool = False,
+) -> dict[str, Any] | None:
     gb = _load_golden_bench()
-    gb.merge_bench_matrix(profile_id, golden_cell=cell)
+    return gb.merge_bench_matrix(
+        profile_id,
+        golden_cell=cell,
+        skip_site_publish=skip_site_publish,
+    )
 
 
 def run_kv_sweep_phase(profile_id: str, *, force: bool) -> dict[str, Any]:
@@ -260,6 +274,7 @@ def process_model(
     force: bool,
     only_phase: str,
     prior: dict[str, Any] | None,
+    skip_site_publish: bool = False,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "inventory_path": path,
@@ -279,7 +294,11 @@ def process_model(
             golden_ok = True
         else:
             result["phases"]["golden"] = run_golden_phase(
-                path, profile_id, skip_shelf=True, resume=resume
+                path,
+                profile_id,
+                skip_shelf=True,
+                resume=resume,
+                skip_site_publish=skip_site_publish,
             )
             golden_ok = result["phases"]["golden"].get("status") == "ok"
     if only_phase == "golden":
@@ -328,7 +347,42 @@ def process_model(
         result["status"] = "partial"
     else:
         result["status"] = "complete"
+
+    if not skip_site_publish:
+        result["site_publish"] = _publish_site_for_model(path, profile_id, result)
     return result
+
+
+def _publish_site_for_model(
+    path: str,
+    profile_id: str,
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    """Publish golden_cell headlines if not already done in golden phase."""
+    prior = (result.get("phases") or {}).get("golden", {}).get("site_publish") or {}
+    if prior.get("published"):
+        return {
+            "site_published": True,
+            "tok_s": prior.get("tok_s"),
+            "profile": profile_id,
+            "reason": prior.get("reason", "golden_phase"),
+        }
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "site_publish", ROOT / "scripts/spark-site-publish.py"
+        )
+        sp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sp)
+        pub = sp.publish_from_profile(profile_id)
+        return {
+            "site_published": bool(pub.get("published")),
+            "tok_s": pub.get("tok_s"),
+            "profile": profile_id,
+            "reason": pub.get("reason"),
+        }
+    except Exception as exc:
+        log(f"WARN site publish {path}: {exc}")
+        return {"site_published": False, "profile": profile_id, "reason": str(exc)}
 
 
 def write_report(report: dict[str, Any]) -> None:
@@ -343,6 +397,7 @@ def workflow(
     skip_shelf: bool = False,
     skip_kv_sweep: bool = False,
     skip_ctx_ladder: bool = False,
+    skip_site_publish: bool = False,
     resume: bool = False,
     force: bool = False,
     only_phase: str = "all",
@@ -407,6 +462,7 @@ def workflow(
             force=force,
             only_phase=only_phase,
             prior=prior_by_path.get(path),
+            skip_site_publish=skip_site_publish,
         )
         report["models"].append(entry)
         write_report(report)
@@ -415,10 +471,19 @@ def workflow(
     complete = sum(1 for m in report["models"] if m.get("status") == "complete")
     partial = sum(1 for m in report["models"] if m.get("status") == "partial")
     failed = sum(1 for m in report["models"] if m.get("status") == "failed")
-    report["summary"] = {"complete": complete, "partial": partial, "failed": failed, "total": len(report["models"])}
+    site_published = sum(
+        1 for m in report["models"] if (m.get("site_publish") or {}).get("site_published")
+    )
+    report["summary"] = {
+        "complete": complete,
+        "partial": partial,
+        "failed": failed,
+        "total": len(report["models"]),
+        "site_published": site_published,
+    }
     write_report(report)
     run([SPARK, "models", "inventory"], timeout=300)
-    log(f"DONE complete={complete} partial={partial} failed={failed}")
+    log(f"DONE complete={complete} partial={partial} failed={failed} site_published={site_published}")
     return report
 
 
@@ -429,6 +494,11 @@ def main() -> int:
     parser.add_argument("--skip-shelf", action="store_true")
     parser.add_argument("--skip-kv-sweep", action="store_true")
     parser.add_argument("--skip-ctx-ladder", action="store_true")
+    parser.add_argument(
+        "--skip-site-publish",
+        action="store_true",
+        help="Do not write model-verification / inference-benchmarks headlines",
+    )
     parser.add_argument("--resume", action="store_true", help="Skip phases already ok in report")
     parser.add_argument("--force", action="store_true", help="Re-run kv sweep / ctx ladder")
     parser.add_argument(
@@ -449,6 +519,7 @@ def main() -> int:
         skip_shelf=args.skip_shelf,
         skip_kv_sweep=args.skip_kv_sweep,
         skip_ctx_ladder=args.skip_ctx_ladder,
+        skip_site_publish=args.skip_site_publish,
         resume=args.resume,
         force=args.force,
         only_phase=args.only_phase,

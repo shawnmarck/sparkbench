@@ -35,6 +35,10 @@ secrets/
 /etc/spark/
 host.env
 
+# Per-host overrides — never commit (see local/README.example)
+local/*
+!local/README.example
+
 # OS / editor
 .DS_Store
 *~

@@ -1,84 +1,93 @@
 models:
   nvidia/qwen3.6-35b-a3b:
     spark_status: works
-    tok_s: 73.5
+    tok_s: 60.0
     tok_s_engine: eugr
-    tok_s_profile: qwen36-nvfp4
-    note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
-    updated_at: '2026-06-22T02:48:26.367366+00:00'
+    tok_s_profile: opencode-qwen36-250k
+    note: "golden ?/? @ 60.0 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    updated_at: '2026-06-27T07:22:58.864791+00:00'
     engine: eugr
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
-    note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
-    updated_at: '2026-06-22T02:48:26.395199+00:00'
-    tok_s: 48.6
+    note: "golden ?/? @ 38.8 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    updated_at: '2026-06-27T07:23:09.067728+00:00'
+    tok_s: 38.8
     tok_s_engine: llamacpp
     tok_s_profile: qwen36-q4-llama
     engine: llamacpp
   yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
     spark_status: works
     engine: llamacpp
-    tok_s: 18.6
+    tok_s: 16.7
     tok_s_engine: llamacpp
     tok_s_profile: gemma4-12b-coder-q4
-    note: bench 13 tok in 0.7s
-    updated_at: '2026-06-21T09:01:17.761172+00:00'
+    note: "golden ?/? @ 16.7 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    updated_at: '2026-06-27T07:23:09.278735+00:00'
   google/gemma-4-12b-it:
     spark_status: works
-    updated_at: '2026-06-22T02:48:57.986857+00:00'
-    tok_s: 21.1
+    updated_at: '2026-06-27T07:22:07.928715+00:00'
+    tok_s: 14.1
     tok_s_engine: llamacpp
     tok_s_profile: google-gemma-4-12b-it-llama
     engine: llamacpp
+    note: "golden 256k/q8_0 @ 14.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
   microsoft/phi-4:
     spark_status: works
+    leaderboard_excluded: true
     updated_at: '2026-06-22T02:48:58.170278+00:00'
     engine: eugr
-    tok_s: 8.0
-    tok_s_engine: eugr
-    tok_s_profile: microsoft-phi-4-eugr
+    note: Permanently excluded from sparkbench.dev leaderboard.
   nvidia/qwen3-30b-a3b:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.362707+00:00'
+    updated_at: '2026-06-27T07:23:07.539923+00:00'
     engine: eugr
-    tok_s: 75.8
+    tok_s: 71.2
     tok_s_engine: eugr
     tok_s_profile: nvidia-qwen3-30b-a3b-eugr
+    note: "golden ?/? @ 71.2 tok/s \u2014 fill~18432 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
   deepseek-ai/deepseek-r1-distill-qwen-32b:
     spark_status: works
-    updated_at: '2026-06-22T02:48:57.882648+00:00'
+    leaderboard_excluded: true
+    updated_at: '2026-06-27T07:22:07.457864+00:00'
     engine: eugr
-    tok_s: 3.6
-    tok_s_engine: eugr
-    tok_s_profile: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
+    note: Permanently excluded from sparkbench.dev leaderboard.
   nousresearch/hermes-4-14b:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.284893+00:00'
+    leaderboard_excluded: true
+    updated_at: '2026-06-27T07:23:07.363007+00:00'
     engine: eugr
-    tok_s: 8.0
-    tok_s_engine: eugr
-    tok_s_profile: nousresearch-hermes-4-14b-eugr
+    note: Permanently excluded from sparkbench.dev leaderboard.
   unsloth/qwen3-coder-30b-a3b-instruct:
     spark_status: works
-    updated_at: '2026-06-22T02:48:59.141539+00:00'
+    updated_at: '2026-06-27T07:23:08.682783+00:00'
     engine: llamacpp
-    tok_s: 70.9
+    tok_s: 29.2
     tok_s_engine: llamacpp
     tok_s_profile: unsloth-qwen3-coder-30b-a3b-instruct-llama
+    note: "golden ?/? @ 29.2 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
   google/gemma-4-26b-a4b-it:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.093307+00:00'
+    updated_at: '2026-06-27T07:22:08.084023+00:00'
     engine: eugr
-    tok_s: 23.6
+    tok_s: 22.2
     tok_s_engine: eugr
     tok_s_profile: google-gemma-4-26b-a4b-it-eugr
+    note: "golden 256k/fp8 @ 22.2 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
   unsloth/qwen3.6-27b:
     spark_status: works
-    updated_at: '2026-06-22T02:48:59.036798+00:00'
+    updated_at: '2026-06-27T07:23:08.871790+00:00'
     engine: eugr
-    tok_s: 9.4
+    tok_s: 9.2
     tok_s_engine: eugr
     tok_s_profile: unsloth-qwen3-6-27b-eugr
+    note: "golden ?/? @ 9.2 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014 tool_ok=False"
   0xsero/deepseek-v4-flash-spark:
     spark_status: failed
     updated_at: '2026-06-25T12:00:00+00:00'
@@ -87,33 +96,38 @@ models:
       \ audit promote without bench v2."
   qwen/qwen3-coder-next:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.659957+00:00'
+    updated_at: '2026-06-27T07:23:07.760133+00:00'
     engine: eugr
-    tok_s: 45.4
+    tok_s: 37.9
     tok_s_engine: eugr
     tok_s_profile: qwen-qwen3-coder-next-eugr
+    note: "golden ?/? @ 37.9 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
   qwen/qwen3.6-27b:
     spark_status: works
-    updated_at: '2026-06-24T16:51:09.736611+00:00'
+    updated_at: '2026-06-27T07:23:07.940778+00:00'
     engine: eugr
-    note: "agent bench avg 27.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 83.8s)"
-    tok_s: 27.5
+    note: "golden ?/? @ 3.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014 tool_ok=True"
+    tok_s: 3.7
     tok_s_engine: eugr
     tok_s_profile: opencode-qwen27-dflash-262k
   rdtand/qwen3.6-27b:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.765957+00:00'
+    updated_at: '2026-06-27T07:23:08.121356+00:00'
     engine: eugr
-    tok_s: 10.3
+    tok_s: 10.6
     tok_s_engine: eugr
     tok_s_profile: rdtand-qwen3-6-27b-eugr
+    note: "golden ?/? @ 10.6 tok/s \u2014 fill~5734 \u2014 bench-agent-v2 \u2014 tool_ok=False"
   saricles/qwen3-coder-next:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.860702+00:00'
+    updated_at: '2026-06-27T07:23:08.312029+00:00'
     engine: eugr
-    tok_s: 63.3
+    tok_s: 56.8
     tok_s_engine: eugr
     tok_s_profile: saricles-qwen3-coder-next-eugr
+    note: "golden ?/? @ 56.8 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
   z-lab/qwen3.6-35b-a3b:
     spark_status: failed
     updated_at: '2026-06-22T02:22:08.961845+00:00'
@@ -122,29 +136,91 @@ models:
       (4 load fails). Needs FP8 target or vLLM fix.'
   stepfun-ai/step-3.7-flash:
     spark_status: works
-    updated_at: '2026-06-22T02:48:58.940989+00:00'
+    updated_at: '2026-06-27T07:23:08.495158+00:00'
     engine: llamacpp
-    tok_s: 22.3
+    tok_s: 17.3
     tok_s_engine: llamacpp
     tok_s_profile: stepfun-ai-step-3-7-flash-llama
+    note: "golden ?/? @ 17.3 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
   google/diffusiongemma-26b-a4b-it:
     spark_status: works
-    updated_at: '2026-06-22T04:17:22.318528+00:00'
+    updated_at: '2026-06-27T07:22:07.770789+00:00'
     engine: eugr
-    tok_s: 70.8
+    tok_s: 39.3
     tok_s_engine: eugr
     tok_s_profile: google-diffusiongemma-26b-a4b-it-eugr
+    note: "golden 256k/fp8 @ 39.3 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
   kaitchup/qwen3.6-27b:
     spark_status: works
-    updated_at: '2026-06-22T04:23:27.985877+00:00'
+    updated_at: '2026-06-27T07:23:07.167457+00:00'
     engine: llamacpp
-    tok_s: 9.3
+    tok_s: 8.4
     tok_s_engine: llamacpp
     tok_s_profile: kaitchup-qwen3-6-27b-llama
+    note: "golden ?/? @ 8.4 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014 tool_ok=False"
   antirez/deepseek-v4-flash:
-    spark_status: wip
-    updated_at: '2026-06-22T07:03:04.563501+00:00'
+    spark_status: works
+    updated_at: '2026-06-27T07:22:07.144503+00:00'
     engine: ds4
-    tok_s: 17.3
+    tok_s: 1.7
     tok_s_engine: ds4
     tok_s_profile: antirez-deepseek-v4-flash-ds4
+    note: "golden 1024k/q8_0 @ 1.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+  deepreinforce-ai/ornith-1.0-35b:
+    tok_s: 50.1
+    tok_s_engine: llamacpp
+    tok_s_profile: deepreinforce-ai-ornith-1-0-35b-llama
+    updated_at: '2026-06-27T07:22:07.304353+00:00'
+    spark_status: works
+    note: "golden 32k/q8_0 @ 50.1 tok/s \u2014 bench-agent-v2"
+  empero-ai/qwythos-9b-claude-mythos-5-1m:
+    tok_s: 12.4
+    tok_s_engine: eugr
+    tok_s_profile: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
+    updated_at: '2026-06-27T07:22:07.617356+00:00'
+    spark_status: works
+    note: "golden 781k/fp8 @ 12.4 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+  jackrong/qwopus3.6-27b-coder-compat:
+    tok_s: 6.9
+    tok_s_engine: llamacpp
+    tok_s_profile: jackrong-qwopus3-6-27b-coder-compat-llama
+    updated_at: '2026-06-27T07:22:08.251158+00:00'
+    spark_status: works
+    note: "golden 256k/q8_0 @ 6.9 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+  qwen/qwen-agentworld-35b-a3b:
+    tok_s: 27.6
+    tok_s_engine: eugr
+    tok_s_profile: qwen-qwen-agentworld-35b-a3b-eugr
+    updated_at: '2026-06-27T07:22:08.416177+00:00'
+    spark_status: works
+    note: "golden 250k/fp8 @ 27.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+  yuxinlu1/gemma-4-12b-agentic-v2:
+    tok_s: 17.1
+    tok_s_engine: llamacpp
+    tok_s_profile: gemma4-12b-agentic-v2-q4
+    updated_at: '2026-06-27T07:22:08.585835+00:00'
+    spark_status: works
+    note: "golden 32k/q8_0 @ 17.1 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+  yuxinlu1/gemma-4-12b-opus-reasoning:
+    tok_s: 17.3
+    tok_s_engine: llamacpp
+    tok_s_profile: gemma4-12b-opus-reasoning-q4
+    updated_at: '2026-06-27T07:22:08.754728+00:00'
+    spark_status: works
+    note: "golden 32k/q8_0 @ 17.3 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+  yuxinlu1/mellum2-12b-opus-thinking:
+    tok_s: 74.4
+    tok_s_engine: llamacpp
+    tok_s_profile: mellum2-12b-opus-q4
+    updated_at: '2026-06-27T07:22:08.922776+00:00'
+    spark_status: works
+    note: "golden 32k/q8_0 @ 74.4 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"

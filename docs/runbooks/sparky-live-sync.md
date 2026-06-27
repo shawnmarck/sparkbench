@@ -98,6 +98,15 @@ Deploy stashes tracked code edits, pulls `origin/main`, restores **host-local** 
 
 ```bash
 cd /opt/spark
+bash scripts/sparky-safe-pull.sh
+```
+
+Push shared cookbook: `bash scripts/sparky-safe-push.sh -m "..."`. Per-host custom: `local/` (gitignored). Skill: `.cursor/skills/sparky-safe-sync/SKILL.md`.
+
+Equivalent manual steps:
+
+```bash
+cd /opt/spark
 bash scripts/sparky-protect-runtime.sh
 git fetch origin
 git pull --ff-only origin main

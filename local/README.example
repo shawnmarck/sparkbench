@@ -1,0 +1,21 @@
+# Host-local overrides (copy to gitignored paths)
+
+This directory is **gitignored**. Put anything that must differ per Spark box here:
+
+- `local/recipes/` — one-off recipe overrides (symlink or copy into use manually)
+- `local/env.sh` — source from shell for box-specific exports
+- `local/notes.md` — operator scratch pad
+
+**Do not** put shared GB10 cookbook data here — commit `recipes/`, `data/golden-recipes.yaml`,
+`data/model-catalog.yaml`, and `data/model-verification.yaml` via `scripts/sparky-safe-push.sh`.
+
+**Never commit:** `data/inference-profiles.yaml`, `data/inference-benchmarks.yaml` (skip-worktree on sparky).
+
+Safe sync on a live box:
+
+```bash
+bash scripts/sparky-safe-pull.sh    # pull without stopping inference
+bash scripts/sparky-safe-push.sh -m "your message"   # push shared cookbook only
+```
+
+See `.cursor/skills/sparky-safe-sync/SKILL.md` and `docs/runbooks/sparky-live-sync.md`.

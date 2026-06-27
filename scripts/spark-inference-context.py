@@ -78,7 +78,7 @@ def _load_hf_config(recipe: dict[str, Any]) -> dict[str, Any]:
     if not inv:
         return {}
     base = MODELS_ROOT / inv
-    for rel in ("config.json", "nvfp4/config.json", "fp8/config.json"):
+    for rel in ("config.json", "hf/config.json", "nvfp4/config.json", "fp8/config.json"):
         path = base / rel
         if path.is_file():
             try:
@@ -88,11 +88,30 @@ def _load_hf_config(recipe: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _inventory_native_ctx(inventory_path: str) -> int | None:
+    path = ROOT / "portal" / "models.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    for entry in data.get("models") or []:
+        rel = str(entry.get("rel_path") or entry.get("id") or "")
+        if rel == inventory_path or rel.startswith(inventory_path + "/"):
+            mc = entry.get("max_context")
+            if isinstance(mc, (int, float)) and mc > 0:
+                return int(mc)
+    return None
+
+
 def native_context(recipe: dict[str, Any]) -> int | None:
     block = recipe.get("context") or {}
     if isinstance(block, dict) and block.get("native"):
         try:
-            return int(block["native"])
+            native = int(block["native"])
+            if native > 32768:
+                return native
         except (TypeError, ValueError):
             pass
     cfg = _load_hf_config(recipe)
@@ -103,6 +122,16 @@ def native_context(recipe: dict[str, Any]) -> int | None:
             val = src.get(key)
             if isinstance(val, (int, float)) and val > 0:
                 return int(val)
+    inv = str(recipe.get("inventory_path") or "").strip().strip("/")
+    if inv:
+        inv_native = _inventory_native_ctx(inv)
+        if inv_native:
+            return inv_native
+    if isinstance(block, dict) and block.get("native"):
+        try:
+            return int(block["native"])
+        except (TypeError, ValueError):
+            pass
     return None
 
 

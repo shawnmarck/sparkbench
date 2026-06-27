@@ -89,7 +89,9 @@ def read_local_config(path: Path) -> dict:
         return {}
 
 
-def max_context_from_config(cfg: dict) -> int | None:
+def max_context_from_config(cfg: dict, _depth: int = 0) -> int | None:
+    if not isinstance(cfg, dict) or _depth > 4:
+        return None
     for key in (
         "max_position_embeddings",
         "model_max_length",
@@ -98,7 +100,10 @@ def max_context_from_config(cfg: dict) -> int | None:
         "seq_length",
     ):
         if key in cfg and cfg[key]:
-            return int(cfg[key])
+            try:
+                return int(cfg[key])
+            except (TypeError, ValueError):
+                pass
     rope = cfg.get("rope_scaling") or {}
     if isinstance(rope, dict) and rope.get("original_max_position_embeddings"):
         factor = rope.get("factor", 1)
@@ -106,6 +111,12 @@ def max_context_from_config(cfg: dict) -> int | None:
             return int(rope["original_max_position_embeddings"] * factor)
         except (TypeError, ValueError):
             pass
+    for nest in ("text_config", "llm_config", "language_config", "vision_config"):
+        sub = cfg.get(nest)
+        if isinstance(sub, dict):
+            ctx = max_context_from_config(sub, _depth + 1)
+            if ctx:
+                return ctx
     return None
 
 
@@ -113,10 +124,101 @@ def _normalize_hf_repo(repo: str | None) -> str | None:
     if not repo:
         return None
     repo = repo.strip().strip("/").strip("'\"")
+    repo = re.sub(r"^[-–—*•]\s*", "", repo)
     if "/" not in repo or "://" in repo:
         return None
     org, name = repo.split("/", 1)
     return f"{org}/{name.split('/')[0]}"
+
+
+def _base_model_from_tags(tags: list | None) -> str | None:
+    for tag in tags or []:
+        if not isinstance(tag, str) or not tag.startswith("base_model:"):
+            continue
+        raw = tag.split(":", 1)[1].strip()
+        if raw.startswith("quantized:"):
+            raw = raw.split(":", 1)[1].strip()
+        repo = _normalize_hf_repo(raw)
+        if repo:
+            return repo
+    return None
+
+
+def _iter_local_config_paths(model_path: Path, variants: list | None = None) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+
+    def add(base: Path) -> None:
+        cfg = base / "config.json"
+        key = str(cfg)
+        if cfg.is_file() and key not in seen:
+            seen.add(key)
+            paths.append(cfg)
+
+    if model_path.is_dir():
+        add(model_path)
+        for sub in sorted(model_path.iterdir()):
+            if sub.is_dir() and not sub.name.startswith("."):
+                add(sub)
+    for variant in variants or []:
+        subpath = variant.get("subpath")
+        if subpath:
+            add(model_path / subpath)
+    return paths
+
+
+def _max_context_from_local(model_path: Path, variants: list | None = None) -> int | None:
+    best: int | None = None
+    for cfg_path in _iter_local_config_paths(model_path, variants):
+        ctx = max_context_from_config(read_local_config(cfg_path.parent))
+        if ctx and (best is None or ctx > best):
+            best = ctx
+    return best
+
+
+def _best_local_config(model_path: Path, variants: list | None = None) -> dict:
+    best: dict = {}
+    best_ctx = -1
+    for cfg_path in _iter_local_config_paths(model_path, variants):
+        cfg = read_local_config(cfg_path.parent)
+        if not cfg:
+            continue
+        ctx = max_context_from_config(cfg) or 0
+        if ctx > best_ctx or not best:
+            best = cfg
+            best_ctx = ctx
+    return best
+
+
+def resolve_max_context(
+    *,
+    catalog_max: int | None,
+    hf_repo: str | None,
+    variants: list | None,
+    model_path: Path,
+    hf_cache: dict,
+) -> int | None:
+    if catalog_max:
+        return int(catalog_max)
+    local_ctx = _max_context_from_local(model_path, variants)
+    repos = collect_hf_repos(hf_repo, variants or [])
+    if not repos:
+        repos = discover_hf_repos(model_path)
+    seen: set[str] = set()
+    for repo in repos:
+        if not repo or repo in seen:
+            continue
+        seen.add(repo)
+        info = hf_enrich(repo, hf_cache)
+        if info.get("max_context"):
+            return int(info["max_context"])
+        base = _base_model_from_tags(info.get("tags"))
+        if base and base not in seen:
+            seen.add(base)
+            base_info = hf_enrich(base, hf_cache)
+            if base_info.get("max_context"):
+                return int(base_info["max_context"])
+    return local_ctx
 
 
 def _add_hf_repo(repos: list[str], seen: set[str], repo: str | None) -> None:
@@ -255,16 +357,15 @@ def save_hf_disk_cache(cache: dict) -> None:
 
 
 def hf_enrich(repo: str, cache: dict) -> dict:
-    if repo in cache:
-        entry = cache[repo]
-        if hf_cache_entry_fresh(entry):
-            return entry
+    cached = cache.get(repo)
+    if cached and hf_cache_entry_fresh(cached) and cached.get("max_context") is not None:
+        return cached
     info = {
-        "description": None,
-        "release_date": None,
-        "max_context": None,
-        "pipeline_tag": None,
-        "tags": [],
+        "description": (cached or {}).get("description"),
+        "release_date": (cached or {}).get("release_date"),
+        "max_context": (cached or {}).get("max_context"),
+        "pipeline_tag": (cached or {}).get("pipeline_tag"),
+        "tags": list((cached or {}).get("tags") or []),
     }
     try:
         from huggingface_hub import HfApi
@@ -524,14 +625,24 @@ def spark_verify_for(rel: str, store: dict) -> dict:
 
 def parse_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None:
     cfg = cfg or {}
-    for key in ("num_parameters", "total_params", "n_parameters"):
-        if key in cfg and cfg[key]:
-            try:
-                n = float(cfg[key])
-                return n / 1e9 if n > 1e6 else n
-            except (TypeError, ValueError):
-                pass
+    blocks = [cfg]
+    for nest in ("text_config", "llm_config", "language_config"):
+        sub = cfg.get(nest)
+        if isinstance(sub, dict):
+            blocks.append(sub)
+    for block in blocks:
+        for key in ("num_parameters", "total_params", "n_parameters"):
+            if key in block and block[key]:
+                try:
+                    n = float(block[key])
+                    return n / 1e9 if n > 1e6 else n
+                except (TypeError, ValueError):
+                    pass
     text = f"{name} {slug}"
+    if re.search(r"coder-next", text, re.I):
+        return 80.0
+    if re.search(r"\bphi-4\b", text, re.I):
+        return 14.0
     m = re.search(r"(\d+(?:\.\d+)?)\s*[- ]?[Bb](?:\b|[-/])", text)
     if m:
         try:
@@ -541,7 +652,7 @@ def parse_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None
     return None
 
 
-def parse_active_param_b(name: str, slug: str) -> float | None:
+def parse_active_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None:
     text = f"{name} {slug}"
     m = re.search(r"(\d+(?:\.\d+)?)\s*[- ]?[Bb]\s*[-/]\s*[Aa]?\s*(\d+(?:\.\d+)?)\s*[Bb]", text, re.I)
     if m:
@@ -549,6 +660,10 @@ def parse_active_param_b(name: str, slug: str) -> float | None:
             return float(m.group(2))
         except ValueError:
             pass
+    if re.search(r"coder-next", text, re.I):
+        return 3.0
+    if re.search(r"deepseek-v4-flash|deepseek-v4", text, re.I):
+        return 13.0
     return None
 
 
@@ -932,6 +1047,8 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         spec = recipe.get("speculative") if isinstance(recipe.get("speculative"), dict) else None
         mtp = recipe.get("mtp") if isinstance(recipe.get("mtp"), dict) else None
         tags = recipe.get("tags") or []
+        ctx_block = recipe.get("context") if isinstance(recipe.get("context"), dict) else {}
+        ctx_ladder = ctx_block.get("ctx_ladder") if isinstance(ctx_block.get("ctx_ladder"), dict) else None
         info = {
             "id": profile_id,
             "name": recipe.get("name"),
@@ -948,6 +1065,7 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             "tags": tags if isinstance(tags, list) else [],
             "speculative": spec,
             "mtp": mtp,
+            "ctx_ladder": ctx_ladder,
         }
         by_path.setdefault(str(inv_path), []).append(info)
 
@@ -1020,23 +1138,25 @@ def main() -> int:
         lab = m["lab"]
         slug = m["slug"]
         base = MODELS_ROOT / lab / slug
-        hf_repo = m.get("hf_repo", "")
+        hf_repo = _normalize_hf_repo(m.get("hf_repo", "")) or (m.get("hf_repo") or "").strip()
         hf_info = hf_enrich(hf_repo, hf_cache) if hf_repo else {}
 
         variants = []
         total_size = 0
         statuses = []
-        max_ctx = hf_info.get("max_context")
+        max_ctx = resolve_max_context(
+            catalog_max=m.get("max_context"),
+            hf_repo=hf_repo or None,
+            variants=m.get("variants", []),
+            model_path=base,
+            hf_cache=hf_cache,
+        )
 
         for v in m.get("variants", []):
             sub = v["subpath"]
             status, size = variant_status(base, sub)
             total_size += size
             statuses.append(status)
-            local_cfg = read_local_config(base / sub)
-            local_ctx = max_context_from_config(local_cfg)
-            if local_ctx:
-                max_ctx = max_ctx or local_ctx
             variants.append(
                 {
                     "format": v.get("format"),
@@ -1083,14 +1203,9 @@ def main() -> int:
         shelf = location_info(SHELF_ROOT, lab, slug)
         shelf["mounted"] = shelf_mounted()
 
-        best_cfg: dict = {}
-        for v in m.get("variants", []):
-            c = read_local_config(base / v["subpath"])
-            if c:
-                best_cfg = c
-                break
+        best_cfg = _best_local_config(base, m.get("variants", []))
         param_b = m.get("param_b") or parse_param_b(m["name"], slug, best_cfg)
-        param_active_b = m.get("param_active_b") or parse_active_param_b(m["name"], slug)
+        param_active_b = m.get("param_active_b") or parse_active_param_b(m["name"], slug, best_cfg)
         architecture = infer_architecture(
             capabilities=m.get("capabilities", []),
             param_b=param_b,
@@ -1146,7 +1261,7 @@ def main() -> int:
                 shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
                 shelf["mounted"] = shelf_mounted()
                 slug = model_dir.name
-                inferred_repo = infer_hf_repo_from_path(model_dir)
+                inferred_repo = _normalize_hf_repo(infer_hf_repo_from_path(model_dir)) or infer_hf_repo_from_path(model_dir)
                 untracked_variants = []
                 untracked_release, untracked_source = resolve_release_date(
                     inferred_repo,
@@ -1162,8 +1277,16 @@ def main() -> int:
                     model_dir,
                     hf_cache,
                 )
-                untracked_param_b = parse_param_b(model_dir.name, slug, read_local_config(model_dir))
-                untracked_param_active_b = parse_active_param_b(model_dir.name, slug)
+                untracked_cfg = _best_local_config(model_dir, untracked_variants)
+                untracked_param_b = parse_param_b(model_dir.name, slug, untracked_cfg)
+                untracked_param_active_b = parse_active_param_b(model_dir.name, slug, untracked_cfg)
+                untracked_ctx = resolve_max_context(
+                    catalog_max=None,
+                    hf_repo=inferred_repo,
+                    variants=untracked_variants,
+                    model_path=model_dir,
+                    hf_cache=hf_cache,
+                )
                 entries.append(
                     {
                         "id": mid,
@@ -1181,7 +1304,7 @@ def main() -> int:
                         "summary": untracked_summary,
                         "release_date": untracked_release,
                         "release_date_source": untracked_source,
-                        "max_context": max_context_from_config(read_local_config(model_dir)),
+                        "max_context": untracked_ctx,
                         "param_b": untracked_param_b,
                         "param_active_b": untracked_param_active_b,
                         "architecture": infer_architecture(
@@ -1215,7 +1338,7 @@ def main() -> int:
                 size = dir_size(model_dir)
                 shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
                 shelf["mounted"] = True
-                inferred_repo = infer_hf_repo_from_path(model_dir)
+                inferred_repo = _normalize_hf_repo(infer_hf_repo_from_path(model_dir)) or infer_hf_repo_from_path(model_dir)
                 shelf_variants = []
                 shelf_release, shelf_source = resolve_release_date(
                     inferred_repo,
@@ -1231,8 +1354,16 @@ def main() -> int:
                     model_dir,
                     hf_cache,
                 )
-                shelf_param_b = parse_param_b(model_dir.name, model_dir.name, {})
-                shelf_param_active_b = parse_active_param_b(model_dir.name, model_dir.name)
+                shelf_cfg = _best_local_config(model_dir, shelf_variants)
+                shelf_param_b = parse_param_b(model_dir.name, model_dir.name, shelf_cfg)
+                shelf_param_active_b = parse_active_param_b(model_dir.name, model_dir.name, shelf_cfg)
+                shelf_ctx = resolve_max_context(
+                    catalog_max=None,
+                    hf_repo=inferred_repo,
+                    variants=shelf_variants,
+                    model_path=model_dir,
+                    hf_cache=hf_cache,
+                )
                 entries.append(
                     {
                         "id": mid,
@@ -1250,7 +1381,7 @@ def main() -> int:
                         "summary": shelf_summary,
                         "release_date": shelf_release,
                         "release_date_source": shelf_source,
-                        "max_context": max_context_from_config(read_local_config(model_dir)),
+                        "max_context": shelf_ctx,
                         "param_b": shelf_param_b,
                         "param_active_b": shelf_param_active_b,
                         "architecture": infer_architecture(

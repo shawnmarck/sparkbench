@@ -112,9 +112,57 @@
     .tag-picker-foot { display: flex; justify-content: space-between; gap: .35rem; margin-top: .35rem; padding-top: .35rem; border-top: 1px solid var(--menu-border); }
     .tag-picker-foot button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .74rem; cursor: pointer; padding: .15rem 0; }
     .tag-picker-foot button:hover { color: var(--accent); }
+    .col-picker-hint {
+      font-size: .72rem;
+      color: var(--muted);
+      padding: 0 .4rem .35rem;
+      line-height: 1.35;
+    }
+    .col-picker .tag-picker-menu {
+      min-width: 15rem;
+      max-height: 18rem;
+    }
+    .tag-picker-menu.is-clamped {
+      position: fixed;
+      z-index: 100;
+    }
+
+    /* ── COLUMN VISIBILITY (JS-driven via body.cols-managed) ─ */
+    body.cols-managed th[data-col],
+    body.cols-managed td[data-col] { display: none; }
+    body.cols-managed th[data-col=model],
+    body.cols-managed td[data-col=model] { display: table-cell; }
+    body.cols-managed.col-vis-local th[data-col=local],
+    body.cols-managed.col-vis-local td[data-col=local],
+    body.cols-managed.col-vis-shelf th[data-col=shelf],
+    body.cols-managed.col-vis-shelf td[data-col=shelf],
+    body.cols-managed.col-vis-ctx th[data-col=ctx],
+    body.cols-managed.col-vis-ctx td[data-col=ctx],
+    body.cols-managed.col-vis-params th[data-col=params],
+    body.cols-managed.col-vis-params td[data-col=params],
+    body.cols-managed.col-vis-active th[data-col=active],
+    body.cols-managed.col-vis-active td[data-col=active],
+    body.cols-managed.col-vis-spark th[data-col=spark],
+    body.cols-managed.col-vis-spark td[data-col=spark],
+    body.cols-managed.col-vis-dl th[data-col=dl],
+    body.cols-managed.col-vis-dl td[data-col=dl],
+    body.cols-managed.col-vis-release_date th[data-col=release_date],
+    body.cols-managed.col-vis-release_date td[data-col=release_date],
+    body.cols-managed.col-vis-arch th[data-col=arch],
+    body.cols-managed.col-vis-arch td[data-col=arch],
+    body.cols-managed.col-vis-engine th[data-col=engine],
+    body.cols-managed.col-vis-engine td[data-col=engine],
+    body.cols-managed.col-vis-inf th[data-col=inf],
+    body.cols-managed.col-vis-inf td[data-col=inf],
+    body.cols-managed.col-vis-bench th[data-col=bench],
+    body.cols-managed.col-vis-bench td[data-col=bench],
+    body.cols-managed.col-vis-caps th[data-col=caps],
+    body.cols-managed.col-vis-caps td[data-col=caps] { display: table-cell; }
 
     /* ── MODELS SPLIT LAYOUT ─────────────────────────────── */
     .models-layout {
+      container-type: inline-size;
+      container-name: models;
       display: flex;
       gap: 1rem;
       align-items: flex-start;
@@ -123,6 +171,7 @@
     .models-table-wrap {
       flex: 1;
       min-width: 0;
+      width: 100%;
     }
 
     /* ── SORTABLE TABLE ──────────────────────────────────── */
@@ -212,18 +261,12 @@
 
     /* ── DETAIL PANE ─────────────────────────────────────── */
     #model-detail-pane {
-      width: 30vw;
-      min-width: 520px;
-      flex-shrink: 0;
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
       overflow: hidden;
-      position: sticky;
-      top: 1rem;
-      max-height: calc(100vh - 80px);
       display: none;
       flex-direction: column;
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
     }
     body[data-pane] #model-detail-pane { display: flex; }
     .pane-header {
@@ -345,6 +388,11 @@
     .inf-profile-block .inf-profile-row { border-top: 0; padding-top: 0; padding-bottom: .35rem; }
     details.bench-history { margin: 0 0 .35rem; font-size: .78rem; }
     details.bench-history summary { cursor: pointer; color: var(--dl); user-select: none; }
+    details.ctx-ladder { margin: 0 0 .35rem; font-size: .78rem; }
+    details.ctx-ladder summary { cursor: pointer; color: var(--dl); user-select: none; }
+    .ctx-ladder-table { width: 100%; border-collapse: collapse; margin-top: .35rem; font-size: .75rem; }
+    .ctx-ladder-table th, .ctx-ladder-table td { text-align: left; padding: .25rem .35rem; border-top: 1px solid var(--border); }
+    .ctx-ladder-table th { color: var(--muted); font-weight: 600; font-size: .68rem; text-transform: uppercase; }
     .bench-history-table { width: 100%; border-collapse: collapse; margin-top: .35rem; font-size: .75rem; }
     .bench-history-table th, .bench-history-table td { text-align: left; padding: .25rem .35rem; border-top: 1px solid var(--border); vertical-align: top; }
     .bench-history-table th { color: var(--muted); font-weight: 600; font-size: .68rem; text-transform: uppercase; }
@@ -355,25 +403,57 @@
     .recipe-lab-create select { font-size: .8rem; padding: .35rem .5rem; }
     .row-sidecar-note { color: var(--muted); font-size: .68rem; margin-top: .15rem; }
 
-    /* ── RESPONSIVE ──────────────────────────────────────── */
-    @media (max-width: 1400px) {
-      th[data-col=spark], td[data-col=spark] { display: none; }
+    /* ── RESPONSIVE (container = .models-layout width) ───── */
+    @container models (max-width: 1599px) {
+      .models-table td.col-model { max-width: none; }
     }
-    @media (max-width: 1280px) {
-      th[data-col=dl], td[data-col=dl] { display: none; }
-    }
-    @media (max-width: 1100px) {
-      th[data-col=shelf], td[data-col=shelf] { display: none; }
-    }
-    @media (max-width: 900px) {
-      th[data-col=arch], td[data-col=arch],
-      th[data-col=engine], td[data-col=engine],
-      th[data-col=bench], td[data-col=bench],
-      th[data-col=release_date], td[data-col=release_date],
-      th[data-col=ctx], td[data-col=ctx] { display: none; }
+
+    /* Constrained: overlay drawer — table stays full width */
+    @container models (min-width: 900px) and (max-width: 1599px) {
       #model-detail-pane {
         position: fixed;
-        left: 0; right: 0; bottom: 0; top: auto;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(520px, 92vw);
+        max-width: 520px;
+        border-radius: 12px 0 0 12px;
+        transform: translateX(100%);
+        transition: transform .22s ease;
+        z-index: 50;
+        max-height: 100vh;
+      }
+      body[data-pane] #model-detail-pane { transform: translateX(0); }
+      body[data-pane] #pane-backdrop { display: block; }
+      body[data-pane] { overflow: hidden; }
+    }
+
+    /* Wide: side-by-side luxury layout */
+    @container models (min-width: 1600px) {
+      #model-detail-pane {
+        position: sticky;
+        top: 1rem;
+        z-index: 3;
+        width: min(600px, 38%);
+        min-width: 440px;
+        max-width: 600px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        transform: none;
+        transition: none;
+        box-shadow: none;
+        max-height: calc(100vh - 80px);
+      }
+    }
+
+    /* Narrow: bottom sheet */
+    @container models (max-width: 899px) {
+      #model-detail-pane {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
         width: 100%;
         min-width: 0;
         max-width: 100%;
@@ -382,10 +462,56 @@
         transform: translateY(100%);
         transition: transform .22s ease;
         z-index: 50;
-        display: flex;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
       }
       body[data-pane] #model-detail-pane { transform: translateY(0); }
       body[data-pane] #pane-backdrop { display: block; }
+      body[data-pane] { overflow: hidden; }
+    }
+
+    /* Fallback when container queries unavailable (uses viewport, not iframe width) */
+    @supports not (container-type: inline-size) {
+      @media (min-width: 900px) and (max-width: 1599px) {
+        #model-detail-pane {
+          position: fixed;
+          top: 0; right: 0; bottom: 0;
+          width: min(520px, 92vw);
+          max-width: 520px;
+          border-radius: 12px 0 0 12px;
+          transform: translateX(100%);
+          transition: transform .22s ease;
+          z-index: 50;
+          max-height: 100vh;
+        }
+        body[data-pane] #model-detail-pane { transform: translateX(0); }
+        body[data-pane] #pane-backdrop { display: block; }
+      }
+      @media (min-width: 1600px) {
+        #model-detail-pane {
+          position: sticky;
+          top: 1rem;
+          width: min(600px, 38%);
+          min-width: 440px;
+          max-width: 600px;
+          flex-shrink: 0;
+          border-radius: 12px;
+          transform: none;
+          max-height: calc(100vh - 80px);
+        }
+      }
+      @media (max-width: 899px) {
+        #model-detail-pane {
+          position: fixed;
+          left: 0; right: 0; bottom: 0; top: auto;
+          width: 100%;
+          max-height: 82vh;
+          border-radius: 14px 14px 0 0;
+          transform: translateY(100%);
+          z-index: 50;
+        }
+        body[data-pane] #model-detail-pane { transform: translateY(0); }
+        body[data-pane] #pane-backdrop { display: block; }
+      }
     }
     html.theme-b body { background: #000 !important; }
     html.theme-b body.embedded { height: 100%; min-height: 100%; }
@@ -426,7 +552,7 @@
     <div class="top page-head">
       <div>
         <h1 class="page-title-line">Model inventory <span class="title-sep">·</span> <span id="summary" class="title-summary">Loading…</span></h1>
-        <p class="sub">Sortable table · click row for details · family grouping toggle</p>
+        <p class="sub">Sortable table · Columns picker · click row for details · Esc closes panel</p>
       </div>
       <a href="/" class="portal-link" target="_top">← Portal</a>
     </div>
@@ -458,6 +584,20 @@
       <div class="control-group">
         <label for="hf-task">HF task</label>
         <select id="hf-task"><option value="">All</option></select>
+      </div>
+      <div class="control-group">
+        <label for="col-picker-btn">Columns</label>
+        <div class="tag-picker col-picker">
+          <button type="button" class="tag-picker-btn" id="col-picker-btn" aria-expanded="false" aria-haspopup="listbox">Auto</button>
+          <div class="tag-picker-menu" id="col-picker-menu" hidden>
+            <div class="col-picker-hint" id="col-picker-hint">Auto picks columns for panel width. Check any to customize.</div>
+            <div class="tag-picker-list" id="col-picker-list" role="listbox"></div>
+            <div class="tag-picker-foot">
+              <button type="button" id="col-picker-reset">Reset auto</button>
+              <button type="button" id="col-picker-done">Done</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="chip-row" id="filter-chips">
         <span class="chip-label">View</span>
@@ -542,7 +682,7 @@
       { key: 'model',   label: 'Model',     sortable: true  },
       { key: 'local',   label: 'Local',     sortable: true  },
       { key: 'shelf',   label: 'Shelf',     sortable: true  },
-      { key: 'ctx',     label: 'Max CTX',   sortable: true  },
+      { key: 'ctx',     label: 'Model CTX', sortable: true  },
       { key: 'params',  label: 'Params',    sortable: true  },
       { key: 'active',  label: 'Active',    sortable: true  },
       { key: 'spark',   label: 'Spark',     sortable: true  },
@@ -554,21 +694,266 @@
       { key: 'bench',   label: 'Bench',     sortable: true  },
       { key: 'caps',    label: 'Caps',      sortable: false },
     ];
+    const COL_AUTO_DEFAULT = [
+      'model', 'local', 'ctx', 'params', 'active', 'spark',
+      'release_date', 'arch', 'engine', 'bench', 'caps',
+    ];
+    const COL_AUTO = {
+      narrow: ['model', 'local', 'ctx', 'params', 'spark', 'bench'],
+      constrained: COL_AUTO_DEFAULT,
+      wide: COL_AUTO_DEFAULT,
+    };
+    let columnOverride = null;
+    let layoutBandWidth = 1200;
+    let layoutResizeTimer = null;
+
+    function layoutBand(w) {
+      if (w < 900) return 'narrow';
+      if (w < 1600) return 'constrained';
+      return 'wide';
+    }
+
+    function effectiveVisibleColumns() {
+      if (columnOverride) return columnOverride;
+      return new Set(COL_AUTO[layoutBand(layoutBandWidth)]);
+    }
+
+    function visibleColumnCount() {
+      return effectiveVisibleColumns().size;
+    }
+
+    function applyColumnVisibility() {
+      const vis = effectiveVisibleColumns();
+      document.body.classList.add('cols-managed');
+      TABLE_COLS.forEach((c) => {
+        document.body.classList.toggle('col-vis-' + c.key, vis.has(c.key));
+      });
+      updateColPickerButton();
+    }
+
+    function loadColumnPrefs(stored) {
+      if (Array.isArray(stored.visibleColumns) && stored.visibleColumns.length) {
+        const valid = stored.visibleColumns.filter((k) => TABLE_COLS.some((c) => c.key === k));
+        columnOverride = new Set(valid.length ? valid : ['model']);
+        columnOverride.add('model');
+      } else {
+        columnOverride = null;
+      }
+    }
+
+    function setColumnOverride(cols) {
+      columnOverride = cols;
+      savePrefs();
+      applyColumnVisibility();
+      applyFilters();
+    }
+
+    function updateColPickerButton() {
+      const btn = $('col-picker-btn');
+      if (!btn) return;
+      const n = effectiveVisibleColumns().size;
+      if (columnOverride) {
+        btn.textContent = `${n} cols`;
+        btn.title = 'Custom column set';
+      } else {
+        const band = layoutBand(layoutBandWidth);
+        btn.textContent = `Auto · ${n}`;
+        btn.title = `Auto columns (${band} layout)`;
+      }
+    }
+
+    function renderColPickerList() {
+      const list = $('col-picker-list');
+      if (!list) return;
+      list.innerHTML = '';
+      const vis = columnOverride ? new Set(columnOverride) : new Set(effectiveVisibleColumns());
+      TABLE_COLS.forEach((col) => {
+        const row = document.createElement('label');
+        row.className = 'tag-picker-item';
+        const locked = col.key === 'model';
+        row.innerHTML = `<input type="checkbox" value="${esc(col.key)}" ${vis.has(col.key) ? 'checked' : ''} ${locked ? 'disabled' : ''}><span>${esc(col.label)}</span>`;
+        if (!locked) {
+          row.querySelector('input').addEventListener('change', (e) => {
+            const current = columnOverride
+              ? new Set(columnOverride)
+              : new Set(effectiveVisibleColumns());
+            if (e.target.checked) current.add(col.key);
+            else current.delete(col.key);
+            current.add('model');
+            columnOverride = current;
+            savePrefs();
+            applyColumnVisibility();
+            applyFilters();
+            renderColPickerList();
+          });
+        }
+        list.appendChild(row);
+      });
+      const hint = $('col-picker-hint');
+      if (hint) {
+        hint.textContent = columnOverride
+          ? 'Custom set saved — Reset auto to follow panel width again.'
+          : `Auto (${layoutBand(layoutBandWidth)}) — check any column to customize.`;
+      }
+    }
+
+    function resetPickerMenuPosition(menuEl) {
+      if (!menuEl) return;
+      menuEl.classList.remove('is-clamped');
+      menuEl.style.position = '';
+      menuEl.style.top = '';
+      menuEl.style.left = '';
+      menuEl.style.right = '';
+      menuEl.style.maxWidth = '';
+      menuEl.style.maxHeight = '';
+    }
+
+    let pickerClampHandler = null;
+
+    function unbindPickerMenuClamp() {
+      if (!pickerClampHandler) return;
+      window.removeEventListener('resize', pickerClampHandler);
+      pickerClampHandler = null;
+    }
+
+    function clampPickerMenu(pickerEl, menuEl, opts) {
+      opts = opts || {};
+      if (!pickerEl || !menuEl) return;
+      resetPickerMenuPosition(menuEl);
+      const margin = opts.margin ?? 10;
+      const gap = 4;
+      const preferRight = !!opts.preferRight;
+      const pickerRect = pickerEl.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+      const maxWidth = Math.max(180, vw - margin * 2);
+      menuEl.style.maxWidth = maxWidth + 'px';
+
+      let menuWidth = menuEl.offsetWidth;
+      let menuHeight = menuEl.offsetHeight;
+      let left = preferRight ? pickerRect.right - menuWidth : pickerRect.left;
+      if (left + menuWidth > vw - margin) left = vw - menuWidth - margin;
+      if (left < margin) left = margin;
+      if (menuWidth > maxWidth) {
+        menuEl.style.maxWidth = maxWidth + 'px';
+        menuWidth = menuEl.offsetWidth;
+        left = margin;
+      }
+
+      let top = pickerRect.bottom + gap;
+      if (top + menuHeight > vh - margin) {
+        const above = pickerRect.top - menuHeight - gap;
+        if (above >= margin) top = above;
+        else menuEl.style.maxHeight = Math.max(120, vh - top - margin) + 'px';
+      }
+
+      menuEl.classList.add('is-clamped');
+      menuEl.style.top = top + 'px';
+      menuEl.style.left = left + 'px';
+    }
+
+    function bindPickerMenuClamp(pickerEl, menuEl, opts) {
+      unbindPickerMenuClamp();
+      const run = () => clampPickerMenu(pickerEl, menuEl, opts);
+      pickerClampHandler = run;
+      run();
+      window.addEventListener('resize', run, { passive: true });
+    }
+
+    function closeColPicker() {
+      unbindPickerMenuClamp();
+      resetPickerMenuPosition($('col-picker-menu'));
+      $('col-picker-menu').hidden = true;
+      $('col-picker-btn').setAttribute('aria-expanded', 'false');
+    }
+
+    function openColPicker() {
+      renderColPickerList();
+      const picker = document.querySelector('.col-picker');
+      const menu = $('col-picker-menu');
+      menu.hidden = false;
+      $('col-picker-btn').setAttribute('aria-expanded', 'true');
+      bindPickerMenuClamp(picker, menu, { preferRight: true });
+    }
+
+    function resetColumnPrefs() {
+      columnOverride = null;
+      savePrefs();
+      applyColumnVisibility();
+      applyFilters();
+      renderColPickerList();
+    }
+
+    function initColumnLayoutObserver() {
+      const layoutEl = document.querySelector('.models-layout');
+      if (!layoutEl) return;
+      layoutBandWidth = layoutEl.clientWidth || window.innerWidth;
+      applyColumnVisibility();
+      if (typeof ResizeObserver === 'undefined') return;
+      const ro = new ResizeObserver((entries) => {
+        const w = entries[0]?.contentRect?.width;
+        if (!w || Math.abs(w - layoutBandWidth) < 12) return;
+        layoutBandWidth = w;
+        clearTimeout(layoutResizeTimer);
+        layoutResizeTimer = setTimeout(() => {
+          if (!columnOverride) applyColumnVisibility();
+          updateColPickerButton();
+          if (!columnOverride && groupByFamily) applyFilters();
+        }, 120);
+      });
+      ro.observe(layoutEl);
+    }
 
     /* ── HELPERS ─────────────────────────────────────────── */
     function gotoInference(opts) {
       opts = opts || {};
-      const msg = { type: 'sparky-portal-nav', view: 'inference', infLogFocus: !!opts.infLogFocus };
+      const params = new URLSearchParams();
+      if (opts.profile) params.set('pick', opts.profile);
+      if (opts.infFilterQ) params.set('q', opts.infFilterQ);
+      const qs = params.toString();
+      const msg = {
+        type: 'sparky-portal-nav',
+        view: 'inference',
+        infLogFocus: !!opts.infLogFocus,
+        profile: opts.profile || null,
+        infFilterQ: opts.infFilterQ || null,
+      };
       try {
         if (window.parent && window.parent !== window) { window.parent.postMessage(msg, location.origin); return; }
       } catch (_) {}
-      location.href = '/#inference';
+      location.href = '/' + (qs ? '?' + qs : '') + '#inference';
+    }
+    function primaryInferenceProfile(m) {
+      const profiles = m.inference_profiles || [];
+      if (!profiles.length) return null;
+      const activeId = activeProfileId();
+      if (activeId && profiles.some((p) => p.id === activeId)) return activeId;
+      const rank = { works: 0, production: 1, testing: 2 };
+      const pool = profiles.filter((p) => p.lifecycle in rank || p.enabled !== false);
+      const list = (pool.length ? pool : profiles).slice();
+      list.sort((a, b) => {
+        const ra = rank[a.lifecycle] ?? 9;
+        const rb = rank[b.lifecycle] ?? 9;
+        if (ra !== rb) return ra - rb;
+        return (Number(b.tok_s) || 0) - (Number(a.tok_s) || 0);
+      });
+      return list[0].id;
+    }
+    function inferenceNavAttrs(profileId, filterQ) {
+      let s = '';
+      if (profileId) s += ' data-inf-profile="' + esc(profileId) + '"';
+      if (filterQ) s += ' data-inf-filter-q="' + esc(filterQ) + '"';
+      return s;
     }
     document.addEventListener('click', (e) => {
       const link = e.target.closest('[data-portal-nav="inference"]');
       if (!link) return;
       e.preventDefault();
-      gotoInference({ infLogFocus: link.dataset.infLogFocus === '1' });
+      gotoInference({
+        infLogFocus: link.dataset.infLogFocus === '1',
+        profile: link.dataset.infProfile || null,
+        infFilterQ: link.dataset.infFilterQ || null,
+      });
     });
 
     const tagKey = (t) => (t || '').toLowerCase();
@@ -969,7 +1354,7 @@
           const activeTag = hasActive ? `<span class="family-active-tag">● active</span>` : '';
           const headCls = ['family-head-row', hasActive ? 'has-active' : '', !open ? 'collapsed' : ''].filter(Boolean).join(' ');
           rows += `<tr class="${headCls}" data-family-key="${esc(g.key)}">
-            <td colspan="${TABLE_COLS.length}">
+            <td colspan="${visibleColumnCount()}">
               <button type="button" class="family-toggle" aria-label="Toggle family">▸</button>
               <span class="family-name">${esc(g.family)}</span>
               <span class="family-meta">${g.items.length} models${localHint}</span>
@@ -1011,6 +1396,23 @@
       $('pane-title').textContent = '';
       $('pane-body').innerHTML = '';
       updateSelectedRow();
+    }
+
+    function visibleModelRowIds() {
+      return [...document.querySelectorAll('tr.model-row:not([hidden])')]
+        .map((tr) => tr.dataset.id)
+        .filter(Boolean);
+    }
+
+    function navigatePane(step) {
+      const ids = visibleModelRowIds();
+      if (!ids.length) return;
+      let idx = selectedModelId ? ids.indexOf(selectedModelId) : -1;
+      if (idx < 0) idx = step > 0 ? -1 : ids.length;
+      idx = Math.max(0, Math.min(ids.length - 1, idx + step));
+      openPane(ids[idx]);
+      const tr = document.querySelector(`tr.model-row[data-id="${CSS.escape(ids[idx])}"]`);
+      if (tr) tr.scrollIntoView({ block: 'nearest' });
     }
 
     function updateSelectedRow() {
@@ -1058,6 +1460,21 @@
       return html;
     }
 
+    function renderCtxLadderPanel(ladder) {
+      if (!ladder || !Array.isArray(ladder.rungs) || !ladder.rungs.length) return '';
+      const maxV = ladder.max_viable_ctx;
+      const rows = ladder.rungs.map((r) => {
+        const st = r.status || 'pending';
+        const cls = st === 'ok' ? 'status-ready' : st === 'load_fail' ? 'status-failed' : 'status-wip';
+        const tok = r.tok_s != null ? `${Math.round(r.tok_s)} tok/s` : '—';
+        const fill = r.fill_target ? fmtCtx(r.fill_target) : '—';
+        return `<tr><td>${fmtCtx(r.ctx)}</td><td>${fill}</td><td><span class="badge ${cls}">${esc(st)}</span></td><td>${tok}</td></tr>`;
+      }).join('');
+      const meta = `golden ${fmtCtx(ladder.golden_ctx)} → native ${fmtCtx(ladder.native_ctx)} · fill ${Math.round((ladder.fill_ratio || 0.75) * 100)}% · max viable ${fmtCtx(maxV)}`;
+      const when = ladder.tested_at ? ladder.tested_at.slice(0, 10) : '';
+      return `<details class="ctx-ladder"><summary>Context ladder${when ? ' (' + when + ')' : ''}</summary><div class="verify-note">${esc(meta)}</div><table class="ctx-ladder-table"><thead><tr><th>Ctx</th><th>Fill</th><th>Status</th><th>Decode</th></tr></thead><tbody>${rows}</tbody></table></details>`;
+    }
+
     function renderBenchCompareStrip(profiles) {
       const rated = profiles.filter((p) => p.tok_s != null && !Number.isNaN(Number(p.tok_s)));
       if (rated.length < 2) return '';
@@ -1077,6 +1494,9 @@
       const profiles = m.inference_profiles || [];
       const switching = inferenceSwitching();
       const activeId = activeProfileId();
+      const defaultProfile = primaryInferenceProfile(m);
+      const defaultFilterQ = defaultProfile ? '' : (rel.split('/').pop() || rel);
+      const openInfAttrs = inferenceNavAttrs(defaultProfile, defaultFilterQ);
       const rows = profiles.map((p) => {
         const lc = p.lifecycle || (p.enabled ? 'production' : 'draft');
         const tier = p.tier === 'heavy' ? '<span class="badge tier-heavy">heavy</span>' : '<span class="badge">fast</span>';
@@ -1089,11 +1509,11 @@
           const ready = infStatus && infStatus.active && infStatus.active.ready;
           const loadInfo = inferenceLoadingInfo();
           actions = ready
-            ? '<span class="badge status-ready">active</span><a href="#" data-portal-nav="inference">Inference ↗</a>'
-            : '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span><a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
+            ? '<span class="badge status-ready">active</span><a href="#" data-portal-nav="inference"' + inferenceNavAttrs(p.id, '') + '>Inference ↗</a>'
+            : '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span><a href="#" data-portal-nav="inference" data-inf-log-focus="1"' + inferenceNavAttrs(p.id, '') + '>View progress ↗</a>';
         } else if (switching && infStatus.switch && infStatus.switch.profile === p.id) {
           const loadInfo = inferenceLoadingInfo();
-          actions = '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span><a href="#" data-portal-nav="inference" data-inf-log-focus="1">View progress ↗</a>';
+          actions = '<span class="badge inf-loading" title="' + esc(inferenceLoadingTitle(loadInfo)) + '">' + esc(inferenceLoadingLabel(loadInfo)) + '</span><a href="#" data-portal-nav="inference" data-inf-log-focus="1"' + inferenceNavAttrs(p.id, '') + '>View progress ↗</a>';
         } else if (switching) {
           actions = '<button type="button" class="btn" disabled>Switch in progress</button>';
         } else if (lc === 'testing' || p.enabled) {
@@ -1105,12 +1525,13 @@
         const runCount = p.bench_run_count || 0;
         const histSummary = runCount ? `Benchmark history (${runCount})` : 'Benchmark history';
         const histOpen = benchHistoryOpen.has(p.id) ? ' open' : '';
-        return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong><code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div><div class="inf-profile-actions">${lifeBadge(lc)}${recipeFeatureBadges(p)}${tier}${tokBadge}${actions}</div></div><details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary><div class="bench-history-panel"></div></details></div>`;
+        const ladderPanel = renderCtxLadderPanel(p.ctx_ladder);
+        return `<div class="inf-profile-block"><div class="inf-profile-row"><div class="inf-profile-info"><strong>${esc(p.name || p.id)}</strong><code>${esc(p.id)} · ${esc(p.engine || '')} · recipe</code>${note}</div><div class="inf-profile-actions">${lifeBadge(lc)}${recipeFeatureBadges(p)}${tier}${tokBadge}${actions}</div></div>${ladderPanel}<details class="bench-history" data-profile="${esc(p.id)}"${histOpen}><summary>${histSummary}</summary><div class="bench-history-panel"></div></details></div>`;
       }).join('');
       const create = onDisk && !isSidecarModel(m)
         ? `<div class="recipe-lab-create"><span class="verify-label">New recipe</span><button type="button" class="btn primary" data-action="recipe-scaffold" data-path="${esc(rel)}" title="Auto-detect engine (GGUF, eugr, MTP, DFlash)">Auto-scaffold</button></div>`
         : (isSidecarModel(m) ? '<div class="verify-note">Sidecar — recipes are managed from the base model.</div>' : '<div class="meta-warn">Model not on disk locally — fetch before creating a recipe.</div>');
-      return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4><div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote.</div>${renderBenchCompareStrip(profiles)}${rows || '<div class="meta-warn">No recipes yet.</div>'}${create}<div class="actions" style="margin-top:.55rem"><a href="#" data-portal-nav="inference">Open Inference tab ↗</a></div></div>`;
+      return `<div class="detail-section inference-block"><h4>Model Lab (recipes)</h4><div class="verify-note">Per <em>recipe</em> (engine + quant). Mark testing → <strong>Start</strong> here → bench on Inference → promote.</div>${renderBenchCompareStrip(profiles)}${rows || '<div class="meta-warn">No recipes yet.</div>'}${create}<div class="actions" style="margin-top:.55rem"><a href="#" data-portal-nav="inference"${openInfAttrs}>Open Inference tab ↗</a></div></div>`;
     }
 
     function renderDetail(m) {
@@ -1281,7 +1702,7 @@
         if (!res.ok) throw new Error(data.error || res.statusText);
         await refreshInferenceStatus();
         applyFilters();
-        gotoInference();
+        gotoInference({ profile: profileId, infLogFocus: true });
       } catch (err) { alert(err.message); }
       finally { btn.disabled = false; btn.classList.remove('busy'); }
     }
@@ -1354,7 +1775,11 @@
     /* ── FILTERS & PREFS ─────────────────────────────────── */
     function readPrefs() { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; } }
     function savePrefs() {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ q: $('q').value, lab: $('lab').value, status: $('status').value, sparkFilters, tagFilter, hfTaskFilter, groupByFamily, sortCol, sortDir }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        q: $('q').value, lab: $('lab').value, status: $('status').value,
+        sparkFilters, tagFilter, hfTaskFilter, groupByFamily, sortCol, sortDir,
+        visibleColumns: columnOverride ? [...columnOverride] : null,
+      }));
     }
 
     function readSortPrefs(stored) {
@@ -1378,8 +1803,21 @@
       if (!list.children.length) list.innerHTML = '<div class="tag-picker-item" style="cursor:default;color:var(--muted)">No matches</div>';
     }
     function setTagFilter(next) { tagFilter = [...next].map(tagKey); updateTagPickerButton(); renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value); applyFilters(); }
-    function closeTagPicker() { $('tag-picker-menu').hidden = true; $('tag-picker-btn').setAttribute('aria-expanded', 'false'); }
-    function openTagPicker() { renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value); $('tag-picker-menu').hidden = false; $('tag-picker-btn').setAttribute('aria-expanded', 'true'); $('tag-picker-search').focus(); }
+    function closeTagPicker() {
+      unbindPickerMenuClamp();
+      resetPickerMenuPosition($('tag-picker-menu'));
+      $('tag-picker-menu').hidden = true;
+      $('tag-picker-btn').setAttribute('aria-expanded', 'false');
+    }
+    function openTagPicker() {
+      renderTagPickerList(collectCatalogTags(all), $('tag-picker-search').value);
+      const picker = document.querySelector('.tag-filter-group .tag-picker');
+      const menu = $('tag-picker-menu');
+      menu.hidden = false;
+      $('tag-picker-btn').setAttribute('aria-expanded', 'true');
+      bindPickerMenuClamp(picker, menu, { preferRight: false });
+      $('tag-picker-search').focus();
+    }
 
     function applyFilters() {
       const q = $('q').value.toLowerCase();
@@ -1454,6 +1892,8 @@
       groupByFamily = !!prev.groupByFamily;
       if (prev.sortCol) { sortCol = prev.sortCol; sortDir = prev.sortDir || 'asc'; }
       else if (prev.col) { sortCol = prev.col; sortDir = prev.dir || 'asc'; }
+      loadColumnPrefs(stored);
+      applyColumnVisibility();
       updateSparkFilterChips();
       updateViewChips();
     }
@@ -1542,9 +1982,26 @@
       }
     }, true);
 
-    // Pane close button
+    // Pane close button + keyboard
     $('pane-close').addEventListener('click', () => closePane());
     $('pane-backdrop').addEventListener('click', () => closePane());
+    document.addEventListener('keydown', (e) => {
+      if (!selectedModelId || paneInputFocused()) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closePane();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        navigatePane(1);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        navigatePane(-1);
+      }
+    });
 
     // Controls
     let filterDebounce = null;
@@ -1565,7 +2022,19 @@
     $('tag-picker-clear').addEventListener('click', () => setTagFilter([]));
     $('tag-picker-done').addEventListener('click', () => closeTagPicker());
     $('tag-picker-search').addEventListener('input', (e) => renderTagPickerList(collectCatalogTags(all), e.target.value));
-    document.addEventListener('click', (e) => { if (!e.target.closest('.tag-picker')) closeTagPicker(); });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.tag-picker')) closeTagPicker();
+      if (!e.target.closest('.col-picker')) closeColPicker();
+    });
+
+    $('col-picker-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if ($('col-picker-menu').hidden) openColPicker();
+      else closeColPicker();
+    });
+    $('col-picker-reset').addEventListener('click', () => resetColumnPrefs());
+    $('col-picker-done').addEventListener('click', () => closeColPicker());
+    initColumnLayoutObserver();
 
     /* ── DATA LOADING ────────────────────────────────────── */
     function loadData(preserve) {

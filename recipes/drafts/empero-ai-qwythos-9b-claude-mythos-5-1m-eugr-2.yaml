@@ -1,0 +1,14 @@
+id: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr-2
+name: qwythos-9b-claude-mythos-5-1m (eugr)
+inventory_path: empero-ai/qwythos-9b-claude-mythos-5-1m
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: qwythos-9b-claude-mythos-5-1m
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-06-26 from /models/empero-ai/qwythos-9b-claude-mythos-5-1m.
+  Mark testing, switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-empero-ai-qwythos-9b-claude-mythos-5-1m-eugr-2.yaml

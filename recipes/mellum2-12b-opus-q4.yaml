@@ -1,0 +1,81 @@
+id: mellum2-12b-opus-q4
+name: Mellum2 12B MoE Opus Thinking Q4
+catalog_id: yuxinlu1/mellum2-12b-opus-thinking-gguf
+inventory_path: yuxinlu1/mellum2-12b-opus-thinking
+engine: llamacpp
+tier: fast
+model: /models/yuxinlu1/mellum2-12b-opus-thinking/gguf/mellum2-claude-Q4_K_M.gguf
+served_name: mellum2-12b-opus-q4
+port: 8081
+tags:
+- testing
+- coding
+- moe
+- llamacpp
+- golden
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: "yuxinlu1 Mellum2 12B / 2.5B active MoE coding model (Claude 4.6\u20134.8 Opus\
+  \ thinking).\nQ4_K_M for fast local coding on llama.cpp.\n"
+lifecycle: works
+context:
+  default: 32768
+  native: 131072
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 32768
+      kv: q8_0
+  ctx_ladder:
+    version: '1.0'
+    tested_at: '2026-06-26T17:03:35.686033+00:00'
+    golden_ctx: 32768
+    native_ctx: 131072
+    fill_ratio: 0.75
+    kv: q8_0
+    max_viable_ctx: 131072
+    rungs:
+    - ctx: 65536
+      kv: q8_0
+      fill_target: 43008
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 65536
+      tok_s: 27.1
+      fill_estimated: 43419
+      prefill_prompt_tokens: 34227
+      decode_tokens: 974
+      decode_elapsed_s: 35.9
+      tool_ok: true
+    - ctx: 98304
+      kv: q8_0
+      fill_target: 66355
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 98304
+      tok_s: 19.3
+      fill_estimated: 66869
+      prefill_prompt_tokens: 53255
+      decode_tokens: 1025
+      decode_elapsed_s: 53.01
+      tool_ok: true
+    - ctx: 131072
+      kv: q8_0
+      fill_target: 88473
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 131072
+      tok_s: 14.6
+      fill_estimated: 88919
+      prefill_prompt_tokens: 71147
+      decode_tokens: 1012
+      decode_elapsed_s: 69.45
+      tool_ok: false
+promoted_at: '2026-06-26T08:44:47.106502+00:00'

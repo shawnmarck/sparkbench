@@ -482,6 +482,7 @@
       let lastInfNavFetchAt = 0;
       const INF_NAV_POLL_MS = 5000;
       let pendingStartProfile = null;
+      let pendingPickProfile = null;
       let benchBusy = false;
       let benchMsgUntil = 0;
       let infLogOverlayOpen = false;
@@ -1383,6 +1384,20 @@
           || !(activeId && all.some((p) => p.id === activeId && p.ready));
       }
 
+      function applyPendingPickProfile(profiles) {
+        if (!pendingPickProfile) return;
+        const id = pendingPickProfile;
+        const prof = (profiles || []).find((p) => p.id === id);
+        if (!prof) return;
+        pendingPickProfile = null;
+        if (infGroupByFamily) infModelGroupsOpen.add(profileModelFamily(prof));
+        pickInfProfile(id);
+        requestAnimationFrame(() => {
+          const row = document.querySelector('.inf-grid-row[data-profile-id="' + CSS.escape(id) + '"]');
+          if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+      }
+
       function renderInferencePanel(data) {
         const active = data.active;
         const loading = inferenceLoadingInfo(data);
@@ -1460,6 +1475,7 @@
           lastInfProfilesSnapshot = profSnap;
           renderInfProfiles(profiles, activeId, switching || benching);
         }
+        applyPendingPickProfile(profiles);
         $('inf-api-link').href = (data.urls && data.urls.api) || '#';
         $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
         const invPath = active && active.inventory_path;
@@ -3220,6 +3236,13 @@
           const btn = nav.querySelector('[data-view="inference"]');
           if (btn) showInference(btn);
           history.replaceState(null, '', '#inference');
+          if (d.profile) pendingPickProfile = d.profile;
+          if (d.infFilterQ) {
+            infFilterQ = d.infFilterQ;
+            if ($('inf-q')) $('inf-q').value = infFilterQ;
+            saveInfPrefs();
+            rerenderInfProfiles();
+          }
           if (d.infLogFocus) openInfLogOverlay();
         }
       });
@@ -3243,6 +3266,7 @@
       loadInfPrefs();
       const urlParams = new URLSearchParams(location.search);
       pendingStartProfile = urlParams.get('start');
+      pendingPickProfile = urlParams.get('pick') || pendingPickProfile;
       if (urlParams.get('q')) {
         infFilterQ = urlParams.get('q');
         if ($('inf-q')) $('inf-q').value = infFilterQ;

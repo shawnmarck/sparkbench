@@ -1,0 +1,36 @@
+id: gemma4-12b-opus-reasoning-q4
+name: Gemma 4 12B Opus Reasoning Q4
+catalog_id: yuxinlu1/gemma-4-12b-opus-reasoning-gguf
+inventory_path: yuxinlu1/gemma-4-12b-opus-reasoning
+engine: llamacpp
+tier: fast
+model: /models/yuxinlu1/gemma-4-12b-opus-reasoning/gguf/gemma4-opus48-Q4_K_M.gguf
+served_name: gemma4-12b-opus-reasoning-q4
+port: 8081
+tags:
+- testing
+- reasoning
+- llamacpp
+- golden
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: "yuxinlu1 Gemma 4 12B IT fine-tune with Claude 4.6\u20134.8 Opus reasoning\
+  \ style.\nQ4_K_M ~7GB. MTP sidecars available in HF repo if speculative decode is\
+  \ wanted later.\n"
+lifecycle: works
+context:
+  default: 32768
+  native: 32768
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 32768
+      kv: q8_0
+promoted_at: '2026-06-26T08:40:02.512410+00:00'

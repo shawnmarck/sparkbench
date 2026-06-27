@@ -1,0 +1,39 @@
+id: gemma4-12b-agentic-v2-q4
+name: "Gemma 4 12B Agentic v2 (Fable5\xD7Composer2.5) Q4"
+catalog_id: yuxinlu1/gemma-4-12b-agentic-v2-gguf
+inventory_path: yuxinlu1/gemma-4-12b-agentic-v2
+engine: llamacpp
+tier: fast
+model: /models/yuxinlu1/gemma-4-12b-agentic-v2/gguf/gemma4-v2-Q4_K_M.gguf
+served_name: gemma4-12b-agentic-v2-q4
+port: 8081
+tags:
+- testing
+- agentic
+- coding
+- llamacpp
+- golden
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: 'yuxinlu1 Gemma 4 12B agentic v2 (3.5x tau2). Q4_K_M ~7GB.
+
+  Tool-use / agentic fine-tune; successor to v1 coder GGUF.
+
+  '
+lifecycle: works
+context:
+  default: 32768
+  native: 32768
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 32768
+      kv: q8_0
+promoted_at: '2026-06-26T08:43:10.597099+00:00'

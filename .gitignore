@@ -33,6 +33,7 @@ bin/llama-server
 *.env.local
 secrets/
 /etc/spark/
+host.env
 
 # OS / editor
 .DS_Store

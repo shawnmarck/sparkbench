@@ -4,7 +4,7 @@ set -euo pipefail
 
 STAGING="/home/techno/spark"
 TARGET="/opt/spark"
-HOST_IP="192.168.0.101"
+HOST_IP="${SPARK_LAN_IP:-192.168.0.101}"
 
 echo "==> Creating ${TARGET} layout"
 mkdir -p "${TARGET}"/{portal,docs,install,services}

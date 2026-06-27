@@ -4,7 +4,7 @@ Quick orientation for humans and coding agents working on this repo.
 
 ## What this is
 
-Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`): portal UI, model inventory, NAS shelf sync, inference smoke stacks.
+Dashboard + ops tooling for a **DGX Spark** (GB10): portal UI, model inventory, NAS shelf sync, inference smoke stacks. Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine (defaults: `sparky` / `192.168.0.101`).
 
 ## Layout
 

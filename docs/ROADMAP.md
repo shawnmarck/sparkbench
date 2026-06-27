@@ -13,7 +13,7 @@ Last updated: 2026-06-25 (vision, agent loop, reprioritized backlog)
 
 ## Why this exists
 
-Homelab control plane for **sparky** (`192.168.0.101`, DGX Spark / GB10):
+Homelab control plane for a **DGX Spark** (GB10 — `$SPARK_HOST`):
 
 | Use case | Tool |
 |----------|------|

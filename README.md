@@ -1,6 +1,8 @@
 # Spark Home Lab
 
-Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, NAS shelf sync, inference tooling.
+Ops dashboard for a **DGX Spark** (GB10) — portal, model inventory, NAS shelf sync, inference tooling.
+
+> Not affiliated with or endorsed by NVIDIA Corporation.
 
 <p align="center">
   <img src="docs/assets/portal-nebula-theme.gif" width="820" alt="Portal nebula theme demo — Theme B nebula background with constellation toggle">
@@ -15,14 +17,16 @@ Private ops dashboard for **DGX Spark** (`sparky`) — portal, model inventory, 
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | **spark CLI** — humans, coding agents, HTTP APIs |
 | [install/INSTALL.md](install/INSTALL.md) | Install script index |
 
-## Deploy to sparky
+## Deploy
 
-From this clone on techno (after commit):
+From your clone (after commit):
 
 ```bash
-./scripts/deploy-sparky.sh
-./scripts/deploy-sparky.sh --status   # drift check
+SPARK_HOST=sparky ./scripts/deploy-sparky.sh
+SPARK_HOST=sparky ./scripts/deploy-sparky.sh --status   # drift check
 ```
+
+Set `SPARK_HOST` to match your machine's hostname or IP.
 
 ## Docs
 

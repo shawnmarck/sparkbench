@@ -46,7 +46,7 @@ If you own a Spark, run this. If you're considering one, check the [leaderboard]
 Fetch the full guide and follow it step by step:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/main/docs/guides/installation-instructions.md
+curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/v0.1.0/docs/guides/installation-instructions.md
 ```
 
 ### For Humans
@@ -164,8 +164,7 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trust
 
 ## Documentation
 
-| Path                                                                                  | Topic                                            |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [CHANGELOG.md](CHANGELOG.md)                                                          | Release history                                  |
 | [AGENTS.md](AGENTS.md)                                                                | Agent manual: layout, rules, code touchpoints    |
 | [docs/guides/installation-instructions.md](docs/guides/installation-instructions.md)  | Full install + ops guide (LLM agents fetch via README) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |

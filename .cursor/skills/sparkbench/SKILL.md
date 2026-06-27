@@ -14,7 +14,7 @@ Follow **`docs/guides/installation-instructions.md`** step by step.
 If the repo is not on disk yet, fetch the guide:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/main/docs/guides/installation-instructions.md
+curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/v0.1.0/docs/guides/installation-instructions.md
 ```
 
 Execute every step in order. Three surfaces: **CLI** (`spark`), **HTTP** (`/api/…`), **Portal** (`http://$SPARK_HOST/`).

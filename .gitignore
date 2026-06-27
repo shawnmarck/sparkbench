@@ -10,6 +10,11 @@ logs/
 run/
 portal/models.json
 
+# Host-local portal/HF runtime (not shared cookbook)
+data/hf-download-queue.yaml
+data/hf-explore-queue.yaml
+data/inference-benchmark-history.yaml
+
 # Vendored sources — pulled at install time, not tracked in git
 vendor/llama.cpp/
 vendor/spark-vllm-docker/

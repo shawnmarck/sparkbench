@@ -57,7 +57,7 @@ Targets:
   engine eugr|llama|ds4   Install one inference engine (one GPU at a time)
   gateway              OpenAI gateway :9000 + client activity widget
   openwebui            Open WebUI dual-backend compose
-  bootstrap            Passwordless sudo for install + Netdata/portal base
+  bootstrap            host.env + passwordless sudo for install + portal base
   agent                Full passwordless sudo for automation (optional)
   restart inference-api   Restart inference API only (ops shortcut)
   extras terminal|shell|lazydocker   Maintainer convenience (not core product)
@@ -147,6 +147,7 @@ cmd_openwebui() {
 }
 
 cmd_bootstrap() {
+  run_module bootstrap/host-env.sh
   run_module bootstrap/grant-install-sudo.sh
 }
 

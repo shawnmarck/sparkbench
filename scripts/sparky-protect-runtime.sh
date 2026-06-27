@@ -11,6 +11,24 @@ HOST_LOCAL_PATHS=(
   data/inference-benchmarks.yaml
 )
 
+# Shared cookbook must never be skip-worktree (legacy mistake on some hosts).
+SHARED_COOKBOOK_PATHS=(
+  data/model-catalog.yaml
+  data/model-verification.yaml
+  data/golden-recipes.yaml
+)
+
+cleared=0
+for path in "${SHARED_COOKBOOK_PATHS[@]}"; do
+  if git ls-files -v "$path" 2>/dev/null | grep -q '^S'; then
+    git update-index --no-skip-worktree "$path"
+    cleared=$((cleared + 1))
+  fi
+done
+if [[ "$cleared" -gt 0 ]]; then
+  echo "==> cleared skip-worktree on $cleared shared cookbook file(s)"
+fi
+
 protected=0
 for path in "${HOST_LOCAL_PATHS[@]}"; do
   if git ls-files --error-unmatch "$path" &>/dev/null; then
@@ -24,3 +42,6 @@ git ls-files -v | grep '^[S]' | awk '{print "  ", $2}' || true
 echo ""
 echo "Shared cookbook (recipes/, data/golden-recipes.yaml, data/model-catalog.yaml,"
 echo "data/model-verification.yaml) is pulled from git — not skip-worktree."
+echo ""
+echo "Host-local runtime (gitignored): run/, logs/, portal/models.json,"
+echo "data/hf-*-queue.yaml"

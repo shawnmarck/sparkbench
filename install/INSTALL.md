@@ -39,10 +39,12 @@ Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer
 | `engines/ds4-dwarfstar.sh` | DwarfStar (ds4) cuda-spark |
 | `gateway/inference-gateway.sh` | `:9000/v1` OpenAI proxy + activity JSONL |
 | `gateway/client-activity.sh` | Activity API `:8769` + nginx `/api/activity` |
+| `bootstrap/host-env.sh` | Create `/etc/spark/host.env` from example when missing |
 | `extras/*` | Maintainer convenience (kitty, p10k, lazydocker) |
-| `legacy/*` | Superseded one-offs — do not use on new installs |
 
 **Compat shims:** numbered scripts at `install/NN-*.sh` exec the matching module above (for runbooks and agents). New work should use `spark-install` or module paths directly.
+
+**Removed (Phase 4):** legacy `15*` / `16b` stock vLLM smoke scripts — use `spark-install engine eugr` instead.
 
 ## Orchestrator targets
 
@@ -108,14 +110,6 @@ These forward to `install/modules/` and remain safe for surgical re-runs. Prefer
 | `14-openwebui-dual-backend.sh` | Open WebUI dual backend compose |
 | `16-eugr-vllm-qwen36.sh` | eugr vLLM NVFP4 (`spark engine eugr`) |
 | `22-ds4-dwarfstar.sh` | DwarfStar (ds4) cuda-spark build + `spark engine ds4` |
-
-**Legacy (superseded — do not use on new installs):**
-
-| Script | Notes |
-|--------|--------|
-| `15-vllm-openwebui-smoke.sh` | Pre–Phase 5 stock vLLM smoke; use `engine eugr` |
-| `15b-sync-inference-compose.sh` | One-off compose sync; folded into eugr install path |
-| `16b-fix-spark-eugr.sh` | One-off eugr script refresh; re-run `engine eugr` instead |
 
 ### Inference gateway & client activity
 

@@ -113,6 +113,8 @@ sudo bash install/spark-install gateway
 
 Legacy numbered scripts (`install/03-….sh`) still work; prefer the orchestrator.
 
+**Host identity:** copy `install/host.env.example` → `/etc/spark/host.env` (or run `spark-install bootstrap`). Secrets stay in `/etc/spark/smb-credentials-models`.
+
 ## Inference API reload (agents)
 
 `scripts/spark-inference-api.py` is a thin HTTP shell on **:8767** (proxied as `/api/inference/*`). It reloads `spark-inference.py` on each request — bench, switch, recipe lifecycle, and history routes all live there.

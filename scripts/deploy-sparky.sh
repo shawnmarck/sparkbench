@@ -25,6 +25,7 @@ BRANCH="${BRANCH:-main}"
 
 CODE_PATHS=(
   scripts
+  install
   services
   recipes
   portal
@@ -67,6 +68,11 @@ DIRTY="$(git status --porcelain | wc -l | tr -d ' ')"
 echo "  dirty:  $DIRTY path(s)"
 SKIP="$(git ls-files -v | grep '^[S]' | wc -l | tr -d ' ')"
 echo "  skip-worktree data: $SKIP file(s)"
+for path in data/model-catalog.yaml data/model-verification.yaml data/golden-recipes.yaml; do
+  if git ls-files -v "$path" 2>/dev/null | grep -q '^S'; then
+    echo "  WARN: skip-worktree on shared $path — run scripts/sparky-protect-runtime.sh"
+  fi
+done
 if [[ -f run/inference-active.json ]]; then
   active="$(python3 -c "import json; print(json.load(open('run/inference-active.json')).get('profile',''))" 2>/dev/null || true)"
   echo "  inference active: ${active:-none}"
@@ -175,10 +181,8 @@ elif [[ -f scripts/sparky-protect-runtime.sh ]]; then
   bash scripts/sparky-protect-runtime.sh
 fi
 
-if [[ -x scripts/apply-spark-patches.sh ]]; then
-  bash scripts/apply-spark-patches.sh
-elif [[ -f scripts/apply-spark-patches.sh ]]; then
-  bash scripts/apply-spark-patches.sh
+if [[ -x scripts/migrate-host-local-data.sh ]]; then
+  bash scripts/migrate-host-local-data.sh
 fi
 
 echo "==> deployed $(git rev-parse --short HEAD) — $(git log -1 --format=%s)"

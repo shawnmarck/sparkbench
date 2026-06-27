@@ -1,6 +1,16 @@
 # Shared install helpers — source from install/modules/*/*.sh (do not execute directly).
 # Compat shims at install/*.sh forward to modules/. SPARK_INSTALL_BATCH=1 defers nginx
 # until spark-install finalizes a bundled run.
+#
+# Host identity (optional): /etc/spark/host.env — SPARK_HOST, SPARK_LAN_IP, NAS_IP, SPARK_USER.
+# Copy install/host.env.example → /etc/spark/host.env on each box (not in git).
+if [[ -f /etc/spark/host.env ]]; then
+  # shellcheck disable=SC1091
+  set -a
+  source /etc/spark/host.env
+  set +a
+fi
+
 SPARK_ROOT="${SPARK_ROOT:-/opt/spark}"
 if [[ -z "${SPARK_USER:-}" ]]; then
   if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]]; then

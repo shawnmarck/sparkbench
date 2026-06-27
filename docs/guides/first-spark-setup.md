@@ -18,7 +18,7 @@ One DGX Spark (`sparky`), one operator. This guide gets you from clone to browsi
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/shawnmarck/sparky-dashboard.git /opt/spark
+git clone https://github.com/shawnmarck/sparkbench.git /opt/spark
 cd /opt/spark
 sudo bash install/00-grant-install-sudo.sh    # if needed
 sudo bash install/20-spark-cli.sh

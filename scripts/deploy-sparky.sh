@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy sparky-dashboard from techno dev clone → GitHub → sparky:/opt/spark
+# Deploy sparkbench from techno dev clone → GitHub → sparky:/opt/spark
 #
 # Usage (from repo root on techno):
 #   ./scripts/deploy-sparky.sh              # push main + pull on sparky

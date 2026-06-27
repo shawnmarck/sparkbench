@@ -1,10 +1,23 @@
 #!/usr/bin/env bash
 # Mount QNAP models share at /mnt/model-shelf (CIFS, fstab, auto on boot)
+# Optional — skip entirely if you have no NAS shelf; SparkBench works with local /models only.
 set -euo pipefail
 
-NAS_IP="${NAS_IP:-192.168.0.99}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+
+NAS_IP="${NAS_IP:-}"
 SHARE="${NAS_SHARE:-models}"
-MOUNT="/mnt/model-shelf"
+
+if [[ -z "${NAS_IP}" ]]; then
+  echo "ERROR: NAS_IP is required."
+  echo "  Set NAS_IP=192.168.x.x (your NAS LAN address) and re-run, e.g.:"
+  echo "    sudo NAS_IP=192.168.1.50 NAS_USER=spark bash $0"
+  echo "  Or skip this script entirely — SparkBench works without a NAS shelf."
+  exit 1
+fi
+MOUNT="${SPARK_SHELF_MOUNT}"
 CREDS="/etc/spark/smb-credentials-models"
 FSTAB_MARKER="# spark-model-shelf"
 SMB_USER="${NAS_USER:-spark}"
@@ -17,7 +30,7 @@ apt-get install -y -qq cifs-utils smbclient keyutils
 echo "==> Creating mount point ${MOUNT}"
 mkdir -p "${MOUNT}"
 
-SECRETS="/home/techno/spark/secrets/nas.env"
+SECRETS="${SPARK_ROOT}/secrets/nas.env"
 if [[ ! -f "${CREDS}" ]]; then
   if [[ -f "${SECRETS}" ]]; then
     # shellcheck disable=SC1090
@@ -58,7 +71,7 @@ if ! smbclient -L "//${NAS_IP}" -A "${CREDS}" 2>/dev/null | grep -qi "${SHARE}";
   echo "WARN: share '${SHARE}' not listed via smbclient; attempting mount anyway"
 fi
 
-MOUNT_OPTS="credentials=${CREDS},uid=techno,gid=techno,file_mode=0664,dir_mode=0775,iocharset=utf8,vers=3.0,nofail,x-systemd.automount,_netdev"
+MOUNT_OPTS="credentials=${CREDS},uid=${SPARK_USER},gid=${SPARK_USER},file_mode=0664,dir_mode=0775,iocharset=utf8,vers=3.0,nofail,x-systemd.automount,_netdev"
 
 echo "==> Test mount"
 if mountpoint -q "${MOUNT}"; then

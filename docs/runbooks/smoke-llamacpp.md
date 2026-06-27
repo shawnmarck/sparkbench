@@ -74,8 +74,6 @@ Subjective feel + tok/s (manual or `llama-bench`) — no portal TPS widget yet.
 ## Related
 
 - `docs/INFERENCE-SMOKE.md` — vLLM path (3a)
-- `docs/ROADMAP.md` — Phase 3b checklist
-
 
 ## Open WebUI
 

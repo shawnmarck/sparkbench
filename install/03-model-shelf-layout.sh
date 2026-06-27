@@ -1,31 +1,33 @@
 #!/usr/bin/env bash
-# Create /models layout on Spark + shelf mirror skeleton, docs, sync script.
+# Create /models layout on Spark + optional shelf mirror skeleton, docs, sync script.
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
+SPARK_ROOT="${SPARK_ROOT}"
 MODELS="/models"
-SHELF_MODELS="/mnt/model-shelf/models"
-TECHNO="techno"
+SHELF_MODELS="${SPARK_SHELF_MOUNT}/models"
 
 echo "==> Sync staging to ${SPARK_ROOT}"
 mkdir -p "${SPARK_ROOT}"/{portal,docs,install,services,scripts}
 rsync -a "${STAGING}/docs/" "${SPARK_ROOT}/docs/"
 rsync -a "${STAGING}/scripts/" "${SPARK_ROOT}/scripts/"
 rsync -a "${STAGING}/install/" "${SPARK_ROOT}/install/"
-chown -R "${TECHNO}:${TECHNO}" "${SPARK_ROOT}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}"
 
 echo "==> Creating Spark model workspace ${MODELS}"
 mkdir -p "${MODELS}/_incoming"
 mkdir -p "${MODELS}/.keep"
-chown -R "${TECHNO}:${TECHNO}" "${MODELS}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${MODELS}"
 chmod 755 "${MODELS}"
 chmod 755 "${MODELS}/_incoming"
 
 cat > "${MODELS}/README.md" <<'EOF'
 # /models — Spark model workspace
 
-Primary download and inference path on this machine. Layout mirrors the NAS shelf.
+Primary download and inference path on this machine. Layout mirrors the NAS shelf when configured.
 
 ```
 /models/
@@ -38,19 +40,19 @@ Primary download and inference path on this machine. Layout mirrors the NAS shel
     awq/  gptq/             optional pre-quant trees
 ```
 
-**Flow:** download here first → smoke test → push to shelf:
+**Flow:** download here first → smoke test → optionally push to NAS shelf:
 ```bash
 spark shelf push google/gemma-4-26b-a4b
 ```
 
-Docs: /opt/spark/docs/MODEL-SHELF.md
+Docs: /opt/spark/docs/guides/model-shelf.md
 EOF
-chown "${TECHNO}:${TECHNO}" "${MODELS}/README.md"
+chown "${SPARK_USER}:${SPARK_USER}" "${MODELS}/README.md"
 
-echo "==> Creating shelf mirror ${SHELF_MODELS}"
-if mountpoint -q /mnt/model-shelf; then
+echo "==> Creating shelf mirror ${SHELF_MODELS} (when NAS is mounted)"
+if shelf_mounted; then
   mkdir -p "${SHELF_MODELS}/_incoming"
-  chown -R "${TECHNO}:${TECHNO}" "${SHELF_MODELS}" 2>/dev/null || true
+  chown -R "${SPARK_USER}:${SPARK_USER}" "${SHELF_MODELS}" 2>/dev/null || true
   cat > "${SHELF_MODELS}/README.md" <<'EOF'
 # NAS model shelf (mirror of Spark /models)
 
@@ -63,10 +65,10 @@ Restore to Spark:
 spark shelf pull google/gemma-4-26b-a4b
 ```
 EOF
-  chown "${TECHNO}:${TECHNO}" "${SHELF_MODELS}/README.md" 2>/dev/null || true
+  chown "${SPARK_USER}:${SPARK_USER}" "${SHELF_MODELS}/README.md" 2>/dev/null || true
   echo "OK: shelf models directory ready"
 else
-  echo "WARN: /mnt/model-shelf not mounted; shelf dirs skipped"
+  echo "OK: NAS shelf not mounted — skipped (local /models only; run install/02-model-shelf-mount.sh when ready)"
 fi
 
 echo "==> Shelf CLI via install/20-spark-cli.sh (spark shelf push|pull)"
@@ -75,6 +77,6 @@ echo "==> Shelf CLI via install/20-spark-cli.sh (spark shelf push|pull)"
 echo
 echo "Done."
 echo "  Spark:  ${MODELS}"
-echo "  Shelf:  ${SHELF_MODELS}"
-echo "  Docs:   ${SPARK_ROOT}/docs/MODEL-SHELF.md"
+echo "  Shelf:  ${SHELF_MODELS} (optional)"
+echo "  Docs:   ${SPARK_ROOT}/docs/guides/model-shelf.md"
 ls -la "${MODELS}"

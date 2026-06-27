@@ -213,7 +213,7 @@ case "${cmd}" in
     ;;
   build)
     VENDOR="${SPARK_DS4_VENDOR:-/opt/spark/vendor/ds4}"
-    STAGING_VENDOR="/home/techno/spark/vendor/ds4"
+    STAGING_VENDOR="${SPARK_ROOT}/vendor/ds4"
     if [[ ! -d "${VENDOR}/.git" && -d "${STAGING_VENDOR}/.git" ]]; then
       VENDOR="${STAGING_VENDOR}"
     fi

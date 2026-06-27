@@ -53,7 +53,11 @@ LOG_DIR = ROOT / "logs"
 BENCHMARKS_FILE = ROOT / "data" / "inference-benchmarks.yaml"
 BENCHMARK_HISTORY_LEGACY = ROOT / "data" / "inference-benchmark-history.yaml"
 BENCHMARK_HISTORY_FILE = ROOT / "run" / "inference-benchmark-history.yaml"
-BENCHMARK_HISTORY_OWNER = "techno"
+BENCHMARK_HISTORY_OWNER = (
+    os.environ.get("SPARK_USER")
+    or os.environ.get("SUDO_USER")
+    or __import__("getpass").getuser()
+)
 BENCH_HISTORY_RUN_RE = re.compile(
     r"^/api/inference/benchmarks/([^/]+)/runs/([^/]+)$"
 )
@@ -118,12 +122,11 @@ def sync_spark_status_for_works(recipe: dict[str, Any], note: str | None = None)
     engine = str(recipe.get("engine") or "").strip()
     if engine == "eugr-dflash":
         engine = "eugr"
-    if not note:
-        note = f"Model Lab: {recipe.get('id', 'recipe')} works"
     args = [sys.executable, str(VERIFY_SCRIPT), "set", str(inv_path), "works"]
     if engine:
         args.append(engine)
-    args.append(note)
+    if note:
+        args.append(note)
     subprocess.run(args, capture_output=True, check=False)
 
 
@@ -145,11 +148,9 @@ def sync_spark_status_for_testing(recipe: dict[str, Any]) -> None:
     if current in ("wip", "works", "failed"):
         return
     engine = str(recipe.get("engine") or "").strip()
-    note = f"Model Lab: {recipe.get('id', 'recipe')} testing"
     args = [sys.executable, str(VERIFY_SCRIPT), "set", str(inv_path), "wip"]
     if engine:
         args.append(engine)
-    args.append(note)
     subprocess.run(args, capture_output=True, check=False)
 
 

@@ -74,7 +74,7 @@ default_variant: gguf/Q4_K_M
 Recipes should point at `/models/...` directly. If a stack expects a different path, use a symlink:
 
 ```bash
-ln -s /models /home/techno/models   # example shim
+ln -s /models ~/models              # example shim
 ```
 
 Avoid reorganizing for stack defaults; keep one canonical tree.

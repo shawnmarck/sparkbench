@@ -2,15 +2,17 @@
 # Open WebUI with vLLM + llama.cpp dual OpenAI connections.
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
 COMPOSE_SRC="${STAGING}/services/open-webui/compose.yaml"
 COMPOSE_DST="${SPARK_ROOT}/services/open-webui/compose.yaml"
 
 echo "==> Install open-webui compose"
 mkdir -p "${SPARK_ROOT}/services/open-webui"
 install -m 644 "${COMPOSE_SRC}" "${COMPOSE_DST}"
-chown techno:techno "${COMPOSE_DST}"
+chown "${SPARK_USER}:${SPARK_USER}" "${COMPOSE_DST}"
 
 echo "==> Recreate Open WebUI (preserves chat volume)"
 docker stop spark-open-webui 2>/dev/null || true

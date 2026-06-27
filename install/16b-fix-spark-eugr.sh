@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cp /home/techno/spark/scripts/spark-eugr /opt/spark/scripts/spark-eugr
-chmod +x /opt/spark/scripts/spark-eugr
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+cp "${SPARK_STAGING}/scripts/spark-eugr" "${SPARK_ROOT}/scripts/spark-eugr"
+chmod +x "${SPARK_ROOT}/scripts/spark-eugr"
 # CLI: install/20-spark-cli.sh → spark engine eugr
-sudo -u techno /opt/spark/scripts/spark-eugr up
+sudo -u "${SPARK_USER}" "${SPARK_ROOT}/scripts/spark-eugr" up

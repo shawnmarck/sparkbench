@@ -2,8 +2,10 @@
 # Phase 3 smoke test: vLLM (Qwen3.6 NVFP4) + Open WebUI
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
 
 echo "==> Sync docs, portal, services, scripts"
 mkdir -p "${SPARK_ROOT}/services/qwen36-nvfp4"
@@ -14,8 +16,8 @@ cp "${STAGING}/scripts/spark-inference" "${SPARK_ROOT}/scripts/"
 chmod +x "${SPARK_ROOT}/scripts/spark-inference"
 # CLI: install/20-spark-cli.sh → spark inference
 
-echo "==> Docker: add techno to docker group"
-usermod -aG docker techno
+echo "==> Docker: add ${SPARK_USER} to docker group"
+usermod -aG docker "${SPARK_USER}"
 
 echo "==> Verify NVIDIA container runtime"
 if ! docker info 2>/dev/null | grep -qi nvidia; then

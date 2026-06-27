@@ -9,7 +9,6 @@ STAGING_VENDOR="${SPARK_STAGING}/vendor/ds4"
 VENDOR="${TARGET}/vendor/ds4"
 BIN_DIR="${TARGET}/bin"
 PIN="${TARGET}/data/ds4-dwarfstar.yaml"
-TECHNO="techno"
 
 echo "==> Sync staging scripts/docs/data"
 rsync -a "${SPARK_STAGING}/scripts/" "${TARGET}/scripts/" 2>/dev/null || true
@@ -33,18 +32,18 @@ else
   git -C "${VENDOR}" fetch origin decode-perf-tuning
   git -C "${VENDOR}" checkout -f decode-perf-tuning
 fi
-chown -R "${TECHNO}:${TECHNO}" "${VENDOR}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${VENDOR}"
 
 echo "==> Build cuda-spark"
-sudo -u "${TECHNO}" bash -lc "cd '${VENDOR}' && make cuda-spark -j\"\$(nproc)\""
+sudo -u "${SPARK_USER}" bash -lc "cd '${VENDOR}' && make cuda-spark -j\"\$(nproc)\""
 
 mkdir -p "${BIN_DIR}"
 install -m 755 "${VENDOR}/ds4-server" "${VENDOR}/ds4" "${VENDOR}/ds4-bench" "${BIN_DIR}/"
 chmod +x "${TARGET}/scripts/spark-ds4"
-chown -R "${TECHNO}:${TECHNO}" "${BIN_DIR}" "${TARGET}/scripts/spark-ds4"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${BIN_DIR}" "${TARGET}/scripts/spark-ds4"
 
 mkdir -p "${TARGET}/run" "${TARGET}/logs"
-chown techno:techno "${TARGET}/run" "${TARGET}/logs"
+chown "${SPARK_USER}:${SPARK_USER}" "${TARGET}/run" "${TARGET}/logs"
 
 rsync -a "${STAGING}/scripts/bench-queue-discover.py" "${TARGET}/run/" 2>/dev/null || true
 rsync -a "${STAGING}/scripts/bench-queue-worker.sh" "${TARGET}/run/" 2>/dev/null || true

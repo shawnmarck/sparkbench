@@ -2,7 +2,7 @@
 
 Run with `sudo bash install/<script>.sh` from `/opt/spark` (or staging copy).
 
-Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LAN_IP` — see `common.sh`.
+Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_USER`, `SPARK_HOST`, `SPARK_LAN_IP` — see `common.sh`.
 
 ## Bootstrap
 
@@ -21,8 +21,8 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 
 | Script | Purpose |
 |--------|---------|
-| `02-model-shelf-mount.sh` | CIFS mount `/mnt/model-shelf` |
-| `03-model-shelf-layout.sh` | `/models` + shelf directory skeleton |
+| `02-model-shelf-mount.sh` | **Optional** CIFS mount `/mnt/model-shelf` |
+| `03-model-shelf-layout.sh` | `/models` workspace (+ shelf skeleton when NAS is mounted) |
 | `03a-shelf-hf-tools.sh` | `spark shelf push/pull`, `spark hf login`, `hf` CLI |
 | `04-model-inventory.sh` | Catalog, inventory builder, portal pages |
 | `05-model-inventory-auto-refresh.sh` | Timer + inotify refresh; nginx (via `common.sh`) |
@@ -63,7 +63,8 @@ Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_HOST`, `SPARK_LA
 ## Typical fresh order
 
 ```
-02 → 03 → 04 → 05 → 10 → 11 → 12
+03 → 04 → 05 → 10 → 11 → 12          # core portal + /models (no NAS required)
+02 → 03                              # optional: add NAS shelf mirror
 16 (vLLM) and/or 13 (llama.cpp) — one GPU engine at a time
 20 (unified `spark` CLI — run once, or chained from 17)
 23 → 24 (stable gateway :9000/v1, then client activity widget) — run after an engine is up

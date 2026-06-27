@@ -1,8 +1,22 @@
 # Shared install helpers — source from install/*.sh (do not execute directly).
 SPARK_ROOT="${SPARK_ROOT:-/opt/spark}"
-SPARK_STAGING="${SPARK_STAGING:-/home/techno/spark}"
+if [[ -z "${SPARK_USER:-}" ]]; then
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]]; then
+    SPARK_USER="${SUDO_USER}"
+  else
+    SPARK_USER="${SPARK_RUN_USER:-spark}"
+  fi
+fi
+SPARK_STAGING="${SPARK_STAGING:-${SPARK_ROOT}}"
 SPARK_HOST="${SPARK_HOST:-sparky}"
-SPARK_LAN_IP="${SPARK_LAN_IP:-192.168.0.101}"
+# Set SPARK_LAN_IP to your Spark's LAN IP if you want nginx to also serve on
+# that address (server_name). Leave blank to serve on hostname + default_server.
+SPARK_LAN_IP="${SPARK_LAN_IP:-}"
+SPARK_SHELF_MOUNT="${SPARK_SHELF_MOUNT:-/mnt/model-shelf}"
+
+shelf_mounted() {
+  mountpoint -q "${SPARK_SHELF_MOUNT}" 2>/dev/null
+}
 
 write_nginx_portal_site() {
   cat > /etc/nginx/sites-available/spark-portal <<NGINX

@@ -2,13 +2,17 @@
 # One-time: enter sudo password once, then the Grok agent can sudo without prompting.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+
 SUDOERS="/etc/sudoers.d/spark-agent"
-RULE='techno ALL=(ALL) NOPASSWD: ALL'
+RULE="${SPARK_USER} ALL=(ALL) NOPASSWD: ALL"
 
 echo "Spark agent sudo grant"
 echo "======================"
 echo
-echo "This adds passwordless sudo for user 'techno' on this host (sparky)."
+echo "This adds passwordless sudo for user '${SPARK_USER}' on this host."
 echo "Scope: full admin (apt, systemctl, mounts, /etc, etc.)"
 echo "File: $SUDOERS"
 echo
@@ -25,8 +29,8 @@ else
   echo "OK: agent sudo rule added"
 fi
 
-if sudo -u techno sudo -n true 2>/dev/null; then
-  echo "Verified: techno can sudo without a password"
+if sudo -u "${SPARK_USER}" sudo -n true 2>/dev/null; then
+  echo "Verified: ${SPARK_USER} can sudo without a password"
 else
   echo "Note: verification skipped (run as root during install is normal)"
 fi

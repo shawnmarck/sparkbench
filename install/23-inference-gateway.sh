@@ -19,8 +19,8 @@ Wants=spark-inference-api.service
 
 [Service]
 Type=simple
-User=techno
-Group=techno
+User=${SPARK_USER}
+Group=${SPARK_USER}
 WorkingDirectory=${TARGET}
 ExecStart=${TARGET}/scripts/spark-inference-gateway --serve --port 9000
 Restart=on-failure

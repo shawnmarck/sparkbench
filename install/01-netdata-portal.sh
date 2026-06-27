@@ -2,9 +2,12 @@
 # Spark home lab — Netdata + static portal (idempotent)
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-TARGET="/opt/spark"
-HOST_IP="${SPARK_LAN_IP:-192.168.0.101}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
+TARGET="${SPARK_ROOT}"
+HOST_IP="${SPARK_LAN_IP}"
 
 echo "==> Creating ${TARGET} layout"
 mkdir -p "${TARGET}"/{portal,docs,install,services}
@@ -12,7 +15,7 @@ rsync -a "${STAGING}/portal/" "${TARGET}/portal/"
 rsync -a "${STAGING}/docs/" "${TARGET}/docs/"
 rsync -a "${STAGING}/install/" "${TARGET}/install/"
 [ -f "${STAGING}/README.md" ] && rsync -a "${STAGING}/README.md" "${TARGET}/README.md"
-chown -R techno:techno "${TARGET}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${TARGET}"
 
 echo "==> Installing Netdata (if missing)"
 if ! command -v netdata >/dev/null 2>&1; then

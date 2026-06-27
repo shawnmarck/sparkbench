@@ -4,9 +4,9 @@ Quick orientation for humans and coding agents working on this repo.
 
 ## What this is
 
-**SparkBench** is the tool you clone and run on your own DGX Spark: portal UI, model inventory, NAS shelf sync, inference control plane, benchmark harness. **[sparkbench.dev](https://sparkbench.dev)** is the separate public site (leaderboard, model browser, benchmark results) generated from this repo's data files.
+**SparkBench** is the tool you clone and run on your own DGX Spark: portal UI, model inventory, optional NAS shelf sync, inference control plane, benchmark harness. **[sparkbench.dev](https://sparkbench.dev)** is the separate public site (leaderboard, model browser, benchmark results) generated from this repo's data files.
 
-Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine before running install scripts.
+Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUDO_USER` or `spark`) before running install scripts.
 
 ## Layout
 
@@ -21,7 +21,7 @@ Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine before running 
 ├── install/              Idempotent sudo install scripts (see install/INSTALL.md)
 ├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml, ds4-dwarfstar.yaml
 ├── recipes/              Inference profile recipes (Phase 5)
-├── docs/                 ROADMAP + guides/ runbooks/ reference/ examples/
+├── docs/                 guides/ runbooks/ reference/ examples/
 └── services/             compose/yaml for inference UIs
 ```
 
@@ -31,11 +31,8 @@ Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine before running 
 
 | Doc | Use when |
 |-----|----------|
-| `docs/ROADMAP.md` | **The plan** — vision, Model Lab loop, backlog queue |
-| `docs/roadmap/README.md` | **Agent workflow** — one PR per task, sequential merge |
-| `docs/roadmap/tasks/*.md` | Task specs (requirements, acceptance criteria, test plan) |
 | `README.md` | Repo homepage + doc index |
-| `docs/guides/model-shelf.md` | `/models` + NAS shelf layout |
+| `docs/guides/model-shelf.md` | `/models` + optional NAS shelf layout |
 | `docs/guides/model-picks.md` | Why each model is in the catalog |
 | `docs/runbooks/smoke-vllm-eugr.md` | eugr vLLM validation (`spark engine eugr`) |
 | `docs/runbooks/smoke-llamacpp.md` | llama.cpp validation (`spark engine llama`) |
@@ -62,7 +59,6 @@ Replace `sparky` with your machine's hostname or `$SPARK_HOST`.
 | vLLM | http://sparky:8000/v1 |
 | llama.cpp | http://sparky:8081/v1 |
 | Open WebUI | http://sparky:3000 |
-| Hermes UI | http://sparky:9119 |
 | Netdata | http://sparky:19999/v3/ |
 
 ## Rules agents should know
@@ -70,7 +66,7 @@ Replace `sparky` with your machine's hostname or `$SPARK_HOST`.
 1. **One GPU engine at a time** — `spark engine eugr down` before `spark engine llama up` (and vice versa).
 2. **Shelf APIs are unauthenticated on LAN** — OK for trusted home LAN only; don't expose port 80 WAN-side.
 3. **Inventory build needs venv** — `/opt/spark/venv/bin/python scripts/spark-inventory-build.py` (HF API).
-4. **Model paths** — local `/models`, NAS `/mnt/model-shelf/models`.
+4. **Model paths** — local `/models`; optional NAS at `/mnt/model-shelf/models` when mounted.
 5. **Bake-off UIs removed** — no Rookery / vLLM Studio; Phase 5 is `spark inference` + `recipes/`.
 6. **Recipes are auto-scaffolded** — after download, `spark-hf` queue worker calls `scaffold_recipe` / specialized scaffolds in `spark-inference.py`. Do not hand-write recipe YAML unless scaffold cannot route the architecture (MoE, multimodal, DFlash, ds4, MTP). Extend the scaffold router in code + catalog `engine`/`capabilities` when adding new engine types. Failed scaffolds surface as `scaffold_error` on queue items — fix routing, don't bypass with manual YAML.
 7. **Runtime data** (`data/inference-profiles.yaml`, `data/inference-benchmarks.yaml`) is host-local and skip-worktree — never reset from git without backup.
@@ -109,12 +105,12 @@ spark gpu
 See `install/INSTALL.md` for full index. Core path:
 
 ```bash
-sudo bash install/02-model-shelf-mount.sh
 sudo bash install/03-model-shelf-layout.sh
 sudo bash install/04-model-inventory.sh
 sudo bash install/05-model-inventory-auto-refresh.sh
 sudo bash install/10-portal-gpu-widget.sh
 sudo bash install/11-model-shelf-api.sh
+# Optional NAS: install/02-model-shelf-mount.sh then re-run 03
 ```
 
 Inference (pick what you need): `16-eugr-vllm-qwen36.sh`, `13-llama-cpp-smoke.sh`.
@@ -147,9 +143,9 @@ Reports: `run/golden-audit-report.json` + `.md`. Golden map: `data/golden-recipe
 - Text-only MM checkpoint: `--language-model-only` when `config.json` has `"language_model_only": true`.
 - Grok `tool_choice: auto`: `--enable-auto-tool-choice` + `--tool-call-parser qwen3_xml` on eugr YAML.
 
-## Hermes spark-bot
+## Chatbots in front of the gateway (optional)
 
-Compose + deploy live under `hermes/` in this repo; runtime on host is **`/opt/hermes`** (outside `/opt/spark`). Do **not** stop Model Lab inference for routine bot work. See `hermes/spark-bot/AGENTS.md`, deploy via `hermes/scripts/deploy-spark-bot.sh`.
+SparkBench exposes an OpenAI-compatible gateway on `:9000`. Any UI/bot that speaks that protocol (Open WebUI, Hermes, LibreChat, your own client) can sit in front of it. See `services/spark-bot/README.md` for setup options — none are required.
 
 ## Threat model (short)
 

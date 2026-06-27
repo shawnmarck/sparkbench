@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# grok-sparky — one-shot wrapper for xAI Grok + current Sparky inference.
+# grok-sparky — OPTIONAL helper: route the `grok` CLI at the SparkBench gateway.
 #
-# Talks to the gateway, builds a TEMPORARY config (using GROK_HOME) containing
-# the live models with their full served names, then execs grok.
+# Audience: anyone who already uses xAI's `grok` CLI and wants its `--model`
+#           flag to autocomplete with whatever profiles SparkBench currently
+#           serves. Not required to use SparkBench.
+#
+# What it does: talks to the gateway, builds a TEMPORARY config (using GROK_HOME)
+# containing the live models with their full served names, then execs grok.
 #
 # Usage:
 #   grok-sparky

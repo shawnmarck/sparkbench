@@ -162,12 +162,12 @@ EOF
 
 help_shelf() {
   cat <<'EOF'
-spark shelf — local disk ↔ NAS model shelf
+spark shelf — local disk ↔ NAS model shelf (optional; requires mounted /mnt/model-shelf)
 
   pull <lab/slug> [lab/slug...]   Fetch from NAS to /models
   push <lab/slug> [lab/slug...]   Backup local to NAS
   rm <lab/slug>                   Delete local tree (NAS kept)
-  status                          Shelf API + mount status
+  status                          Shelf API + mount status (NAS offline is OK)
 EOF
 }
 

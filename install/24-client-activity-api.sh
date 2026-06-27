@@ -19,8 +19,8 @@ Wants=spark-inference-gateway.service
 
 [Service]
 Type=simple
-User=techno
-Group=techno
+User=${SPARK_USER}
+Group=${SPARK_USER}
 WorkingDirectory=${TARGET}
 ExecStart=${TARGET}/scripts/spark-client-activity.py --serve --port 8769
 Restart=on-failure

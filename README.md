@@ -29,7 +29,7 @@ SparkBench is a self-hosted dashboard and inference control plane for a single D
 - **Model Lab**: Auto-scaffold recipes from weights, mark testing, bench, promote to production
 - **Versioned benchmarks**: Reproducible tok/s, multi-turn agent loops, context ladder
 - **HuggingFace integration**: Search, queue, download, dedupe; weights land in a canonical tree
-- **NAS shelf sync**: Mirror models to/from a CIFS share so they survive reinstalls
+- **NAS shelf sync** (optional): Mirror models to/from a CIFS share when you have one; works fine with local `/models` only
 
 The benchmarks generated here are what populate **[sparkbench.dev](https://sparkbench.dev)**, the public GB10 leaderboard.
 
@@ -45,15 +45,20 @@ If you own a Spark, run this. If you're considering one, check the [leaderboard]
 git clone https://github.com/shawnmarck/sparkbench.git /opt/spark
 cd /opt/spark
 
-# (optional) match your host
+# (optional) match your host and runtime user
 export SPARK_HOST=mybox
 export SPARK_LAN_IP=192.168.1.50
+export SPARK_USER="$USER"
 
 # Core install (idempotent, safe to re-run)
-sudo bash install/20-spark-cli.sh           # spark CLI
-sudo bash install/04-model-inventory.sh     # /models inventory
-sudo bash install/11-model-shelf-api.sh     # shelf HTTP API
-sudo bash install/17-inference-api.sh       # inference control plane
+sudo bash install/03-model-shelf-layout.sh   # /models workspace (no NAS required)
+sudo bash install/20-spark-cli.sh            # spark CLI
+sudo bash install/04-model-inventory.sh      # portal model inventory
+sudo bash install/11-model-shelf-api.sh      # shelf + model HTTP APIs (NAS optional)
+sudo bash install/17-inference-api.sh        # inference control plane
+
+# Optional: NAS shelf mirror (skip if you have no CIFS share)
+# sudo bash install/02-model-shelf-mount.sh
 
 # Pick the engines you want
 sudo bash install/16-eugr-vllm-qwen36.sh    # vLLM (eugr fork, NVFP4)
@@ -80,7 +85,7 @@ spark models verify set <lab/slug> works
 
 spark hf search "deepseek v3"         # explore HuggingFace
 spark hf queue add <repo>             # background download
-spark shelf push <lab/slug>           # mirror to NAS
+spark shelf push <lab/slug>           # mirror to NAS (when shelf is mounted)
 ```
 
 Full reference: [docs/reference/spark-cli.md](docs/reference/spark-cli.md).
@@ -131,7 +136,7 @@ One GPU at a time. `spark inference up <profile>` evicts the current engine and 
 HuggingFace
     │
     ▼
-spark hf  ────────────▶  /models/{lab}/{slug}/   ◀──────  NAS shelf (CIFS)
+spark hf  ────────────▶  /models/{lab}/{slug}/   ◀──────  NAS shelf (optional CIFS)
                               │
                               ▼
                         spark inference
@@ -158,7 +163,6 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trust
 | Path                                                                                  | Topic                                            |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | [AGENTS.md](AGENTS.md)                                                                | Repo layout, rules, agent quick-start            |
-| [docs/ROADMAP.md](docs/ROADMAP.md)                                                    | Phases, status, what's next                      |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |
 | [docs/reference/inference-stack.md](docs/reference/inference-stack.md)                | Inference control plane spec                     |
 | [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md)          | Bench v2: long-ctx + tool-use methodology          |

@@ -7,8 +7,6 @@ Maintains in-memory active-client map (IP + app, 5-min TTL).
 
 Usage:
   python scripts/spark-client-activity.py --serve --port 8769
-
-See docs/roadmap/tasks/TASK-001-client-activity-dashboard.md
 """
 from __future__ import annotations
 

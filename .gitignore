@@ -10,10 +10,18 @@ logs/
 run/
 portal/models.json
 
-# Vendor build artifacts (sources track upstream eugr/spark-vllm-docker)
-vendor/spark-vllm-docker/wheels/
-vendor/llama.cpp/build/
-vendor/llama.cpp/models/
+# Vendored sources — pulled at install time, not tracked in git
+vendor/llama.cpp/
+vendor/spark-vllm-docker/
+vendor/ds4/
+oobe-extract/
+
+# Built/downloaded ARM binaries (built or fetched by install scripts)
+bin/ds4
+bin/ds4-bench
+bin/ds4-server
+bin/llama-cli
+bin/llama-server
 
 # Secrets / local env
 .env
@@ -26,9 +34,15 @@ secrets/
 *~
 .vscode/
 .idea/
+.cursor/
+
+# Internal QA evidence — never ship with releases
+.no-mistakes/
+
+# Stray audit/bench logs at repo root
+benchmark-audit.log
+*.bak.*
+*.bak-*
 
 # Lock files
 *.lock
-# DwarfStar — cloned/built by install/22-ds4-dwarfstar.sh
-vendor/ds4/
-oobe-extract/

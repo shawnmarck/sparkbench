@@ -2,8 +2,10 @@
 # Deploy model inventory (catalog, builder, portal page)
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
 
 echo "==> Sync to ${SPARK_ROOT}"
 mkdir -p "${SPARK_ROOT}"/{data,scripts,portal,install}
@@ -12,7 +14,7 @@ rsync -a "${STAGING}/scripts/spark-inventory-build" "${STAGING}/scripts/spark-in
 cp "${STAGING}/portal/models.html" "${STAGING}/portal/index.html" "${SPARK_ROOT}/portal/"
 cp "${STAGING}/install/04-model-inventory.sh" "${SPARK_ROOT}/install/"
 cp "${STAGING}/scripts/spark-download-models.sh" "${SPARK_ROOT}/scripts/" 2>/dev/null || true
-chown -R techno:techno "${SPARK_ROOT}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}"
 
 chmod +x "${SPARK_ROOT}/scripts/spark-inventory-build" "${SPARK_ROOT}/scripts/spark-inventory-build.py"
 # CLI: install/20-spark-cli.sh → spark models inventory

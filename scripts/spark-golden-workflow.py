@@ -211,7 +211,13 @@ def run_ctx_ladder_phase(profile_id: str, *, force: bool) -> dict[str, Any]:
     return out
 
 
+def shelf_mounted() -> bool:
+    return os.path.ismount("/mnt/model-shelf")
+
+
 def run_shelf_phase(path: str) -> dict[str, Any]:
+    if not shelf_mounted():
+        return {"status": "skipped", "reason": "NAS shelf not mounted"}
     models = json.loads((ROOT / "portal/models.json").read_text()).get("models") or []
 
     def inv_path(m: dict) -> str:

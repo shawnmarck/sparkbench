@@ -2,11 +2,12 @@
 # Build llama.cpp for GB10 (sm_121) and install spark-llama helper.
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
 VENDOR="${SPARK_ROOT}/vendor/llama.cpp"
 BIN_DIR="${SPARK_ROOT}/bin"
-TECHNO="techno"
 MODEL_Q4="/models/unsloth/qwen3.6-35b-a3b/gguf/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf"
 PORT=8081
 
@@ -27,10 +28,10 @@ if [[ -d "${VENDOR}/.git" ]]; then
 else
   git clone --depth 1 https://github.com/ggml-org/llama.cpp.git "${VENDOR}"
 fi
-chown -R "${TECHNO}:${TECHNO}" "${VENDOR}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${VENDOR}"
 
 echo "==> Build (CUDA sm_121 — GB10)"
-sudo -u "${TECHNO}" bash -lc "
+sudo -u "${SPARK_USER}" bash -lc "
   cd '${VENDOR}'
   rm -rf build
   cmake -B build \
@@ -45,7 +46,7 @@ sudo -u "${TECHNO}" bash -lc "
 mkdir -p "${BIN_DIR}"
 install -m 755 "${VENDOR}/build/bin/llama-server" "${BIN_DIR}/llama-server"
 install -m 755 "${VENDOR}/build/bin/llama-cli" "${BIN_DIR}/llama-cli"
-chown -R "${TECHNO}:${TECHNO}" "${BIN_DIR}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${BIN_DIR}"
 
 cat >"${SPARK_ROOT}/scripts/spark-llama" <<'SCRIPT'
 #!/usr/bin/env bash
@@ -135,10 +136,10 @@ SCRIPT
 
 chmod 755 "${SPARK_ROOT}/scripts/spark-llama"
 # CLI: install/20-spark-cli.sh → spark engine llama
-chown techno:techno "${SPARK_ROOT}/scripts/spark-llama"
+chown "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}/scripts/spark-llama"
 
 mkdir -p /opt/spark/run /opt/spark/logs
-chown techno:techno /opt/spark/run /opt/spark/logs
+chown "${SPARK_USER}:${SPARK_USER}" /opt/spark/run /opt/spark/logs
 
 echo
 echo "Done. llama-server -> ${BIN_DIR}/llama-server"

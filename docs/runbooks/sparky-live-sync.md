@@ -4,8 +4,8 @@ Two ways to sync code with GitHub. **Recipes and GB10 perf data travel in git** 
 
 | Path | Who | When |
 |------|-----|------|
-| **A — deploy from techno** | Cursor agent on techno | Default: commit cookbook → push → `./scripts/deploy-sparky.sh` |
-| **B — git on sparky** | Agent on sparky | Pull when ready; commit maintainer cookbook updates back to GitHub |
+| **A — deploy from dev machine** | Local clone | Default: commit cookbook → push → `./scripts/deploy-sparky.sh` |
+| **B — git on spark host** | Agent on spark host | Pull when ready; commit maintainer cookbook updates back to GitHub |
 
 **Never treat sparky `/opt/spark` as a throwaway clone** — it runs inference. Local-only state stays on the box.
 
@@ -39,7 +39,7 @@ git commit -m "Golden matrix: <model> GB10 bench data"
 git push
 ```
 
-On techno (or any clone): `git pull` — or `./scripts/deploy-sparky.sh` to push + pull sparky.
+On any dev clone: `git pull` — or `./scripts/deploy-sparky.sh` to push + pull the spark host.
 
 ## One-time setup on sparky
 
@@ -52,7 +52,7 @@ Marks **host-local** YAML only (`inference-profiles.yaml`, etc.). Does **not** h
 
 ---
 
-## Path A — deploy from techno (default)
+## Path A — deploy from dev machine (default)
 
 ```bash
 ./scripts/deploy-sparky.sh --status

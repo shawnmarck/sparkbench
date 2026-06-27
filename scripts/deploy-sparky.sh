@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
-# Deploy sparkbench from techno dev clone → GitHub → sparky:/opt/spark
+# deploy-sparky.sh — OPTIONAL maintainer helper.
 #
-# Usage (from repo root on techno):
-#   ./scripts/deploy-sparky.sh              # push main + pull on sparky
+# Audience: a SparkBench maintainer (or operator with two boxes) who edits
+#           in a dev clone on machine A and wants a one-liner to ship the
+#           change to /opt/spark on Spark host B via GitHub.
+#
+# End users running SparkBench on a single Spark do NOT need this — they edit
+# in /opt/spark directly. Safe to ignore or delete.
+#
+# Usage (from your dev machine, repo root):
+#   ./scripts/deploy-sparky.sh              # push main + pull on spark host
 #   SKIP_PUSH=1 ./scripts/deploy-sparky.sh  # pull only
 #   ./scripts/deploy-sparky.sh --status     # show drift, no changes
 #   REGENERATE_INVENTORY=1 ./scripts/deploy-sparky.sh
 #
-# Code changes: edit on techno → commit → this script.
-# Ops (inference up, audits): ssh sparky directly — not via deploy.
+# Code changes: edit locally → commit → this script.
+# Ops (inference up, audits): ssh to spark host directly — not via deploy.
 set -euo pipefail
 
 SPARK_HOST="${SPARK_HOST:-sparky}"
@@ -68,7 +75,7 @@ REMOTE
 }
 
 if [[ "$status_only" == 1 ]]; then
-  echo "==> techno: $REPO_ROOT"
+  echo "==> local: $REPO_ROOT"
   git fetch origin "$BRANCH" 2>/dev/null || true
   echo "  branch: $(git branch --show-current)"
   echo "  HEAD:   $(git rev-parse --short HEAD) $(git log -1 --format='(%cr) %s')"
@@ -130,9 +137,9 @@ if [[ ${#STASH_PATHS[@]} -gt 0 ]] && (
   STASHED=1
 fi
 
-# Abort if pull would clobber untracked files (commit them on techno first).
+# Abort if pull would clobber untracked files (commit them locally first).
 if [[ -n "$(git ls-files -o --exclude-standard -- "${STASH_PATHS[@]}")" ]]; then
-  echo "ERROR: untracked files under deploy paths — commit on techno before deploy:" >&2
+  echo "ERROR: untracked files under deploy paths — commit locally before deploy:" >&2
   git ls-files -o --exclude-standard -- "${STASH_PATHS[@]}" | head -20 >&2
   exit 1
 fi

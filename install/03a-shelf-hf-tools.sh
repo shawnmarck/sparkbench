@@ -7,12 +7,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 echo "==> Sync scripts from staging"
+STAGING="${SPARK_STAGING}"
 rsync -a "${STAGING}/scripts/" "${SPARK_ROOT}/scripts/"
 rsync -a "${STAGING}/docs/" "${SPARK_ROOT}/docs/"
-chown -R techno:techno "${SPARK_ROOT}/scripts" "${SPARK_ROOT}/docs"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}/scripts" "${SPARK_ROOT}/docs"
 
 mkdir -p "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
-chown techno:techno "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
+chown "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
 
 echo "==> Install CLI tools"
 # CLI: install/20-spark-cli.sh → spark shelf / spark hf

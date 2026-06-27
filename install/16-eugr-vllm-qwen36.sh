@@ -2,8 +2,10 @@
 # eugr/spark-vllm-docker + Qwen3.6 NVFP4 local recipe
 set -euo pipefail
 
-STAGING="/home/techno/spark"
-SPARK_ROOT="/opt/spark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+STAGING="${SPARK_STAGING}"
 REPO="${SPARK_ROOT}/vendor/spark-vllm-docker"
 REPO_URL="https://github.com/eugr/spark-vllm-docker.git"
 
@@ -26,13 +28,13 @@ if [[ -d "${REPO}/.git" ]]; then
 else
   git clone --depth 1 "${REPO_URL}" "${REPO}"
 fi
-chown -R techno:techno "${REPO}"
+chown -R "${SPARK_USER}:${SPARK_USER}" "${REPO}"
 
 echo "==> Build vllm-node image (downloads prebuilt wheels when available)"
-sudo -u techno bash -lc "cd  && ./build-and-copy.sh"
+sudo -u "${SPARK_USER}" bash -lc "cd '${REPO}' && ./build-and-copy.sh"
 
 echo "==> Start Qwen3.6 NVFP4 via eugr recipe (daemon)"
-sudo -u techno "${SPARK_ROOT}/scripts/spark-eugr" up
+sudo -u "${SPARK_USER}" "${SPARK_ROOT}/scripts/spark-eugr" up
 
 echo
 echo "Done."

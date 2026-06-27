@@ -2,12 +2,12 @@
 # Mount QNAP models share at /mnt/model-shelf (CIFS, fstab, auto on boot)
 set -euo pipefail
 
-NAS_IP="192.168.0.99"
-SHARE="models"
+NAS_IP="${NAS_IP:-192.168.0.99}"
+SHARE="${NAS_SHARE:-models}"
 MOUNT="/mnt/model-shelf"
 CREDS="/etc/spark/smb-credentials-models"
 FSTAB_MARKER="# spark-model-shelf"
-SMB_USER="shawn"
+SMB_USER="${NAS_USER:-spark}"
 
 echo "==> Installing SMB client tools (if missing)"
 export DEBIAN_FRONTEND=noninteractive

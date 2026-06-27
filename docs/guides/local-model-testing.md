@@ -14,7 +14,7 @@ This file lives in `docs/guides/local-model-testing.md` in the **sparkbench** re
 | What | Where |
 |------|--------|
 | **Workspace orientation** | `docs/guides/local-model-testing.md` |
-| Project orientation (production) | `AGENT.md` (this repo) |
+| Project orientation (production) | `AGENTS.md` (this repo) |
 | CLI reference | `/opt/spark/docs/reference/spark-cli.md` |
 | Inference stack | `/opt/spark/docs/reference/inference-stack.md` |
 | Model inventory (UI) | `http://sparky/models.html` → `portal/models.json` |

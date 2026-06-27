@@ -5,7 +5,7 @@
 > **Repo:** `/opt/spark`  
 > **Purpose:** How agents (and humans) bench every completed model, fix stack issues without regressions, and run long work asynchronously so chat stays responsive.
 
-This file lives in `docs/guides/local-model-testing.md` in the **sparky-dashboard** repo (`/opt/spark` on host).
+This file lives in `docs/guides/local-model-testing.md` in the **sparkbench** repo (`/opt/spark` on host).
 
 ---
 

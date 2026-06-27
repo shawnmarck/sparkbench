@@ -1,10 +1,10 @@
-# AGENT.md — Sparky homelab (`/opt/spark`)
+# AGENT.md — SparkBench (`/opt/spark`)
 
 Quick orientation for humans and coding agents working on this repo.
 
 ## What this is
 
-Private dashboard + ops tooling for a **DGX Spark** (`sparky`, `192.168.0.101`): portal UI, model inventory, NAS shelf sync, inference smoke stacks.
+**SparkBench** is the tool you clone and run on your own DGX Spark: portal UI, model inventory, NAS shelf sync, inference control plane, benchmark harness. **[sparkbench.dev](https://sparkbench.dev)** is the separate public site (leaderboard, model browser, benchmark results) generated from this repo's data files. Set `SPARK_HOST` / `SPARK_LAN_IP` env vars to match your machine (defaults: `sparky` / `192.168.0.101`).
 
 ## Layout
 
@@ -52,7 +52,7 @@ flowchart TB
 | Layer | Path | Role | Git on sparky |
 |-------|------|------|---------------|
 | Dev clone | `~/projects/sparky` on techno | Primary Cursor agent; commit, push | — |
-| Remote | `github.com/shawnmarck/sparky-dashboard` | Source of truth for **shared code** | — |
+| Remote | `github.com/shawnmarck/sparkbench` | Source of truth for **shared code** | — |
 | Install | `/opt/spark` on sparky | Runtime + optional **local dev** | pull / rebase / merge |
 | **Runtime data** | `/opt/spark/data/*.yaml` | Live audit/bench state | **`skip-worktree`** — never overwrite from git |
 

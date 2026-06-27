@@ -1,19 +1,22 @@
-# Spark setup roadmap
+# SparkBench roadmap
 
 **This is the plan.** Status, phases, URLs, and what to build next.  
-Last updated: 2026-06-25 (vision, agent loop, reprioritized backlog)
+Last updated: 2026-06-26 (SparkBench rename, site/tool split)
 
 ---
 
 ## Vision
 
-**Sparky is the Model Lab control panel for one DGX Spark:** discover models, define recipes, bench on real hardware, promote to production, and see who’s using inference — all without leaving the portal.
+**SparkBench is two things:**
+
+- **The tool** (this repo) — clone it, run it on your DGX Spark. Portal, model inventory, inference control plane, benchmark harness. The closed loop from discovery to production.
+- **The site** ([sparkbench.dev](https://sparkbench.dev)) — generated from this repo’s data. Public leaderboard, model browser, benchmark results. Shows what runs well on GB10 without requiring anyone to run the tool.
 
 ---
 
 ## Why this exists
 
-Homelab control plane for **sparky** (`192.168.0.101`, DGX Spark / GB10):
+Homelab control plane for a **DGX Spark** (GB10 — `$SPARK_HOST`):
 
 | Use case | Tool |
 |----------|------|

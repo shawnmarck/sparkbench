@@ -1,6 +1,6 @@
 # Golden workflow runbook
 
-**"Golden workflow"** = full layered bench per model: golden cell → KV sweep → ctx ladder → (optional) shelf push.
+**"Golden workflow"** = full layered bench per model: golden cell → ctx ladder → KV sweep → (optional) shelf push.
 
 Orchestrator: `scripts/spark-golden-workflow.py`  
 Report: `/opt/spark/run/golden-workflow-report.json`  
@@ -52,8 +52,8 @@ Use `--resume` to skip phases already complete in the workflow report.
 | Layer | Measures | Stored on recipe |
 |-------|----------|------------------|
 | Golden | Full bench v2 at optimized ctx/kv | `bench_matrix.golden_cell`, verify `works` |
-| KV sweep | Golden ctx × KV quants @ 75% fill | `kv_sweep`, `bench_matrix.kv_sweep` |
 | Ctx ladder | Golden kv × ctx rungs @ 75% fill | `ctx_ladder`, `bench_matrix.ctx_ladder` |
+| KV sweep | Golden ctx × KV quants @ 75% fill | `kv_sweep`, `bench_matrix.kv_sweep` |
 | Shelf | NAS rsync | inventory `shelf.present` |
 
 KV options by engine (see `spark-golden-bench.py`):

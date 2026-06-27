@@ -4,8 +4,7 @@
 
 | Item | Value |
 |------|-------|
-| Hostname | `sparky` |
-| LAN | `192.168.0.101` |
+| Hostname | `sparky` (or `$SPARK_HOST`) |
 | **Sparky repo** | `/opt/spark` — dashboard + Model Lab (SSH terminal cwd) |
 | Hermes runtime | `/opt/hermes` — compose, agent data (**outside** `/opt/spark`) |
 | Hermes data | `/opt/hermes/data/spark-bot/data` → container `/opt/data` |
@@ -77,7 +76,7 @@ Copy `scripts/grok-sparky` from this repo onto your client machine and put it in
 ```bash
 grok-sparky                  # starts Grok pointed at the current Sparky profile
 grok-sparky "do the thing"   # headless + prompt
-SPARKY_HOST=192.168.0.101 grok-sparky
+SPARKY_HOST=sparky grok-sparky
 ```
 
 What it does:

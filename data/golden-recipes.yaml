@@ -28,6 +28,8 @@ golden:
   yuxinlu1/gemma-4-12b-opus-reasoning: gemma4-12b-opus-reasoning-q4
   qwen/qwen-agentworld-35b-a3b: qwen-qwen-agentworld-35b-a3b-eugr
   empero-ai/qwythos-9b-claude-mythos-5-1m: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
+  deepreinforce-ai/ornith-1.0-35b: deepreinforce-ai-ornith-1-0-35b-llama
+  jackrong/qwopus3.6-27b-coder-compat: jackrong-qwopus3-6-27b-coder-compat-llama
   # 0xsero/deepseek-v4-flash-spark: skipped — REAP GGUF load fails on llamacpp (see SKIP in audit script)
 
 deprecated_profiles:

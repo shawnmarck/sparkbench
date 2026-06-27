@@ -55,6 +55,7 @@ def spark_verify_for(rel: str, store: dict | None = None) -> dict:
         "note": entry.get("note"),
         "updated_at": entry.get("updated_at"),
         "removal_pending": bool(entry.get("removal_pending")),
+        "removal_shelf": bool(entry.get("removal_shelf")),
         "removal_queued_at": entry.get("removal_queued_at"),
     }
 
@@ -88,17 +89,19 @@ def set_status(rel: str, spark_status: str, engine: str | None = None, note: str
     return spark_verify_for(rel, store)
 
 
-def set_removal(rel: str, pending: bool) -> dict:
+def set_removal(rel: str, pending: bool, *, shelf: bool = False) -> dict:
     store = load_store()
     models = store.setdefault("models", {})
 
     if pending:
         entry = models.setdefault(rel, {})
         entry["removal_pending"] = True
+        entry["removal_shelf"] = bool(shelf)
         entry["removal_queued_at"] = datetime.now(timezone.utc).isoformat()
     elif rel in models:
         entry = models[rel]
         entry.pop("removal_pending", None)
+        entry.pop("removal_shelf", None)
         entry.pop("removal_queued_at", None)
         _cleanup_entry(models, rel)
 
@@ -106,13 +109,13 @@ def set_removal(rel: str, pending: bool) -> dict:
     return spark_verify_for(rel, store)
 
 
-def list_pending_removals(store: dict | None = None) -> list[str]:
+def list_pending_removals(store: dict | None = None) -> list[dict]:
     store = store if store is not None else load_store()
     out = []
     for rel, entry in (store.get("models") or {}).items():
         if entry.get("removal_pending"):
-            out.append(rel)
-    return sorted(out)
+            out.append({"path": rel, "shelf": bool(entry.get("removal_shelf"))})
+    return sorted(out, key=lambda x: x["path"])
 
 
 def clear_removal(rel: str) -> None:
@@ -148,7 +151,8 @@ def main() -> int:
 
     if cmd == "removal" and len(sys.argv) >= 4:
         flag = sys.argv[3].strip().lower() in ("on", "true", "1", "yes")
-        print(json.dumps(set_removal(rel, flag), indent=2))
+        shelf = "--shelf" in sys.argv[4:]
+        print(json.dumps(set_removal(rel, flag, shelf=shelf), indent=2))
         return 0
 
     if cmd == "set" and len(sys.argv) >= 4:

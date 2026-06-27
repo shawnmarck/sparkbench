@@ -1,0 +1,34 @@
+id: deepreinforce-ai-ornith-1-0-35b-llama
+name: ornith-1.0-35b (llamacpp)
+inventory_path: deepreinforce-ai/ornith-1.0-35b
+engine: llamacpp
+tier: fast
+lifecycle: works
+served_name: ornith-1-0-35b
+port: 8081
+model: /models/deepreinforce-ai/ornith-1.0-35b/hf/ornith-1.0-35b-Q4_K_M.gguf
+tags:
+- lab
+- llamacpp
+- golden
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: Scaffolded 2026-06-27 from /models/deepreinforce-ai/ornith-1.0-35b. GGUF in
+  hf/ (not gguf/); Q4_K_M preferred over Q5. Mark testing, switch, bench, then promote.
+updated_at: '2026-06-27T02:04:27.992342+00:00'
+context:
+  default: 32768
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 32768
+      kv: q8_0
+promoted_at: '2026-06-27T02:21:14.033883+00:00'

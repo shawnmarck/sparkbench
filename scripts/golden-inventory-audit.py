@@ -51,6 +51,8 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "yuxinlu1/gemma-4-12b-opus-reasoning": "gemma4-12b-opus-reasoning-q4",
     "qwen/qwen-agentworld-35b-a3b": "qwen-qwen-agentworld-35b-a3b-eugr",
     "empero-ai/qwythos-9b-claude-mythos-5-1m": "empero-ai-qwythos-9b-claude-mythos-5-1m-eugr",
+    "deepreinforce-ai/ornith-1.0-35b": "deepreinforce-ai-ornith-1-0-35b-llama",
+    "jackrong/qwopus3.6-27b-coder-compat": "jackrong-qwopus3-6-27b-coder-compat-llama",
     "0xsero/deepseek-v4-flash-spark": "0xsero-deepseek-v4-flash-spark-llama",
 }
 
@@ -75,6 +77,8 @@ ARCH_FIXES: dict[str, str] = {
     "saricles/qwen3-coder-next": "dense",
     "qwen/qwen-agentworld-35b-a3b": "moe",
     "empero-ai/qwythos-9b-claude-mythos-5-1m": "dense",
+    "deepreinforce-ai/ornith-1.0-35b": "moe",
+    "jackrong/qwopus3.6-27b-coder-compat": "dense",
     "z-lab/qwen3.6-27b": "dense",
     "yuxinlu1/mellum2-12b-opus-thinking": "moe",
 }
@@ -165,19 +169,32 @@ def ready_timeout_secs(recipe: dict[str, Any]) -> int:
         return EUGR_READY_SECS
     if engine == "ds4":
         return max(DEFAULT_READY_SECS, 600)
+    if engine == "llamacpp":
+        model_path = Path(str(recipe.get("model") or ""))
+        if model_path.is_file():
+            gb = model_path.stat().st_size / (1024**3)
+            if gb >= 15:
+                return max(DEFAULT_READY_SECS, 1200)
+            if gb >= 8:
+                return max(DEFAULT_READY_SECS, 600)
     return DEFAULT_READY_SECS
 
 
 def wait_ready(port: int, timeout: int = DEFAULT_READY_SECS, *, engine: str | None = None) -> bool:
     url = f"http://127.0.0.1:{port}/v1/models"
     deadline = time.time() + timeout
+    poll = 0
     while time.time() < deadline:
+        poll += 1
         try:
             with urllib.request.urlopen(url, timeout=10) as resp:
                 if resp.status == 200:
+                    log(f"ready on port {port} after {poll} polls")
                     return True
         except Exception:
             pass
+        if poll % 12 == 0:
+            log(f"still waiting port={port} elapsed={int(time.time() - (deadline - timeout))}s/{timeout}s")
         time.sleep(5)
     return False
 
@@ -470,6 +487,7 @@ def process_model(
         recipe = core.load_recipe(profile_id)
         port = int(recipe.get("port") or 8000)
         ready_secs = ready_timeout_secs(recipe)
+        log(f"waiting for ready port={port} timeout={ready_secs}s engine={recipe.get('engine')}")
         if not wait_ready(port, timeout=ready_secs, engine=str(recipe.get("engine") or "")):
             result["status"] = "not_ready"
             result["error"] = f"/v1/models not ready on port {port} within {ready_secs}s"

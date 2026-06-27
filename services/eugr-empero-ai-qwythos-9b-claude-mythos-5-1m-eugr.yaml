@@ -8,7 +8,7 @@ defaults:
   host: 0.0.0.0
   tensor_parallel: 1
   gpu_memory_utilization: 0.85
-  max_model_len: 800000
+  max_model_len: 799744
   max_num_seqs: 4
   max_num_batched_tokens: 8192
 command: "vllm serve /models/empero-ai/qwythos-9b-claude-mythos-5-1m/hf \\\n  --host\

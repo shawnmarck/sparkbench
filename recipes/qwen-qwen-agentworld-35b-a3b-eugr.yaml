@@ -21,7 +21,7 @@ context:
   kv_default: fp8
   presets:
     golden:
-      label: Long ctx (250k viability)
+      label: Golden max fit
       ctx: 256000
       kv: fp8
     long:

@@ -619,6 +619,7 @@ def spark_verify_for(rel: str, store: dict) -> dict:
         "tok_s_profile": entry.get("tok_s_profile"),
         "updated_at": entry.get("updated_at"),
         "removal_pending": bool(entry.get("removal_pending")),
+        "removal_shelf": bool(entry.get("removal_shelf")),
         "removal_queued_at": entry.get("removal_queued_at"),
     }
 
@@ -654,7 +655,11 @@ def parse_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None
 
 def parse_active_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None:
     text = f"{name} {slug}"
-    m = re.search(r"(\d+(?:\.\d+)?)\s*[- ]?[Bb]\s*[-/]\s*[Aa]?\s*(\d+(?:\.\d+)?)\s*[Bb]", text, re.I)
+    m = re.search(
+        r"(\d+(?:\.\d+)?)\s*[- ]?[Bb]\s*[-/]\s*[Aa]?(\d+(?:\.\d+)?)\s*[Bb]",
+        text,
+        re.I,
+    )
     if m:
         try:
             return float(m.group(2))
@@ -665,6 +670,19 @@ def parse_active_param_b(name: str, slug: str, cfg: dict | None = None) -> float
     if re.search(r"deepseek-v4-flash|deepseek-v4", text, re.I):
         return 13.0
     return None
+
+
+def normalize_param_active_b(
+    architecture: str | None,
+    param_b: float | None,
+    param_active_b: float | None,
+) -> float | None:
+    """Dense models: active = total so the Active column sorts usefully."""
+    if param_active_b is not None and param_active_b > 0:
+        return param_active_b
+    if architecture == "dense" and param_b is not None:
+        return param_b
+    return param_active_b
 
 
 def infer_architecture(
@@ -1213,6 +1231,7 @@ def main() -> int:
             name=m["name"],
             slug=slug,
         )
+        param_active_b = normalize_param_active_b(architecture, param_b, param_active_b)
 
         entries.append(
             {
@@ -1280,6 +1299,16 @@ def main() -> int:
                 untracked_cfg = _best_local_config(model_dir, untracked_variants)
                 untracked_param_b = parse_param_b(model_dir.name, slug, untracked_cfg)
                 untracked_param_active_b = parse_active_param_b(model_dir.name, slug, untracked_cfg)
+                untracked_arch = infer_architecture(
+                    capabilities=["untracked"],
+                    param_b=untracked_param_b,
+                    param_active_b=untracked_param_active_b,
+                    name=model_dir.name,
+                    slug=slug,
+                )
+                untracked_param_active_b = normalize_param_active_b(
+                    untracked_arch, untracked_param_b, untracked_param_active_b
+                )
                 untracked_ctx = resolve_max_context(
                     catalog_max=None,
                     hf_repo=inferred_repo,
@@ -1307,13 +1336,7 @@ def main() -> int:
                         "max_context": untracked_ctx,
                         "param_b": untracked_param_b,
                         "param_active_b": untracked_param_active_b,
-                        "architecture": infer_architecture(
-                            capabilities=["untracked"],
-                            param_b=untracked_param_b,
-                            param_active_b=untracked_param_active_b,
-                            name=model_dir.name,
-                            slug=slug,
-                        ),
+                        "architecture": untracked_arch,
                         "status": "ready" if size else "empty",
                         "size_bytes": size,
                         "size_human": human_size(size),
@@ -1357,6 +1380,16 @@ def main() -> int:
                 shelf_cfg = _best_local_config(model_dir, shelf_variants)
                 shelf_param_b = parse_param_b(model_dir.name, model_dir.name, shelf_cfg)
                 shelf_param_active_b = parse_active_param_b(model_dir.name, model_dir.name, shelf_cfg)
+                shelf_arch = infer_architecture(
+                    capabilities=["shelf-only"],
+                    param_b=shelf_param_b,
+                    param_active_b=shelf_param_active_b,
+                    name=model_dir.name,
+                    slug=model_dir.name,
+                )
+                shelf_param_active_b = normalize_param_active_b(
+                    shelf_arch, shelf_param_b, shelf_param_active_b
+                )
                 shelf_ctx = resolve_max_context(
                     catalog_max=None,
                     hf_repo=inferred_repo,
@@ -1384,13 +1417,7 @@ def main() -> int:
                         "max_context": shelf_ctx,
                         "param_b": shelf_param_b,
                         "param_active_b": shelf_param_active_b,
-                        "architecture": infer_architecture(
-                            capabilities=["shelf-only"],
-                            param_b=shelf_param_b,
-                            param_active_b=shelf_param_active_b,
-                            name=model_dir.name,
-                            slug=model_dir.name,
-                        ),
+                        "architecture": shelf_arch,
                         "status": "shelf-only",
                         "size_bytes": size,
                         "size_human": human_size(size),

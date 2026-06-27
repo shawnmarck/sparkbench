@@ -47,7 +47,7 @@ spark inference up help    # subcommand help + live profile list
 spark inf help             # prefixes OK
 ```
 
-**zsh:** unquoted `?` needs `/etc/zsh/zshrc.d/spark.zsh` (from `install/20`). Without it, use `help` or `spark inference '?'`.
+**zsh:** unquoted `?` needs `/etc/zsh/zshrc.d/spark.zsh` (from `spark-install core`). Without it, use `help` or `spark inference '?'`.
 
 **Tab completion:** bash `/etc/bash_completion.d/spark`, zsh `_spark`. Prefixes work: `spark inf<TAB>` → `inference`.
 
@@ -124,7 +124,7 @@ spark models golden yuxinlu1/mellum2-12b-opus-thinking
 | Legacy `spark-inference`, `spark-eugr`, … | `spark inference …`, `spark engine eugr …` |
 | Assuming sudo for routine ops | `spark` mutates via scripts; sudo only for `install/*.sh` |
 | Running two engines | Check status; stop one before starting another |
-| Blind `install/05` re-runs | Prefer targeted install scripts |
+| Blind `spark-install core` on a live box | Prefer `spark-install module …` or surgical module scripts |
 
 ### Suggested agent workflow
 
@@ -220,7 +220,7 @@ Full table: `scripts/legacy/README.md`
 DwarfStar native DeepSeek V4 Flash (`ds4-server`). Same port as eugr (**8000**) — mutually exclusive.
 
 ```bash
-spark engine ds4 build    # cuda-spark (install/22)
+spark engine ds4 build    # cuda-spark (spark-install engine ds4)
 spark engine ds4 up
 spark engine ds4 status
 spark engine ds4 down

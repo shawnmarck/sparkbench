@@ -10,7 +10,7 @@ Pin: `data/ds4-dwarfstar.yaml` · Model: `antirez/deepseek-v4-flash`
 ## Install / build
 
 ```bash
-sudo bash /opt/spark/install/22-ds4-dwarfstar.sh
+sudo bash /opt/spark/install/spark-install engine ds4
 ```
 
 ## Engine smoke

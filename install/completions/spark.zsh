@@ -1,6 +1,6 @@
 # zsh: spark wrapper so unquoted ? works (nomatch passes literal ?)
 # + ? key shows contextual help while typing spark commands
-# Installed to /etc/zsh/zshrc.d/spark.zsh by install/20-spark-cli.sh
+# Installed to /etc/zsh/zshrc.d/spark.zsh by install/modules/core/cli.sh (spark-install core)
 
 if [[ -o interactive ]]; then
   setopt nonomatch

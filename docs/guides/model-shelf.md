@@ -104,5 +104,5 @@ spark-shelf-push --status    # running? tail of log
 
 ## Related
 
-- Install: `/opt/spark/install/03-model-shelf-layout.sh`
-- NAS mount: `/opt/spark/install/02-model-shelf-mount.sh`
+- Layout: `sudo bash /opt/spark/install/spark-install core` (or `module core/models-layout.sh`)
+- NAS mount: `sudo bash /opt/spark/install/spark-install nas`

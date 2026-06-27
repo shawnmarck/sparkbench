@@ -1,6 +1,5 @@
 # Shared install helpers — source from install/modules/*/*.sh (do not execute directly).
-# Compat shims at install/*.sh forward to modules/. SPARK_INSTALL_BATCH=1 defers nginx
-# until spark-install finalizes a bundled run.
+# SPARK_INSTALL_BATCH=1 defers nginx until spark-install finalizes a bundled run.
 #
 # Host identity (optional): /etc/spark/host.env or $SPARK_ROOT/host.env (gitignored).
 # Copy install/host.env.example. Secrets stay in /etc/spark/smb-credentials-models.

@@ -53,7 +53,7 @@ cmd="${1:-}"
 case "${cmd}" in
   up)
     load_recipe
-    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run install/13-llama-cpp-smoke.sh"
+    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run: sudo bash install/spark-install engine llama"
     [[ -f "${MODEL}" ]] || die "Missing model: ${MODEL}"
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx vllm_node; then
       echo "WARNING: vllm_node is running — stop with: spark-eugr down"

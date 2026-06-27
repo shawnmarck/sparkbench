@@ -15,7 +15,7 @@ chmod +x "${TARGET}/scripts/spark-inference.py"
 chmod +x "${TARGET}/scripts/spark-eugr"
 chmod +x "${TARGET}/scripts/spark-llama"
 
-# CLI: install/20-spark-cli.sh (single spark binary on PATH)
+# CLI: install/modules/core/cli.sh (single spark binary on PATH)
 
 cat > "${UNIT}" <<EOF
 [Unit]

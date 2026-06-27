@@ -6,7 +6,7 @@ HF="/opt/spark/venv/bin/hf"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-[[ -x "${HF}" ]] || die "${HF} not found — run install/04-model-inventory.sh first"
+[[ -x "${HF}" ]] || die "${HF} not found — run: sudo bash install/spark-install core"
 
 usage() {
   cat <<EOF

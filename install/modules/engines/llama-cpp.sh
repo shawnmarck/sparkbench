@@ -81,7 +81,7 @@ cmd="${1:-}"
 
 case "${cmd}" in
   up)
-    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run install/13-llama-cpp-smoke.sh"
+    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run: sudo bash install/spark-install engine llama"
     [[ -f "${MODEL}" ]] || die "Missing model: ${MODEL}"
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx vllm_node; then
       echo "WARNING: vllm_node is running — stop with: spark engine eugr down"
@@ -135,7 +135,7 @@ esac
 SCRIPT
 
 chmod 755 "${SPARK_ROOT}/scripts/spark-llama"
-# CLI: install/20-spark-cli.sh → spark engine llama
+# CLI: install/modules/core/cli.sh → spark engine llama
 chown "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}/scripts/spark-llama"
 
 mkdir -p /opt/spark/run /opt/spark/logs

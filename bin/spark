@@ -31,7 +31,7 @@ Examples:
   spark shelf pull nvidia/qwen3.6-35b-a3b
   spark engine llama status
 
-Tip: spark <group> ?  — contextual help (prefixes OK; zsh: unquoted ? works after install/20)
+Tip: spark <group> ?  — contextual help (prefixes OK; zsh: unquoted ? works after spark-install core)
       spark inf help     Same without ?
 EOF
 }
@@ -416,7 +416,7 @@ cmd_shelf() {
       if command -v curl >/dev/null 2>&1; then
         curl -fsS "http://127.0.0.1/api/shelf/status" 2>/dev/null | "${PY}" -m json.tool 2>/dev/null \
           || curl -fsS "http://127.0.0.1/api/shelf/status" 2>/dev/null \
-          || die "shelf API unavailable — run install/11-model-shelf-api.sh"
+          || die "shelf API unavailable — run: sudo bash install/spark-install core"
       else
         die "curl required for spark shelf status"
       fi

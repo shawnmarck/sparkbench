@@ -22,7 +22,7 @@ export OPENAI_API_KEY="any-string-the-gateway-doesnt-check"
 
 ### Option A — Open WebUI (recommended for first-time setup)
 
-Bundled installer: `install/14-openwebui-dual-backend.sh`. Browse to `http://<host>:3000`
+Bundled installer: `sudo bash install/spark-install openwebui`. Browse to `http://<host>:3000`
 once it's up and point it at the gateway URL above.
 
 ### Option B — Hermes (the agent we run in our own lab)

@@ -14,7 +14,7 @@ mkdir -p "${SPARK_ROOT}/vendor" "${SPARK_ROOT}/services"
 cp "${STAGING}/services/eugr-qwen36-local.yaml" "${SPARK_ROOT}/services/"
 cp "${STAGING}/scripts/spark-eugr" "${SPARK_ROOT}/scripts/"
 chmod +x "${SPARK_ROOT}/scripts/spark-eugr"
-# CLI: install/20-spark-cli.sh → spark engine eugr
+# CLI: install/modules/core/cli.sh → spark engine eugr
 
 echo "==> Stop stock vLLM container (if running)"
 docker stop spark-vllm-qwen36 2>/dev/null || true

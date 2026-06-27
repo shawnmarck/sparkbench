@@ -68,11 +68,10 @@ EOF
   chown "${SPARK_USER}:${SPARK_USER}" "${SHELF_MODELS}/README.md" 2>/dev/null || true
   echo "OK: shelf models directory ready"
 else
-  echo "OK: NAS shelf not mounted — skipped (local /models only; run install/02-model-shelf-mount.sh when ready)"
+  echo "OK: NAS shelf not mounted — skipped (local /models only; run: spark-install nas)"
 fi
 
-echo "==> Shelf CLI via install/20-spark-cli.sh (spark shelf push|pull)"
-# CLI: install/20-spark-cli.sh → spark shelf pull|push
+echo "==> Shelf CLI via spark shelf push|pull (after spark-install core)"
 
 echo
 echo "Done."

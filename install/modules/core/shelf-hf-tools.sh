@@ -16,7 +16,7 @@ mkdir -p "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
 chown "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}/run" "${SPARK_ROOT}/logs"
 
 echo "==> Install CLI tools"
-# CLI: install/20-spark-cli.sh → spark shelf / spark hf
+# CLI: install/modules/core/cli.sh → spark shelf / spark hf
 cat >/usr/local/bin/hf <<'EOF'
 #!/usr/bin/env bash
 exec /opt/spark/venv/bin/hf "$@"

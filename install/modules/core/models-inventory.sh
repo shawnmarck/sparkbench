@@ -12,12 +12,11 @@ mkdir -p "${SPARK_ROOT}"/{data,scripts,portal,install}
 rsync -a "${STAGING}/data/" "${SPARK_ROOT}/data/"
 rsync -a "${STAGING}/scripts/spark-inventory-build" "${STAGING}/scripts/spark-inventory-build.py" "${SPARK_ROOT}/scripts/"
 cp "${STAGING}/portal/models.html" "${STAGING}/portal/index.html" "${SPARK_ROOT}/portal/"
-cp "${STAGING}/install/04-model-inventory.sh" "${SPARK_ROOT}/install/"
 cp "${STAGING}/scripts/spark-download-models.sh" "${SPARK_ROOT}/scripts/" 2>/dev/null || true
 chown -R "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}"
 
 chmod +x "${SPARK_ROOT}/scripts/spark-inventory-build" "${SPARK_ROOT}/scripts/spark-inventory-build.py"
-# CLI: install/20-spark-cli.sh → spark models inventory
+# CLI: install/modules/core/cli.sh → spark models inventory
 
 echo "==> Python deps"
 /opt/spark/venv/bin/pip install -q pyyaml

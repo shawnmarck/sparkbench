@@ -207,7 +207,7 @@ Stable unified endpoint now lives at `http://sparky:9000/v1` (or 127.0.0.1:9000 
 - Systemd service: `spark-inference-gateway.service` (enabled, restarts on failure).
 - Wrapper: `/opt/spark/scripts/spark-inference-gateway --serve --port 9000`
 - Also callable directly from scripts.
-- **Activity instrumentation:** each `POST /v1/chat/completions` and `/v1/completions` (stream + non-stream) is recorded as a session row appended to `run/inference-activity.jsonl` on a non-blocking background thread (Authorization stripped; 50 MB / 7d rotation cap). `spark-client-activity.py` (`:8769`, nginx `/api/activity`) reads the JSONL into 1h/24h rollups for the Portal System-tab "Client activity" widget. Install: `install/23-inference-gateway.sh` + `install/24-client-activity-api.sh`.
+- **Activity instrumentation:** each `POST /v1/chat/completions` and `/v1/completions` (stream + non-stream) is recorded as a session row appended to `run/inference-activity.jsonl` on a non-blocking background thread (Authorization stripped; 50 MB / 7d rotation cap). `spark-client-activity.py` (`:8769`, nginx `/api/activity`) reads the JSONL into 1h/24h rollups for the Portal System-tab "Client activity" widget. Install: `sudo bash install/spark-install gateway` (`modules/gateway/inference-gateway.sh` + `client-activity.sh`).
 
 CLI integration is minimal (use the script); full `spark inference gateway ...` can be added later.
 

@@ -60,6 +60,7 @@ Targets:
   bootstrap            host.env + passwordless sudo for install + portal base
   agent                Full passwordless sudo for automation (optional)
   restart inference-api   Restart inference API only (ops shortcut)
+  module <modules/path>   Run one install/modules/*.sh (surgical fix)
   extras terminal|shell|lazydocker   Maintainer convenience (not core product)
   status               Show systemd + HTTP health for installed services
   list                 List targets (this summary)
@@ -74,7 +75,7 @@ Typical fresh box:
 Env: SPARK_ROOT, SPARK_STAGING, SPARK_USER, SPARK_HOST, SPARK_LAN_IP — see install/common.sh
      SPARK_INSTALL_BATCH=1 (set internally by core/gateway bundles; defers nginx until finalize)
 
-Legacy numbered scripts (install/03-….sh) forward to install/modules/; prefer spark-install.
+Legacy numbered install scripts were removed — use targets above or `module`.
 EOF
 }
 
@@ -161,6 +162,12 @@ cmd_restart() {
   run_module core/inference-api-restart.sh
 }
 
+cmd_module() {
+  local rel="${1:-}"
+  [[ -n "$rel" ]] || die "usage: spark-install module <path under modules/> (e.g. core/inference-api-restart.sh)"
+  run_module "$rel"
+}
+
 cmd_extras() {
   local extra="${1:-}"
   [[ -n "$extra" ]] || die "usage: spark-install extras terminal|shell|lazydocker"
@@ -245,6 +252,7 @@ main() {
         bootstrap) cmd_bootstrap ;;
         agent) cmd_agent ;;
         restart) cmd_restart "${1:-}" ;;
+        module) cmd_module "${1:-}" ;;
         extras) cmd_extras "${1:-}" ;;
         *)
           die "unknown target: ${cmd} (run spark-install list)"

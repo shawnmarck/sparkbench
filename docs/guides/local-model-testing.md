@@ -28,7 +28,7 @@ This file lives in `docs/guides/local-model-testing.md` in the **sparkbench** re
 | **DwarfStar (ds4) smoke** | `docs/runbooks/smoke-ds4.md` |
 | **Golden audit / new models** | `docs/runbooks/new-model-golden-benchmark.md`, `scripts/golden-inventory-audit.py` |
 | **Bench standard v2** | `docs/reference/benchmark-standard.md` |
-| ds4 pin / install | `data/ds4-dwarfstar.yaml`, `install/22-ds4-dwarfstar.sh` |
+| ds4 pin / install | `data/ds4-dwarfstar.yaml`, `spark-install engine ds4` |
 
 ```bash
 ssh sparky 'spark inference list'

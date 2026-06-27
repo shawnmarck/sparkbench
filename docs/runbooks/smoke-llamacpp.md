@@ -16,7 +16,7 @@ Goal: run the same Qwen3.6 family via **GGUF** on GB10 for comparison with NVFP4
 ## Install
 
 ```bash
-sudo /opt/spark/install/13-llama-cpp-smoke.sh
+sudo bash /opt/spark/install/spark-install engine llama
 ```
 
 Builds from source into `/opt/spark/vendor/llama.cpp` with `CMAKE_CUDA_ARCHITECTURES=121` (GB10). Installs `spark-llama` CLI.
@@ -77,7 +77,7 @@ Subjective feel + tok/s (manual or `llama-bench`) — no portal TPS widget yet.
 
 ## Open WebUI
 
-Open WebUI is wired for **both** backends (install `14-openwebui-dual-backend.sh`):
+Open WebUI is wired for **both** backends (`sudo bash install/spark-install openwebui`):
 
 | Backend | URL | When |
 |---------|-----|------|

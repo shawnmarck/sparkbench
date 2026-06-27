@@ -18,7 +18,7 @@ Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUD
 │   ├── assets/           sparky-theme.js, oobe-nebula.js, nebula-tune.js, spark-inventory-grid.js
 │   └── themes/           theme-b.css, theme-ui.css
 ├── scripts/              spark CLI + implementation scripts
-├── install/              Idempotent sudo install scripts (see install/INSTALL.md)
+├── install/              spark-install orchestrator + modules/ (see install/INSTALL.md)
 ├── data/                 model-catalog.yaml, model-verification.yaml, inference-profiles.yaml, ds4-dwarfstar.yaml
 ├── recipes/              Inference profile recipes (Phase 5)
 ├── docs/                 guides/ runbooks/ reference/ examples/
@@ -75,7 +75,7 @@ Replace `sparky` with your machine's hostname or `$SPARK_HOST`.
 
 **Canonical reference:** `docs/reference/spark-cli.md`
 
-Single command on PATH: **`spark`** (`install/20-spark-cli.sh`).
+Single command on PATH: **`spark`** (installed by `spark-install core` → `install/modules/core/cli.sh`).
 
 | Who | How to discover | How to run |
 |-----|-----------------|------------|
@@ -111,8 +111,6 @@ sudo bash install/spark-install gateway
 # Optional NAS: sudo bash install/spark-install nas
 ```
 
-Legacy numbered scripts (`install/03-….sh`) still work; prefer the orchestrator.
-
 **Host identity:** copy `install/host.env.example` → `/etc/spark/host.env` (or run `spark-install bootstrap`). Secrets stay in `/etc/spark/smb-credentials-models`.
 
 ## Inference API reload (agents)
@@ -120,8 +118,8 @@ Legacy numbered scripts (`install/03-….sh`) still work; prefer the orchestrato
 `scripts/spark-inference-api.py` is a thin HTTP shell on **:8767** (proxied as `/api/inference/*`). It reloads `spark-inference.py` on each request — bench, switch, recipe lifecycle, and history routes all live there.
 
 - **Routine changes to `spark-inference.py`:** no restart needed.
-- **Changes to `spark-inference-api.py` itself:** `sudo bash install/spark-install restart inference-api` (or `install/19-inference-api-restart.sh`)
-- **Auto-restart on script save:** chained from `spark-install core` via `install/18-inference-api-watch.sh`
+- **Changes to `spark-inference-api.py` itself:** `sudo bash install/spark-install restart inference-api` (or `spark-install module core/inference-api-restart.sh`)
+- **Auto-restart on script save:** chained from `spark-install core` via `install/modules/core/inference-api-watch.sh`
 
 ## Golden audit & new models
 
@@ -170,7 +168,7 @@ Pipeline: Gateway (`:9000`, `spark-inference-gateway.py`) appends JSONL to `run/
 
 - `json.dumps(session, separators=(",", ":"))` used in gateway to minimize JSONL line size
 - Gateway `run/inference-activity.jsonl` is git-ignored; events survive gateway restarts
-- Activity API is LAN-only, no auth; `install/24-client-activity-api.sh` handles systemd + nginx
+- Activity API is LAN-only, no auth; `spark-install gateway` → `install/modules/gateway/client-activity.sh`
 - Nginx config is centralized in `install/common.sh` `write_nginx_portal_site`; add new locations there, not via sed
 
 ### Explore Shortlist / Compare view (TASK-004)

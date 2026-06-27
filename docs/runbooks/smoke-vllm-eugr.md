@@ -33,7 +33,7 @@ MoE NVFP4 scale tensors aren't handled by the stock ModelOpt loader on Spark. Th
 ## Commands
 
 ```bash
-# Start (build once via install/16-eugr-vllm-qwen36.sh)
+# Start (build once via spark-install engine eugr)
 spark-eugr up
 
 # Logs (first boot may take 5–15 min for CUDA graph compile)

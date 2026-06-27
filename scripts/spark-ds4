@@ -164,7 +164,7 @@ load_pin_defaults
 case "${cmd}" in
   up)
     load_recipe
-    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run: sudo bash install/22-ds4-dwarfstar.sh"
+    [[ -x "${BIN}" ]] || die "Missing ${BIN} — run: sudo bash install/spark-install engine ds4"
     [[ -n "${MODEL}" && -f "${MODEL}" ]] || die "Missing model GGUF (set SPARK_DS4_RECIPE or check ${PIN})"
     stop_others
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
@@ -217,7 +217,7 @@ case "${cmd}" in
     if [[ ! -d "${VENDOR}/.git" && -d "${STAGING_VENDOR}/.git" ]]; then
       VENDOR="${STAGING_VENDOR}"
     fi
-    [[ -d "${VENDOR}" ]] || die "Missing ds4 source — run install/22-ds4-dwarfstar.sh"
+    [[ -d "${VENDOR}" ]] || die "Missing ds4 source — run: sudo bash install/spark-install engine ds4"
     cd "${VENDOR}"
     make cuda-spark -j"$(nproc)"
     mkdir -p /opt/spark/bin

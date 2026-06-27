@@ -1,14 +1,22 @@
 profiles:
   gemma4-12b-coder-q4:
-    tok_s: 18.6
+    tok_s: 16.7
     engine: llamacpp
-    method: bench
-    measured_at: '2026-06-21T08:28:35.638042+00:00'
-    completion_tokens: 13
-    prompt_tokens: 10
-    elapsed_s: 0.7
-    note: bench 13 tok in 0.7s
-    latest_run_id: 20260621T08283563-c3b73a
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:09.278735+00:00'
+    tok_s_min: 16.7
+    tok_s_max: 16.8
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 16.8
+    - 16.7
+    note: "golden ?/? @ 16.7 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07230927-2c1685
   qwen36-nvfp4:
     tok_s: 73.5
     engine: eugr
@@ -28,167 +36,147 @@ profiles:
     note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
     latest_run_id: 20260621T08535201-16a13c
   qwen36-q4-llama:
-    tok_s: 48.6
+    tok_s: 38.8
     engine: llamacpp
-    method: bench-agent
-    measured_at: '2026-06-21T08:59:13.892448+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 876
-    elapsed_s: 47.37
-    tok_s_min: 48.6
-    tok_s_max: 48.7
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:09.067728+00:00'
+    tok_s_min: 38.8
+    tok_s_max: 38.9
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 48.7
-    - 48.6
-    - 48.6
-    note: "agent bench avg 48.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 47.4s)"
-    latest_run_id: 20260621T08591389-da2af5
+    - 38.8
+    - 38.9
+    note: "golden ?/? @ 38.8 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230906-e3bbc7
   google-gemma-4-12b-it-llama:
-    tok_s: 21.1
+    tok_s: 14.1
     engine: llamacpp
-    method: bench-agent
-    measured_at: '2026-06-21T09:16:33.702063+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 885
-    elapsed_s: 109.4
-    tok_s_min: 20.9
-    tok_s_max: 21.1
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 21.1
-    - 21.1
-    - 20.9
-    note: "agent bench avg 21.1 tok/s over 3 sessions \xD7 3 turns (2304 tok in 109.4s)"
-    latest_run_id: 20260621T09163370-e8688b
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:07.928715+00:00'
+    note: "golden 256k/q8_0 @ 14.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07220792-cb3d2d
   microsoft-phi-4-eugr:
     tok_s: 8.0
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-22T00:16:39.183718+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 3120
-    elapsed_s: 287.55
+    method: bench-agent-v2
+    measured_at: '2026-06-25T01:08:43.385119+00:00'
+    completion_tokens: 954
+    prompt_tokens: 0
+    elapsed_s: 119.58
     tok_s_min: 8.0
     tok_s_max: 8.0
-    sessions: 3
-    turns_per_session: 3
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
     - 8.0
     - 8.0
-    - 8.0
-    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 287.5s)"
-    latest_run_id: 20260622T00163918-3ff9ef
+    note: bench-v2 avg 8.0 decode tok/s (2 sessions, ~5k ctx fill, tool_ok=False)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 5734
+    tool_roundtrip_ok: false
+    latest_run_id: 20260625T01084338-e025cf
   nousresearch-hermes-4-14b-eugr:
-    tok_s: 8.0
+    tok_s: 7.9
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-22T00:23:51.011351+00:00'
-    completion_tokens: 1995
-    prompt_tokens: 2538
-    elapsed_s: 249.53
-    tok_s_min: 8.0
-    tok_s_max: 8.0
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:07.363007+00:00'
+    tok_s_min: 7.9
+    tok_s_max: 7.9
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 8.0
-    - 8.0
-    - 8.0
-    note: "agent bench avg 8.0 tok/s over 3 sessions \xD7 3 turns (1995 tok in 249.5s)"
-    latest_run_id: 20260622T00235101-a262cf
+    - 7.9
+    - 7.9
+    note: "golden ?/? @ 7.9 tok/s \u2014 fill~18432 \u2014 bench-agent-v2 \u2014 tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 18432
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230736-a67efc
   nvidia-qwen3-30b-a3b-eugr:
-    tok_s: 75.8
+    tok_s: 71.2
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-22T00:26:09.101664+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 3162
-    elapsed_s: 30.39
-    tok_s_min: 75.4
-    tok_s_max: 76.1
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:07.539923+00:00'
+    tok_s_min: 71.1
+    tok_s_max: 71.2
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 75.4
-    - 75.9
-    - 76.1
-    note: "agent bench avg 75.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 30.4s)"
-    latest_run_id: 20260622T00260910-bffd3b
+    - 71.1
+    - 71.2
+    note: "golden ?/? @ 71.2 tok/s \u2014 fill~18432 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 18432
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230753-868227
   unsloth-qwen3-coder-30b-a3b-instruct-llama:
-    tok_s: 70.9
+    tok_s: 29.2
     engine: llamacpp
-    method: bench-agent
-    measured_at: '2026-06-22T00:37:33.431684+00:00'
-    completion_tokens: 2196
-    prompt_tokens: 2940
-    elapsed_s: 30.98
-    tok_s_min: 70.7
-    tok_s_max: 71.0
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:08.682783+00:00'
+    tok_s_min: 22.1
+    tok_s_max: 36.3
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 70.9
-    - 70.7
-    - 71.0
-    note: "agent bench avg 70.9 tok/s over 3 sessions \xD7 3 turns (2196 tok in 31.0s)"
-    latest_run_id: 20260622T00373343-a99d1f
+    - 22.1
+    - 36.3
+    note: "golden ?/? @ 29.2 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07230868-2954a4
   deepseek-ai-deepseek-r1-distill-qwen-32b-eugr:
     tok_s: 3.6
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-21T23:59:48.185661+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 3027
-    elapsed_s: 646.51
-    tok_s_min: 3.6
-    tok_s_max: 3.6
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 3.6
-    - 3.6
-    - 3.6
-    note: "agent bench avg 3.6 tok/s over 3 sessions \xD7 3 turns (2304 tok in 646.5s)"
-    latest_run_id: 20260621T23594818-66c11f
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:07.457864+00:00'
+    note: "golden 128k/fp8 @ 3.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07220745-cd5575
   google-gemma-4-26b-a4b-it-eugr:
-    tok_s: 23.6
+    tok_s: 22.2
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-22T00:08:52.818301+00:00'
-    completion_tokens: 2038
-    prompt_tokens: 2718
-    elapsed_s: 86.51
-    tok_s_min: 23.5
-    tok_s_max: 23.6
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 23.5
-    - 23.5
-    - 23.6
-    note: "agent bench avg 23.6 tok/s over 3 sessions \xD7 3 turns (2038 tok in 86.5s)"
-    latest_run_id: 20260622T00085281-2fa9dd
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:08.084023+00:00'
+    note: "golden 256k/fp8 @ 22.2 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07220808-fc9534
   qwen-qwen3-coder-next-eugr:
-    tok_s: 45.4
+    tok_s: 37.9
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-21T22:52:20.092434+00:00'
-    completion_tokens: 2091
-    prompt_tokens: 2730
-    elapsed_s: 46.1
-    tok_s_min: 45.0
-    tok_s_max: 45.7
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:07.760133+00:00'
+    tok_s_min: 37.9
+    tok_s_max: 37.9
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 45.7
-    - 45.4
-    - 45.0
-    note: "agent bench avg 45.4 tok/s over 3 sessions \xD7 3 turns (2091 tok in 46.1s)"
-    latest_run_id: 20260621T22522009-532d78
+    - 37.9
+    - 37.9
+    note: "golden ?/? @ 37.9 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230776-09fbaa
   qwen-qwen3-6-27b-eugr:
     tok_s: 7.8
     engine: eugr
@@ -208,59 +196,57 @@ profiles:
     note: "agent bench avg 7.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 295.5s)"
     latest_run_id: 20260621T23063864-c07788
   rdtand-qwen3-6-27b-eugr:
-    tok_s: 10.3
+    tok_s: 10.6
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-21T23:21:01.420918+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 3174
-    elapsed_s: 224.31
-    tok_s_min: 10.2
-    tok_s_max: 10.3
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:08.121356+00:00'
+    tok_s_min: 10.6
+    tok_s_max: 10.6
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 10.2
-    - 10.3
-    - 10.3
-    note: "agent bench avg 10.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 224.3s)"
-    latest_run_id: 20260621T23210142-de9687
+    - 10.6
+    - 10.6
+    note: "golden ?/? @ 10.6 tok/s \u2014 fill~5734 \u2014 bench-agent-v2 \u2014 tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 5734
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230812-6df618
   unsloth-qwen3-6-27b-eugr:
-    tok_s: 9.4
+    tok_s: 9.2
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-21T23:34:03.527940+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 3180
-    elapsed_s: 245.23
-    tok_s_min: 9.4
-    tok_s_max: 9.4
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:08.871790+00:00'
+    tok_s_min: 9.2
+    tok_s_max: 9.2
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 9.4
-    - 9.4
-    - 9.4
-    note: "agent bench avg 9.4 tok/s over 3 sessions \xD7 3 turns (2304 tok in 245.2s)"
-    latest_run_id: 20260621T23340352-48b2a8
+    - 9.2
+    - 9.2
+    note: "golden ?/? @ 9.2 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014 tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230887-ac19f2
   saricles-qwen3-coder-next-eugr:
-    tok_s: 63.3
+    tok_s: 56.8
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-21T23:43:30.858530+00:00'
-    completion_tokens: 2224
-    prompt_tokens: 2995
-    elapsed_s: 35.13
-    tok_s_min: 63.0
-    tok_s_max: 63.6
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:08.312029+00:00'
+    tok_s_min: 56.4
+    tok_s_max: 57.1
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 63.0
-    - 63.3
-    - 63.6
-    note: "agent bench avg 63.3 tok/s over 3 sessions \xD7 3 turns (2224 tok in 35.1s)"
-    latest_run_id: 20260621T23433085-2839ae
+    - 56.4
+    - 57.1
+    note: "golden ?/? @ 56.8 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07230831-c0b694
   qwen-qwen3-6-27b-dflash-eugr:
     tok_s: 29.0
     engine: eugr
@@ -280,92 +266,165 @@ profiles:
     note: "agent bench avg 29.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 79.5s)"
     latest_run_id: 20260622T01393346-90d997
   stepfun-ai-step-3-7-flash-llama:
-    tok_s: 22.3
-    engine: llamacpp
-    method: bench-agent
-    measured_at: '2026-06-22T02:37:43.344433+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 897
-    elapsed_s: 103.16
-    tok_s_min: 22.3
-    tok_s_max: 22.4
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 22.3
-    - 22.4
-    - 22.4
-    note: "agent bench avg 22.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 103.2s)"
-    latest_run_id: 20260622T02374334-a57fd6
-  google-diffusiongemma-26b-a4b-it-eugr:
-    tok_s: 70.8
-    engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-22T04:17:21.952519+00:00'
-    completion_tokens: 2094
-    prompt_tokens: 2789
-    elapsed_s: 29.59
-    tok_s_min: 69.3
-    tok_s_max: 71.8
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 71.8
-    - 69.3
-    - 71.2
-    note: "agent bench avg 70.8 tok/s over 3 sessions \xD7 3 turns (2094 tok in 29.6s)"
-    latest_run_id: 20260622T04172195-dfbf13
-  kaitchup-qwen3-6-27b-llama:
-    tok_s: 9.3
-    engine: llamacpp
-    method: bench-agent
-    measured_at: '2026-06-22T04:23:27.681359+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 876
-    elapsed_s: 247.41
-    tok_s_min: 9.3
-    tok_s_max: 9.3
-    sessions: 3
-    turns_per_session: 3
-    run_tok_s:
-    - 9.3
-    - 9.3
-    - 9.3
-    note: "agent bench avg 9.3 tok/s over 3 sessions \xD7 3 turns (2304 tok in 247.4s)"
-    latest_run_id: 20260622T04232768-a0f646
-  antirez-deepseek-v4-flash-ds4:
     tok_s: 17.3
-    engine: ds4
-    method: bench-agent
-    measured_at: '2026-06-22T05:02:45.858141+00:00'
-    completion_tokens: 2295
-    prompt_tokens: 3003
-    elapsed_s: 132.8
-    tok_s_min: 17.2
-    tok_s_max: 17.4
-    sessions: 3
-    turns_per_session: 3
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:08.495158+00:00'
+    tok_s_min: 17.3
+    tok_s_max: 17.3
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 17.4
-    - 17.2
-    - 17.2
-    note: "agent bench avg 17.3 tok/s over 3 sessions \xD7 3 turns (2295 tok in 132.8s)"
-    latest_run_id: 20260622T05024585-e0d06b
-  opencode-qwen27-dflash-262k:
-    tok_s: 27.5
+    - 17.3
+    - 17.3
+    note: "golden ?/? @ 17.3 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07230849-32d616
+  google-diffusiongemma-26b-a4b-it-eugr:
+    tok_s: 39.3
     engine: eugr
-    method: bench-agent
-    measured_at: '2026-06-24T16:51:09.736611+00:00'
-    completion_tokens: 2304
-    prompt_tokens: 876
-    elapsed_s: 83.75
-    tok_s_min: 27.5
-    tok_s_max: 27.5
-    sessions: 3
-    turns_per_session: 3
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:07.770789+00:00'
+    note: "golden 256k/fp8 @ 39.3 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07220777-831bed
+  kaitchup-qwen3-6-27b-llama:
+    tok_s: 7.6
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T17:58:13.806455+00:00'
+    note: "golden 256k/q8_0 @ 7.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T17581380-e5203c
+  antirez-deepseek-v4-flash-ds4:
+    tok_s: 1.7
+    engine: ds4
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:07.144503+00:00'
+    note: "golden 1024k/q8_0 @ 1.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07220714-087283
+  opencode-qwen27-dflash-262k:
+    tok_s: 3.7
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:23:07.940778+00:00'
+    tok_s_min: 3.7
+    tok_s_max: 3.7
+    sessions: 2
+    turns_per_session: 4
     run_tok_s:
-    - 27.5
-    - 27.5
-    - 27.5
-    note: "agent bench avg 27.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 83.8s)"
-    latest_run_id: 20260624T16510973-560b0a
+    - 3.7
+    - 3.7
+    note: "golden ?/? @ 3.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014 tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07230794-46c54b
+  opencode-qwen36-250k:
+    tok_s: 60.0
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:58.864791+00:00'
+    tok_s_min: 59.6
+    tok_s_max: 60.5
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 59.6
+    - 60.5
+    note: "golden ?/? @ 60.0 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07225886-567755
+  empero-ai-qwythos-9b-claude-mythos-5-1m-eugr:
+    tok_s: 12.4
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:07.617356+00:00'
+    note: "golden 781k/fp8 @ 12.4 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07220761-57dcc0
+  qwen-qwen-agentworld-35b-a3b-eugr:
+    tok_s: 27.6
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:08.416177+00:00'
+    note: "golden 250k/fp8 @ 27.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=False"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260627T07220841-d3bdec
+  gemma4-12b-opus-reasoning-q4:
+    tok_s: 17.3
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:08.754728+00:00'
+    note: "golden 32k/q8_0 @ 17.3 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07220875-7fd98a
+  gemma4-12b-agentic-v2-q4:
+    tok_s: 17.1
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:08.585835+00:00'
+    note: "golden 32k/q8_0 @ 17.1 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07220858-fba980
+  mellum2-12b-opus-q4:
+    tok_s: 74.4
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:08.922776+00:00'
+    note: "golden 32k/q8_0 @ 74.4 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07220892-87e54e
+  deepreinforce-ai-ornith-1-0-35b-llama:
+    tok_s: 28.1
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T15:10:48.575871+00:00'
+    note: "golden 256k/q8_0 @ 28.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T15104857-14a30d
+  jackrong-qwopus3-6-27b-coder-compat-llama:
+    tok_s: 6.9
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-06-27T07:22:08.251158+00:00'
+    note: "golden 256k/q8_0 @ 6.9 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260627T07220825-2b01da

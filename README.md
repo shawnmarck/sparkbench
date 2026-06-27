@@ -15,7 +15,7 @@ One CLI, one box, no cloud.
 </div>
 
 <p align="center">
-  <img src="docs/assets/sparkbench-demo.gif" width="820" alt="SparkBench portal — Inference, Models, and Explore tabs in action">
+  <img src="docs/assets/sparkbench-demo.gif" width="820" alt="SparkBench portal: Inference, Models, and Explore tabs in action">
 </p>
 
 ---
@@ -24,14 +24,14 @@ One CLI, one box, no cloud.
 
 SparkBench is a self-hosted dashboard and inference control plane for a single DGX Spark. It bundles everything you need to evaluate models on GB10 hardware without leaving a single CLI:
 
-- **Portal** — System metrics, model browser, inference panel, HuggingFace explorer
-- **Three engines** — vLLM (eugr), llama.cpp, ds4 (DeepSeek V4 Flash). One CLI to switch.
-- **Model Lab** — Auto-scaffold recipes from weights, mark testing, bench, promote to production
-- **Versioned benchmarks** — Reproducible tok/s, multi-turn agent loops, context ladder
-- **HuggingFace integration** — Search, queue, download, dedupe; weights land in a canonical tree
-- **NAS shelf sync** — Mirror models to/from a CIFS share so they survive reinstalls
+- **Portal**: System metrics, model browser, inference panel, HuggingFace explorer
+- **Three engines**: vLLM (eugr), llama.cpp, ds4 (DeepSeek V4 Flash). One CLI to switch.
+- **Model Lab**: Auto-scaffold recipes from weights, mark testing, bench, promote to production
+- **Versioned benchmarks**: Reproducible tok/s, multi-turn agent loops, context ladder
+- **HuggingFace integration**: Search, queue, download, dedupe; weights land in a canonical tree
+- **NAS shelf sync**: Mirror models to/from a CIFS share so they survive reinstalls
 
-The benchmarks generated here are what populate **[sparkbench.dev](https://sparkbench.dev)** — the public GB10 leaderboard.
+The benchmarks generated here are what populate **[sparkbench.dev](https://sparkbench.dev)**, the public GB10 leaderboard.
 
 ## Why
 
@@ -49,7 +49,7 @@ cd /opt/spark
 export SPARK_HOST=mybox
 export SPARK_LAN_IP=192.168.1.50
 
-# Core install (idempotent — safe to re-run)
+# Core install (idempotent, safe to re-run)
 sudo bash install/20-spark-cli.sh           # spark CLI
 sudo bash install/04-model-inventory.sh     # /models inventory
 sudo bash install/11-model-shelf-api.sh     # shelf HTTP API
@@ -65,7 +65,7 @@ Full script index: [install/INSTALL.md](install/INSTALL.md).
 
 ## Use it
 
-One CLI on PATH — `spark`. Designed for humans and coding agents alike.
+One CLI on PATH: `spark`. Designed for humans and coding agents alike.
 
 ```bash
 spark status                          # everything in one glance
@@ -151,7 +151,7 @@ spark hf  ────────────▶  /models/{lab}/{slug}/   ◀�
             Hermes · Open WebUI · Grok · your agents
 ```
 
-Static portal on `:80` (nginx). All mutation APIs are LAN-only — fine for a trusted home network; **don't expose port 80 to the WAN**.
+Static portal on `:80` (nginx). All mutation APIs are LAN-only, fine for a trusted home network; **don't expose port 80 to the WAN**.
 
 ## Documentation
 
@@ -161,8 +161,8 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only — fine for a tr
 | [docs/ROADMAP.md](docs/ROADMAP.md)                                                    | Phases, status, what's next                      |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |
 | [docs/reference/inference-stack.md](docs/reference/inference-stack.md)                | Inference control plane spec                     |
-| [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md)          | Bench v2 — long-ctx + tool-use methodology       |
-| [docs/guides/first-spark-setup.md](docs/guides/first-spark-setup.md)                  | First Spark setup — clone → recipes → fetch      |
+| [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md)          | Bench v2: long-ctx + tool-use methodology          |
+| [docs/guides/first-spark-setup.md](docs/guides/first-spark-setup.md)                  | First Spark setup: clone → recipes → fetch         |
 | [docs/guides/model-shelf.md](docs/guides/model-shelf.md)                              | `/models` + NAS shelf layout                     |
 | [docs/guides/model-picks.md](docs/guides/model-picks.md)                              | Why each model is in the catalog                 |
 | [docs/guides/local-model-testing.md](docs/guides/local-model-testing.md)              | Bench queue + stack fixes SOP                    |
@@ -174,12 +174,12 @@ Static portal on `:80` (nginx). All mutation APIs are LAN-only — fine for a tr
 
 ## Contributing
 
-PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) — one PR per task, deploy smoke after merge.
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md): one PR per task, deploy smoke after merge.
 
 Two great ways to help:
 
 1. **Bench a new model** on your Spark and open a PR with the recipe + verification YAML. It shows up on [sparkbench.dev](https://sparkbench.dev) automatically.
-2. **Fix a sharp edge** — runbooks, install scripts, portal UX. Small, focused PRs preferred.
+2. **Fix a sharp edge**: runbooks, install scripts, portal UX. Small, focused PRs preferred.
 
 ## License
 

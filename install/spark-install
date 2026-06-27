@@ -14,11 +14,11 @@ require_root() {
 }
 
 run_module() {
-  local script="$1"
-  local path="${INSTALL_DIR}/${script}"
-  [[ -f "$path" ]] || die "missing module: ${script}"
+  local module="$1"
+  local path="${INSTALL_DIR}/modules/${module}"
+  [[ -f "$path" ]] || die "missing module: modules/${module}"
   echo
-  echo "==> ${script}"
+  echo "==> modules/${module}"
   bash "$path"
 }
 
@@ -74,24 +74,24 @@ Typical fresh box:
 Env: SPARK_ROOT, SPARK_STAGING, SPARK_USER, SPARK_HOST, SPARK_LAN_IP — see install/common.sh
      SPARK_INSTALL_BATCH=1 (set internally by core/gateway bundles; defers nginx until finalize)
 
-Legacy numbered scripts (install/03-….sh) still work; this orchestrator is the supported path.
+Legacy numbered scripts (install/03-….sh) forward to install/modules/; prefer spark-install.
 EOF
 }
 
 cmd_core() {
   echo "spark-install: core (portal + model shelf + HTTP APIs + CLI)"
   export SPARK_INSTALL_BATCH=1
-  run_module 01-netdata-portal.sh
-  run_module 20-spark-cli.sh
-  run_module 03-model-shelf-layout.sh
-  run_module 03a-shelf-hf-tools.sh
-  run_module 04-model-inventory.sh
-  run_module 05-model-inventory-auto-refresh.sh
-  run_module 10-portal-gpu-widget.sh
-  run_module 11-model-shelf-api.sh
-  run_module 21-hf-api.sh
-  run_module 17-inference-api.sh
-  run_module 12-model-removal-cron.sh
+  run_module core/portal-base.sh
+  run_module core/cli.sh
+  run_module core/models-layout.sh
+  run_module core/shelf-hf-tools.sh
+  run_module core/models-inventory.sh
+  run_module core/inventory-refresh.sh
+  run_module core/gpu-api.sh
+  run_module core/shelf-api.sh
+  run_module core/hf-api.sh
+  run_module core/inference-api.sh
+  run_module core/removal-cron.sh
   finalize_nginx_portal_site
   verify_core_nginx_routes
   unset SPARK_INSTALL_BATCH
@@ -103,8 +103,8 @@ cmd_core() {
 
 cmd_nas() {
   echo "spark-install: nas (CIFS shelf + /models layout)"
-  run_module 02-model-shelf-mount.sh
-  run_module 03-model-shelf-layout.sh
+  run_module optional/nas-mount.sh
+  run_module core/models-layout.sh
   echo "OK: NAS shelf path configured (when mount succeeds)"
 }
 
@@ -114,15 +114,15 @@ cmd_engine() {
   case "$engine" in
     eugr|vllm)
       echo "spark-install: engine eugr (eugr vLLM NVFP4)"
-      run_module 16-eugr-vllm-qwen36.sh
+      run_module engines/eugr-vllm.sh
       ;;
     llama|llamacpp)
       echo "spark-install: engine llama (llama.cpp GGUF)"
-      run_module 13-llama-cpp-smoke.sh
+      run_module engines/llama-cpp.sh
       ;;
     ds4|dwarfstar)
       echo "spark-install: engine ds4 (DwarfStar cuda-spark)"
-      run_module 22-ds4-dwarfstar.sh
+      run_module engines/ds4-dwarfstar.sh
       ;;
     *)
       die "unknown engine: ${engine} (try: eugr, llama, ds4)"
@@ -134,8 +134,8 @@ cmd_engine() {
 cmd_gateway() {
   echo "spark-install: gateway (:9000/v1 + client activity API)"
   export SPARK_INSTALL_BATCH=1
-  run_module 23-inference-gateway.sh
-  run_module 24-client-activity-api.sh
+  run_module gateway/inference-gateway.sh
+  run_module gateway/client-activity.sh
   finalize_nginx_portal_site
   verify_gateway_nginx_routes
   unset SPARK_INSTALL_BATCH
@@ -143,30 +143,30 @@ cmd_gateway() {
 }
 
 cmd_openwebui() {
-  run_module 14-openwebui-dual-backend.sh
+  run_module optional/openwebui.sh
 }
 
 cmd_bootstrap() {
-  run_module 00-grant-install-sudo.sh
+  run_module bootstrap/grant-install-sudo.sh
 }
 
 cmd_agent() {
-  run_module 07-grant-agent-sudo.sh
+  run_module bootstrap/grant-agent-sudo.sh
 }
 
 cmd_restart() {
   local what="${1:-}"
   [[ "$what" == "inference-api" ]] || die "usage: spark-install restart inference-api"
-  run_module 19-inference-api-restart.sh
+  run_module core/inference-api-restart.sh
 }
 
 cmd_extras() {
   local extra="${1:-}"
   [[ -n "$extra" ]] || die "usage: spark-install extras terminal|shell|lazydocker"
   case "$extra" in
-    terminal) run_module 06-kitty-terminal.sh ;;
-    shell) run_module 08-zsh-powerlevel10k.sh ;;
-    lazydocker) run_module 09-lazydocker.sh ;;
+    terminal) run_module extras/kitty-terminal.sh ;;
+    shell) run_module extras/zsh-powerlevel10k.sh ;;
+    lazydocker) run_module extras/lazydocker.sh ;;
     *) die "unknown extra: ${extra} (try: terminal, shell, lazydocker)" ;;
   esac
 }
@@ -218,7 +218,7 @@ cmd_status() {
   if [[ -x /usr/local/bin/spark ]]; then
     echo "  spark CLI: /usr/local/bin/spark"
   else
-    echo "  spark CLI: not on PATH (run spark-install core or 20-spark-cli.sh)"
+    echo "  spark CLI: not on PATH (run spark-install core)"
   fi
 }
 

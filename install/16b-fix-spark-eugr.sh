@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
+# Compat shim → modules/legacy/fix-spark-eugr.sh (use install/spark-install instead)
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
-cp "${SPARK_STAGING}/scripts/spark-eugr" "${SPARK_ROOT}/scripts/spark-eugr"
-chmod +x "${SPARK_ROOT}/scripts/spark-eugr"
-# CLI: install/20-spark-cli.sh → spark engine eugr
-sudo -u "${SPARK_USER}" "${SPARK_ROOT}/scripts/spark-eugr" up
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec bash "${ROOT}/modules/legacy/fix-spark-eugr.sh" "$@"

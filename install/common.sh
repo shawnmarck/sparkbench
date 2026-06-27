@@ -1,6 +1,6 @@
-# Shared install helpers — source from install/*.sh (do not execute directly).
-# SPARK_INSTALL_BATCH=1 — set by install/spark-install during bundled runs; modules call
-# maybe_write_nginx_portal_site instead of write_nginx_portal_site until finalize.
+# Shared install helpers — source from install/modules/*/*.sh (do not execute directly).
+# Compat shims at install/*.sh forward to modules/. SPARK_INSTALL_BATCH=1 defers nginx
+# until spark-install finalizes a bundled run.
 SPARK_ROOT="${SPARK_ROOT:-/opt/spark}"
 if [[ -z "${SPARK_USER:-}" ]]; then
   if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]]; then

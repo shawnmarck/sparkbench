@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
+# Compat shim → modules/legacy/sync-inference-compose.sh (use install/spark-install instead)
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
-cp "${SPARK_STAGING}/services/qwen36-nvfp4/compose.yaml" "${SPARK_ROOT}/services/qwen36-nvfp4/compose.yaml"
-cp "${SPARK_STAGING}/portal/index.html" "${SPARK_ROOT}/portal/"
-echo "Synced compose + portal"
-cp "${SPARK_STAGING}/docs/INFERENCE-SMOKE.md" "${SPARK_ROOT}/docs/"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec bash "${ROOT}/modules/legacy/sync-inference-compose.sh" "$@"

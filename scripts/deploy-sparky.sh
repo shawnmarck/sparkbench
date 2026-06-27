@@ -25,6 +25,8 @@ CODE_PATHS=(
   hermes
   bin
   data/golden-recipes.yaml
+  data/model-catalog.yaml
+  data/model-verification.yaml
   AGENT.md
   README.md
 )
@@ -94,17 +96,15 @@ cd "$ROOT"
 
 git fetch origin "$BRANCH"
 
-# Protect runtime data: backup live files, pull code, restore (skip-worktree hides from status).
-RUNTIME_DATA=(
-  data/model-verification.yaml
-  data/inference-benchmarks.yaml
+# Host-local only — shared cookbook (catalog, verify, recipes) comes from git.
+HOST_LOCAL_DATA=(
   data/inference-profiles.yaml
-  data/model-catalog.yaml
+  data/inference-benchmarks.yaml
 )
-RUNTIME_BACKUP_DIR="$(mktemp -d /tmp/sparky-runtime.XXXXXX)"
-for path in "${RUNTIME_DATA[@]}"; do
+HOST_LOCAL_BACKUP_DIR="$(mktemp -d /tmp/sparky-host-local.XXXXXX)"
+for path in "${HOST_LOCAL_DATA[@]}"; do
   if [[ -f "$path" ]]; then
-    cp "$path" "$RUNTIME_BACKUP_DIR/$(basename "$path")"
+    cp "$path" "$HOST_LOCAL_BACKUP_DIR/$(basename "$path")"
   fi
   if git ls-files --error-unmatch "$path" &>/dev/null; then
     git update-index --skip-worktree "$path" 2>/dev/null || true
@@ -154,13 +154,13 @@ fi
 
 git pull --ff-only origin "$BRANCH"
 
-for path in "${RUNTIME_DATA[@]}"; do
+for path in "${HOST_LOCAL_DATA[@]}"; do
   base="$(basename "$path")"
-  if [[ -f "$RUNTIME_BACKUP_DIR/$base" ]]; then
-    cp "$RUNTIME_BACKUP_DIR/$base" "$path"
+  if [[ -f "$HOST_LOCAL_BACKUP_DIR/$base" ]]; then
+    cp "$HOST_LOCAL_BACKUP_DIR/$base" "$path"
   fi
 done
-rm -rf "$RUNTIME_BACKUP_DIR"
+rm -rf "$HOST_LOCAL_BACKUP_DIR"
 
 if [[ -x scripts/sparky-protect-runtime.sh ]]; then
   bash scripts/sparky-protect-runtime.sh

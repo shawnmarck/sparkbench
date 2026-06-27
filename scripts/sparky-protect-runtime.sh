@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
-# Mark sparky runtime files as skip-worktree so git pull never overwrites live audit/bench state.
-# Run once on sparky after clone, and again after deploy (deploy calls this automatically).
-#
-# Undo: git update-index --no-skip-worktree <path>
+# Mark host-local files as skip-worktree so git pull does not fight per-box toggles.
+# Shared cookbook (recipes + data/*.yaml perf) is NOT protected — it travels in git.
 set -euo pipefail
 
 ROOT="${SPARK_ROOT:-/opt/spark}"
 cd "$ROOT"
 
-RUNTIME_PATHS=(
-  data/model-verification.yaml
-  data/inference-benchmarks.yaml
+HOST_LOCAL_PATHS=(
   data/inference-profiles.yaml
-  data/model-catalog.yaml
+  data/inference-benchmarks.yaml
 )
 
 protected=0
-for path in "${RUNTIME_PATHS[@]}"; do
+for path in "${HOST_LOCAL_PATHS[@]}"; do
   if git ls-files --error-unmatch "$path" &>/dev/null; then
     git update-index --skip-worktree "$path"
     protected=$((protected + 1))
   fi
 done
 
-echo "==> skip-worktree on $protected runtime data file(s)"
+echo "==> skip-worktree on $protected host-local file(s)"
 git ls-files -v | grep '^[S]' | awk '{print "  ", $2}' || true
+echo ""
+echo "Shared cookbook (recipes/, data/golden-recipes.yaml, data/model-catalog.yaml,"
+echo "data/model-verification.yaml) is pulled from git — not skip-worktree."

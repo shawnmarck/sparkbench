@@ -25,8 +25,8 @@ Production host: **`sparky`**, repo **`/opt/spark`**.
 | Layer | Script | What it measures |
 |-------|--------|------------------|
 | 1. Golden | `golden-inventory-audit.py` | Optimize ctx/kv, full bench v2, promote, `works` |
-| 2. KV sweep | `spark-kv-sweep.py` | Golden ctx × engine KV quants @ 75% fill → tok/s |
-| 3. Ctx ladder | `spark-ctx-ladder.py` | Golden kv × ctx rungs to native @ 75% fill → tok/s |
+| 2. Ctx ladder | `spark-ctx-ladder.py` | Golden kv × ctx rungs to native @ 75% fill → tok/s |
+| 3. KV sweep | `spark-kv-sweep.py` | Golden ctx × engine KV quants @ 75% fill → tok/s |
 | 4. Shelf | `spark shelf push` | Optional NAS backup |
 
 Results persist on the recipe as `context.bench_matrix` (+ `kv_sweep`, `ctx_ladder`).

@@ -11,6 +11,7 @@ from pathlib import Path
 
 PULL_SCRIPT = Path("/opt/spark/scripts/spark-shelf-pull")
 PUSH_SCRIPT = Path("/opt/spark/scripts/spark-shelf-push")
+FETCH_SCRIPT = Path("/opt/spark/scripts/spark-models-fetch.py")
 REMOVE_SCRIPT = Path("/opt/spark/scripts/spark-local-rm")
 VERIFY_SCRIPT = Path("/opt/spark/scripts/spark-model-verify")
 MODELS_ROOT = Path("/models")
@@ -55,6 +56,7 @@ def active_job():
     jobs = [
         ("pull", RUN_DIR / "shelf-pull.pid", LOG_DIR / "shelf-pull-latest.log"),
         ("push", RUN_DIR / "shelf-push.pid", LOG_DIR / "shelf-push-latest.log"),
+        ("fetch", RUN_DIR / "models-fetch.pid", LOG_DIR / "models-fetch-latest.log"),
         ("remove-local", RUN_DIR / "local-remove.pid", LOG_DIR / "local-remove-latest.log"),
     ]
     for action, pid_file, log_file in jobs:
@@ -103,15 +105,22 @@ def start_job(action: str, rel: str) -> tuple[bool, str, dict]:
         if not local_present(rel):
             return False, f"Not present locally: /models/{rel}", {}
         script = REMOVE_SCRIPT
+        bg_args = ["--background", rel]
+    elif action == "fetch":
+        if not FETCH_SCRIPT.is_file():
+            return False, f"Missing script: {FETCH_SCRIPT}", {}
+        script = FETCH_SCRIPT
+        bg_args = ["--background", rel]
     else:
         if not shelf_mounted():
             return False, "NAS shelf is not mounted (/mnt/model-shelf)", {}
         script = PULL_SCRIPT if action == "pull" else PUSH_SCRIPT
         if not script.is_file():
             return False, f"Missing script: {script}", {}
+        bg_args = ["--background", rel]
 
     proc = subprocess.run(
-        [str(script), "--background", rel],
+        [str(script), *bg_args],
         capture_output=True,
         text=True,
         check=False,
@@ -293,6 +302,13 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/api/models/removal":
             self._handle_removal(data)
+            return
+
+        if self.path == "/api/models/fetch":
+            if not data:
+                self._json(400, {"ok": False, "error": "invalid JSON"})
+                return
+            self._handle_action("fetch", data)
             return
 
         routes = {

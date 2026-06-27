@@ -274,15 +274,8 @@ def process_model(
 
     if not golden_ok:
         result["status"] = "failed"
-        result["error"] = "golden phase failed — skipping kv sweep and ctx ladder"
+        result["error"] = "golden phase failed — skipping ctx ladder and kv sweep"
         return result
-
-    if only_phase in ("all", "kv_sweep") and not skip_kv_sweep:
-        if resume and not force and phase_done(prior, "kv_sweep"):
-            result["phases"]["kv_sweep"] = prior["phases"]["kv_sweep"]  # type: ignore[index]
-            log("resume: skip kv_sweep")
-        else:
-            result["phases"]["kv_sweep"] = run_kv_sweep_phase(profile_id, force=force)
 
     if only_phase in ("all", "ctx_ladder") and not skip_ctx_ladder:
         if resume and not force and phase_done(prior, "ctx_ladder"):
@@ -290,6 +283,13 @@ def process_model(
             log("resume: skip ctx_ladder")
         else:
             result["phases"]["ctx_ladder"] = run_ctx_ladder_phase(profile_id, force=force)
+
+    if only_phase in ("all", "kv_sweep") and not skip_kv_sweep:
+        if resume and not force and phase_done(prior, "kv_sweep"):
+            result["phases"]["kv_sweep"] = prior["phases"]["kv_sweep"]  # type: ignore[index]
+            log("resume: skip kv_sweep")
+        else:
+            result["phases"]["kv_sweep"] = run_kv_sweep_phase(profile_id, force=force)
 
     if only_phase in ("all", "shelf") and not skip_shelf:
         if resume and phase_done(prior, "shelf"):
@@ -357,7 +357,7 @@ def workflow(
         "started_at": datetime.now(timezone.utc).isoformat(),
         "bench_standard": "2.0",
         "fill_ratio": 0.75,
-        "layers": ["golden", "kv_sweep", "ctx_ladder", "shelf"],
+        "layers": ["golden", "ctx_ladder", "kv_sweep", "shelf"],
         "targets": [{"path": p, "profile": prof} for p, prof in targets],
     }
     log(f"PLAN {json.dumps(plan, indent=2)}")

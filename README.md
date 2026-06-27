@@ -37,6 +37,7 @@ From this clone on techno (after commit):
 | [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md) | Versioned bench v2 (long-ctx + tools) |
 | [docs/runbooks/new-model-golden-benchmark.md](docs/runbooks/new-model-golden-benchmark.md) | New model golden audit |
 | [docs/guides/local-model-testing.md](docs/guides/local-model-testing.md) | Bench queue + stack fixes SOP |
+| [docs/guides/first-spark-setup.md](docs/guides/first-spark-setup.md) | **First Spark setup** — solo GB10 clone → golden recipes → fetch |
 | [AGENT.md](AGENT.md) | Agent rules + **deploy workflow** (`scripts/deploy-sparky.sh`) |
 | [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | Unified `spark` command reference |
 | [docs/examples/](docs/examples/) | YAML templates |

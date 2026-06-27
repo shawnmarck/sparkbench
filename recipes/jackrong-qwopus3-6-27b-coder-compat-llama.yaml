@@ -1,0 +1,35 @@
+id: jackrong-qwopus3-6-27b-coder-compat-llama
+name: qwopus3.6-27b-coder-compat (llamacpp)
+inventory_path: jackrong/qwopus3.6-27b-coder-compat
+engine: llamacpp
+tier: fast
+lifecycle: works
+served_name: qwopus3-6-27b-coder-compat
+port: 8081
+model: /models/jackrong/qwopus3.6-27b-coder-compat/mtp-gguf/Qwopus3.6-27B-Coder-Compat-MTP-Q5_K_M.gguf
+tags:
+- lab
+- llamacpp
+- golden
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '262144'
+notes: Scaffolded 2026-06-27 from /models/jackrong/qwopus3.6-27b-coder-compat. Single
+  MTP GGUF in mtp-gguf/ (no separate main/draft pair). Mark testing, switch, bench,
+  then promote.
+updated_at: '2026-06-27T02:22:01.530505+00:00'
+context:
+  default: 262144
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: q8_0
+promoted_at: '2026-06-27T02:31:58.128516+00:00'

@@ -1004,12 +1004,14 @@
     const fmtTime = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString(); } catch { return ''; } };
     const fmtCtx = (n) => !n ? '—' : n >= 1000 ? (n / 1000).toFixed(0) + 'K' : String(n);
     const fmtParams = (m) => {
-      if (m.param_active_b && m.param_b) return m.param_active_b + 'B active / ' + m.param_b + 'B';
+      if (m.param_active_b && m.param_b && m.param_active_b < m.param_b)
+        return m.param_active_b + 'B active / ' + m.param_b + 'B';
       if (m.param_b) return m.param_b + 'B';
       return '—';
     };
     const sparkStatus = (m) => (m.spark_verify && m.spark_verify.spark_status) || 'unverified';
     const removalPending = (m) => !!(m.spark_verify && m.spark_verify.removal_pending);
+    const removalShelf = (m) => !!(m.spark_verify && m.spark_verify.removal_shelf);
     const localSize = (m) => {
       if (m.model_kind === 'speculative_sidecar' && m.combined_size_human) return m.combined_size_human;
       return (m.local && m.local.present) ? m.local.size_human : '—';
@@ -1081,7 +1083,8 @@
     function modelArchitecture(m) {
       if (m.architecture === 'moe' || m.architecture === 'dense') return m.architecture;
       const caps = new Set((m.capabilities || []).map((c) => String(c).toLowerCase()));
-      if (m.param_active_b != null && m.param_active_b > 0) return 'moe';
+      if (m.param_active_b != null && m.param_b != null && m.param_active_b < m.param_b) return 'moe';
+      if (m.param_active_b != null && m.param_b != null && m.param_active_b === m.param_b) return 'dense';
       if (caps.has('moe')) return 'moe';
       if (caps.has('dense')) return 'dense';
       if (m.param_b != null && (m.param_active_b == null || m.param_active_b === 0)) return 'dense';
@@ -1547,14 +1550,19 @@
       const vars = (m.variants || []).length ? `<div class="variants detail-section"><table><tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th></tr>${m.variants.map(v => `<tr><td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td><td>${esc(v.status)}</td></tr>`).join('')}</table></div>` : '';
       const queueBtn = queued
         ? `<button type="button" class="btn danger active" data-action="queue-removal" data-pending="0" data-path="${rel}">Cancel removal</button>`
-        : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) ? 'disabled' : ''}>Queue removal</button>`;
+        : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-scope="local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) ? 'disabled' : ''}>Queue local removal</button><button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-scope="both" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || !(m.shelf && m.shelf.present) || !shelfMounted ? 'disabled' : ''} title="${!(m.shelf && m.shelf.present) ? 'Not on NAS shelf' : ''}">Queue full removal</button>`;
       const caps = catalogCapabilities(m);
       const task = m.pipeline_tag;
       const hfTags = notableHfTags(m);
       const hfPreview = hfTags.slice(0, 4);
       const hfExtra = hfTags.slice(4);
       const tagBlock = (caps.length || task || hfPreview.length) ? `<div class="detail-section tag-block">${caps.length ? `<div class="tag-line"><span class="tag-line-label">Catalog</span><span class="tag-line-val">${tagLine(caps)}</span></div>` : ''}${task ? `<div class="tag-line"><span class="tag-line-label">HF task</span><span class="tag-line-val"><span class="badge hf-task">${esc(formatTagLabel(task))}</span></span></div>` : ''}${hfPreview.length ? `<div class="tag-line"><span class="tag-line-label">HF tags</span><span class="tag-line-val">${tagLine(hfPreview)}</span></div>` : ''}${hfExtra.length ? `<details class="tag-more"><summary>${hfExtra.length} more HF tag${hfExtra.length === 1 ? '' : 's'}</summary>${tagLine(hfExtra)}</details>` : ''}${m.hf_url ? `<div class="tag-line" style="margin-top:.5rem"><span class="tag-line-label"></span><span class="tag-line-val"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">All tags on Hugging Face ↗</a></span></div>` : ''}</div>` : '';
-      return `${tagBlock}${summaryBlock(m)}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions"><button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete now</button></div>${queued ? '<div class="queue-note">Pending delete — local copy purges daily at 03:00. NAS shelf copy is kept.</div>' : ''}</div>${vars}`;
+      const queueNote = queued
+        ? (removalShelf(m)
+          ? '<div class="queue-note">Pending delete — local + NAS copies purge daily at 03:00.</div>'
+          : '<div class="queue-note">Pending delete — local copy purges daily at 03:00. NAS shelf copy is kept.</div>')
+        : '';
+      return `${tagBlock}${summaryBlock(m)}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions"><button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete local now</button></div>${queueNote}</div>${vars}`;
     }
 
     /* ── BENCH HISTORY ───────────────────────────────────── */
@@ -1720,11 +1728,18 @@
     }
 
     async function setRemovalQueue(path, pending, btn) {
-      if (pending && btn.dataset.shelf === '—') { if (!confirm(`"${btn.dataset.name}" is NOT on NAS shelf.\n\nQueue ${btn.dataset.local} for deletion anyway?`)) return; }
-      else if (pending) { if (!confirm(`Queue "${btn.dataset.name}" (${btn.dataset.local}) for removal?\n\nPurges at 03:00. NAS copy (${btn.dataset.shelf}) kept.`)) return; }
+      const scope = btn.dataset.scope || 'local';
+      const shelfAlso = pending && scope === 'both';
+      if (pending && btn.dataset.shelf === '—') {
+        if (!confirm(`"${btn.dataset.name}" is NOT on NAS shelf.\n\nQueue ${btn.dataset.local} for local deletion anyway?`)) return;
+      } else if (pending && shelfAlso) {
+        if (!confirm(`Queue FULL removal for "${btn.dataset.name}"?\n\nDeletes local (${btn.dataset.local}) AND NAS (${btn.dataset.shelf}) at 03:00.`)) return;
+      } else if (pending) {
+        if (!confirm(`Queue LOCAL removal for "${btn.dataset.name}" (${btn.dataset.local})?\n\nPurges at 03:00. NAS copy (${btn.dataset.shelf}) is kept.`)) return;
+      }
       btn.disabled = true;
       try {
-        const res = await fetch('/api/models/removal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, pending }) });
+        const res = await fetch('/api/models/removal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, pending, shelf: shelfAlso }) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText);
         const model = all.find(m => (m.rel_path || m.id) === path);

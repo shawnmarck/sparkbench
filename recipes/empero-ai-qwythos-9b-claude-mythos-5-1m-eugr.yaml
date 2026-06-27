@@ -14,17 +14,17 @@ notes: Scaffolded 2026-06-25 from /models/empero-ai/qwythos-9b-claude-mythos-5-1
   Mark testing, switch, bench, then promote. Viability ctx 800000 verified 2026-06-25.
   Load + smoke at 800k ctx, no bench.
 eugr_recipe: /opt/spark/services/eugr-empero-ai-qwythos-9b-claude-mythos-5-1m-eugr.yaml
-_path: /opt/spark/recipes/empero-ai-qwythos-9b-claude-mythos-5-1m-eugr.yaml
 context:
-  default: 800000
+  default: 799744
   native: 1048576
   kv_default: fp8
   presets:
     golden:
-      label: Long ctx (800k viability)
-      ctx: 800000
+      label: Golden max fit
+      ctx: 799744
       kv: fp8
     long:
       label: Long ctx (viability 781k)
       ctx: 800000
       kv: fp8
+promoted_at: '2026-06-27T02:41:50.418800+00:00'

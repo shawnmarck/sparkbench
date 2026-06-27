@@ -5,7 +5,8 @@ set -euo pipefail
 LOG_DIR="/opt/spark/logs"
 LOG_FILE="${LOG_DIR}/removal-purge-latest.log"
 VERIFY="/opt/spark/scripts/spark-model-verify"
-RM="/opt/spark/scripts/spark-local-rm"
+RM_LOCAL="/opt/spark/scripts/spark-local-rm"
+RM_SHELF="/opt/spark/scripts/spark-shelf-rm"
 DRY_RUN=0
 
 usage() {
@@ -13,6 +14,7 @@ usage() {
 Usage: spark-removal-purge [--dry-run]
 
 Deletes /models paths flagged removal_pending in model-verification.yaml.
+When removal_shelf is set, also removes the NAS shelf copy.
 Typically run nightly via systemd timer.
 EOF
 }
@@ -30,26 +32,55 @@ mkdir -p "${LOG_DIR}"
   echo "=== removal purge $(date -Is) dry_run=${DRY_RUN} ==="
 } >>"${LOG_FILE}"
 
-mapfile -t PENDING < <("${VERIFY}" pending | python3 -c "import sys,json; print('\n'.join(json.load(sys.stdin)))")
+pending_json="$("${VERIFY}" pending)"
+pending_count="$(python3 -c "import json,sys; print(len(json.load(sys.stdin)))" <<<"${pending_json}")"
 
-if [[ ${#PENDING[@]} -eq 0 || -z "${PENDING[0]:-}" ]]; then
+if [[ "${pending_count}" -eq 0 ]]; then
   echo "No models queued for removal" | tee -a "${LOG_FILE}"
   exit 0
 fi
 
-for rel in "${PENDING[@]}"; do
+while read -r rel shelf; do
   [[ -n "${rel}" ]] || continue
-  echo "==> Purging ${rel}" | tee -a "${LOG_FILE}"
+  echo "==> Purging ${rel} (shelf=${shelf})" | tee -a "${LOG_FILE}"
   if [[ ${DRY_RUN} -eq 1 ]]; then
-    "${RM}" --dry-run "${rel}" 2>&1 | tee -a "${LOG_FILE}" || true
+    "${RM_LOCAL}" --dry-run "${rel}" 2>&1 | tee -a "${LOG_FILE}" || true
+    if [[ "${shelf}" == "1" ]]; then
+      "${RM_SHELF}" --dry-run "${rel}" 2>&1 | tee -a "${LOG_FILE}" || true
+    fi
     continue
   fi
-  if "${RM}" "${rel}" >>"${LOG_FILE}" 2>&1; then
-    "${VERIFY}" removal "${rel}" off >/dev/null
-    echo "OK: removed ${rel}" | tee -a "${LOG_FILE}"
+  ok_local=0
+  if [[ -d "/models/${rel}" ]]; then
+    if "${RM_LOCAL}" "${rel}" >>"${LOG_FILE}" 2>&1; then
+      ok_local=1
+      echo "OK: removed local ${rel}" | tee -a "${LOG_FILE}"
+    else
+      echo "ERROR: failed local ${rel} (flag kept)" | tee -a "${LOG_FILE}" >&2
+    fi
   else
-    echo "ERROR: failed ${rel} (flag kept)" | tee -a "${LOG_FILE}" >&2
+    ok_local=1
+    echo "SKIP: no local copy ${rel}" | tee -a "${LOG_FILE}"
   fi
-done
+  ok_shelf=1
+  if [[ "${shelf}" == "1" ]]; then
+    if mountpoint -q /mnt/model-shelf 2>/dev/null && [[ -d "/mnt/model-shelf/models/${rel}" ]]; then
+      if "${RM_SHELF}" "${rel}" >>"${LOG_FILE}" 2>&1; then
+        echo "OK: removed shelf ${rel}" | tee -a "${LOG_FILE}"
+      else
+        ok_shelf=0
+        echo "ERROR: failed shelf ${rel} (flag kept)" | tee -a "${LOG_FILE}" >&2
+      fi
+    else
+      echo "SKIP: no shelf copy ${rel}" | tee -a "${LOG_FILE}"
+    fi
+  fi
+  if [[ ${ok_local} -eq 1 && ${ok_shelf} -eq 1 ]]; then
+    "${VERIFY}" removal "${rel}" off >/dev/null
+  fi
+done < <(python3 -c "import json,sys
+for item in json.load(sys.stdin):
+    print(item.get('path',''), '1' if item.get('shelf') else '0')
+" <<<"${pending_json}")
 
 echo "Done $(date -Is)" | tee -a "${LOG_FILE}"

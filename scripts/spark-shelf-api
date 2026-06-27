@@ -224,9 +224,13 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         pending = bool(data.get("pending"))
+        shelf = bool(data.get("shelf"))
         flag = "on" if pending else "off"
+        cmd = [str(VERIFY_SCRIPT), "removal", rel, flag]
+        if pending and shelf:
+            cmd.append("--shelf")
         proc = subprocess.run(
-            [str(VERIFY_SCRIPT), "removal", rel, flag],
+            cmd,
             capture_output=True,
             text=True,
             check=False,
@@ -239,14 +243,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             spark_verify = json.loads(proc.stdout)
         except json.JSONDecodeError:
-            spark_verify = {"removal_pending": pending}
+            spark_verify = {"removal_pending": pending, "removal_shelf": shelf}
 
         subprocess.Popen(
             ["/opt/spark/scripts/spark-inventory-build"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        self._json(200, {"ok": True, "path": rel, "pending": pending, "spark_verify": spark_verify})
+        self._json(200, {"ok": True, "path": rel, "pending": pending, "shelf": shelf, "spark_verify": spark_verify})
 
     def _handle_action(self, action: str, data: dict):
         if not data.get("confirm"):

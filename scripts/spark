@@ -142,7 +142,7 @@ spark models — inventory verification
   verify set <lab/slug> <flag> Set works|broken|untested
   verify list                All verified models
   verify pending               Models awaiting verification
-  removal <lab/slug> on|off    Queue or cancel local removal
+  removal <lab/slug> on|off [--shelf]  Queue or cancel removal (local; --shelf also queues NAS)
   inventory                    Rebuild portal/models.json
 EOF
 }

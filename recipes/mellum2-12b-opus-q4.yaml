@@ -87,7 +87,7 @@ context:
   bench_matrix:
     version: '1.0'
     fill_ratio: 0.75
-    updated_at: '2026-06-27T06:44:38.793965+00:00'
+    updated_at: '2026-06-27T17:47:09.034668+00:00'
     golden_cell:
       ctx: 32768
       kv: q8_0
@@ -102,23 +102,44 @@ context:
       kv: q8_0
       fill_target: 18432
       fill_ratio: 0.75
-      status: load_fail
-      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      status: ok
+      loaded_ctx: 32768
+      tok_s: 57.8
+      fill_estimated: 18707
+      prefill_prompt_tokens: 14615
+      decode_tokens: 1087
+      decode_elapsed_s: 18.79
+      tool_ok: true
+      method: bench-agent-v2
     - ctx: 32768
       kv: q4_0
       fill_target: 18432
       fill_ratio: 0.75
-      status: load_fail
-      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      status: ok
+      loaded_ctx: 32768
+      tok_s: 55.0
+      fill_estimated: 18707
+      prefill_prompt_tokens: 14615
+      decode_tokens: 911
+      decode_elapsed_s: 16.57
+      tool_ok: true
+      method: bench-agent-v2
     - ctx: 32768
       kv: f16
       fill_target: 18432
       fill_ratio: 0.75
-      status: load_fail
-      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      status: ok
+      loaded_ctx: 32768
+      tok_s: 56.0
+      fill_estimated: 18707
+      prefill_prompt_tokens: 14615
+      decode_tokens: 1000
+      decode_elapsed_s: 17.85
+      tool_ok: true
+      method: bench-agent-v2
   kv_sweep:
     version: '1.0'
-    tested_at: '2026-06-27T06:15:40.632377+00:00'
+    tested_at: '2026-06-27T17:47:09.024819+00:00'
     golden_ctx: 32768
     fill_ratio: 0.75
     results:
@@ -126,18 +147,39 @@ context:
       kv: q8_0
       fill_target: 18432
       fill_ratio: 0.75
-      status: load_fail
-      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      status: ok
+      loaded_ctx: 32768
+      tok_s: 57.8
+      fill_estimated: 18707
+      prefill_prompt_tokens: 14615
+      decode_tokens: 1087
+      decode_elapsed_s: 18.79
+      tool_ok: true
+      method: bench-agent-v2
     - ctx: 32768
       kv: q4_0
       fill_target: 18432
       fill_ratio: 0.75
-      status: load_fail
-      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      status: ok
+      loaded_ctx: 32768
+      tok_s: 55.0
+      fill_estimated: 18707
+      prefill_prompt_tokens: 14615
+      decode_tokens: 911
+      decode_elapsed_s: 16.57
+      tool_ok: true
+      method: bench-agent-v2
     - ctx: 32768
       kv: f16
       fill_target: 18432
       fill_ratio: 0.75
-      status: load_fail
-      error: "ERROR: Missing /opt/spark/bin/llama-server \u2014 run install/13-llama-cpp-smoke.sh\n"
+      status: ok
+      loaded_ctx: 32768
+      tok_s: 56.0
+      fill_estimated: 18707
+      prefill_prompt_tokens: 14615
+      decode_tokens: 1000
+      decode_elapsed_s: 17.85
+      tool_ok: true
+      method: bench-agent-v2
 promoted_at: '2026-06-26T08:44:47.106502+00:00'

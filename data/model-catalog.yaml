@@ -424,6 +424,11 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe deepreinforce-ai-ornith-1-0-35b-llama.\n"
   param_b: 35
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: deepreinforce-ai/Ornith-1.0-35B-GGUF
 - id: empero-ai/qwythos-9b-claude-mythos-5-1m
   lab: empero-ai
   name: qwythos-9b-claude-mythos-5-1m (eugr)

@@ -27,7 +27,7 @@ context:
   bench_matrix:
     version: '1.0'
     fill_ratio: 0.75
-    updated_at: '2026-06-27T06:06:13.065717+00:00'
+    updated_at: '2026-06-27T16:28:50.331991+00:00'
     golden_cell:
       ctx: 262144
       kv: fp8
@@ -41,14 +41,18 @@ context:
       kv: fp8
       fill_target: 176947
       fill_ratio: 0.75
-      status: load_fail
-      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
-        or directory
-
-        '
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 20.4
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35081
+      decode_tokens: 266
+      decode_elapsed_s: 13.06
+      tool_ok: false
+      method: bench-agent-v2
   kv_sweep:
     version: '1.0'
-    tested_at: '2026-06-27T06:06:13.061712+00:00'
+    tested_at: '2026-06-27T16:28:50.325824+00:00'
     golden_ctx: 262144
     fill_ratio: 0.75
     results:
@@ -56,8 +60,12 @@ context:
       kv: fp8
       fill_target: 176947
       fill_ratio: 0.75
-      status: load_fail
-      error: '/opt/spark/scripts/spark-eugr: line 12: ./run-recipe.sh: No such file
-        or directory
-
-        '
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 20.4
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35081
+      decode_tokens: 266
+      decode_elapsed_s: 13.06
+      tool_ok: false
+      method: bench-agent-v2

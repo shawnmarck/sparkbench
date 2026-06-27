@@ -154,12 +154,13 @@ models:
       \ tool_ok=False"
   kaitchup/qwen3.6-27b:
     spark_status: works
-    updated_at: '2026-06-27T07:23:07.167457+00:00'
+    updated_at: '2026-06-27T17:58:13.806455+00:00'
     engine: llamacpp
-    tok_s: 8.4
+    tok_s: 7.6
     tok_s_engine: llamacpp
     tok_s_profile: kaitchup-qwen3-6-27b-llama
-    note: "golden ?/? @ 8.4 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014 tool_ok=False"
+    note: "golden 256k/q8_0 @ 7.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
   antirez/deepseek-v4-flash:
     spark_status: works
     updated_at: '2026-06-27T07:22:07.144503+00:00'
@@ -170,12 +171,14 @@ models:
     note: "golden 1024k/q8_0 @ 1.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
       \ tool_ok=True"
   deepreinforce-ai/ornith-1.0-35b:
-    tok_s: 50.1
+    tok_s: 28.1
     tok_s_engine: llamacpp
     tok_s_profile: deepreinforce-ai-ornith-1-0-35b-llama
-    updated_at: '2026-06-27T07:22:07.304353+00:00'
+    updated_at: '2026-06-27T15:10:48.575871+00:00'
     spark_status: works
-    note: "golden 32k/q8_0 @ 50.1 tok/s \u2014 bench-agent-v2"
+    note: "golden 256k/q8_0 @ 28.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    engine: llamacpp
   empero-ai/qwythos-9b-claude-mythos-5-1m:
     tok_s: 12.4
     tok_s_engine: eugr

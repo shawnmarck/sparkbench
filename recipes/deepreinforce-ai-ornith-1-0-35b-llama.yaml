@@ -6,7 +6,7 @@ tier: fast
 lifecycle: works
 served_name: ornith-1-0-35b
 port: 8081
-model: /models/deepreinforce-ai/ornith-1.0-35b/hf/ornith-1.0-35b-Q4_K_M.gguf
+model: /models/deepreinforce-ai/ornith-1.0-35b/hf/ornith-1.0-35b-Q8_0.gguf
 tags:
 - lab
 - llamacpp
@@ -18,18 +18,20 @@ llamacpp_args:
 - '1'
 - --no-mmap
 - -c
-- '32768'
-notes: Scaffolded 2026-06-27 from /models/deepreinforce-ai/ornith-1.0-35b. GGUF in
+- '262144'
+notes: 'Scaffolded 2026-06-27 from /models/deepreinforce-ai/ornith-1.0-35b. GGUF in
   hf/ (not gguf/); Q4_K_M preferred over Q5. Mark testing, switch, bench, then promote.
+
+  Switched to Q8_0 GGUF for golden re-bench.'
 updated_at: '2026-06-27T02:04:27.992342+00:00'
 context:
-  default: 32768
+  default: 262144
   native: 262144
   kv_default: q8_0
   presets:
     golden:
       label: Golden max fit
-      ctx: 32768
+      ctx: 262144
       kv: q8_0
   ctx_ladder: &id001
     version: '1.0'
@@ -108,99 +110,99 @@ context:
   bench_matrix:
     version: '1.0'
     fill_ratio: 0.75
-    updated_at: '2026-06-27T04:03:07.054258+00:00'
+    updated_at: '2026-06-27T15:33:23.091360+00:00'
     ctx_ladder: *id001
     golden_cell:
-      ctx: 32768
+      ctx: 262144
       kv: q8_0
-      tok_s: 50.1
-      tool_ok: null
+      tok_s: 28.1
+      tool_ok: true
       method: bench-agent-v2
       bench_standard: '2.0'
-      fill_target: null
+      fill_target: 50000
     kv_sweep:
-    - ctx: 32768
+    - ctx: 262144
       kv: q8_0
-      fill_target: 18432
+      fill_target: 176947
       fill_ratio: 0.75
       status: ok
-      loaded_ctx: 32768
-      tok_s: 33.8
-      fill_estimated: 18707
-      prefill_prompt_tokens: 15208
-      decode_tokens: 931
-      decode_elapsed_s: 27.51
+      loaded_ctx: 262144
+      tok_s: 3.2
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 969
+      decode_elapsed_s: 298.54
       tool_ok: true
-      method: bench-agent-v2-lite
-    - ctx: 32768
+      method: bench-agent-v2
+    - ctx: 262144
       kv: q4_0
-      fill_target: 18432
+      fill_target: 176947
       fill_ratio: 0.75
       status: ok
-      loaded_ctx: 32768
-      tok_s: 33.9
-      fill_estimated: 18707
-      prefill_prompt_tokens: 15208
-      decode_tokens: 866
-      decode_elapsed_s: 25.54
+      loaded_ctx: 262144
+      tok_s: 3.4
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1009
+      decode_elapsed_s: 297.85
       tool_ok: true
-      method: bench-agent-v2-lite
-    - ctx: 32768
+      method: bench-agent-v2
+    - ctx: 262144
       kv: f16
-      fill_target: 18432
+      fill_target: 176947
       fill_ratio: 0.75
       status: ok
-      loaded_ctx: 32768
-      tok_s: 34.7
-      fill_estimated: 18707
-      prefill_prompt_tokens: 15208
-      decode_tokens: 1022
-      decode_elapsed_s: 29.48
+      loaded_ctx: 262144
+      tok_s: 3.4
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1007
+      decode_elapsed_s: 292.92
       tool_ok: true
-      method: bench-agent-v2-lite
+      method: bench-agent-v2
   kv_sweep:
     version: '1.0'
-    tested_at: '2026-06-27T04:03:07.002460+00:00'
-    golden_ctx: 32768
+    tested_at: '2026-06-27T15:33:23.078668+00:00'
+    golden_ctx: 262144
     fill_ratio: 0.75
     results:
-    - ctx: 32768
+    - ctx: 262144
       kv: q8_0
-      fill_target: 18432
+      fill_target: 176947
       fill_ratio: 0.75
       status: ok
-      loaded_ctx: 32768
-      tok_s: 33.8
-      fill_estimated: 18707
-      prefill_prompt_tokens: 15208
-      decode_tokens: 931
-      decode_elapsed_s: 27.51
+      loaded_ctx: 262144
+      tok_s: 3.2
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 969
+      decode_elapsed_s: 298.54
       tool_ok: true
-      method: bench-agent-v2-lite
-    - ctx: 32768
+      method: bench-agent-v2
+    - ctx: 262144
       kv: q4_0
-      fill_target: 18432
+      fill_target: 176947
       fill_ratio: 0.75
       status: ok
-      loaded_ctx: 32768
-      tok_s: 33.9
-      fill_estimated: 18707
-      prefill_prompt_tokens: 15208
-      decode_tokens: 866
-      decode_elapsed_s: 25.54
+      loaded_ctx: 262144
+      tok_s: 3.4
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1009
+      decode_elapsed_s: 297.85
       tool_ok: true
-      method: bench-agent-v2-lite
-    - ctx: 32768
+      method: bench-agent-v2
+    - ctx: 262144
       kv: f16
-      fill_target: 18432
+      fill_target: 176947
       fill_ratio: 0.75
       status: ok
-      loaded_ctx: 32768
-      tok_s: 34.7
-      fill_estimated: 18707
-      prefill_prompt_tokens: 15208
-      decode_tokens: 1022
-      decode_elapsed_s: 29.48
+      loaded_ctx: 262144
+      tok_s: 3.4
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1007
+      decode_elapsed_s: 292.92
       tool_ok: true
-      method: bench-agent-v2-lite
-promoted_at: '2026-06-27T02:21:14.033883+00:00'
+      method: bench-agent-v2
+promoted_at: '2026-06-27T15:10:34.166821+00:00'

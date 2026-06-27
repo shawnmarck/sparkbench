@@ -22,8 +22,7 @@ llamacpp_args:
 - -c
 - '262144'
 updated_at: '2026-06-22T04:17:27.075709+00:00'
-promoted_at: '2026-06-22T04:23:27.947397+00:00'
-_path: /opt/spark/recipes/kaitchup-qwen3-6-27b-llama.yaml
+promoted_at: '2026-06-27T17:57:59.229949+00:00'
 context:
   default: 262144
   native: 262144
@@ -33,3 +32,35 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: q8_0
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-27T17:58:20.587080+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: q8_0
+      tok_s: 7.6
+      tool_ok: true
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder:
+      version: '1.0'
+      tested_at: '2026-06-27T17:58:13.990496+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+  ctx_ladder:
+    version: '1.0'
+    tested_at: '2026-06-27T17:58:13.990496+00:00'
+    golden_ctx: 262144
+    native_ctx: 262144
+    fill_ratio: 0.75
+    kv: q8_0
+    max_viable_ctx: null
+    best_tok_s_ctx: null
+    rungs: []

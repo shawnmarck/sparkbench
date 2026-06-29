@@ -22,8 +22,7 @@ llamacpp_args:
 - -c
 - '262144'
 updated_at: '2026-06-22T02:33:07.600003+00:00'
-promoted_at: '2026-06-22T02:48:58.918327+00:00'
-_path: /opt/spark/recipes/stepfun-ai-step-3-7-flash-llama.yaml
+promoted_at: '2026-06-28T09:32:19.834101+00:00'
 context:
   default: 262144
   native: 262144
@@ -33,3 +32,99 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: q8_0
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-28T10:31:53.798103+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: q8_0
+      tok_s: 14.4
+      tool_ok: true
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-06-28T09:32:34.896965+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+    kv_sweep:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: bench_fail
+      loaded_ctx: 262144
+      error: timed out
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 1.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 137716
+      decode_tokens: 1044
+      decode_elapsed_s: 779.75
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 1.4
+      fill_estimated: 177469
+      prefill_prompt_tokens: 137716
+      decode_tokens: 1050
+      decode_elapsed_s: 768.23
+      tool_ok: true
+      method: bench-agent-v2
+  ctx_ladder: *id001
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-28T10:31:53.737798+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: bench_fail
+      loaded_ctx: 262144
+      error: timed out
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 1.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 137716
+      decode_tokens: 1044
+      decode_elapsed_s: 779.75
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 1.4
+      fill_estimated: 177469
+      prefill_prompt_tokens: 137716
+      decode_tokens: 1050
+      decode_elapsed_s: 768.23
+      tool_ok: true
+      method: bench-agent-v2

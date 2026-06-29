@@ -39,6 +39,62 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: fp8
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-28T08:48:32.246836+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: fp8
+      tok_s: 3.0
+      tool_ok: true
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-06-28T08:08:39.013549+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: fp8
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+    kv_sweep:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 0.8
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 1484.92
+      tool_ok: false
+      method: bench-agent-v2
+  ctx_ladder: *id001
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-28T08:48:32.214737+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 0.8
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 1484.92
+      tool_ok: false
+      method: bench-agent-v2
 notes: "Dense Qwen3.6-27B + DFlash speculative decoding for architecture/design agent\
   \ work.\nTarget fp8 weights + z-lab DFlash sidecar (block diffusion drafter).\n\
   HF: z-lab/Qwen3.6-27B-DFlash (drafter only; pair w/ Qwen/Qwen3.6-27B). Paper arXiv:2602.06036.\n\
@@ -49,5 +105,4 @@ notes: "Dense Qwen3.6-27B + DFlash speculative decoding for architecture/design 
   \ on ctx fill.\nLaunch: spark inference up opencode-qwen27-dflash-262k\nOpenCode\
   \ / Grok: http://sparky:9000/v1 (model: sparky or qwen3.6-27b-dflash) \u2014 sync\
   \ after switch if using concrete names.\nNon-reasoning: chat_template_kwargs.enable_thinking=false.\n"
-promoted_at: '2026-06-23T00:00:00+00:00'
-_path: /opt/spark/recipes/opencode-qwen27-dflash-262k.yaml
+promoted_at: '2026-06-28T08:08:24.568534+00:00'

@@ -59,9 +59,14 @@ case "${cmd}" in
       echo "WARNING: vllm_node is running — stop with: spark-eugr down"
     fi
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
-    if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-      die "llama-server already running (pid $(cat "${PID_FILE}"))"
-    fi
+    # Stop any stray server (KV sweeps can orphan without pid file).
+    while read -r opid; do
+      [[ -z "${opid}" ]] && continue
+      kill "${opid}" 2>/dev/null || true
+      sleep 1
+      kill -0 "${opid}" 2>/dev/null && kill -9 "${opid}" 2>/dev/null || true
+    done < <(pgrep -f '/opt/spark/bin/llama-server' 2>/dev/null || true)
+    rm -f "${PID_FILE}"
     export GGML_CUDA_ENABLE_UNIFIED_MEMORY="${GGML_CUDA_ENABLE_UNIFIED_MEMORY:-1}"
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
       nohup "${BIN}" \
@@ -88,14 +93,26 @@ case "${cmd}" in
     echo "Log: ${LOG_FILE}"
     ;;
   down)
+    stopped=0
     if [[ -f "${PID_FILE}" ]]; then
       pid="$(cat "${PID_FILE}")"
       kill "${pid}" 2>/dev/null || true
+      sleep 1
+      kill -0 "${pid}" 2>/dev/null && kill -9 "${pid}" 2>/dev/null || true
       rm -f "${PID_FILE}"
       echo "Stopped llama-server (${pid})"
-    else
-      pkill -f '/opt/spark/bin/llama-server' 2>/dev/null && echo "Stopped llama-server" || echo "Not running"
+      stopped=1
     fi
+    # KV sweeps / benches can orphan llama-server without updating the pid file.
+    while read -r opid; do
+      [[ -z "${opid}" ]] && continue
+      kill "${opid}" 2>/dev/null || true
+      sleep 1
+      kill -0 "${opid}" 2>/dev/null && kill -9 "${opid}" 2>/dev/null || true
+      echo "Stopped orphan llama-server (${opid})"
+      stopped=1
+    done < <(pgrep -f '/opt/spark/bin/llama-server' 2>/dev/null || true)
+    [[ "${stopped}" -eq 1 ]] || echo "Not running"
     ;;
   status)
     if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then

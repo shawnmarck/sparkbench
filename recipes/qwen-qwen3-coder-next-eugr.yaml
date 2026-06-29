@@ -14,8 +14,7 @@ notes: Scaffolded 2026-06-21 from /models/qwen/qwen3-coder-next. Mark testing, s
   bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-qwen-qwen3-coder-next-eugr.yaml
 updated_at: '2026-06-21T22:40:57.343995+00:00'
-promoted_at: '2026-06-22T02:48:58.622164+00:00'
-_path: /opt/spark/recipes/qwen-qwen3-coder-next-eugr.yaml
+promoted_at: '2026-06-28T07:31:34.818000+00:00'
 context:
   default: 262144
   native: 262144
@@ -25,3 +24,59 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: fp8
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-28T07:36:27.200720+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: fp8
+      tok_s: 38.7
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-06-28T07:31:51.028684+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: fp8
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+    kv_sweep:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 36.3
+      fill_estimated: 44469
+      prefill_prompt_tokens: 36484
+      decode_tokens: 501
+      decode_elapsed_s: 13.81
+      tool_ok: false
+      method: bench-agent-v2
+  ctx_ladder: *id001
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-28T07:36:27.161707+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 36.3
+      fill_estimated: 44469
+      prefill_prompt_tokens: 36484
+      decode_tokens: 501
+      decode_elapsed_s: 13.81
+      tool_ok: false
+      method: bench-agent-v2

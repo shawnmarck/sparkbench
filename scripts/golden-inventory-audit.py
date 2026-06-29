@@ -180,12 +180,44 @@ def ready_timeout_secs(recipe: dict[str, Any]) -> int:
     return DEFAULT_READY_SECS
 
 
+def eugr_startup_failed() -> str | None:
+    """Return error snippet if vllm_node logged a fatal startup failure."""
+    try:
+        r = subprocess.run(
+            ["docker", "logs", "vllm_node", "--tail", "80"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        blob = (r.stdout or "") + (r.stderr or "")
+    except Exception:
+        return None
+    for needle in (
+        "Engine core initialization failed",
+        "Free memory on device",
+        "CUDA out of memory",
+        "ValueError: Free memory",
+    ):
+        if needle in blob:
+            for line in reversed(blob.splitlines()):
+                if needle.split()[0] in line or "ValueError" in line or "RuntimeError" in line:
+                    return line.strip()[:500]
+            return needle
+    return None
+
+
 def wait_ready(port: int, timeout: int = DEFAULT_READY_SECS, *, engine: str | None = None) -> bool:
     url = f"http://127.0.0.1:{port}/v1/models"
     deadline = time.time() + timeout
     poll = 0
+    started = time.time()
     while time.time() < deadline:
         poll += 1
+        if engine == "eugr":
+            err = eugr_startup_failed()
+            if err and time.time() - started > 30:
+                log(f"eugr startup failed (fast-fail): {err}")
+                return False
         try:
             with urllib.request.urlopen(url, timeout=10) as resp:
                 if resp.status == 200:

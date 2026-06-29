@@ -26,7 +26,6 @@ notes: 'Same Qwen3.6 MoE base as NVFP4 tier, GGUF Q4_K_M via llama-server.
 
   Stop eugr vLLM before switching: spark inference down'
 lifecycle: works
-_path: /opt/spark/recipes/qwen36-q4-llama.yaml
 context:
   default: 262144
   native: 262144
@@ -36,3 +35,112 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: q8_0
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-28T11:24:13.799295+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: q8_0
+      tok_s: 33.6
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-06-28T11:03:55.047789+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+    kv_sweep:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 4.2
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 272.45
+      tool_ok: false
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 4.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 270.54
+      tool_ok: false
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 4.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 267.3
+      tool_ok: false
+      method: bench-agent-v2
+  ctx_ladder: *id001
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-28T11:24:13.793678+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 4.2
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 272.45
+      tool_ok: false
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 4.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 270.54
+      tool_ok: false
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 4.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1152
+      decode_elapsed_s: 267.3
+      tool_ok: false
+      method: bench-agent-v2
+promoted_at: '2026-06-28T11:03:40.974896+00:00'

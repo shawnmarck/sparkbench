@@ -196,53 +196,56 @@ def probe_cell(
         ],
         timeout=3600,
     )
-    if up.returncode != 0:
-        row["status"] = "load_fail"
-        row["error"] = (up.stderr or up.stdout or "inference up failed")[-500:]
-        return row
-
-    timeout = ready_timeout
-    if timeout is None:
-        timeout = 1200 if ctx >= 1_048_576 else 900 if ctx >= 524_288 else READY_SECS
-    if not wait_ready(port, expected_ctx=ctx, timeout=timeout):
-        row["status"] = "load_fail"
-        row["error"] = f"/v1/models not ready at ctx={ctx} kv={kv} within {timeout}s"
-        return row
-
-    loaded = loaded_ctx(port)
-    row["loaded_ctx"] = loaded
-    if loaded is not None and abs(loaded - ctx) > 1024:
-        row["status"] = "load_fail"
-        row["error"] = f"requested ctx={ctx} but loaded={loaded}"
-        return row
-
     try:
-        # Match spark inference bench: retries on 400/413/500, eugr tool fallback.
-        stats = benchv2._bench_v2_session(
-            port,
-            served,
-            fill_target_tokens=fill,
-            engine=engine,
-            use_tools=True,
-        )
-    except Exception as exc:
-        row["status"] = "bench_fail"
-        row["error"] = str(exc)[:500]
-        return row
+        if up.returncode != 0:
+            row["status"] = "load_fail"
+            row["error"] = (up.stderr or up.stdout or "inference up failed")[-500:]
+            return row
 
-    row.update(
-        {
-            "status": "ok",
-            "tok_s": round(stats["decode_tok_s"], 1),
-            "fill_estimated": stats.get("context_fill_estimated_tokens"),
-            "prefill_prompt_tokens": stats.get("prefill_prompt_tokens"),
-            "decode_tokens": stats.get("decode_completion_tokens"),
-            "decode_elapsed_s": round(stats.get("decode_elapsed_s") or 0, 2),
-            "tool_ok": stats.get("tool_roundtrip_ok"),
-            "method": "bench-agent-v2",
-        }
-    )
-    return row
+        timeout = ready_timeout
+        if timeout is None:
+            timeout = 1200 if ctx >= 1_048_576 else 900 if ctx >= 524_288 else READY_SECS
+        if not wait_ready(port, expected_ctx=ctx, timeout=timeout):
+            row["status"] = "load_fail"
+            row["error"] = f"/v1/models not ready at ctx={ctx} kv={kv} within {timeout}s"
+            return row
+
+        loaded = loaded_ctx(port)
+        row["loaded_ctx"] = loaded
+        if loaded is not None and abs(loaded - ctx) > 1024:
+            row["status"] = "load_fail"
+            row["error"] = f"requested ctx={ctx} but loaded={loaded}"
+            return row
+
+        try:
+            # Match spark inference bench: retries on 400/413/500, eugr tool fallback.
+            stats = benchv2._bench_v2_session(
+                port,
+                served,
+                fill_target_tokens=fill,
+                engine=engine,
+                use_tools=True,
+            )
+        except Exception as exc:
+            row["status"] = "bench_fail"
+            row["error"] = str(exc)[:500]
+            return row
+
+        row.update(
+            {
+                "status": "ok",
+                "tok_s": round(stats["decode_tok_s"], 1),
+                "fill_estimated": stats.get("context_fill_estimated_tokens"),
+                "prefill_prompt_tokens": stats.get("prefill_prompt_tokens"),
+                "decode_tokens": stats.get("decode_completion_tokens"),
+                "decode_elapsed_s": round(stats.get("decode_elapsed_s") or 0, 2),
+                "tool_ok": stats.get("tool_roundtrip_ok"),
+                "method": "bench-agent-v2",
+            }
+        )
+        return row
+    finally:
+        run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)
 
 
 def _load_site_publish():

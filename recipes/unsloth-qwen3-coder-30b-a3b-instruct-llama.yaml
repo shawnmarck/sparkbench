@@ -24,8 +24,7 @@ llamacpp_args:
 - -c
 - '262144'
 updated_at: '2026-06-22T00:36:21.446008+00:00'
-promoted_at: '2026-06-22T02:48:59.105185+00:00'
-_path: /opt/spark/recipes/unsloth-qwen3-coder-30b-a3b-instruct-llama.yaml
+promoted_at: '2026-06-28T01:56:40.051861+00:00'
 context:
   default: 262144
   native: 262144
@@ -35,3 +34,97 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: q8_0
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-28T02:37:43.225408+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: q8_0
+      tok_s: 13.0
+      tool_ok: false
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-06-28T01:56:54.541068+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+    kv_sweep:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 0.9
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148584
+      decode_tokens: 481
+      decode_elapsed_s: 515.45
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 0.8
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148584
+      decode_tokens: 390
+      decode_elapsed_s: 512.03
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: /v1/models not ready at ctx=262144 kv=f16 within 600s
+  ctx_ladder: *id001
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-28T02:37:43.220030+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 0.9
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148584
+      decode_tokens: 481
+      decode_elapsed_s: 515.45
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 0.8
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148584
+      decode_tokens: 390
+      decode_elapsed_s: 512.03
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: load_fail
+      error: /v1/models not ready at ctx=262144 kv=f16 within 600s

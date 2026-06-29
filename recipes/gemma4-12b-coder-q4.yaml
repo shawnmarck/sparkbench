@@ -25,7 +25,6 @@ notes: "Community Gemma 4 12B coding fine-tune (yuxinlu1). Q4_K_M ~6.9GB.\nSmoke
   \ \"output ONLY code\" for clean content field.\nStart: SPARK_LLAMA_MODEL=<model>\
   \ SPARK_LLAMA_NAME=gemma4-12b-coder-q4 spark engine llama up\n"
 lifecycle: works
-_path: /opt/spark/recipes/gemma4-12b-coder-q4.yaml
 context:
   default: 262144
   native: 262144
@@ -35,3 +34,112 @@ context:
       label: Golden max fit
       ctx: 262144
       kv: q8_0
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-28T04:08:20.658532+00:00'
+    golden_cell:
+      ctx: 8192
+      kv: q8_0
+      tok_s: 19.5
+      tool_ok: true
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 2048
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-06-28T03:49:37.161969+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: null
+      best_tok_s_ctx: null
+      rungs: []
+    kv_sweep:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 9.3
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35078
+      decode_tokens: 778
+      decode_elapsed_s: 83.59
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 9.4
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35078
+      decode_tokens: 737
+      decode_elapsed_s: 78.2
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 10.8
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35078
+      decode_tokens: 861
+      decode_elapsed_s: 79.57
+      tool_ok: true
+      method: bench-agent-v2
+  ctx_ladder: *id001
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-06-28T04:08:20.651685+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: q8_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 9.3
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35078
+      decode_tokens: 778
+      decode_elapsed_s: 83.59
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: q4_0
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 9.4
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35078
+      decode_tokens: 737
+      decode_elapsed_s: 78.2
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: f16
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 10.8
+      fill_estimated: 44469
+      prefill_prompt_tokens: 35078
+      decode_tokens: 861
+      decode_elapsed_s: 79.57
+      tool_ok: true
+      method: bench-agent-v2
+promoted_at: '2026-06-28T03:49:23.325474+00:00'

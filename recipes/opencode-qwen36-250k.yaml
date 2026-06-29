@@ -35,11 +35,11 @@ context:
   bench_matrix:
     version: '1.0'
     fill_ratio: 0.75
-    updated_at: '2026-06-28T07:27:35.564445+00:00'
+    updated_at: '2026-06-29T07:27:20.312911+00:00'
     golden_cell:
       ctx: 256000
       kv: fp8
-      tok_s: 59.6
+      tok_s: 58.9
       tool_ok: true
       method: bench-agent-v2
       bench_standard: '2.0'

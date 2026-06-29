@@ -1,0 +1,53 @@
+# LocalMaxxing forum recipe — NVFP4 + native MTP on GB10/Spark
+# Source: https://www.localmaxxing.com/en/models/nvidia/Qwen3.6-35B-A3B-NVFP4?run=cmqqvo7f301cdqo013ski46lm
+# Draft only — does not replace opencode-qwen36-250k golden profile.
+recipe_version: "1"
+name: localmaxxing-qwen36-nvfp4-mtp-eugr
+description: NVFP4 Qwen3.6-35B with MTP speculative (LocalMaxxing forum recipe)
+
+model: localmaxxing-qwen36-nvfp4-mtp
+container: vllm-node
+
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: 1
+
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 262144
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+
+command: |
+  vllm serve /models/nvidia/qwen3.6-35b-a3b/nvfp4 \
+    --host {host} \
+    --port {port} \
+    --served-model-name Qwen3.6-35B-A3B \
+    --served-model-name Qwen3.6-35B-A3B-NVFP4 \
+    --served-model-name nvidia/Qwen3.6-35B-A3B-NVFP4 \
+    --tensor-parallel-size {tensor_parallel} \
+    --pipeline-parallel-size 1 \
+    --trust-remote-code \
+    --language-model-only \
+    --dtype auto \
+    --quantization modelopt \
+    --kv-cache-dtype fp8 \
+    --attention-backend flashinfer \
+    --moe-backend marlin \
+    --load-format instanttensor \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --enable-chunked-prefill \
+    --async-scheduling \
+    --enable-prefix-caching \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_coder \
+    --reasoning-parser qwen3 \
+    --speculative-config '{{"method": "mtp", "num_speculative_tokens": 3, "moe_backend": "triton"}}' \
+    --default-chat-template-kwargs '{{"preserve_thinking": true}}' \
+    --generation-config vllm \
+    --override-generation-config '{{"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0.0, "repetition_penalty": 1.0}}'

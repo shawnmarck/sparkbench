@@ -1,0 +1,63 @@
+id: localmaxxing-qwen36-nvfp4-mtp-eugr
+name: "LocalMaxxing \xB7 Qwen3.6 NVFP4 MTP (forum)"
+catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
+inventory_path: nvidia/qwen3.6-35b-a3b
+engine: eugr
+tier: heavy
+lifecycle: testing
+eugr_recipe: /opt/spark/services/eugr-localmaxxing-qwen36-nvfp4-mtp-eugr.yaml
+served_name: nvidia/Qwen3.6-35B-A3B-NVFP4
+port: 8000
+tags:
+- lab
+- eugr
+- mtp
+- nvfp4
+- experimental
+speculative:
+  method: mtp
+  num_speculative_tokens: 3
+  moe_backend: triton
+context:
+  default: 262144
+  kv_default: fp8
+  native: 262144
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-06-29T07:22:35.624394+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: fp8
+      tok_s: 68.2
+      tool_ok: true
+      method: bench-agent-v2
+      bench_standard: '2.0'
+      fill_target: 50000
+    micro_bench:
+      method: llama-benchy
+      version: '0.3.8'
+      tested_at: '2026-06-29T07:35:52+00:00'
+      pp: 2048
+      tg: 128
+      depth: 0
+      concurrency: 1
+      runs: 5
+      latency_mode: generation
+      pp_tok_s: 6116.0
+      pp_tok_s_std: 736.3
+      tg_tok_s: 99.3
+      tg_tok_s_std: 10.9
+      baseline_profile: opencode-qwen36-250k
+      baseline_pp_tok_s: 5451.0
+      baseline_tg_tok_s: 75.4
+      reference_url: https://www.localmaxxing.com/en/models/nvidia/Qwen3.6-35B-A3B-NVFP4?run=cmqqvo7f301cdqo013ski46lm
+      reference_pp_tok_s: 5000.3
+notes: |
+  LocalMaxxing forum recipe for GB10 Spark — NVFP4 + native MTP speculative.
+  Source: https://www.localmaxxing.com/en/models/nvidia/Qwen3.6-35B-A3B-NVFP4?run=cmqqvo7f301cdqo013ski46lm
+  Agent bench v2 (~50k fill): 68.2 tok/s vs opencode-qwen36-250k 58.9 tok/s (+16%).
+  llama-benchy pp2048/tg128/d0: pp 6116, tg 99.3 tok/s (forum reference pp 5000.3).
+  Key deltas: instanttensor, modelopt, fp8 KV, gpu-mem 0.65, qwen3_coder parser, async-scheduling.
+  Does NOT replace golden opencode-qwen36-250k.
+updated_at: '2026-06-29T07:16:17.322818+00:00'

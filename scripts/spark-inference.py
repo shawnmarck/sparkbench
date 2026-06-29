@@ -382,10 +382,11 @@ def discover_dflash_target_weights(slug: str) -> tuple[str, Path, str] | None:
 
 
 def assess_dflash_pair(model_dir: Path, weight_format: str) -> tuple[bool, str | None]:
-    if weight_format == "nvfp4" and is_moe_model(model_dir):
+    if is_moe_model(model_dir):
         return False, (
-            "DFlash + NVFP4 MoE hits KV cache page-size mismatch in current vLLM; "
-            "download FP8/HF target weights or wait for a vLLM fix"
+            "DFlash + Qwen3.6 MoE hits KV cache page-size mismatch in current vLLM "
+            "(hybrid GDN/attention + drafter); needs vLLM PR #40898 or SGLang. "
+            "Use dense 27B DFlash or MoE baseline without DFlash."
         )
     return True, None
 

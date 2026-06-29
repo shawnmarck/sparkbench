@@ -5,6 +5,9 @@ repos:
     status: incompatible
     title: Does not work on Spark
     message: >-
-      Z Lab DFlash sidecar for Qwen3.6-35B MoE fails on our DGX Spark — NVFP4 MoE
-      target hits KV cache page-size mismatch in vLLM (load fails). Use
-      z-lab/Qwen3.6-27B-DFlash instead (~3.7 tok/s agent bench v2 on opencode-qwen27-dflash-262k).
+      Qwen3.6-35B MoE + DFlash fails on Spark vLLM (eugr) — hybrid GDN/attention
+      target and DFlash drafter KV page sizes cannot be unified (AssertionError in
+      unify_kv_cache_spec_page_size). Confirmed with FP8 target weights, not just
+      NVFP4. Needs vLLM PR #40898 or SGLang (z-lab's recommended Blackwell path).
+      Use opencode-qwen36-250k NVFP4 baseline (~59.6 tok/s) or dense 27B DFlash
+      (~3 tok/s agent bench on opencode-qwen27-dflash-262k).

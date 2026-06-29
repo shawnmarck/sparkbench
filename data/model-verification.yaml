@@ -1,12 +1,11 @@
 models:
   nvidia/qwen3.6-35b-a3b:
     spark_status: works
-    tok_s: 59.6
+    tok_s: 58.9
     tok_s_engine: eugr
     tok_s_profile: opencode-qwen36-250k
-    note: "golden 250k/fp8 @ 59.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
-    updated_at: '2026-06-28T11:31:07.625752+00:00'
+    note: bench-v2 avg 58.9 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    updated_at: '2026-06-29T07:27:20.312911+00:00'
     engine: eugr
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
@@ -133,10 +132,10 @@ models:
       \ tool_ok=False"
   z-lab/qwen3.6-35b-a3b:
     spark_status: failed
-    updated_at: '2026-06-22T02:22:08.961845+00:00'
+    updated_at: '2026-06-29T06:33:00.000000+00:00'
     engine: eugr
-    note: 'DFlash sidecar: NVFP4 MoE target hits KV cache page-size mismatch in vLLM
-      (4 load fails). Needs FP8 target or vLLM fix.'
+    note: 'DFlash + MoE: KV page-size AssertionError even with FP8 target (vLLM 0.23.1rc1).
+      Sidecar + weights on disk. Blocked on vLLM #40898 or SGLang.'
   stepfun-ai/step-3.7-flash:
     spark_status: works
     updated_at: '2026-06-28T11:31:08.982613+00:00'
@@ -230,3 +229,7 @@ models:
     spark_status: works
     note: "golden 32k/q8_0 @ 74.4 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
       \ tool_ok=True"
+  qwen/qwen3.6-35b-a3b:
+    spark_status: wip
+    updated_at: '2026-06-29T06:16:32.455271+00:00'
+    engine: eugr

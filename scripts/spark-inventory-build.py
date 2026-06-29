@@ -760,9 +760,16 @@ def attach_spark_verify(entries: list, store: dict, benchmarks: dict[str, dict])
 
 
 def is_speculative_profile(profile: dict) -> bool:
+    """External sidecar specs (DFlash) — not built-in MTP on the same target weights."""
     spec = profile.get("speculative") if isinstance(profile.get("speculative"), dict) else None
-    if spec and spec.get("method"):
-        return True
+    if spec:
+        method = str(spec.get("method") or "").lower()
+        if method == "mtp":
+            return False
+        if spec.get("sidecar_inventory") or spec.get("sidecar_path"):
+            return True
+        if method:
+            return True
     tags = {str(t).lower() for t in (profile.get("tags") or [])}
     return "dflash" in tags or "sidecar" in tags
 
@@ -938,10 +945,16 @@ def load_golden_recipe_maps() -> tuple[dict[str, str], set[str]]:
 
 
 def _bench_profile_for_entry(entry: dict, profiles: list[dict], golden_by_inv: dict[str, str]) -> dict | None:
-    """Pick the headline bench profile — golden production recipe, not stale draft max."""
+    """Pick the headline bench profile — golden production recipe, not experimental max."""
     rated = [p for p in profiles if p.get("tok_s") is not None]
     if not rated:
         return None
+    rel = str(entry.get("rel_path") or entry.get("id") or "")
+    golden_id = entry.get("golden_profile") or golden_by_inv.get(rel)
+    if golden_id:
+        for p in rated:
+            if p.get("id") == golden_id:
+                return p
     if entry.get("model_kind") == "speculative_sidecar":
         target_inv = str(entry.get("requires_target") or "")
         golden_id = golden_by_inv.get(target_inv)
@@ -997,7 +1010,9 @@ def reconcile_spark_verify_with_profiles(
         return
 
     if rated:
-        best = max(rated, key=lambda p: float(p["tok_s"]))
+        best = _bench_profile_for_entry(entry, profiles, golden_by_inv) or max(
+            rated, key=lambda p: float(p["tok_s"])
+        )
         # Never auto-promote to works — only explicit verify set (post successful bench) does that.
         sv["tok_s"] = best.get("tok_s")
         sv["tok_s_engine"] = best.get("engine")

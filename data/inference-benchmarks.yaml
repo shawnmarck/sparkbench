@@ -363,7 +363,7 @@ profiles:
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
     latest_run_id: 20260628T04232913-a02e7a
-  localmaxxing-qwen36-nvfp4-mtp-eugr:
+  qwen36-35b-a3b-mtp-eugr:
     tok_s: 68.2
     engine: eugr
     method: bench-agent-v2

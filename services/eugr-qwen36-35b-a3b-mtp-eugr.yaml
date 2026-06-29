@@ -1,11 +1,9 @@
-# LocalMaxxing forum recipe — NVFP4 + native MTP on GB10/Spark
-# Source: https://www.localmaxxing.com/en/models/nvidia/Qwen3.6-35B-A3B-NVFP4?run=cmqqvo7f301cdqo013ski46lm
-# Draft only — does not replace opencode-qwen36-250k golden profile.
+# Qwen3.6-35B-A3B NVFP4 + native MTP speculative (262k ctx)
 recipe_version: "1"
-name: localmaxxing-qwen36-nvfp4-mtp-eugr
-description: NVFP4 Qwen3.6-35B with MTP speculative (LocalMaxxing forum recipe)
+name: qwen36-35b-a3b-mtp-eugr
+description: NVFP4 Qwen3.6-35B-A3B with MTP speculative decoding
 
-model: localmaxxing-qwen36-nvfp4-mtp
+model: qwen3.6-35b-a3b-mtp
 container: vllm-node
 
 env:

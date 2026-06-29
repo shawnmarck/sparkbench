@@ -281,7 +281,9 @@ def tested_kv_options(recipe: dict[str, Any]) -> list[str]:
         return ok
     cell = (block.get("bench_matrix") or {}).get("golden_cell") or {}
     presets = block.get("presets") or {}
-    golden = presets.get("golden") if isinstance(presets, dict) else {}
+    golden = presets.get("golden") if isinstance(presets, dict) else None
+    if not isinstance(golden, dict):
+        golden = {}
     gkv = str(golden.get("kv") or block.get("kv_default") or "")
     if cell.get("tok_s") and gkv:
         return [gkv]

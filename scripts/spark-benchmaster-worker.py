@@ -15,9 +15,10 @@ Config: ~/.config/sparkbench/worker.yaml (or env vars).
 Env overrides: SPARK_BENCHMASTER_URL, SPARK_GATEWAY_URL, BENCHMASTER_WORKER_ID
 
 Usage:
-  python3 spark-benchmaster-worker.py --once     # claim one job if available
-  python3 spark-benchmaster-worker.py --loop     # poll until stopped
-  python3 spark-benchmaster-worker.py status     # show available intel jobs
+  python3 spark-benchmaster-worker.py once      # claim one job if available
+  python3 spark-benchmaster-worker.py --once    # same (compat alias)
+  python3 spark-benchmaster-worker.py loop      # poll until stopped
+  python3 spark-benchmaster-worker.py status    # list claimable jobs
 """
 from __future__ import annotations
 
@@ -39,6 +40,22 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
+WORKER_VERSION = "20260702a"
+
+
+def _clean_str(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    return str(value).strip()
+
+
+def _normalize_base_url(raw: str) -> str:
+    url = _clean_str(raw, "http://sparky")
+    if not url:
+        url = "http://sparky"
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
+        url = f"http://{url.lstrip('/')}"
+    return url.rstrip("/")
 
 
 def load_config(path: Path | None = None) -> dict[str, Any]:
@@ -47,26 +64,35 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     if config_path.is_file():
         raw = config_path.read_text()
         if yaml is not None:
-            cfg = yaml.safe_load(raw) or {}
+            loaded = yaml.safe_load(raw) or {}
+            cfg = {str(k): v for k, v in loaded.items()}
         else:
             for line in raw.splitlines():
                 line = line.strip()
                 if not line or line.startswith("#") or ":" not in line:
                     continue
                 key, val = line.split(":", 1)
-                cfg[key.strip()] = val.strip().strip('"').strip("'")
-    spark_base = os.environ.get("SPARK_BENCHMASTER_URL") or cfg.get("spark_base") or "http://sparky"
-    gateway = os.environ.get("SPARK_GATEWAY_URL") or cfg.get("gateway_url") or f"{spark_base.rstrip('/')}:9000/v1"
+                val = val.split("#", 1)[0].strip().strip('"').strip("'")
+                cfg[key.strip()] = val
+    spark_base = _normalize_base_url(
+        os.environ.get("SPARK_BENCHMASTER_URL") or cfg.get("spark_base") or "http://sparky"
+    )
+    gateway_raw = os.environ.get("SPARK_GATEWAY_URL") or cfg.get("gateway_url") or ""
+    gateway = _normalize_base_url(gateway_raw) if _clean_str(gateway_raw) else f"{spark_base}:9000/v1"
     return {
-        "spark_base": spark_base.rstrip("/"),
-        "gateway_url": gateway.rstrip("/"),
-        "worker_id": os.environ.get("BENCHMASTER_WORKER_ID") or cfg.get("worker_id") or "intel-worker",
-        "benchmark": cfg.get("benchmark") or "terminal-bench@2.1",
-        "agent": cfg.get("agent") or "terminus-2",
-        "harbor_timeout_s": int(cfg.get("harbor_timeout_s") or 7200),
-        "poll_interval_s": int(cfg.get("poll_interval_s") or 30),
-        "n_concurrent": int(cfg.get("n_concurrent") or 1),
-        "openai_api_key": os.environ.get("OPENAI_API_KEY") or cfg.get("openai_api_key") or "local",
+        "spark_base": spark_base,
+        "gateway_url": gateway,
+        "worker_id": _clean_str(os.environ.get("BENCHMASTER_WORKER_ID") or cfg.get("worker_id"), "intel-worker"),
+        "benchmark": _clean_str(cfg.get("benchmark"), "terminal-bench@2.1"),
+        "agent": _clean_str(cfg.get("agent"), "terminus-2"),
+        "harbor_timeout_s": int(_clean_str(cfg.get("harbor_timeout_s"), "14400") or 14400),
+        "poll_interval_s": int(_clean_str(cfg.get("poll_interval_s"), "30") or 30),
+        "n_concurrent": int(_clean_str(cfg.get("n_concurrent"), "1") or 1),
+        "openai_api_key": _clean_str(os.environ.get("OPENAI_API_KEY") or cfg.get("openai_api_key"), "local"),
+        "prereq_wait_s": int(_clean_str(cfg.get("prereq_wait_s"), "10800") or 10800),
+        "intel_lease_secs": int(_clean_str(cfg.get("intel_lease_secs"), "28800") or 28800),
+        "timeout_multiplier": float(_clean_str(cfg.get("timeout_multiplier"), "4") or 4),
+        "agent_timeout_multiplier": float(_clean_str(cfg.get("agent_timeout_multiplier"), "4") or 4),
     }
 
 
@@ -93,6 +119,14 @@ class SparkClient:
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode())
+        except urllib.error.URLError as exc:
+            reason = getattr(exc, "reason", exc)
+            if "control characters" in str(reason).lower() or "InvalidURL" in type(reason).__name__:
+                raise RuntimeError(
+                    f"invalid spark_base URL {self.base!r} — check ~/.config/sparkbench/worker.yaml "
+                    "(no trailing spaces; use http://hostname)"
+                ) from exc
+            raise
         except urllib.error.HTTPError as exc:
             payload = exc.read().decode()
             try:
@@ -106,7 +140,7 @@ class SparkClient:
     def available(self) -> dict[str, Any]:
         return self._request("GET", "/api/benchmaster/jobs/available")
 
-    def claim(self, job_id: str, *, lease_secs: int = 7200) -> dict[str, Any]:
+    def claim(self, job_id: str, *, lease_secs: int = 28800) -> dict[str, Any]:
         return self._request(
             "POST",
             f"/api/benchmaster/jobs/{job_id}/claim",
@@ -137,14 +171,43 @@ class SparkClient:
             {"worker_id": self.worker_id, "result": result},
         )
 
+    def progress(
+        self,
+        job_id: str,
+        *,
+        stage: str,
+        detail: str | None = None,
+        harbor_cmd: str | None = None,
+        worker_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"worker_id": self.worker_id, "stage": stage}
+        if detail:
+            body["detail"] = detail
+        if harbor_cmd:
+            body["harbor_cmd"] = harbor_cmd
+        if worker_config:
+            body["worker_config"] = worker_config
+        return self._request("POST", f"/api/benchmaster/jobs/{job_id}/progress", body)
+
 
 def log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def wait_prereq(client: SparkClient, job_id: str, *, timeout_s: int = 3600) -> dict[str, Any]:
+def wait_prereq(
+    client: SparkClient,
+    job_id: str,
+    *,
+    timeout_s: int = 10800,
+    lease_secs: int = 28800,
+    renew_every_s: int = 600,
+) -> dict[str, Any]:
     deadline = time.time() + timeout_s
+    last_renew = 0.0
     while time.time() < deadline:
+        if time.time() - last_renew >= renew_every_s:
+            client.renew(job_id, extend_secs=lease_secs)
+            last_renew = time.time()
         st = client.prereq(job_id)
         if not st.get("ok"):
             raise RuntimeError(st.get("error") or "prereq status failed")
@@ -165,10 +228,46 @@ def parse_harbor_metrics(text: str) -> dict[str, Any]:
         metrics["passed"] = int(m.group(1))
         metrics["total"] = int(m.group(2))
         metrics["pass_rate"] = round(int(m.group(1)) / max(int(m.group(2)), 1), 4)
-        return metrics
     m = re.search(r"pass[_ -]?rate[:=\s]+([0-9.]+)", text, re.I)
     if m:
         metrics["pass_rate"] = float(m.group(1))
+    # Harbor summary tables (unicode box-drawing or ASCII pipes)
+    m = re.search(
+        r"Trials\s*[|│]\s*Exceptions\s*[|│]\s*Mean[\s\S]*?"
+        r"[|│]\s*(\d+)\s*[|│]\s*(\d+)\s*[|│]\s*([0-9.]+)",
+        text,
+    )
+    if m:
+        metrics.setdefault("trials", int(m.group(1)))
+        metrics.setdefault("exceptions", int(m.group(2)))
+        metrics.setdefault("reward_mean", float(m.group(3)))
+        if metrics.get("trials") and "total" not in metrics:
+            metrics["total"] = int(m.group(1))
+        if metrics.get("exceptions") == 0 and metrics.get("reward_mean", 0) > 0:
+            metrics.setdefault("passed", 1)
+            metrics.setdefault("pass_rate", metrics["reward_mean"])
+    m = re.search(
+        r"Reward\s*[|│]\s*Count[\s\S]*?[|│]\s*([0-9.]+)\s*[|│]\s*(\d+)",
+        text,
+    )
+    if m:
+        metrics.setdefault("reward_mean", float(m.group(1)))
+        metrics.setdefault("reward_count", int(m.group(2)))
+    exc: dict[str, int] = {}
+    for name in ("AgentTimeoutError", "VerifierTimeoutError", "RewardFileNotFoundError"):
+        em = re.search(rf"{re.escape(name)}\s*[|│]\s*(\d+)", text)
+        if em:
+            exc[name] = int(em.group(1))
+    if exc:
+        metrics["exception_counts"] = exc
+        metrics["primary_exception"] = next(iter(exc))
+    m = re.search(r"Total runtime:\s*([^\n]+)", text)
+    if m:
+        metrics["harbor_runtime"] = m.group(1).strip()
+    m = re.search(r"(\d+)/(\d+)\s+Mean:\s*([0-9.]+)", text)
+    if m:
+        metrics.setdefault("trials", int(m.group(2)))
+        metrics.setdefault("reward_mean", float(m.group(3)))
     return metrics
 
 
@@ -183,8 +282,12 @@ def run_harbor(
     task_limit: int | None,
     timeout_s: int,
     work_dir: Path,
+    timeout_multiplier: float = 1.0,
+    agent_timeout_multiplier: float = 1.0,
 ) -> dict[str, Any]:
     work_dir.mkdir(parents=True, exist_ok=True)
+    tm = float(timeout_multiplier or 1.0)
+    atm = float(agent_timeout_multiplier or 1.0)
     cmd = [
         "harbor",
         "run",
@@ -198,6 +301,10 @@ def run_harbor(
         f"api_base={gateway_url}",
         "-n",
         str(n_concurrent),
+        "--timeout-multiplier",
+        str(tm),
+        "--agent-timeout-multiplier",
+        str(atm),
     ]
     if task_limit is not None:
         cmd.extend(["-l", str(task_limit)])
@@ -205,7 +312,8 @@ def run_harbor(
     env = os.environ.copy()
     env.setdefault("OPENAI_API_KEY", api_key)
 
-    log(f"RUN: {' '.join(cmd)}")
+    harbor_cmd = " ".join(cmd)
+    log(f"RUN: {harbor_cmd}")
     proc = subprocess.run(
         cmd,
         capture_output=True,
@@ -216,10 +324,14 @@ def run_harbor(
     )
     combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
     metrics = parse_harbor_metrics(combined)
-    ok = proc.returncode == 0
+    infra_ok = proc.returncode == 0
+    task_ok = infra_ok and not metrics.get("exception_counts") and (metrics.get("reward_mean") or 0) > 0
     return {
-        "ok": ok,
+        "ok": task_ok,
+        "infrastructure_ok": infra_ok,
+        "task_ok": task_ok,
         "harbor_returncode": proc.returncode,
+        "harbor_cmd": harbor_cmd,
         "harbor_log_tail": combined[-8000:],
         **metrics,
     }
@@ -227,15 +339,26 @@ def run_harbor(
 
 def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> None:
     job_id = str(job["id"])
+    lease_secs = int(cfg.get("intel_lease_secs") or 28800)
+    prereq_wait_s = int(cfg.get("prereq_wait_s") or 10800)
+    t0 = time.time()
     log(f"claiming {job_id} profile={job.get('profile_id')}")
-    claim = client.claim(job_id)
+    claim = client.claim(job_id, lease_secs=lease_secs)
     if not claim.get("ok"):
         log(f"claim failed: {claim.get('error')}")
         return
+    t_claim = time.time()
 
     try:
-        log(f"waiting for Sparky prereq {job_id}…")
-        ready = wait_prereq(client, job_id, timeout_s=3600)
+        log(f"waiting for Sparky prereq {job_id} (up to {prereq_wait_s}s)…")
+        ready = wait_prereq(
+            client,
+            job_id,
+            timeout_s=prereq_wait_s,
+            lease_secs=lease_secs,
+        )
+        t_prereq = time.time()
+        prereq = ready.get("prereq") or {}
         served = str(ready.get("served_name") or claim.get("served_name") or job.get("profile_id"))
         dataset = str(claim.get("dataset") or job.get("harness") or cfg["benchmark"])
         agent = str(claim.get("agent") or cfg["agent"])
@@ -245,8 +368,33 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
 
         model = f"openai/{served}"
         work_dir = Path.home() / ".cache" / "sparkbench" / "harbor" / job_id
-        client.renew(job_id, extend_secs=cfg["harbor_timeout_s"])
+        client.renew(job_id, extend_secs=lease_secs)
 
+        log(
+            f"prereq ready in {t_prereq - t_claim:.0f}s "
+            f"(ctx={prereq.get('ctx')} kv={prereq.get('kv')}) — starting Harbor"
+        )
+        worker_cfg_audit = {
+            "worker_version": WORKER_VERSION,
+            "timeout_multiplier": float(cfg.get("timeout_multiplier") or 4),
+            "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 4),
+            "prereq_wait_s": prereq_wait_s,
+            "harbor_timeout_s": int(cfg["harbor_timeout_s"]),
+            "intel_lease_secs": lease_secs,
+        }
+        t_harbor_start = time.time()
+        harbor_preview_cmd = (
+            f"harbor run -d {dataset} -a {agent} -m openai/{served} "
+            f"--timeout-multiplier {worker_cfg_audit['timeout_multiplier']} "
+            f"--agent-timeout-multiplier {worker_cfg_audit['agent_timeout_multiplier']} ..."
+        )
+        client.progress(
+            job_id,
+            stage="harbor_start",
+            detail=f"worker {WORKER_VERSION}",
+            harbor_cmd=harbor_preview_cmd,
+            worker_config=worker_cfg_audit,
+        )
         result = run_harbor(
             dataset=dataset,
             agent=agent,
@@ -257,13 +405,34 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             task_limit=int(task_limit) if task_limit is not None else None,
             timeout_s=int(cfg["harbor_timeout_s"]),
             work_dir=work_dir,
+            timeout_multiplier=float(cfg.get("timeout_multiplier") or 4),
+            agent_timeout_multiplier=float(cfg.get("agent_timeout_multiplier") or 4),
         )
+        t_harbor_end = time.time()
         result["agent"] = agent
         result["dataset"] = dataset
         result["model"] = model
         result["gateway_url"] = cfg["gateway_url"]
+        result["worker_version"] = WORKER_VERSION
+        result["timing"] = {
+            "claim_to_prereq_ready_s": round(t_prereq - t_claim, 1),
+            "harbor_elapsed_s": round(t_harbor_end - t_harbor_start, 1),
+            "total_elapsed_s": round(t_harbor_end - t0, 1),
+            "prereq_started_at": prereq.get("started_at"),
+            "prereq_ready_at": prereq.get("ready_at"),
+            "timeout_multiplier": float(cfg.get("timeout_multiplier") or 4),
+            "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 4),
+            "prereq_wait_cap_s": prereq_wait_s,
+            "harbor_timeout_cap_s": int(cfg["harbor_timeout_s"]),
+        }
 
-        log(f"complete {job_id} ok={result.get('ok')} pass_rate={result.get('pass_rate')}")
+        log(
+            f"complete {job_id} task_ok={result.get('task_ok')} "
+            f"reward={result.get('reward_mean')} exception={result.get('primary_exception')} "
+            f"prereq={result['timing']['claim_to_prereq_ready_s']}s "
+            f"harbor={result['timing']['harbor_elapsed_s']}s "
+            f"total={result['timing']['total_elapsed_s']}s"
+        )
         done = client.complete(job_id, result)
         if not done.get("ok"):
             log(f"complete API error: {done.get('error')}")
@@ -317,6 +486,16 @@ def cmd_loop(client: SparkClient, cfg: dict[str, Any]) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmaster intel worker (Harbor on Mac/techno)")
     parser.add_argument("--config", type=Path, default=None, help="worker.yaml path")
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Claim and run one job if available (alias for 'once' subcommand)",
+    )
+    parser.add_argument(
+        "--loop",
+        action="store_true",
+        help="Poll until interrupted (alias for 'loop' subcommand)",
+    )
     sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("status", help="List claimable intel jobs on Sparky")
@@ -327,12 +506,12 @@ def main() -> int:
     cfg = load_config(args.config)
     client = SparkClient(cfg["spark_base"], str(cfg["worker_id"]))
 
+    if args.once or args.cmd == "once":
+        return cmd_once(client, cfg)
+    if args.loop or args.cmd == "loop":
+        return cmd_loop(client, cfg)
     if args.cmd == "status":
         return cmd_status(client)
-    if args.cmd == "once":
-        return cmd_once(client, cfg)
-    if args.cmd == "loop":
-        return cmd_loop(client, cfg)
 
     parser.print_help()
     return 2

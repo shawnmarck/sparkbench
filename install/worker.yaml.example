@@ -1,15 +1,38 @@
 # Portable Benchmaster intel worker — copy to ~/.config/sparkbench/worker.yaml
 # on Mac or techno (not installed on Sparky).
 
-spark_base: http://sparky.vimba-turtle.ts.net   # Tailscale MagicDNS or 100.x IP
+# Tailscale MagicDNS or 100.x IP — include http://
+spark_base: http://sparky.vimba-turtle.ts.net
 gateway_url: http://sparky.vimba-turtle.ts.net:9000/v1
-worker_id: macbook-air                          # unique per machine
+
+# unique per machine
+worker_id: macbook-air
 
 benchmark: terminal-bench@2.1
 agent: terminus-2
-harbor_timeout_s: 7200
-poll_interval_s: 30
 n_concurrent: 1
+
+# --- Three separate timeout layers (they do NOT stack into one budget) ---
+#
+# 1) prereq_wait_s — Mac waits for Sparky to load inference (down/up/ready).
+#    Not counted against Harbor agent time. Sparky allows up to ~30–120 min
+#    for large ctx models before failing prereq.
+#
+# 2) harbor_timeout_s — outer subprocess cap on `harbor run` on the Mac.
+#
+# 3) timeout_multiplier / agent_timeout_multiplier — Harbor task/agent wall
+#    clock inside the eval (after model is already up). Increase for slow
+#    remote models (Tailscale + 262k ctx).
+#
+# 4) intel_lease_secs — Sparky job lease while Mac holds the claim (must cover
+#    prereq + harbor + buffer).
+
+prereq_wait_s: 10800
+harbor_timeout_s: 14400
+intel_lease_secs: 28800
+timeout_multiplier: 4.0
+agent_timeout_multiplier: 4.0
+poll_interval_s: 30
 
 # Local OpenAI-compatible gateway on Sparky ignores this; Harbor/LiteLLM still wants a key.
 openai_api_key: local

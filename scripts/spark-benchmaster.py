@@ -38,7 +38,7 @@ SPARK = "/usr/local/bin/spark"
 JOB_TYPES = frozenset({"ctx_ladder", "kv_sweep", "golden_workflow", "perf_sweep", "intel_eval"})
 GPU_JOB_TYPES = frozenset({"ctx_ladder", "kv_sweep", "golden_workflow", "perf_sweep"})
 PERF_SWEEP_PHASES = ("golden_workflow", "kv_sweep", "ctx_ladder")
-DEFAULT_INTEL_LEASE_SECS = 7200
+DEFAULT_INTEL_LEASE_SECS = 28800
 HARNESS_DATASETS: dict[str, str] = {
     "terminal-bench@2.1": "terminal-bench/terminal-bench-2-1",
 }
@@ -404,7 +404,7 @@ def _intel_prereq_thread(job_id: str, profile_id: str) -> None:
             raise RuntimeError((up.stderr or up.stdout or "inference up failed")[-500:])
         tick("up", "done")
 
-        timeout = 1200 if golden_ctx >= 1_048_576 else 900 if golden_ctx >= 524_288 else 600
+        timeout = 7200 if golden_ctx >= 1_048_576 else 3600 if golden_ctx >= 524_288 else 1800 if golden_ctx >= 262144 else 1200 if golden_ctx >= 131072 else 900
         tick("ready", "running", f"up to {timeout}s")
         if not gb.wait_ready(port, expected_ctx=golden_ctx, timeout=timeout):
             tick("ready", "failed", f"timeout {timeout}s")
@@ -569,6 +569,47 @@ def renew_job_lease(job_id: str, worker_id: str, *, extend_secs: int | None = No
     return {"ok": True, "job_id": job_id, "lease_expires_at": item["lease_expires_at"]}
 
 
+def intel_progress_update(
+    job_id: str,
+    worker_id: str,
+    *,
+    stage: str,
+    detail: str | None = None,
+    harbor_cmd: str | None = None,
+    worker_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    with _QUEUE_LOCK:
+        item = find_job(load_queue()["items"], job_id)
+        if not item:
+            raise ValueError(f"unknown job: {job_id}")
+        if str(item.get("claimed_by") or "") != worker_id:
+            raise ValueError("job not claimed by this worker")
+    run_dir = _job_run_dir(job_id)
+    payload: dict[str, Any] = {
+        "updated_at": utc_now(),
+        "stage": stage,
+        "worker_id": worker_id,
+    }
+    if detail:
+        payload["detail"] = detail
+    if harbor_cmd:
+        payload["harbor_cmd"] = harbor_cmd
+    if worker_config:
+        payload["worker_config"] = worker_config
+    (run_dir / "intel-progress.json").write_text(json.dumps(payload, indent=2) + "\n")
+    msg = f"intel {stage}" + (f" — {detail}" if detail else "")
+    _update_job(
+        job_id,
+        progress={
+            "phase": "harbor" if stage.startswith("harbor") else "prereq",
+            "message": msg,
+            "updated_at": utc_now(),
+        },
+    )
+    append_event("intel_progress", job_id=job_id, worker_id=worker_id, stage=stage)
+    return {"ok": True, "job_id": job_id, "stage": stage}
+
+
 def intel_prereq_status(job_id: str) -> dict[str, Any]:
     with _QUEUE_LOCK:
         item = find_job(load_queue()["items"], job_id)
@@ -627,6 +668,13 @@ def _merge_intel_result(job: dict[str, Any], result: dict[str, Any]) -> None:
                 "pass_rate": result.get("pass_rate"),
                 "passed": result.get("passed"),
                 "total": result.get("total"),
+                "reward_mean": result.get("reward_mean"),
+                "harbor_runtime": result.get("harbor_runtime"),
+                "primary_exception": result.get("primary_exception"),
+                "exception_counts": result.get("exception_counts"),
+                "task_ok": result.get("task_ok"),
+                "infrastructure_ok": result.get("infrastructure_ok"),
+                "timing": result.get("timing"),
                 "measured_at": result.get("measured_at") or utc_now(),
                 "job_id": job.get("id"),
             }
@@ -666,6 +714,9 @@ def complete_intel_job(job_id: str, worker_id: str, result: dict[str, Any]) -> d
     result.setdefault("agent", item.get("agent"))
     (run_dir / "intel-result.json").write_text(json.dumps(result, indent=2) + "\n")
 
+    eval_ok = result.get("task_ok")
+    if eval_ok is None:
+        eval_ok = not result.get("exception_counts") and (result.get("reward_mean") or 0) > 0
     summary = {
         "job_id": job_id,
         "type": "intel_eval",
@@ -673,7 +724,8 @@ def complete_intel_job(job_id: str, worker_id: str, result: dict[str, Any]) -> d
         "inventory_path": item.get("inventory_path"),
         "started_at": item.get("started_at"),
         "finished_at": utc_now(),
-        "ok": bool(result.get("ok", True)),
+        "ok": bool(eval_ok),
+        "infrastructure_ok": bool(result.get("infrastructure_ok", result.get("harbor_returncode") == 0)),
         "result": result,
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
@@ -683,13 +735,16 @@ def complete_intel_job(job_id: str, worker_id: str, result: dict[str, Any]) -> d
     except Exception as exc:
         log(f"WARN intel results merge {job_id}: {exc}")
 
-    failed = not result.get("ok", True)
+    failed = not eval_ok
+    fail_err = result.get("error")
+    if failed and not fail_err:
+        fail_err = result.get("primary_exception") or "intel eval failed"
     _update_job(
         job_id,
         state="failed" if failed else "done",
         finished_at=utc_now(),
         result_ref=str(run_dir / "summary.json"),
-        error=result.get("error") if failed else None,
+        error=fail_err if failed else None,
         progress={
             "phase": None,
             "message": "failed" if failed else "complete",
@@ -850,6 +905,8 @@ def _execute_phase(job: dict[str, Any], phase: str) -> dict[str, Any]:
 
 def _phases_for_job(job: dict[str, Any]) -> list[str]:
     jtype = str(job.get("type") or "")
+    if jtype == "intel_eval":
+        return []
     if jtype == "perf_sweep":
         return list(PERF_SWEEP_PHASES)
     if jtype in JOB_TYPES:
@@ -859,6 +916,8 @@ def _phases_for_job(job: dict[str, Any]) -> list[str]:
 
 def run_job(job: dict[str, Any]) -> dict[str, Any]:
     global _RUNNING_JOB_ID
+    if str(job.get("type") or "") == "intel_eval":
+        raise RuntimeError("intel_eval jobs run on Mac/techno worker — not GPU worker")
     job_id = str(job["id"])
     _RUNNING_JOB_ID = job_id
     try:
@@ -1069,6 +1128,11 @@ def add_job(
         inventory_path=inventory_path,
         front=front,
     )
+    if job_type == "intel_eval":
+        log(
+            f"intel job queued {item['id']} profile={profile_id} — "
+            "awaiting Mac/techno worker claim (not picked up by Sparky GPU worker)"
+        )
     return item
 
 
@@ -1158,13 +1222,46 @@ def control_action(action: str, **opts: Any) -> dict[str, Any]:
     return status()
 
 
+def _queue_counts(items: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        st = str(item.get("state") or "queued")
+        counts[st] = counts.get(st, 0) + 1
+        jtype = str(item.get("type") or "")
+        if jtype == "intel_eval" and st == "queued":
+            counts["intel_queued"] = counts.get("intel_queued", 0) + 1
+        elif jtype in GPU_JOB_TYPES and st == "queued":
+            counts["gpu_queued"] = counts.get("gpu_queued", 0) + 1
+    return counts
+
+
+def _attention_job(items: list[dict[str, Any]], current: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Surface intel jobs in status when GPU worker is idle but Mac hasn't claimed yet."""
+    if current is not None:
+        return None
+    for item in items:
+        if str(item.get("type")) != "intel_eval":
+            continue
+        st = str(item.get("state") or "")
+        if st not in {"queued", "running"}:
+            continue
+        row = dict(item)
+        row["live_phases"] = live_phases_for_job(item)
+        if st == "queued":
+            row["awaiting"] = "remote_worker"
+        return row
+    return None
+
+
 def live_phases_for_job(job: dict[str, Any]) -> list[dict[str, Any]]:
     """Phase checklist for portal — reads completed phase JSON from run dir."""
+    gb = _load_golden_bench()
     jtype = str(job.get("type") or "")
     job_id = str(job.get("id") or "")
     run_dir = RUN_DIR / "runs" / job_id
     progress = job.get("progress") or {}
     current_phase = str(progress.get("phase") or "")
+    job_state = str(job.get("state") or "queued")
 
     labels = {
         "golden_workflow": "Golden cell",
@@ -1208,15 +1305,19 @@ def live_phases_for_job(job: dict[str, Any]) -> list[dict[str, Any]]:
             elif ps == "failed":
                 entry["state"] = "failed"
                 entry["detail"] = str(prereq.get("error") or "failed")[:120]
+            elif ps == "pending" and job_state == "queued":
+                entry["detail"] = "Waiting for Mac worker claim"
             rows.append(entry)
             continue
         if jtype == "intel_eval" and phase == "harbor":
             prereq = job.get("prereq") or {}
             if str(prereq.get("status")) == "ready":
-                if current_phase == "harbor" or str(job.get("state")) == "running":
+                if current_phase == "harbor" or job_state == "running":
                     entry["state"] = "running"
                     if job.get("claimed_by"):
                         entry["detail"] = f"worker {job['claimed_by']}"
+            elif job_state == "queued":
+                entry["detail"] = "spark-benchmaster-worker.py once on Mac"
             rows.append(entry)
             continue
 
@@ -1244,7 +1345,6 @@ def live_phases_for_job(job: dict[str, Any]) -> list[dict[str, Any]]:
                 entry["detail"] = msg
         rows.append(entry)
 
-    gb = _load_golden_bench()
     probe_live = gb.read_live_probe(run_dir / gb.LIVE_PROBE_FILE) if job_id else None
     if probe_live and probe_live.get("substeps"):
         for entry in rows:
@@ -1263,10 +1363,7 @@ def status() -> dict[str, Any]:
     with _QUEUE_LOCK:
         data = load_queue()
     items = data.get("items") or []
-    counts: dict[str, int] = {}
-    for item in items:
-        st = str(item.get("state") or "queued")
-        counts[st] = counts.get(st, 0) + 1
+    counts = _queue_counts(items)
     current = None
     cid = (data.get("control") or {}).get("current_job_id")
     if cid:
@@ -1274,6 +1371,8 @@ def status() -> dict[str, Any]:
         if raw:
             current = dict(raw)
             current["live_phases"] = live_phases_for_job(raw)
+    attention = _attention_job(items, current)
+    intel_avail = list_available_intel()
     return {
         "ok": True,
         "version": data.get("version", "1.0"),
@@ -1283,6 +1382,8 @@ def status() -> dict[str, Any]:
         "counts": counts,
         "queue_length": len(items),
         "current_job": current,
+        "attention_job": attention,
+        "intel_claimable": bool(intel_avail.get("jobs")),
         "worker_alive": _WORKER_THREAD is not None and _WORKER_THREAD.is_alive(),
     }
 
@@ -1379,6 +1480,10 @@ def worker_loop() -> None:
                     data = load_queue()
                     orphan = find_job(data.get("items") or [], str(cid))
                 if orphan and str(orphan.get("state")) == "running":
+                    if str(orphan.get("type")) == "intel_eval":
+                        # Claimed by Mac/techno worker — prereq thread runs on API process.
+                        time.sleep(5)
+                        continue
                     log(f"resuming orphaned job {cid}")
                     run_job(orphan)
                     continue
@@ -1451,6 +1556,19 @@ def api_dispatch(method: str, path: str, body: dict[str, Any] | None) -> tuple[i
     if method == "GET" and job_id and job_action == "prereq":
         payload = intel_prereq_status(job_id)
         return (404, payload) if not payload.get("ok") else (200, payload)
+
+    if method == "POST" and job_id and job_action == "progress":
+        try:
+            return 200, intel_progress_update(
+                job_id,
+                str(body.get("worker_id") or ""),
+                stage=str(body.get("stage") or "unknown"),
+                detail=body.get("detail"),
+                harbor_cmd=body.get("harbor_cmd"),
+                worker_config=body.get("worker_config"),
+            )
+        except ValueError as exc:
+            return 400, {"ok": False, "error": str(exc)}
 
     if method == "POST" and job_id and job_action == "claim":
         worker_id = str(body.get("worker_id") or "")

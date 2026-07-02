@@ -429,6 +429,10 @@ models:
     subpath: hf
     engine: vllm
     hf_repo: deepreinforce-ai/Ornith-1.0-35B-GGUF
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: deepreinforce-ai/Ornith-1.0-35B
 - id: empero-ai/qwythos-9b-claude-mythos-5-1m
   lab: empero-ai
   name: qwythos-9b-claude-mythos-5-1m (eugr)
@@ -568,3 +572,31 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-coder-q4.\n"
   param_b: 12
+- id: yuxinlu1/gemma-4-12b-agentic-fable5-composer2.5-v2-3.5x-tau2
+  lab: yuxinlu1
+  name: Gemma 4 12B Agentic Fable5 Composer2 5 V2 3 5X Tau2
+  slug: gemma-4-12b-agentic-fable5-composer2.5-v2-3.5x-tau2
+  hf_repo: yuxinlu1/gemma-4-12B-agentic-fable5-composer2.5-v2-3.5x-tau2-GGUF
+  capabilities:
+  - explorer
+  - vllm
+  why_downloaded: HF Explorer download 2026-06-30
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: yuxinlu1/gemma-4-12B-agentic-fable5-composer2.5-v2-3.5x-tau2-GGUF
+- id: nvidia/qwen3.6-27b
+  lab: nvidia
+  name: Qwen3 6 27B
+  slug: qwen3.6-27b
+  hf_repo: nvidia/Qwen3.6-27B-NVFP4
+  capabilities:
+  - explorer
+  - vllm
+  why_downloaded: HF Explorer download 2026-06-30
+  variants:
+  - format: hf
+    subpath: hf
+    engine: vllm
+    hf_repo: nvidia/Qwen3.6-27B-NVFP4

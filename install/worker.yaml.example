@@ -1,0 +1,15 @@
+# Portable Benchmaster intel worker — copy to ~/.config/sparkbench/worker.yaml
+# on Mac or techno (not installed on Sparky).
+
+spark_base: http://sparky.vimba-turtle.ts.net   # Tailscale MagicDNS or 100.x IP
+gateway_url: http://sparky.vimba-turtle.ts.net:9000/v1
+worker_id: macbook-air                          # unique per machine
+
+benchmark: terminal-bench@2.1
+agent: terminus-2
+harbor_timeout_s: 7200
+poll_interval_s: 30
+n_concurrent: 1
+
+# Local OpenAI-compatible gateway on Sparky ignores this; Harbor/LiteLLM still wants a key.
+openai_api_key: local

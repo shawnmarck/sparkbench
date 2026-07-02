@@ -23,6 +23,7 @@ Groups:
   install                 Host bootstrap (sudo; see install/spark-install)
   gpu                    Metrics JSON (same as /api/gpu)
   bench history|show|note|latest   Benchmark run history (per recipe)
+  benchmaster status|queue|add|control|runs   Bench queue control plane
   hf login               Hugging Face token setup
 
 Examples:
@@ -56,7 +57,7 @@ run_py() {
 
 # --- contextual help (? at any level) ---
 
-SPARK_GROUPS=(status inference recipe models shelf engine bench gpu hf gateway install)
+SPARK_GROUPS=(status inference recipe models shelf engine bench benchmaster gpu hf gateway install)
 
 resolve_prefix() {
   local word="$1"
@@ -291,6 +292,25 @@ Run benchmarks: spark inference bench (unchanged)
 EOF
 }
 
+help_benchmaster() {
+  cat <<'EOF'
+spark benchmaster — queue control plane for perf sweeps + intel evals
+
+  status [--json]                         Worker + queue overview
+  queue [--json]                          Full queue snapshot
+  add <profile> [--type TYPE] [--inventory lab/slug] [--front]
+          [--harness terminal-bench@2.1] [--agent terminus-2] [--task-limit N]
+  intel-available [--json]                Claimable intel_eval jobs (remote worker)
+  control pause|resume|stop_after_current|abort_current_requeue_front
+  runs [--json] [--limit N]               Completed run summaries
+
+Job types: perf_sweep (Sparky GPU), intel_eval (Mac/techno Harbor worker)
+
+HTTP: http://sparky/api/benchmaster/status
+Remote worker: scripts/spark-benchmaster-worker.py (see install/worker.yaml.example)
+EOF
+}
+
 context_help() {
   local -a args=("$@")
 
@@ -317,6 +337,9 @@ context_help() {
         sub="$(resolve_prefix "${args[1]}" history show note latest)" || return 1
         help_bench
       fi
+      ;;
+    benchmaster)
+      help_benchmaster
       ;;
     inference)
       if [[ ${#args[@]} -eq 1 ]]; then
@@ -530,6 +553,95 @@ cmd_bench() {
   run_py "${LIB}/spark-inference.py" bench "$sub" "$@"
 }
 
+cmd_benchmaster() {
+  local sub="${1:-}"
+  [[ -n "$sub" ]] || { help_benchmaster; exit 0; }
+  shift
+  case "$sub" in
+    status)
+      if [[ "${1:-}" == "--json" ]]; then
+        run_py "${LIB}/spark-benchmaster.py" --status
+      else
+        run_py "${LIB}/spark-benchmaster.py" --status | "${PY}" -m json.tool
+      fi
+      ;;
+    queue)
+      if command -v curl >/dev/null 2>&1; then
+        curl -fsS "http://127.0.0.1/api/benchmaster/queue" 2>/dev/null \
+          | { [[ "${1:-}" == "--json" ]] && cat || "${PY}" -m json.tool; } \
+          || die "benchmaster API unavailable — run: sudo bash install/spark-install module core/benchmaster-api.sh"
+      else
+        die "curl required for spark benchmaster queue"
+      fi
+      ;;
+    add)
+      local profile="${1:-}"
+      [[ -n "$profile" ]] || die "usage: spark benchmaster add <profile> [--type perf_sweep|intel_eval] ..."
+      shift
+      local jtype="perf_sweep"
+      local inv=""
+      local front=0
+      local harness=""
+      local agent=""
+      local task_limit=""
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --type) jtype="${2:-}"; shift 2 ;;
+          --inventory) inv="${2:-}"; shift 2 ;;
+          --harness) harness="${2:-}"; shift 2 ;;
+          --agent) agent="${2:-}"; shift 2 ;;
+          --task-limit) task_limit="${2:-}"; shift 2 ;;
+          --front) front=1; shift ;;
+          *) die "unknown option: $1" ;;
+        esac
+      done
+      local payload
+      payload=$("${PY}" -c "
+import json
+p={'type':'${jtype}','profile_id':'${profile}','inventory_path':'${inv}','front':bool(${front})}
+if '${harness}': p['harness']='${harness}'
+if '${agent}': p['agent']='${agent}'
+if '${task_limit}': p['task_limit']=int('${task_limit}')
+print(json.dumps(p))
+")
+      curl -fsS -X POST "http://127.0.0.1/api/benchmaster/queue/add" \
+        -H "Content-Type: application/json" \
+        -d "$payload" | "${PY}" -m json.tool
+      ;;
+    intel-available)
+      if command -v curl >/dev/null 2>&1; then
+        curl -fsS "http://127.0.0.1/api/benchmaster/jobs/available" 2>/dev/null \
+          | { [[ "${1:-}" == "--json" ]] && cat || "${PY}" -m json.tool; } \
+          || die "benchmaster API unavailable"
+      else
+        die "curl required"
+      fi
+      ;;
+    control)
+      local action="${1:-}"
+      [[ -n "$action" ]] || die "usage: spark benchmaster control pause|resume|stop_after_current|abort_current_requeue_front"
+      curl -fsS -X POST "http://127.0.0.1/api/benchmaster/control" \
+        -H "Content-Type: application/json" \
+        -d "{\"action\":\"${action}\"}" | "${PY}" -m json.tool
+      ;;
+    runs)
+      local limit=50
+      [[ "${1:-}" == "--json" ]] && shift
+      [[ "${1:-}" == "--limit" && -n "${2:-}" ]] && { limit="$2"; shift 2; }
+      curl -fsS "http://127.0.0.1/api/benchmaster/runs" | "${PY}" -c "
+import json, sys
+d = json.load(sys.stdin)
+runs = d.get('runs') or []
+limit = int('${limit}')
+print(json.dumps({'ok': True, 'runs': runs[:limit]}, indent=2))
+"
+      ;;
+    *)
+      die "unknown benchmaster command: $sub (try: status, queue, add, control, runs)"
+      ;;
+  esac
+}
+
 cmd_hf() {
   local sub="${1:-}"
   [[ -n "$sub" ]] || { help_hf; exit 0; }
@@ -571,6 +683,7 @@ dispatch_group() {
     engine) cmd_engine "$@" ;;
     gpu) cmd_gpu "$@" ;;
     bench) cmd_bench "$@" ;;
+    benchmaster) cmd_benchmaster "$@" ;;
     hf) cmd_hf "$@" ;;
     gateway) cmd_gateway "$@" ;;
     install) cmd_install "$@" ;;

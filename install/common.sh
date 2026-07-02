@@ -103,8 +103,23 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location /api/benchmaster/ {
+        proxy_pass http://127.0.0.1:8770/api/benchmaster/;
+        proxy_http_version 1.1;
+        proxy_read_timeout 3600s;
+        proxy_connect_timeout 10s;
+        proxy_buffering off;
+        add_header Cache-Control "no-store";
+    }
+
     location ~* \.css$ {
         add_header Cache-Control "public, max-age=86400";
+        try_files \$uri =404;
+    }
+
+    location ~* \.js$ {
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        add_header Pragma "no-cache";
         try_files \$uri =404;
     }
 

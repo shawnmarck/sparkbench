@@ -1,0 +1,176 @@
+id: deepreinforce-ai-ornith-1-0-35b-fp8-eugr
+name: ornith-1.0-35b FP8 (eugr)
+inventory_path: deepreinforce-ai/ornith-1.0-35b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: ornith-1.0-35b-fp8
+port: 8000
+tags:
+- lab
+- eugr
+- ornith
+- fp8
+notes: 'Ornith 35B MoE A/B compare (fp8). Scaffolded 2026-07-02. Same bench cell as
+  Q8_0 golden: 262k ctx, ~50k fill, bench-agent-v2.'
+eugr_recipe: /opt/spark/services/eugr-deepreinforce-ai-ornith-1-0-35b-fp8-eugr.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden compare
+      ctx: 262144
+      kv: fp8
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-07-02T14:26:29.218661+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 10.5
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1008
+      decode_elapsed_s: 96.06
+      tool_ok: true
+      method: bench-agent-v2
+    kv_sweep:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 10.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 922
+      decode_elapsed_s: 89.75
+      tool_ok: true
+      method: bench-agent-v2
+    ctx_ladder:
+      version: '1.0'
+      tested_at: '2026-07-02T14:26:29.130266+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: fp8
+      max_viable_ctx: 262144
+      best_tok_s_ctx: 131072
+      rungs:
+      - ctx: 131072
+        kv: fp8
+        fill_target: 88473
+        fill_ratio: 0.75
+        status: ok
+        loaded_ctx: 131072
+        tok_s: 19.6
+        fill_estimated: 88919
+        prefill_prompt_tokens: 73951
+        decode_tokens: 962
+        decode_elapsed_s: 49.11
+        tool_ok: true
+        method: bench-agent-v2
+      - ctx: 196608
+        kv: fp8
+        fill_target: 132711
+        fill_ratio: 0.75
+        status: ok
+        loaded_ctx: 196608
+        tok_s: 14.1
+        fill_estimated: 133369
+        prefill_prompt_tokens: 111416
+        decode_tokens: 931
+        decode_elapsed_s: 65.89
+        tool_ok: true
+        method: bench-agent-v2
+      - ctx: 262144
+        kv: fp8
+        fill_target: 176947
+        fill_ratio: 0.75
+        status: ok
+        loaded_ctx: 262144
+        tok_s: 10.9
+        fill_estimated: 177469
+        prefill_prompt_tokens: 148586
+        decode_tokens: 1031
+        decode_elapsed_s: 94.31
+        tool_ok: true
+        method: bench-agent-v2
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-07-02T07:25:53.634277+00:00'
+    golden_ctx: 262144
+    fill_ratio: 0.75
+    results:
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 10.3
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 922
+      decode_elapsed_s: 89.75
+      tool_ok: true
+      method: bench-agent-v2
+  ctx_ladder:
+    version: '1.0'
+    tested_at: '2026-07-02T14:26:29.130266+00:00'
+    golden_ctx: 262144
+    native_ctx: 262144
+    fill_ratio: 0.75
+    kv: fp8
+    max_viable_ctx: 262144
+    best_tok_s_ctx: 131072
+    rungs:
+    - ctx: 131072
+      kv: fp8
+      fill_target: 88473
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 131072
+      tok_s: 19.6
+      fill_estimated: 88919
+      prefill_prompt_tokens: 73951
+      decode_tokens: 962
+      decode_elapsed_s: 49.11
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 196608
+      kv: fp8
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 14.1
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 931
+      decode_elapsed_s: 65.89
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 262144
+      kv: fp8
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 10.9
+      fill_estimated: 177469
+      prefill_prompt_tokens: 148586
+      decode_tokens: 1031
+      decode_elapsed_s: 94.31
+      tool_ok: true
+      method: bench-agent-v2
+updated_at: '2026-07-02T03:13:59.346563+00:00'
+promoted_at: '2026-07-02T14:49:16.325806+00:00'

@@ -56,6 +56,7 @@ nas (optional, any time after clone)
 | `core/shelf-api.sh` | Shelf/model HTTP APIs |
 | `core/hf-api.sh` | HF Explorer API (portal Explore tab) |
 | `core/inference-api.sh` | Inference control API |
+| `core/benchmaster-api.sh` | Benchmaster queue control API (:8770) |
 | `core/inference-api-watch.sh` | Auto-restart inference API on script changes |
 | `core/inference-api-restart.sh` | Restart inference API only |
 | `core/removal-cron.sh` | Nightly queued local model purge |

@@ -63,3 +63,32 @@ CLI: `spark hf …` · Portal: **Explore** tab
 | ds4 | `http://$SPARK_HOST:8000/v1` (mutually exclusive with eugr) |
 
 Prefer gateway `:9000` for agents — handles profile aliases and auto-switch.
+
+## Benchmaster (`/api/benchmaster/*` → :8770)
+
+Queue control for **perf sweeps** (Sparky GPU) and **intel evals** (remote Harbor worker). Portal: `#benchmaster` · Log: `/opt/spark/logs/benchmaster.log`
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/benchmaster/status` | Control mode, current job, counts, worker_alive |
+| GET | `/api/benchmaster/queue` | Full queue snapshot |
+| GET | `/api/benchmaster/runs` | Completed run summaries |
+| GET | `/api/benchmaster/runs/<job_id>` | Job + summary + artifacts path |
+| GET | `/api/benchmaster/events` | Event log tail |
+| GET | `/api/benchmaster/stream?since=N` | SSE status + events |
+| GET | `/api/benchmaster/jobs/available` | Claimable `intel_eval` jobs (`gpu_busy` flag) |
+| GET | `/api/benchmaster/jobs/<id>/prereq` | Intel model-load status on Sparky |
+| POST | `/api/benchmaster/queue/add` | Enqueue job (see body below) |
+| POST | `/api/benchmaster/queue/reorder` | `{"job_ids":[…]}` |
+| POST | `/api/benchmaster/queue/remove` | `{"job_id":"bm-…"}` |
+| POST | `/api/benchmaster/control` | `{"action":"pause\|resume\|stop_after_current\|abort_current_requeue_front"}` |
+| POST | `/api/benchmaster/jobs/<id>/claim` | Remote worker: `{"worker_id":"…","lease_secs":7200}` |
+| POST | `/api/benchmaster/jobs/<id>/release` | Release claim |
+| POST | `/api/benchmaster/jobs/<id>/renew` | Extend lease |
+| POST | `/api/benchmaster/jobs/<id>/complete` | Post Harbor results |
+
+**queue/add body:** `type` (`perf_sweep` | `ctx_ladder` | `kv_sweep` | `golden_workflow` | `intel_eval`), `profile_id`, optional `inventory_path`, `quant`, `note`, `front`, `harness`, `agent`, `task_limit`.
+
+CLI: `spark benchmaster status|queue|add|intel-available|control|runs`
+
+Agent skill: `.claude/skills/benchmaster/SKILL.md` · Runbook: `docs/runbooks/benchmaster-agent.md`

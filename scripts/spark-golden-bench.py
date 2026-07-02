@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import time
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 
 ROOT = Path("/opt/spark")
 RECIPES = ROOT / "recipes"
+RECIPES_DRAFTS = RECIPES / "drafts"
 
 FILL_RATIO = 0.75
 HEADROOM_MIN = 8192
@@ -30,6 +33,75 @@ KV_SWEEP_BY_ENGINE: dict[str, list[str]] = {
 
 # Engines / families where KV dtype is not meaningfully swappable at runtime.
 KV_SWEEP_ENGINES: frozenset[str] = frozenset({"llamacpp", "eugr"})
+
+LIVE_PROBE_FILE = "live-probe.json"
+
+
+def benchmaster_run_dir() -> Path | None:
+    raw = os.environ.get("BENCHMASTER_RUN_DIR", "").strip()
+    return Path(raw) if raw else None
+
+
+def live_probe_path(run_dir: Path | None = None) -> Path | None:
+    base = run_dir or benchmaster_run_dir()
+    return (base / LIVE_PROBE_FILE) if base else None
+
+
+def default_probe_substeps() -> list[dict[str, Any]]:
+    return [
+        {"id": "down", "label": "Stop prior inference", "state": "pending"},
+        {"id": "up", "label": "Load model (inference up)", "state": "pending"},
+        {"id": "ready", "label": "Wait for engine ready", "state": "pending"},
+        {"id": "bench", "label": "Run benchmark", "state": "pending"},
+    ]
+
+
+def _set_substep(
+    substeps: list[dict[str, Any]],
+    step_id: str,
+    state: str,
+    *,
+    detail: str | None = None,
+) -> None:
+    for row in substeps:
+        if row.get("id") == step_id:
+            row["state"] = state
+            if detail is not None:
+                row["detail"] = detail
+            elif state == "pending":
+                row.pop("detail", None)
+            return
+
+
+def write_live_probe(
+    path: Path | None,
+    substeps: list[dict[str, Any]],
+    *,
+    phase: str = "",
+    extra: dict[str, Any] | None = None,
+) -> None:
+    if path is None:
+        return
+    payload: dict[str, Any] = {
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "phase": phase,
+        "substeps": substeps,
+    }
+    if extra:
+        payload.update(extra)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2) + "\n")
+    os.replace(tmp, path)
+
+
+def read_live_probe(path: Path | None) -> dict[str, Any] | None:
+    if path is None or not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def kv_sweep_eligible(recipe: dict[str, Any], *, inventory_path: str | None = None) -> bool:
@@ -71,15 +143,29 @@ def load_benchv2():
     return mod
 
 
+def resolve_recipe_path(profile_id: str) -> Path | None:
+    """Production recipe wins over draft (matches spark-inference.py)."""
+    prod = RECIPES / f"{profile_id}.yaml"
+    if prod.is_file():
+        return prod
+    draft = RECIPES_DRAFTS / f"{profile_id}.yaml"
+    if draft.is_file():
+        return draft
+    return None
+
+
 def load_recipe(profile_id: str) -> dict[str, Any]:
-    path = RECIPES / f"{profile_id}.yaml"
-    if not path.is_file():
-        raise FileNotFoundError(f"missing recipe: {path}")
+    path = resolve_recipe_path(profile_id)
+    if path is None:
+        raise FileNotFoundError(
+            f"missing recipe: {profile_id} (checked recipes/ and recipes/drafts/)"
+        )
     return yaml.safe_load(path.read_text()) or {}
 
 
 def save_recipe(profile_id: str, recipe: dict[str, Any]) -> None:
-    path = RECIPES / f"{profile_id}.yaml"
+    path = resolve_recipe_path(profile_id) or (RECIPES / f"{profile_id}.yaml")
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(recipe, sort_keys=False, default_flow_style=False))
 
 
@@ -166,6 +252,8 @@ def probe_cell(
     fill_ratio: float = FILL_RATIO,
     benchv2: Any | None = None,
     ready_timeout: int | None = None,
+    progress_path: Path | None = None,
+    phase: str = "probe",
 ) -> dict[str, Any]:
     """Load at (ctx, kv), bench once at fill_ratio of usable window."""
     if benchv2 is None:
@@ -182,7 +270,28 @@ def probe_cell(
         "status": "pending",
     }
 
+    probe_path = progress_path or live_probe_path()
+    substeps = default_probe_substeps()
+    write_live_probe(
+        probe_path,
+        substeps,
+        phase=phase,
+        extra={"profile_id": profile_id, "ctx": ctx, "kv": kv},
+    )
+
+    def tick(step_id: str, state: str, detail: str | None = None) -> None:
+        _set_substep(substeps, step_id, state, detail=detail)
+        write_live_probe(
+            probe_path,
+            substeps,
+            phase=phase,
+            extra={"profile_id": profile_id, "ctx": ctx, "kv": kv},
+        )
+
+    tick("down", "running")
     run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)
+    tick("down", "done")
+    tick("up", "running", f"ctx={ctx} kv={kv}")
     up = run_cmd(
         [
             "/usr/local/bin/spark",
@@ -198,14 +307,18 @@ def probe_cell(
     )
     try:
         if up.returncode != 0:
+            tick("up", "failed", (up.stderr or up.stdout or "inference up failed")[-120:])
             row["status"] = "load_fail"
             row["error"] = (up.stderr or up.stdout or "inference up failed")[-500:]
             return row
+        tick("up", "done")
 
         timeout = ready_timeout
         if timeout is None:
             timeout = 1200 if ctx >= 1_048_576 else 900 if ctx >= 524_288 else READY_SECS
+        tick("ready", "running", f"/v1/models @ ctx={ctx} (up to {timeout}s)")
         if not wait_ready(port, expected_ctx=ctx, timeout=timeout):
+            tick("ready", "failed", f"not ready within {timeout}s")
             row["status"] = "load_fail"
             row["error"] = f"/v1/models not ready at ctx={ctx} kv={kv} within {timeout}s"
             return row
@@ -213,12 +326,14 @@ def probe_cell(
         loaded = loaded_ctx(port)
         row["loaded_ctx"] = loaded
         if loaded is not None and abs(loaded - ctx) > 1024:
+            tick("ready", "failed", f"loaded ctx={loaded}")
             row["status"] = "load_fail"
             row["error"] = f"requested ctx={ctx} but loaded={loaded}"
             return row
+        tick("ready", "done", f"loaded ctx={loaded}")
 
+        tick("bench", "running", f"fill ~{fill} tokens")
         try:
-            # Match spark inference bench: retries on 400/413/500, eugr tool fallback.
             stats = benchv2._bench_v2_session(
                 port,
                 served,
@@ -227,6 +342,7 @@ def probe_cell(
                 use_tools=True,
             )
         except Exception as exc:
+            tick("bench", "failed", str(exc)[:120])
             row["status"] = "bench_fail"
             row["error"] = str(exc)[:500]
             return row
@@ -243,6 +359,7 @@ def probe_cell(
                 "method": "bench-agent-v2",
             }
         )
+        tick("bench", "done", f"{row['tok_s']} tok/s")
         return row
     finally:
         run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)

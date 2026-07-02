@@ -675,3 +675,85 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 /* ─── Downloads pane ────────────────────────────────────────────────────── */
 .exp-dl-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; background: #0c0e14; overflow: hidden; }
 .exp-dl-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: .45rem .55rem; }
+
+/* ─── Benchmaster ───────────────────────────────────────────────────────── */
+.bm-card-body { display: flex; flex-direction: column; gap: .75rem; }
+.bm-controls { display: flex; flex-wrap: wrap; gap: .4rem; }
+.bm-btn {
+  appearance: none; border: 1px solid var(--border); background: #12151c; color: var(--text);
+  font: inherit; font-size: .78rem; padding: .35rem .65rem; border-radius: 8px; cursor: pointer;
+}
+.bm-btn:hover { border-color: #3a4250; }
+.bm-btn.primary { border-color: #3a4a2a; background: #1a2210; color: var(--accent); }
+.bm-btn.warn { border-color: #4a3020; background: #221810; color: var(--warn); }
+.bm-btn.tiny { font-size: .68rem; padding: .15rem .4rem; }
+.bm-badge { font-family: ui-monospace, monospace; font-size: .72rem; padding: .1rem .35rem; border-radius: 6px; border: 1px solid var(--border); }
+.bm-badge.ok { border-color: #2a4a2a; color: var(--accent); }
+.bm-badge.warn { border-color: #4a4020; color: var(--warn); }
+.bm-badge.err { border-color: #4a2020; color: #f88; }
+.bm-section .section-title { margin-bottom: .35rem; }
+.bm-panel { border: 1px solid var(--border); border-radius: 10px; background: #0c0e14; padding: .55rem .65rem; font-size: .78rem; }
+.bm-empty { color: var(--muted); font-family: ui-monospace, monospace; font-size: .74rem; }
+.bm-muted { color: var(--muted); font-family: ui-monospace, monospace; font-size: .72rem; }
+.bm-current-row { margin-bottom: .25rem; }
+.bm-progress { height: 4px; background: #1a1e28; border-radius: 4px; overflow: hidden; margin: .35rem 0; }
+.bm-progress i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s ease; }
+.bm-queue-row, .bm-run-row {
+  display: grid; grid-template-columns: 1.5rem 1fr auto auto auto; gap: .45rem; align-items: center;
+  padding: .25rem 0; border-bottom: 1px solid #1a1e28;
+}
+.bm-run-row { grid-template-columns: 1fr auto auto auto; }
+.bm-queue-row:last-child, .bm-run-row:last-child { border-bottom: none; }
+.bm-queue-row.running { color: var(--accent); }
+.bm-queue-row.failed, .bm-run-row.err { color: #f88; }
+.bm-run-row.ok { color: var(--accent); }
+.bm-run-row.warn { color: var(--warn); }
+.bm-q-profile { font-family: ui-monospace, monospace; }
+.bm-add-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.bm-add-row input, .bm-add-row select {
+  flex: 1 1 12rem; min-width: 8rem; padding: .35rem .5rem; border-radius: 8px;
+  border: 1px solid var(--border); background: #12151c; color: var(--text); font: inherit; font-size: .78rem;
+}
+.bm-msg { font-size: .78rem; padding: .35rem .5rem; border-radius: 8px; border: 1px solid var(--border); }
+.bm-msg.ok { border-color: #2a4a2a; color: var(--accent); }
+.bm-msg.err { border-color: #4a2020; color: #f88; }
+.bm-phases {
+  list-style: none; margin: .45rem 0 .35rem; padding: 0;
+  border-top: 1px solid var(--border); padding-top: .45rem;
+}
+.bm-phase {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: .15rem .45rem;
+  align-items: baseline;
+  padding: .2rem 0;
+  font-family: ui-monospace, monospace;
+  font-size: .72rem;
+}
+.bm-phase-icon { text-align: center; opacity: .85; }
+.bm-phase-label { color: var(--text); }
+.bm-phase-detail, .bm-phase-hint {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: .68rem;
+}
+.bm-phase-running .bm-phase-icon, .bm-phase-running .bm-phase-label { color: var(--accent); }
+.bm-phase-done .bm-phase-icon, .bm-phase-done .bm-phase-label { color: var(--accent); opacity: .85; }
+.bm-phase-failed .bm-phase-icon, .bm-phase-failed .bm-phase-label { color: #f88; }
+.bm-phase-pending .bm-phase-label { color: var(--muted); }
+.bm-substeps {
+  list-style: none; margin: .25rem 0 0 1.1rem; padding: 0;
+  grid-column: 1 / -1;
+}
+.bm-substep {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: .1rem .35rem;
+  padding: .12rem 0;
+  font-size: .66rem;
+  color: var(--muted);
+}
+.bm-substep-running { color: var(--accent); }
+.bm-substep-done { color: var(--accent); opacity: .75; }
+.bm-substep-failed { color: #f88; }
+.bm-substep .bm-phase-detail { grid-column: 2; font-size: .64rem; }

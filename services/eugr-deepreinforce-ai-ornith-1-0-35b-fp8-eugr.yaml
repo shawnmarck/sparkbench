@@ -1,0 +1,35 @@
+# Ornith 35B MoE eugr (fp8) — A/B compare
+recipe_version: "1"
+name: deepreinforce-ai-ornith-1-0-35b-fp8-eugr
+description: eugr vLLM serve Ornith-1.0-35B fp8
+
+model: ornith-1.0-35b-fp8
+container: vllm-node
+
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 262144
+  max_num_seqs: 4
+  max_num_batched_tokens: 32768
+
+command: |
+  vllm serve /models/deepreinforce-ai/ornith-1.0-35b/fp8 \
+    --host {host} \
+    --port {port} \
+    --served-model-name ornith-1.0-35b-fp8 \
+    --tensor-parallel-size {tensor_parallel} \
+    --trust-remote-code \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_xml \
+    --reasoning-parser qwen3 \
+    --kv-cache-dtype auto \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --enable-chunked-prefill \
+    --enable-prefix-caching \
+    --load-format auto

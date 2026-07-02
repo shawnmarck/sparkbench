@@ -55,4 +55,7 @@ profiles:
     ctx: 65536
   unsloth-qwen3-coder-30b-a3b-instruct-llama:
     ctx: 32768
-
+  deepreinforce-ai-ornith-1-0-35b-fp8-eugr:
+    ctx: 262144
+  deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr:
+    ctx: 262144

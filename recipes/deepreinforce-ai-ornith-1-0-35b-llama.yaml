@@ -110,7 +110,7 @@ context:
   bench_matrix:
     version: '1.0'
     fill_ratio: 0.75
-    updated_at: '2026-06-27T15:33:23.091360+00:00'
+    updated_at: '2026-07-02T06:49:22.912417+00:00'
     ctx_ladder: *id001
     golden_cell:
       ctx: 262144
@@ -205,4 +205,5 @@ context:
       decode_elapsed_s: 292.92
       tool_ok: true
       method: bench-agent-v2
-promoted_at: '2026-06-27T15:10:34.166821+00:00'
+promoted_at: '2026-07-02T06:49:04.414896+00:00'
+_path: /opt/spark/recipes/deepreinforce-ai-ornith-1-0-35b-llama.yaml

@@ -20,3 +20,5 @@ curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/v0.1.0/docs/g
 Execute every step in order. Three surfaces: **CLI** (`spark`), **HTTP** (`/api/…`), **Portal** (`http://$SPARK_HOST/`).
 
 For HTTP route tables when working inside a clone, see [references/api.md](references/api.md).
+
+For **Benchmaster queue** orchestration (perf sweeps, intel evals, pause/abort), see [../benchmaster/SKILL.md](../benchmaster/SKILL.md).

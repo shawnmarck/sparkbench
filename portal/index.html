@@ -28,6 +28,7 @@
       <a href="/#models" class="nav-btn" data-src="/models.html" data-title="Model inventory" data-popout="/#models">Models</a>
       <a href="#explore" class="nav-btn" data-view="explore">Explore</a>
       <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
+      <a href="#benchmaster" class="nav-btn" data-view="benchmaster">Benchmaster</a>
       <a href="http://sparky:9119/" class="nav-btn" id="nav-hermes" data-src="http://sparky:9119/" data-title="Hermes" data-popout="http://sparky:9119/">Hermes<span class="svc-dot down" id="nav-hermes-dot" aria-hidden="true"></span></a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
@@ -323,6 +324,49 @@
           </div>
         </div>
 
+        <div class="card" id="benchmaster-card" hidden>
+          <div class="card-head">
+            <h2>Benchmaster</h2>
+            <div class="card-head-meta" id="bm-head-meta">queue offline</div>
+          </div>
+          <div class="bm-card-body">
+            <div class="bm-controls">
+              <button type="button" class="bm-btn primary" data-bm-action="resume">Resume</button>
+              <button type="button" class="bm-btn" data-bm-action="pause">Pause</button>
+              <button type="button" class="bm-btn" data-bm-action="stop_after_current">Stop after current</button>
+              <button type="button" class="bm-btn warn" data-bm-action="abort_current_requeue_front">Abort &amp; requeue front</button>
+              <button type="button" class="bm-btn" data-bm-action="refresh">Refresh</button>
+            </div>
+            <div class="bm-msg" id="bm-msg" hidden></div>
+            <div class="bm-section">
+              <div class="section-title">Current job</div>
+              <div id="bm-current" class="bm-panel"><div class="bm-empty bm-pending">Connecting…</div></div>
+            </div>
+            <div class="bm-section">
+              <div class="section-title">Queue</div>
+              <div id="bm-queue" class="bm-panel"><div class="bm-empty bm-pending">Connecting…</div></div>
+            </div>
+            <div class="bm-section">
+              <div class="section-title">Add job</div>
+              <div class="bm-add-row">
+                <input type="text" id="bm-add-profile" placeholder="profile id (e.g. opencode-qwen36-250k)" aria-label="Profile id">
+                <input type="text" id="bm-add-inv" placeholder="inventory path (optional)" aria-label="Inventory path">
+                <select id="bm-add-type" aria-label="Job type">
+                  <option value="perf_sweep">perf_sweep</option>
+                  <option value="ctx_ladder">ctx_ladder</option>
+                  <option value="kv_sweep">kv_sweep</option>
+                  <option value="golden_workflow">golden_workflow</option>
+                </select>
+                <button type="button" class="bm-btn primary" id="bm-add-btn">Enqueue</button>
+              </div>
+            </div>
+            <div class="bm-section">
+              <div class="section-title">Recent runs</div>
+              <div id="bm-runs" class="bm-panel"><div class="bm-empty bm-pending">Connecting…</div></div>
+            </div>
+          </div>
+        </div>
+
         <div class="card" id="inference-card" hidden>
           <div class="card-head">
             <h2>Inference</h2>
@@ -436,6 +480,7 @@
 
   <script src="/assets/sparky-theme.js" defer></script>
   <script src="/assets/spark-inventory-grid.js" defer></script>
+  <script src="/assets/spark-benchmaster.js?v=20260702e" defer></script>
   <script>document.addEventListener('DOMContentLoaded', () => SparkyTheme.init());</script>
   <script>
     (function () {
@@ -519,6 +564,7 @@
       const systemCard = $('system-card');
       const inferenceCard = $('inference-card');
       const exploreCard = $('explore-card');
+      const benchmasterCard = $('benchmaster-card');
 
       const fmtGb = (mb) => (mb / 1024).toFixed(1);
       const setBar = (el, pct) => { el.style.setProperty('--bar-pct', (Math.max(0, Math.min(100, pct)) / 100)); };
@@ -2819,8 +2865,10 @@
         systemCard.hidden = true;
         inferenceCard.hidden = true;
         exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
       }
 
       function showSystem(btn) {
@@ -2828,14 +2876,16 @@
         onSystem = true;
         onInference = false;
         onExplore = false;
-        document.body.classList.remove('inf-view', 'exp-view');
+        document.body.classList.remove('inf-view', 'exp-view', 'bm-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         systemCard.hidden = false;
         inferenceCard.hidden = true;
         exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
         gpuPoll();
         fetchClientActivity();
       }
@@ -2845,30 +2895,58 @@
         onSystem = false;
         onInference = false;
         onExplore = true;
-        document.body.classList.remove('inf-view');
+        document.body.classList.remove('inf-view', 'bm-view');
         document.body.classList.add('exp-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         hideAllViews();
         exploreCard.hidden = false;
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
         expShortlistSetTab(expTab);
         expTick();
         if (expTab === 'browse') expBrowse();
+      }
+
+      function showBenchmaster(btn) {
+        closeInfLogOverlay();
+        onSystem = false;
+        onInference = false;
+        onExplore = false;
+        document.body.classList.remove('inf-view', 'exp-view');
+        document.body.classList.add('bm-view');
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        systemCard.hidden = true;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
+        benchmasterCard.hidden = false;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        if (window.SparkBenchmaster) {
+          SparkBenchmaster.show();
+        } else {
+          window.addEventListener('load', function onBmLoad() {
+            window.removeEventListener('load', onBmLoad);
+            if (window.SparkBenchmaster) SparkBenchmaster.show();
+          });
+        }
       }
 
       function showInference(btn) {
         onSystem = false;
         onInference = true;
         onExplore = false;
-        document.body.classList.remove('exp-view');
+        document.body.classList.remove('exp-view', 'bm-view');
         document.body.classList.add('inf-view');
         setActiveNav(btn);
         dashboard.style.display = '';
         systemCard.hidden = true;
         inferenceCard.hidden = false;
         exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
         framePanel.classList.remove('open');
         frame.removeAttribute('src');
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
         const qParam = new URLSearchParams(location.search).get('q');
         if (qParam) {
           infFilterQ = qParam;
@@ -2897,12 +2975,14 @@
         onSystem = false;
         onInference = false;
         onExplore = false;
-        document.body.classList.remove('inf-view', 'exp-view');
+        document.body.classList.remove('inf-view', 'exp-view', 'bm-view');
         setActiveNav(btn);
         dashboard.style.display = 'none';
         systemCard.hidden = true;
         inferenceCard.hidden = true;
         exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
         framePanel.classList.add('open');
         $('frame-title').textContent = title;
         $('frame-popout').href = popoutHref;
@@ -2929,6 +3009,11 @@
         if (btn.dataset.view === 'explore') {
           showExplore(btn);
           history.replaceState(null, '', '#explore');
+          return;
+        }
+        if (btn.dataset.view === 'benchmaster') {
+          showBenchmaster(btn);
+          history.replaceState(null, '', '#benchmaster');
           return;
         }
         if (btn.dataset.src) {
@@ -3280,6 +3365,8 @@
       const hash = location.hash.replace('#', '');
       if (hash === 'explore') {
         showExplore(nav.querySelector('[data-view="explore"]'));
+      } else if (hash === 'benchmaster') {
+        showBenchmaster(nav.querySelector('[data-view="benchmaster"]'));
       } else if (hash === 'inference' || pendingStartProfile) {
         showInference(nav.querySelector('[data-view="inference"]'));
         if (pendingStartProfile) history.replaceState(null, '', '#inference');

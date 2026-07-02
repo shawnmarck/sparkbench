@@ -1,0 +1,1634 @@
+version: '1.0'
+updated_at: '2026-07-02T14:47:23.151275+00:00'
+models:
+  deepreinforce-ai/ornith-1.0-35b:
+    inventory_path: deepreinforce-ai/ornith-1.0-35b
+    quants:
+    - quant: fp8
+      profile_id: deepreinforce-ai-ornith-1-0-35b-fp8-eugr
+      engine: eugr
+      lifecycle: testing
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-07-02T14:26:29.218661+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 10.5
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1008
+          decode_elapsed_s: 96.06
+          tool_ok: true
+          method: bench-agent-v2
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 10.3
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 922
+          decode_elapsed_s: 89.75
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-07-02T14:26:29.130266+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: 262144
+          best_tok_s_ctx: 131072
+          rungs:
+          - ctx: 131072
+            kv: fp8
+            fill_target: 88473
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 131072
+            tok_s: 19.6
+            fill_estimated: 88919
+            prefill_prompt_tokens: 73951
+            decode_tokens: 962
+            decode_elapsed_s: 49.11
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 196608
+            kv: fp8
+            fill_target: 132711
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 196608
+            tok_s: 14.1
+            fill_estimated: 133369
+            prefill_prompt_tokens: 111416
+            decode_tokens: 931
+            decode_elapsed_s: 65.89
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 262144
+            kv: fp8
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 10.9
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148586
+            decode_tokens: 1031
+            decode_elapsed_s: 94.31
+            tool_ok: true
+            method: bench-agent-v2
+    - quant: llama
+      profile_id: deepreinforce-ai-ornith-1-0-35b-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-07-02T06:49:22.912417+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 28.1
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 3.2
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 969
+          decode_elapsed_s: 298.54
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 3.4
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1009
+          decode_elapsed_s: 297.85
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 3.4
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1007
+          decode_elapsed_s: 292.92
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-27T03:22:00.895912+00:00'
+          golden_ctx: 32768
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: 262144
+          rungs:
+          - ctx: 65536
+            kv: q8_0
+            fill_target: 43008
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 65536
+            tok_s: 16.6
+            fill_estimated: 43419
+            prefill_prompt_tokens: 35601
+            decode_tokens: 1037
+            decode_elapsed_s: 62.6
+            tool_ok: true
+            method: bench-agent-v2-lite
+          - ctx: 98304
+            kv: q8_0
+            fill_target: 66355
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 98304
+            tok_s: 11.1
+            fill_estimated: 66869
+            prefill_prompt_tokens: 55366
+            decode_tokens: 1009
+            decode_elapsed_s: 90.54
+            tool_ok: true
+            method: bench-agent-v2-lite
+          - ctx: 131072
+            kv: q8_0
+            fill_target: 88473
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 131072
+            tok_s: 7.8
+            fill_estimated: 88919
+            prefill_prompt_tokens: 73951
+            decode_tokens: 932
+            decode_elapsed_s: 118.89
+            tool_ok: true
+            method: bench-agent-v2-lite
+          - ctx: 196608
+            kv: q8_0
+            fill_target: 132711
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 196608
+            tok_s: 5.4
+            fill_estimated: 133369
+            prefill_prompt_tokens: 111416
+            decode_tokens: 1009
+            decode_elapsed_s: 185.69
+            tool_ok: true
+            method: bench-agent-v2-lite
+          - ctx: 262144
+            kv: q8_0
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 3.9
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148586
+            decode_tokens: 1035
+            decode_elapsed_s: 263.11
+            tool_ok: true
+            method: bench-agent-v2-lite
+    - quant: nvfp4
+      profile_id: deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr
+      engine: eugr
+      lifecycle: testing
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-07-02T14:39:36.958559+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 10.9
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1010
+          decode_elapsed_s: 92.7
+          tool_ok: true
+          method: bench-agent-v2
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 11.1
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 986
+          decode_elapsed_s: 89.07
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-07-02T14:39:36.931022+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: 262144
+          best_tok_s_ctx: 131072
+          rungs:
+          - ctx: 131072
+            kv: fp8
+            fill_target: 88473
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 131072
+            tok_s: 20.3
+            fill_estimated: 88919
+            prefill_prompt_tokens: 73951
+            decode_tokens: 1031
+            decode_elapsed_s: 50.91
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 196608
+            kv: fp8
+            fill_target: 132711
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 196608
+            tok_s: 14.9
+            fill_estimated: 133369
+            prefill_prompt_tokens: 111416
+            decode_tokens: 1010
+            decode_elapsed_s: 67.59
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 262144
+            kv: fp8
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 10.8
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148586
+            decode_tokens: 978
+            decode_elapsed_s: 90.54
+            tool_ok: true
+            method: bench-agent-v2
+  nvidia/qwen3.6-35b-a3b:
+    inventory_path: nvidia/qwen3.6-35b-a3b
+    quants:
+    - quant: nvfp4
+      profile_id: opencode-qwen36-250k
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-29T07:27:20.312911+00:00'
+        golden_cell:
+          ctx: 256000
+          kv: fp8
+          tok_s: 58.9
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 256000
+          kv: fp8
+          fill_target: 172800
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 256000
+          tok_s: 13.0
+          fill_estimated: 173619
+          prefill_prompt_tokens: 145341
+          decode_tokens: 945
+          decode_elapsed_s: 72.68
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T07:22:19.198535+00:00'
+          golden_ctx: 256000
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: 262144
+          best_tok_s_ctx: 262144
+          rungs:
+          - ctx: 262144
+            kv: fp8
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 14.0
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148586
+            decode_tokens: 1123
+            decode_elapsed_s: 80.15
+            tool_ok: true
+            method: bench-agent-v2
+    - quant: nvfp4
+      profile_id: qwen36-35b-a3b-mtp-eugr
+      engine: eugr
+      lifecycle: testing
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-29T07:22:35.624394+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 68.2
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+  antirez/deepseek-v4-flash:
+    inventory_path: antirez/deepseek-v4-flash
+    quants:
+    - quant: ''
+      profile_id: antirez-deepseek-v4-flash-ds4
+      engine: ds4
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T03:59:47.041998+00:00'
+        golden_cell:
+          ctx: 1048576
+          kv: q8_0
+          tok_s: 1.7
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 1048576
+          kv: q8_0
+          fill_target: 707789
+          fill_ratio: 0.75
+          status: load_fail
+          error: /v1/models not ready at ctx=1048576 kv=q8_0 within 600s
+  deepseek-ai/deepseek-r1-distill-qwen-32b:
+    inventory_path: deepseek-ai/deepseek-r1-distill-qwen-32b
+    quants:
+    - quant: ''
+      profile_id: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T04:36:10.327151+00:00'
+        golden_cell:
+          ctx: 131072
+          kv: fp8
+          tok_s: 3.6
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 131072
+          kv: fp8
+          fill_target: 88473
+          fill_ratio: 0.75
+          status: bench_fail
+          loaded_ctx: 131072
+          error: 'HTTP 400: {"error":{"message":"\"auto\" tool choice requires --enable-auto-tool-choice
+            and --tool-call-parser to be set","type":"BadRequestError","param":null,"code":400}}'
+  empero-ai/qwythos-9b-claude-mythos-5-1m:
+    inventory_path: empero-ai/qwythos-9b-claude-mythos-5-1m
+    quants:
+    - quant: ''
+      profile_id: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T15:44:57.241517+00:00'
+        golden_cell:
+          ctx: 799744
+          kv: fp8
+          tok_s: 12.4
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 799744
+          kv: fp8
+          fill_target: 539827
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 799744
+          tok_s: 11.3
+          fill_estimated: 135469
+          prefill_prompt_tokens: 113263
+          decode_tokens: 922
+          decode_elapsed_s: 81.58
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-27T08:13:05.712790+00:00'
+          golden_ctx: 799744
+          native_ctx: 1048576
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: 1048576
+          best_tok_s_ctx: 262144
+          rungs:
+          - ctx: 262144
+            kv: fp8
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 12.2
+            fill_estimated: 44469
+            prefill_prompt_tokens: 36563
+            decode_tokens: 790
+            decode_elapsed_s: 64.59
+            tool_ok: false
+            method: bench-agent-v2
+          - ctx: 327680
+            kv: fp8
+            fill_target: 221184
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 327680
+            tok_s: 12.0
+            fill_estimated: 55669
+            prefill_prompt_tokens: 46003
+            decode_tokens: 869
+            decode_elapsed_s: 72.68
+            tool_ok: false
+            method: bench-agent-v2
+          - ctx: 409600
+            kv: fp8
+            fill_target: 276480
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 409600
+            tok_s: 12.0
+            fill_estimated: 69319
+            prefill_prompt_tokens: 57508
+            decode_tokens: 916
+            decode_elapsed_s: 76.57
+            tool_ok: false
+            method: bench-agent-v2
+          - ctx: 512000
+            kv: fp8
+            fill_target: 345600
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 512000
+            tok_s: 11.8
+            fill_estimated: 86819
+            prefill_prompt_tokens: 72258
+            decode_tokens: 906
+            decode_elapsed_s: 76.86
+            tool_ok: false
+            method: bench-agent-v2
+          - ctx: 614400
+            kv: fp8
+            fill_target: 414720
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 614400
+            tok_s: 11.6
+            fill_estimated: 104319
+            prefill_prompt_tokens: 87008
+            decode_tokens: 1136
+            decode_elapsed_s: 97.57
+            tool_ok: false
+            method: bench-agent-v2
+          - ctx: 799744
+            kv: fp8
+            fill_target: 539827
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 799744
+            tok_s: 11.3
+            fill_estimated: 135469
+            prefill_prompt_tokens: 113263
+            decode_tokens: 922
+            decode_elapsed_s: 81.34
+            tool_ok: false
+            method: bench-agent-v2
+          - ctx: 1048576
+            kv: fp8
+            fill_target: 707789
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 1048576
+            tok_s: 10.8
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148663
+            decode_tokens: 923
+            decode_elapsed_s: 85.19
+            tool_ok: false
+            method: bench-agent-v2
+  yuxinlu1/gemma-4-12b-agentic-v2:
+    inventory_path: yuxinlu1/gemma-4-12b-agentic-v2
+    quants:
+    - quant: q4
+      profile_id: gemma4-12b-agentic-v2-q4
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T17:40:47.300978+00:00'
+        golden_cell:
+          ctx: 32768
+          kv: q8_0
+          tok_s: 17.1
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 14745
+        kv_sweep:
+        - ctx: 32768
+          kv: q8_0
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 13.7
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14614
+          decode_tokens: 755
+          decode_elapsed_s: 55.3
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 32768
+          kv: q4_0
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 14.1
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14614
+          decode_tokens: 767
+          decode_elapsed_s: 54.49
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 32768
+          kv: f16
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 14.3
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14614
+          decode_tokens: 731
+          decode_elapsed_s: 51.23
+          tool_ok: true
+          method: bench-agent-v2
+  yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1:
+    inventory_path: yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1
+    quants:
+    - quant: q4
+      profile_id: gemma4-12b-coder-q4
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T04:08:20.658532+00:00'
+        golden_cell:
+          ctx: 8192
+          kv: q8_0
+          tok_s: 19.5
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 2048
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 9.3
+          fill_estimated: 44469
+          prefill_prompt_tokens: 35078
+          decode_tokens: 778
+          decode_elapsed_s: 83.59
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 9.4
+          fill_estimated: 44469
+          prefill_prompt_tokens: 35078
+          decode_tokens: 737
+          decode_elapsed_s: 78.2
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 10.8
+          fill_estimated: 44469
+          prefill_prompt_tokens: 35078
+          decode_tokens: 861
+          decode_elapsed_s: 79.57
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T03:49:37.161969+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  yuxinlu1/gemma-4-12b-opus-reasoning:
+    inventory_path: yuxinlu1/gemma-4-12b-opus-reasoning
+    quants:
+    - quant: q4
+      profile_id: gemma4-12b-opus-reasoning-q4
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T17:45:21.440768+00:00'
+        golden_cell:
+          ctx: 32768
+          kv: q8_0
+          tok_s: 17.3
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 14745
+        kv_sweep:
+        - ctx: 32768
+          kv: q8_0
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 14.3
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14614
+          decode_tokens: 954
+          decode_elapsed_s: 66.75
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 32768
+          kv: q4_0
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 14.8
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14614
+          decode_tokens: 970
+          decode_elapsed_s: 65.64
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 32768
+          kv: f16
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 14.9
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14614
+          decode_tokens: 886
+          decode_elapsed_s: 59.46
+          tool_ok: true
+          method: bench-agent-v2
+  google/diffusiongemma-26b-a4b-it:
+    inventory_path: google/diffusiongemma-26b-a4b-it
+    quants:
+    - quant: ''
+      profile_id: google-diffusiongemma-26b-a4b-it-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T15:56:44.027386+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 39.3
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 26.1
+          fill_estimated: 44469
+          prefill_prompt_tokens: 35081
+          decode_tokens: 263
+          decode_elapsed_s: 10.08
+          tool_ok: false
+          method: bench-agent-v2
+  google/gemma-4-12b-it:
+    inventory_path: google/gemma-4-12b-it
+    quants:
+    - quant: llama
+      profile_id: google-gemma-4-12b-it-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T16:17:49.387226+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 14.1
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 6.7
+          fill_estimated: 88919
+          prefill_prompt_tokens: 71146
+          decode_tokens: 1113
+          decode_elapsed_s: 165.63
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 6.9
+          fill_estimated: 88919
+          prefill_prompt_tokens: 71146
+          decode_tokens: 1088
+          decode_elapsed_s: 157.79
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 7.8
+          fill_estimated: 88919
+          prefill_prompt_tokens: 71146
+          decode_tokens: 1088
+          decode_elapsed_s: 140.11
+          tool_ok: true
+          method: bench-agent-v2
+  google/gemma-4-26b-a4b-it:
+    inventory_path: google/gemma-4-26b-a4b-it
+    quants:
+    - quant: ''
+      profile_id: google-gemma-4-26b-a4b-it-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T16:28:50.331991+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 22.2
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 20.4
+          fill_estimated: 44469
+          prefill_prompt_tokens: 35081
+          decode_tokens: 266
+          decode_elapsed_s: 13.06
+          tool_ok: false
+          method: bench-agent-v2
+  jackrong/qwopus3.6-27b-coder-compat:
+    inventory_path: jackrong/qwopus3.6-27b-coder-compat
+    quants:
+    - quant: llama
+      profile_id: jackrong-qwopus3-6-27b-coder-compat-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T17:26:34.151885+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 6.9
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.1
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148585
+          decode_tokens: 848
+          decode_elapsed_s: 799.78
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.2
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148585
+          decode_tokens: 923
+          decode_elapsed_s: 798.82
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.2
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148585
+          decode_tokens: 921
+          decode_elapsed_s: 792.03
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-27T08:55:49.786636+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: 262144
+          best_tok_s_ctx: 131072
+          rungs:
+          - ctx: 131072
+            kv: q8_0
+            fill_target: 88473
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 131072
+            tok_s: 2.4
+            fill_estimated: 88919
+            prefill_prompt_tokens: 73950
+            decode_tokens: 972
+            decode_elapsed_s: 402.51
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 196608
+            kv: q8_0
+            fill_target: 132711
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 196608
+            tok_s: 1.4
+            fill_estimated: 133369
+            prefill_prompt_tokens: 111415
+            decode_tokens: 813
+            decode_elapsed_s: 572.37
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 262144
+            kv: q8_0
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 1.1
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148585
+            decode_tokens: 848
+            decode_elapsed_s: 806.7
+            tool_ok: true
+            method: bench-agent-v2
+  kaitchup/qwen3.6-27b:
+    inventory_path: kaitchup/qwen3.6-27b
+    quants:
+    - quant: llama
+      profile_id: kaitchup-qwen3-6-27b-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-27T19:10:26.172508+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 7.6
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.0
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1079
+          decode_elapsed_s: 1116.18
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.0
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1089
+          decode_elapsed_s: 1106.6
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.0
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1080
+          decode_elapsed_s: 1082.12
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-27T17:58:13.990496+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  yuxinlu1/mellum2-12b-opus-thinking:
+    inventory_path: yuxinlu1/mellum2-12b-opus-thinking
+    quants:
+    - quant: q4
+      profile_id: mellum2-12b-opus-q4
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T04:13:09.510926+00:00'
+        golden_cell:
+          ctx: 32768
+          kv: q8_0
+          tok_s: 74.4
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 14745
+        kv_sweep:
+        - ctx: 32768
+          kv: q8_0
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 57.8
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14615
+          decode_tokens: 1087
+          decode_elapsed_s: 18.79
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 32768
+          kv: q4_0
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 55.0
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14615
+          decode_tokens: 911
+          decode_elapsed_s: 16.57
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 32768
+          kv: f16
+          fill_target: 18432
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 32768
+          tok_s: 56.0
+          fill_estimated: 18707
+          prefill_prompt_tokens: 14615
+          decode_tokens: 1000
+          decode_elapsed_s: 17.85
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T04:13:09.486585+00:00'
+          golden_ctx: 32768
+          native_ctx: 131072
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: 131072
+          best_tok_s_ctx: 32768
+          rungs:
+          - ctx: 32768
+            kv: q8_0
+            fill_target: 18432
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 32768
+            tok_s: 57.5
+            fill_estimated: 18707
+            prefill_prompt_tokens: 14615
+            decode_tokens: 1087
+            decode_elapsed_s: 18.9
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 65536
+            kv: q8_0
+            fill_target: 43008
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 65536
+            tok_s: 27.0
+            fill_estimated: 43419
+            prefill_prompt_tokens: 34227
+            decode_tokens: 974
+            decode_elapsed_s: 36.04
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 98304
+            kv: q8_0
+            fill_target: 66355
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 98304
+            tok_s: 19.3
+            fill_estimated: 66869
+            prefill_prompt_tokens: 53255
+            decode_tokens: 1025
+            decode_elapsed_s: 53.05
+            tool_ok: true
+            method: bench-agent-v2
+          - ctx: 131072
+            kv: q8_0
+            fill_target: 88473
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 131072
+            tok_s: 14.6
+            fill_estimated: 88919
+            prefill_prompt_tokens: 71147
+            decode_tokens: 1012
+            decode_elapsed_s: 69.37
+            tool_ok: false
+            method: bench-agent-v2
+  nvidia/qwen3-30b-a3b:
+    inventory_path: nvidia/qwen3-30b-a3b
+    quants:
+    - quant: ''
+      profile_id: nvidia-qwen3-30b-a3b-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T07:07:26.927323+00:00'
+        golden_cell:
+          ctx: 40960
+          kv: fp8
+          tok_s: 72.3
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 18432
+        kv_sweep:
+        - ctx: 40960
+          kv: fp8
+          fill_target: 24576
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 40960
+          tok_s: 71.2
+          fill_estimated: 6215
+          prefill_prompt_tokens: 5018
+          decode_tokens: 1070
+          decode_elapsed_s: 15.02
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T07:05:46.335373+00:00'
+          golden_ctx: 40960
+          native_ctx: 40960
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  qwen/qwen3.6-27b:
+    inventory_path: qwen/qwen3.6-27b
+    quants:
+    - quant: ''
+      profile_id: opencode-qwen27-dflash-262k
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T08:48:32.246836+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 3.0
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 0.8
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1152
+          decode_elapsed_s: 1484.92
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T08:08:39.013549+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  qwen/qwen-agentworld-35b-a3b:
+    inventory_path: qwen/qwen-agentworld-35b-a3b
+    quants:
+    - quant: ''
+      profile_id: qwen-qwen-agentworld-35b-a3b-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T11:30:57.343190+00:00'
+        golden_cell:
+          ctx: 256000
+          kv: fp8
+          tok_s: 27.6
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 256000
+          kv: fp8
+          fill_target: 172800
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 256000
+          tok_s: 10.6
+          fill_estimated: 173619
+          prefill_prompt_tokens: 145341
+          decode_tokens: 1152
+          decode_elapsed_s: 108.74
+          tool_ok: false
+          method: bench-agent-v2
+  qwen/qwen3-coder-next:
+    inventory_path: qwen/qwen3-coder-next
+    quants:
+    - quant: ''
+      profile_id: qwen-qwen3-coder-next-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T07:36:27.200720+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 38.7
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 36.3
+          fill_estimated: 44469
+          prefill_prompt_tokens: 36484
+          decode_tokens: 501
+          decode_elapsed_s: 13.81
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T07:31:51.028684+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  unsloth/qwen3.6-35b-a3b:
+    inventory_path: unsloth/qwen3.6-35b-a3b
+    quants:
+    - quant: q4
+      profile_id: qwen36-q4-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T11:24:13.799295+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 33.6
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 4.2
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1152
+          decode_elapsed_s: 272.45
+          tool_ok: false
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 4.3
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1152
+          decode_elapsed_s: 270.54
+          tool_ok: false
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 4.3
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148586
+          decode_tokens: 1152
+          decode_elapsed_s: 267.3
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T11:03:55.047789+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  rdtand/qwen3.6-27b:
+    inventory_path: rdtand/qwen3.6-27b
+    quants:
+    - quant: ''
+      profile_id: rdtand-qwen3-6-27b-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T09:14:48.480495+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 10.2
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 9.9
+          fill_estimated: 44469
+          prefill_prompt_tokens: 36486
+          decode_tokens: 869
+          decode_elapsed_s: 87.79
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T09:03:01.532773+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  saricles/qwen3-coder-next:
+    inventory_path: saricles/qwen3-coder-next
+    quants:
+    - quant: ''
+      profile_id: saricles-qwen3-coder-next-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T09:22:36.114229+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 57.5
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 51.2
+          fill_estimated: 44469
+          prefill_prompt_tokens: 36484
+          decode_tokens: 396
+          decode_elapsed_s: 7.74
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T09:18:31.356442+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  stepfun-ai/step-3.7-flash:
+    inventory_path: stepfun-ai/step-3.7-flash
+    quants:
+    - quant: llama
+      profile_id: stepfun-ai-step-3-7-flash-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T10:31:53.798103+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 14.4
+          tool_ok: true
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: bench_fail
+          loaded_ctx: 262144
+          error: timed out
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.3
+          fill_estimated: 177469
+          prefill_prompt_tokens: 137716
+          decode_tokens: 1044
+          decode_elapsed_s: 779.75
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 1.4
+          fill_estimated: 177469
+          prefill_prompt_tokens: 137716
+          decode_tokens: 1050
+          decode_elapsed_s: 768.23
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T09:32:34.896965+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  unsloth/qwen3.6-27b:
+    inventory_path: unsloth/qwen3.6-27b
+    quants:
+    - quant: ''
+      profile_id: unsloth-qwen3-6-27b-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T10:57:02.664427+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: fp8
+          tok_s: 9.3
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: fp8
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 9.0
+          fill_estimated: 44469
+          prefill_prompt_tokens: 36486
+          decode_tokens: 963
+          decode_elapsed_s: 106.87
+          tool_ok: false
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T10:45:37.723027+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: fp8
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []
+  unsloth/qwen3-coder-30b-a3b-instruct:
+    inventory_path: unsloth/qwen3-coder-30b-a3b-instruct
+    quants:
+    - quant: llama
+      profile_id: unsloth-qwen3-coder-30b-a3b-instruct-llama
+      engine: llamacpp
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-06-28T02:37:43.225408+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: q8_0
+          tok_s: 13.0
+          tool_ok: false
+          method: bench-agent-v2
+          bench_standard: '2.0'
+          fill_target: 50000
+        kv_sweep:
+        - ctx: 262144
+          kv: q8_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 0.9
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148584
+          decode_tokens: 481
+          decode_elapsed_s: 515.45
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: q4_0
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 0.8
+          fill_estimated: 177469
+          prefill_prompt_tokens: 148584
+          decode_tokens: 390
+          decode_elapsed_s: 512.03
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 262144
+          kv: f16
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: load_fail
+          error: /v1/models not ready at ctx=262144 kv=f16 within 600s
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-06-28T01:56:54.541068+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: null
+          best_tok_s_ctx: null
+          rungs: []

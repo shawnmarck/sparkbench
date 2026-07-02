@@ -101,6 +101,7 @@ cmd_core() {
   run_module core/shelf-api.sh
   run_module core/hf-api.sh
   run_module core/inference-api.sh
+  run_module core/benchmaster-api.sh
   run_module core/removal-cron.sh
   finalize_nginx_portal_site
   verify_core_nginx_routes
@@ -220,6 +221,7 @@ cmd_status() {
   check_unit spark-shelf-api.service
   check_unit spark-hf-api.service
   check_unit spark-inference-api.service
+  check_unit spark-benchmaster-api.service
   check_unit spark-inference-gateway.service
   check_unit spark-client-activity.service
   check_unit spark-inventory-refresh.timer

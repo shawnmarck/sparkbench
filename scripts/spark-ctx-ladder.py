@@ -111,6 +111,10 @@ def resolve_rungs(
         rungs = sorted({int(x) for x in block["ladder_rungs"]})
     else:
         rungs = list(build_rungs(golden_ctx, native_ctx))
+        if not rungs:
+            # Model already at native ctx — ladder downward to chart tok/s vs fill.
+            rungs = build_rungs_below(golden_ctx)
+            include_golden = True
         if include_below:
             rungs = build_rungs_below(golden_ctx) + rungs
         if include_golden:
@@ -142,12 +146,14 @@ def run_ladder(
     has_plan = bool(block.get("ladder_rungs"))
     if not force and block.get("ctx_ladder", {}).get("rungs") and not has_plan:
         prior = block["ctx_ladder"]
-        return {
-            "profile_id": profile_id,
-            "status": "skipped",
-            "reason": "ctx_ladder already present (use --force)",
-            "ctx_ladder": prior,
-        }
+        prior_rungs = prior.get("rungs") or []
+        if prior_rungs:
+            return {
+                "profile_id": profile_id,
+                "status": "skipped",
+                "reason": "ctx_ladder already present (use --force)",
+                "ctx_ladder": prior,
+            }
     if (
         not force
         and has_plan
@@ -201,7 +207,20 @@ def run_ladder(
     max_viable = golden if include_golden else None
     best_tok_s = 0.0
     best_tok_s_ctx: int | None = None
-    for ctx in rungs:
+    progress_path = gb.live_probe_path()
+    for idx, ctx in enumerate(rungs):
+        gb.write_live_probe(
+            progress_path,
+            gb.default_probe_substeps(),
+            phase="ctx_ladder",
+            extra={
+                "profile_id": profile_id,
+                "rung_ctx": ctx,
+                "rung_index": idx + 1,
+                "rung_total": len(rungs),
+                "kv": kv,
+            },
+        )
         log(f"--- rung ctx={ctx} fill~{gb.fill_target_for_ctx(ctx, fill_ratio=fill_ratio)} ---")
         row = gb.probe_cell(
             profile_id,
@@ -210,6 +229,8 @@ def run_ladder(
             kv=kv,
             fill_ratio=fill_ratio,
             benchv2=benchv2,
+            progress_path=progress_path,
+            phase="ctx_ladder",
         )
         report["results"].append(row)
         log(f"rung ctx={ctx} status={row['status']} tok_s={row.get('tok_s')}")

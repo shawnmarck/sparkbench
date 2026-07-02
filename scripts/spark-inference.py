@@ -1265,20 +1265,42 @@ def detect_active_profile() -> dict[str, Any] | None:
         except (json.JSONDecodeError, OSError, SystemExit):
             pass
 
-    for profile_id in enabled_profiles():
+    eugr_up = eugr_running()
+    llama_up = llama_running()
+    ds4_up = ds4_running()
+    if not (eugr_up or llama_up or ds4_up):
+        return None
+
+    for profile_id in switchable_profile_ids():
         recipe = load_recipe(profile_id)
         engine = recipe.get("engine")
         port = int(recipe.get("port") or 0)
-        if engine == "eugr" and eugr_running():
-            return {"profile": profile_id, "recipe": recipe, "state": None}
-        if engine == "llamacpp" and llama_running():
+        if engine == "eugr" and eugr_up:
             served = served_name_from_port(port) if port else None
-            if served == recipe.get("served_name"):
+            if served and served == recipe.get("served_name"):
                 return {"profile": profile_id, "recipe": recipe, "state": None}
-        if engine == "ds4" and ds4_running():
+        if engine == "llamacpp" and llama_up:
             served = served_name_from_port(port) if port else None
-            if served == recipe.get("served_name"):
+            if served and served == recipe.get("served_name"):
                 return {"profile": profile_id, "recipe": recipe, "state": None}
+        if engine == "ds4" and ds4_up:
+            served = served_name_from_port(port) if port else None
+            if served and served == recipe.get("served_name"):
+                return {"profile": profile_id, "recipe": recipe, "state": None}
+
+    pending = ctxmod.read_launch_overrides().get("profile")
+    if isinstance(pending, str) and pending.strip():
+        try:
+            recipe = load_recipe(pending.strip())
+            engine = recipe.get("engine")
+            if (
+                (engine == "eugr" and eugr_up)
+                or (engine == "llamacpp" and llama_up)
+                or (engine == "ds4" and ds4_up)
+            ):
+                return {"profile": pending.strip(), "recipe": recipe, "state": None}
+        except SystemExit:
+            pass
     return None
 
 
@@ -1407,6 +1429,7 @@ def cmd_up(
 
     print("Stopping current engines (if any)...")
     cmd_down()
+    write_state(profile_id)
 
     path = str(recipe_path(profile_id))
     engine = recipe.get("engine")

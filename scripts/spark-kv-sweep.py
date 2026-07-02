@@ -83,7 +83,20 @@ def run_kv_sweep(
         return report
 
     results: list[dict[str, Any]] = []
-    for kv in kvs:
+    progress_path = gb.live_probe_path()
+    for idx, kv in enumerate(kvs):
+        gb.write_live_probe(
+            progress_path,
+            gb.default_probe_substeps(),
+            phase="kv_sweep",
+            extra={
+                "profile_id": profile_id,
+                "kv_target": kv,
+                "kv_index": idx + 1,
+                "kv_total": len(kvs),
+                "ctx": golden_ctx,
+            },
+        )
         log(f"--- kv={kv} ctx={golden_ctx} fill~{gb.fill_target_for_ctx(golden_ctx, fill_ratio=fill_ratio)} ---")
         row = gb.probe_cell(
             profile_id,
@@ -92,6 +105,8 @@ def run_kv_sweep(
             kv=kv,
             fill_ratio=fill_ratio,
             benchv2=benchv2,
+            progress_path=progress_path,
+            phase="kv_sweep",
         )
         results.append(row)
         log(f"kv={kv} status={row['status']} tok_s={row.get('tok_s')}")

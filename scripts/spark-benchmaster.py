@@ -632,8 +632,11 @@ def intel_upload_artifacts(
             raise ValueError(f"unknown job: {job_id}")
         if str(item.get("type")) != "intel_eval":
             raise ValueError("not an intel_eval job")
-        if str(item.get("claimed_by") or "") != worker_id:
-            raise ValueError("job not claimed by this worker")
+        state = str(item.get("state") or "")
+        claimed = str(item.get("claimed_by") or "")
+        if state not in {"done", "failed"}:
+            if claimed != worker_id:
+                raise ValueError("job not claimed by this worker")
 
     run_dir = _job_run_dir(job_id)
     dest_root = run_dir / "mac-artifacts"

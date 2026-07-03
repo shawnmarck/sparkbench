@@ -17,6 +17,7 @@ Env overrides: SPARK_BENCHMASTER_URL, SPARK_GATEWAY_URL, BENCHMASTER_WORKER_ID
 Usage:
   python3 spark-benchmaster-worker.py once      # claim one job if available
   python3 spark-benchmaster-worker.py --once    # same (compat alias)
+  python3 spark-benchmaster-worker.py upload-only --job-id bm-...
   python3 spark-benchmaster-worker.py loop      # poll until stopped
   python3 spark-benchmaster-worker.py status    # list claimable jobs
 """
@@ -42,7 +43,7 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
-WORKER_VERSION = "20260703a"
+WORKER_VERSION = "20260703b"
 
 
 def _clean_str(value: Any, default: str = "") -> str:
@@ -293,8 +294,15 @@ def collect_harbor_artifacts(work_dir: Path, combined_log: str) -> dict[str, dic
     work_dir.mkdir(parents=True, exist_ok=True)
     out: dict[str, dict[str, str]] = {}
 
-    log_bytes = combined_log.encode("utf-8", errors="replace")
-    out["harbor-full.log"] = _encode_artifact(log_bytes)
+    log_path = work_dir / "harbor-full.log"
+    if combined_log:
+        log_bytes = combined_log.encode("utf-8", errors="replace")
+    elif log_path.is_file():
+        log_bytes = log_path.read_bytes()
+    else:
+        log_bytes = b""
+    if log_bytes:
+        out["harbor-full.log"] = _encode_artifact(log_bytes)
 
     jobs_root = work_dir / "jobs"
     if jobs_root.is_dir():
@@ -526,6 +534,19 @@ def cmd_status(client: SparkClient) -> int:
     return 0
 
 
+def cmd_upload_only(client: SparkClient, job_id: str) -> int:
+    work_dir = Path.home() / ".cache" / "sparkbench" / "harbor" / job_id
+    if not work_dir.is_dir():
+        log(f"no local harbor cache for {job_id}: {work_dir}")
+        return 1
+    log(f"backfill upload for {job_id} from {work_dir}")
+    resp = upload_harbor_artifacts(client, job_id, work_dir, "")
+    if not resp.get("ok"):
+        log(f"upload failed: {resp.get('error')}")
+        return 1
+    return 0
+
+
 def cmd_once(client: SparkClient, cfg: dict[str, Any]) -> int:
     data = client.available()
     jobs = [j for j in data.get("jobs") or [] if j.get("claimable")]
@@ -574,11 +595,15 @@ def main() -> int:
     sub.add_parser("status", help="List claimable intel jobs on Sparky")
     sub.add_parser("once", help="Claim and run one job if available")
     sub.add_parser("loop", help="Poll until interrupted")
+    upload_p = sub.add_parser("upload-only", help="Upload Harbor artifacts for a finished job (backfill)")
+    upload_p.add_argument("--job-id", required=True, help="Benchmaster job id")
 
     args = parser.parse_args()
     cfg = load_config(args.config)
     client = SparkClient(cfg["spark_base"], str(cfg["worker_id"]))
 
+    if args.cmd == "upload-only":
+        return cmd_upload_only(client, str(args.job_id))
     if args.once or args.cmd == "once":
         return cmd_once(client, cfg)
     if args.loop or args.cmd == "loop":

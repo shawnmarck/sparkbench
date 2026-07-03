@@ -520,6 +520,7 @@ def claim_job(job_id: str, worker_id: str, *, lease_secs: int | None = None) -> 
         "harness": harness,
         "agent": str(item.get("agent") or "terminus-2"),
         "task_limit": item.get("task_limit"),
+        "task_names": item.get("task_names") or [],
     }
 
 
@@ -883,6 +884,7 @@ def list_available_intel() -> dict[str, Any]:
                     "harness": item.get("harness"),
                     "agent": item.get("agent"),
                     "task_limit": item.get("task_limit"),
+                    "task_names": item.get("task_names") or [],
                     "note": item.get("note"),
                     "claimable": not gpu_busy,
                 }
@@ -1170,6 +1172,7 @@ def add_job(
     harness: str | None = None,
     agent: str | None = None,
     task_limit: int | None = None,
+    task_names: list[str] | None = None,
 ) -> dict[str, Any]:
     if job_type not in JOB_TYPES:
         raise ValueError(f"unsupported job type: {job_type}")
@@ -1202,6 +1205,10 @@ def add_job(
         item["harness"] = harness or "terminal-bench@2.1"
         item["agent"] = agent or "terminus-2"
         item["task_limit"] = int(task_limit) if task_limit is not None else None
+        names = task_names or []
+        if isinstance(names, str):
+            names = [names]
+        item["task_names"] = [str(x).strip() for x in names if str(x).strip()]
         item["claimed_by"] = None
         item["claimed_at"] = None
         item["lease_expires_at"] = None
@@ -1738,6 +1745,7 @@ def api_dispatch(method: str, path: str, body: dict[str, Any] | None) -> tuple[i
                 harness=body.get("harness"),
                 agent=body.get("agent"),
                 task_limit=body.get("task_limit"),
+                task_names=body.get("task_names"),
             )
             return 200, {"ok": True, "item": item}
         except ValueError as exc:

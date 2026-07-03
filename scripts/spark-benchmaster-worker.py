@@ -8,7 +8,7 @@ Config: ~/.config/sparkbench/worker.yaml (or env vars).
   worker_id: macbook-air
   benchmark: terminal-bench@2.1
   agent: terminus-2
-  harbor_timeout_s: 7200
+  harbor_timeout_s: 14400
   poll_interval_s: 30
   n_concurrent: 1
 
@@ -43,7 +43,7 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
-WORKER_VERSION = "20260703b"
+WORKER_VERSION = "20260703c"
 
 
 def _clean_str(value: Any, default: str = "") -> str:
@@ -94,8 +94,8 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
         "openai_api_key": _clean_str(os.environ.get("OPENAI_API_KEY") or cfg.get("openai_api_key"), "local"),
         "prereq_wait_s": int(_clean_str(cfg.get("prereq_wait_s"), "10800") or 10800),
         "intel_lease_secs": int(_clean_str(cfg.get("intel_lease_secs"), "28800") or 28800),
-        "timeout_multiplier": float(_clean_str(cfg.get("timeout_multiplier"), "4") or 4),
-        "agent_timeout_multiplier": float(_clean_str(cfg.get("agent_timeout_multiplier"), "4") or 4),
+        "timeout_multiplier": float(_clean_str(cfg.get("timeout_multiplier"), "8") or 8),
+        "agent_timeout_multiplier": float(_clean_str(cfg.get("agent_timeout_multiplier"), "8") or 8),
     }
 
 
@@ -348,6 +348,7 @@ def run_harbor(
     api_key: str,
     n_concurrent: int,
     task_limit: int | None,
+    task_names: list[str] | None,
     timeout_s: int,
     work_dir: Path,
     timeout_multiplier: float = 1.0,
@@ -374,6 +375,9 @@ def run_harbor(
         "--agent-timeout-multiplier",
         str(atm),
     ]
+    for name in task_names or []:
+        if str(name).strip():
+            cmd.extend(["--task-name", str(name).strip()])
     if task_limit is not None:
         cmd.extend(["-l", str(task_limit)])
 
@@ -382,30 +386,41 @@ def run_harbor(
 
     harbor_cmd = " ".join(cmd)
     log(f"RUN: {harbor_cmd}")
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=timeout_s,
-        cwd=str(work_dir),
-        env=env,
-    )
-    combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            cwd=str(work_dir),
+            env=env,
+        )
+        combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        harbor_returncode = proc.returncode
+        timed_out = False
+    except subprocess.TimeoutExpired as exc:
+        combined = (exc.stdout or "") + "\n" + (exc.stderr or "")
+        harbor_returncode = -1
+        timed_out = True
     (work_dir / "harbor-full.log").write_text(combined, encoding="utf-8", errors="replace")
     metrics = parse_harbor_metrics(combined)
-    infra_ok = proc.returncode == 0
+    infra_ok = harbor_returncode == 0 and not timed_out
     task_ok = infra_ok and not metrics.get("exception_counts") and (metrics.get("reward_mean") or 0) > 0
-    return {
+    out: dict[str, Any] = {
         "ok": task_ok,
         "infrastructure_ok": infra_ok,
         "task_ok": task_ok,
-        "harbor_returncode": proc.returncode,
+        "harbor_returncode": harbor_returncode,
         "harbor_cmd": harbor_cmd,
         "harbor_log_tail": combined[-8000:],
         "harbor_log_bytes": len(combined),
         "_harbor_combined": combined,
         **metrics,
     }
+    if timed_out:
+        out["error"] = f"harbor subprocess timed out after {timeout_s}s"
+        out["primary_exception"] = "HarborSubprocessTimeout"
+    return out
 
 
 def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> None:
@@ -436,6 +451,9 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
         task_limit = claim.get("task_limit")
         if task_limit is None:
             task_limit = job.get("task_limit")
+        task_names = claim.get("task_names") or job.get("task_names") or []
+        if isinstance(task_names, str):
+            task_names = [task_names]
 
         model = f"openai/{served}"
         work_dir = Path.home() / ".cache" / "sparkbench" / "harbor" / job_id
@@ -447,8 +465,8 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
         )
         worker_cfg_audit = {
             "worker_version": WORKER_VERSION,
-            "timeout_multiplier": float(cfg.get("timeout_multiplier") or 4),
-            "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 4),
+            "timeout_multiplier": float(cfg.get("timeout_multiplier") or 8),
+            "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 8),
             "prereq_wait_s": prereq_wait_s,
             "harbor_timeout_s": int(cfg["harbor_timeout_s"]),
             "intel_lease_secs": lease_secs,
@@ -474,10 +492,11 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             api_key=str(cfg["openai_api_key"]),
             n_concurrent=int(cfg["n_concurrent"]),
             task_limit=int(task_limit) if task_limit is not None else None,
+            task_names=[str(x) for x in task_names if str(x).strip()],
             timeout_s=int(cfg["harbor_timeout_s"]),
             work_dir=work_dir,
-            timeout_multiplier=float(cfg.get("timeout_multiplier") or 4),
-            agent_timeout_multiplier=float(cfg.get("agent_timeout_multiplier") or 4),
+            timeout_multiplier=float(cfg.get("timeout_multiplier") or 8),
+            agent_timeout_multiplier=float(cfg.get("agent_timeout_multiplier") or 8),
         )
         t_harbor_end = time.time()
         result["agent"] = agent
@@ -491,8 +510,8 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             "total_elapsed_s": round(t_harbor_end - t0, 1),
             "prereq_started_at": prereq.get("started_at"),
             "prereq_ready_at": prereq.get("ready_at"),
-            "timeout_multiplier": float(cfg.get("timeout_multiplier") or 4),
-            "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 4),
+            "timeout_multiplier": float(cfg.get("timeout_multiplier") or 8),
+            "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 8),
             "prereq_wait_cap_s": prereq_wait_s,
             "harbor_timeout_cap_s": int(cfg["harbor_timeout_s"]),
         }
@@ -519,11 +538,15 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             log(f"complete API error: {done.get('error')}")
     except Exception as exc:
         log(f"job {job_id} failed: {exc}")
+        work_dir = Path.home() / ".cache" / "sparkbench" / "harbor" / job_id
+        fail_body: dict[str, Any] = {"ok": False, "error": str(exc)[:500]}
+        if work_dir.is_dir():
+            try:
+                upload_harbor_artifacts(client, job_id, work_dir, "")
+            except Exception as upload_exc:
+                log(f"artifact upload on failure: {upload_exc}")
         try:
-            client.complete(
-                job_id,
-                {"ok": False, "error": str(exc)[:500]},
-            )
+            client.complete(job_id, fail_body)
         except Exception:
             client.release(job_id, reason=str(exc)[:200])
 

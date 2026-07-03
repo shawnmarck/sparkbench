@@ -19,6 +19,7 @@ n_concurrent: 1
 #    for large ctx models before failing prereq.
 #
 # 2) harbor_timeout_s — outer subprocess cap on `harbor run` on the Mac.
+#    Must exceed inner agent budget (900s * agent_timeout_multiplier) plus setup.
 #
 # 3) timeout_multiplier / agent_timeout_multiplier — Harbor task/agent wall
 #    clock inside the eval (after model is already up). Increase for slow
@@ -30,8 +31,8 @@ n_concurrent: 1
 prereq_wait_s: 10800
 harbor_timeout_s: 14400
 intel_lease_secs: 28800
-timeout_multiplier: 4.0
-agent_timeout_multiplier: 4.0
+timeout_multiplier: 8.0
+agent_timeout_multiplier: 8.0
 poll_interval_s: 30
 
 # Local OpenAI-compatible gateway on Sparky ignores this; Harbor/LiteLLM still wants a key.

@@ -300,6 +300,7 @@ spark benchmaster — queue control plane for perf sweeps + intel evals
   queue [--json]                          Full queue snapshot
   add <profile> [--type TYPE] [--inventory lab/slug] [--front]
           [--harness terminal-bench@2.1] [--agent terminus-2] [--task-limit N]
+          [--task-name NAME ...]
   intel-available [--json]                Claimable intel_eval jobs (remote worker)
   control pause|resume|stop_after_current|abort_current_requeue_front
   runs [--json] [--limit N]               Completed run summaries
@@ -584,6 +585,7 @@ cmd_benchmaster() {
       local harness=""
       local agent=""
       local task_limit=""
+      local task_names=()
       while [[ $# -gt 0 ]]; do
         case "$1" in
           --type) jtype="${2:-}"; shift 2 ;;
@@ -591,6 +593,7 @@ cmd_benchmaster() {
           --harness) harness="${2:-}"; shift 2 ;;
           --agent) agent="${2:-}"; shift 2 ;;
           --task-limit) task_limit="${2:-}"; shift 2 ;;
+          --task-name) task_names+=("${2:-}"); shift 2 ;;
           --front) front=1; shift ;;
           *) die "unknown option: $1" ;;
         esac
@@ -602,6 +605,8 @@ p={'type':'${jtype}','profile_id':'${profile}','inventory_path':'${inv}','front'
 if '${harness}': p['harness']='${harness}'
 if '${agent}': p['agent']='${agent}'
 if '${task_limit}': p['task_limit']=int('${task_limit}')
+names=json.loads('$(printf '%s\n' "${task_names[@]}" | "${PY}" -c "import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))")')
+if names: p['task_names']=names
 print(json.dumps(p))
 ")
       curl -fsS -X POST "http://127.0.0.1/api/benchmaster/queue/add" \

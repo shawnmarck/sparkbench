@@ -43,7 +43,7 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
-WORKER_VERSION = "20260703c"
+WORKER_VERSION = "20260703d"
 
 
 def _clean_str(value: Any, default: str = "") -> str:
@@ -377,7 +377,7 @@ def run_harbor(
     ]
     for name in task_names or []:
         if str(name).strip():
-            cmd.extend(["--task-name", str(name).strip()])
+            cmd.extend(["--include-task-name", str(name).strip()])
     if task_limit is not None:
         cmd.extend(["-l", str(task_limit)])
 

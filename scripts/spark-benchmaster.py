@@ -46,8 +46,10 @@ HARNESS_DATASETS: dict[str, str] = {
     "terminal-bench@2.1": "terminal-bench/terminal-bench-2-1",
     "swe-bench@verified": "swe-bench/swe-bench-verified",
 }
-DEFAULT_SUITE_HARBOR_TIMEOUT_S = 259200  # 72h — full TB/SWE suites on Mac
+DEFAULT_SUITE_HARBOR_TIMEOUT_S = 259200  # 72h — full TB suite on Mac
 DEFAULT_SUITE_INTEL_LEASE_S = 280800  # 78h
+SWE_SUITE_HARBOR_TIMEOUT_S = 604800  # 7d — ~500 SWE instances
+SWE_SUITE_INTEL_LEASE_S = 620000  # ~7.2d
 RESULTS_FILE = ROOT / "data" / "benchmaster-results.yaml"
 
 _QUEUE_LOCK = threading.RLock()
@@ -307,6 +309,41 @@ def harness_dataset(harness: str) -> str:
     return HARNESS_DATASETS.get(harness, harness)
 
 
+def is_full_intel_suite(
+    *,
+    task_names: list[str] | None,
+    task_limit: int | None,
+) -> bool:
+    names = task_names or []
+    if isinstance(names, str):
+        names = [names]
+    return not task_limit and not any(str(n).strip() for n in names)
+
+
+def suite_timeout_defaults(harness: str) -> tuple[int, int]:
+    if str(harness or "").startswith("swe-bench"):
+        return SWE_SUITE_HARBOR_TIMEOUT_S, SWE_SUITE_INTEL_LEASE_S
+    return DEFAULT_SUITE_HARBOR_TIMEOUT_S, DEFAULT_SUITE_INTEL_LEASE_S
+
+
+def resolve_intel_timeouts(
+    item: dict[str, Any],
+    *,
+    lease_secs: int | None = None,
+) -> tuple[int, int]:
+    harness = str(item.get("harness") or "terminal-bench@2.1")
+    harbor = item.get("harbor_timeout_s")
+    lease = item.get("intel_lease_secs") or lease_secs
+    if harbor is None and is_full_intel_suite(
+        task_names=item.get("task_names"),
+        task_limit=item.get("task_limit"),
+    ):
+        harbor, lease_default = suite_timeout_defaults(harness)
+        if lease is None:
+            lease = lease_default
+    return int(harbor or 14400), int(lease or DEFAULT_INTEL_LEASE_SECS)
+
+
 def normalize_harbor_task_name(name: str, harness: str = "terminal-bench@2.1") -> str:
     """Harbor expects org/task ids, e.g. terminal-bench/fix-git not fix-git."""
     name = str(name or "").strip()
@@ -512,6 +549,10 @@ def claim_job(job_id: str, worker_id: str, *, lease_secs: int | None = None) -> 
             raise ValueError(f"job not claimable (state={state})")
         if _gpu_busy(data):
             raise ValueError("gpu_busy — wait for current Sparky job to finish")
+        harbor_timeout_s, intel_lease_secs = resolve_intel_timeouts(item, lease_secs=lease_secs)
+        lease_secs = intel_lease_secs
+        item["harbor_timeout_s"] = harbor_timeout_s
+        item["intel_lease_secs"] = intel_lease_secs
         now = utc_now()
         expires = (datetime.now(timezone.utc) + timedelta(seconds=lease_secs)).isoformat()
         item["state"] = "running"
@@ -544,8 +585,8 @@ def claim_job(job_id: str, worker_id: str, *, lease_secs: int | None = None) -> 
         "agent": str(item.get("agent") or "terminus-2"),
         "task_limit": item.get("task_limit"),
         "task_names": item.get("task_names") or [],
-        "harbor_timeout_s": item.get("harbor_timeout_s"),
-        "intel_lease_secs": item.get("intel_lease_secs"),
+        "harbor_timeout_s": harbor_timeout_s,
+        "intel_lease_secs": intel_lease_secs,
     }
 
 
@@ -1241,6 +1282,10 @@ def add_job(
             item["harbor_timeout_s"] = int(harbor_timeout_s)
         if intel_lease_secs is not None:
             item["intel_lease_secs"] = int(intel_lease_secs)
+        if is_full_intel_suite(task_names=item["task_names"], task_limit=item["task_limit"]):
+            default_harbor, default_lease = suite_timeout_defaults(item["harness"])
+            item.setdefault("harbor_timeout_s", default_harbor)
+            item.setdefault("intel_lease_secs", default_lease)
         item["claimed_by"] = None
         item["claimed_at"] = None
         item["lease_expires_at"] = None

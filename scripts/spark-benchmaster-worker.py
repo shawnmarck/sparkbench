@@ -43,7 +43,26 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
-WORKER_VERSION = "20260703d"
+WORKER_VERSION = "20260703e"
+
+
+def normalize_harbor_task_name(name: str, harness: str = "terminal-bench@2.1") -> str:
+    name = str(name or "").strip()
+    if not name or "/" in name:
+        return name
+    org = str(harness or "terminal-bench@2.1").split("@", 1)[0]
+    return f"{org}/{name}"
+
+
+def normalize_harbor_task_names(names: list[str] | None, harness: str) -> list[str]:
+    if isinstance(names, str):
+        names = [names]
+    out: list[str] = []
+    for raw in names or []:
+        norm = normalize_harbor_task_name(raw, harness)
+        if norm and norm not in out:
+            out.append(norm)
+    return out
 
 
 def _clean_str(value: Any, default: str = "") -> str:
@@ -454,6 +473,10 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
         task_names = claim.get("task_names") or job.get("task_names") or []
         if isinstance(task_names, str):
             task_names = [task_names]
+        task_names = normalize_harbor_task_names(
+            [str(x) for x in task_names],
+            str(claim.get("harness") or job.get("harness") or cfg["benchmark"]),
+        )
 
         model = f"openai/{served}"
         work_dir = Path.home() / ".cache" / "sparkbench" / "harbor" / job_id
@@ -492,7 +515,7 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             api_key=str(cfg["openai_api_key"]),
             n_concurrent=int(cfg["n_concurrent"]),
             task_limit=int(task_limit) if task_limit is not None else None,
-            task_names=[str(x) for x in task_names if str(x).strip()],
+            task_names=[str(x) for x in task_names],
             timeout_s=int(cfg["harbor_timeout_s"]),
             work_dir=work_dir,
             timeout_multiplier=float(cfg.get("timeout_multiplier") or 8),

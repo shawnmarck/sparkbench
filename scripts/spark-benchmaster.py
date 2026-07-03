@@ -304,6 +304,26 @@ def harness_dataset(harness: str) -> str:
     return HARNESS_DATASETS.get(harness, harness)
 
 
+def normalize_harbor_task_name(name: str, harness: str = "terminal-bench@2.1") -> str:
+    """Harbor expects org/task ids, e.g. terminal-bench/fix-git not fix-git."""
+    name = str(name or "").strip()
+    if not name or "/" in name:
+        return name
+    org = str(harness or "terminal-bench@2.1").split("@", 1)[0]
+    return f"{org}/{name}"
+
+
+def normalize_harbor_task_names(names: list[str] | None, harness: str) -> list[str]:
+    if isinstance(names, str):
+        names = [names]
+    out: list[str] = []
+    for raw in names or []:
+        norm = normalize_harbor_task_name(raw, harness)
+        if norm and norm not in out:
+            out.append(norm)
+    return out
+
+
 def _resolve_served_name(profile_id: str) -> str:
     gb = _load_golden_bench()
     recipe = gb.load_recipe(profile_id)
@@ -1205,10 +1225,7 @@ def add_job(
         item["harness"] = harness or "terminal-bench@2.1"
         item["agent"] = agent or "terminus-2"
         item["task_limit"] = int(task_limit) if task_limit is not None else None
-        names = task_names or []
-        if isinstance(names, str):
-            names = [names]
-        item["task_names"] = [str(x).strip() for x in names if str(x).strip()]
+        item["task_names"] = normalize_harbor_task_names(task_names, item["harness"])
         item["claimed_by"] = None
         item["claimed_at"] = None
         item["lease_expires_at"] = None

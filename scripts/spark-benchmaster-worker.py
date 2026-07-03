@@ -23,6 +23,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
 import json
 import os
 import re
@@ -40,7 +42,7 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
-WORKER_VERSION = "20260702a"
+WORKER_VERSION = "20260703a"
 
 
 def _clean_str(value: Any, default: str = "") -> str:
@@ -189,6 +191,14 @@ class SparkClient:
             body["worker_config"] = worker_config
         return self._request("POST", f"/api/benchmaster/jobs/{job_id}/progress", body)
 
+    def upload(self, job_id: str, files: dict[str, dict[str, str]]) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            f"/api/benchmaster/jobs/{job_id}/upload",
+            {"worker_id": self.worker_id, "files": files},
+            timeout=300,
+        )
+
 
 def log(msg: str) -> None:
     print(msg, flush=True)
@@ -271,6 +281,56 @@ def parse_harbor_metrics(text: str) -> dict[str, Any]:
     return metrics
 
 
+def _encode_artifact(raw: bytes, *, gzip_min: int = 65536) -> dict[str, str]:
+    if len(raw) >= gzip_min:
+        packed = gzip.compress(raw)
+        return {"encoding": "gzip+base64", "data": base64.b64encode(packed).decode("ascii")}
+    return {"encoding": "base64", "data": base64.b64encode(raw).decode("ascii")}
+
+
+def collect_harbor_artifacts(work_dir: Path, combined_log: str) -> dict[str, dict[str, str]]:
+    """Gather Harbor logs/results from Mac work dir for upload to Sparky."""
+    work_dir.mkdir(parents=True, exist_ok=True)
+    out: dict[str, dict[str, str]] = {}
+
+    log_bytes = combined_log.encode("utf-8", errors="replace")
+    out["harbor-full.log"] = _encode_artifact(log_bytes)
+
+    jobs_root = work_dir / "jobs"
+    if jobs_root.is_dir():
+        job_dirs = sorted(jobs_root.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+        for job_dir in job_dirs[:3]:
+            if not job_dir.is_dir():
+                continue
+            prefix = f"jobs/{job_dir.name}"
+            result_path = job_dir / "result.json"
+            if result_path.is_file():
+                rel = f"{prefix}/result.json"
+                out[rel] = _encode_artifact(result_path.read_bytes())
+            for path in sorted(job_dir.rglob("*")):
+                if not path.is_file():
+                    continue
+                if path.name.endswith((".log", ".txt", ".json")) and path.stat().st_size <= 512_000:
+                    rel = f"{prefix}/{path.relative_to(job_dir).as_posix()}"
+                    if rel not in out:
+                        out[rel] = _encode_artifact(path.read_bytes(), gzip_min=999999999)
+
+    return out
+
+
+def upload_harbor_artifacts(client: SparkClient, job_id: str, work_dir: Path, combined_log: str) -> dict[str, Any]:
+    files = collect_harbor_artifacts(work_dir, combined_log)
+    if not files:
+        return {"ok": True, "uploaded": [], "total_bytes": 0}
+    log(f"uploading {len(files)} artifact(s) to Sparky for {job_id}")
+    resp = client.upload(job_id, files)
+    if not resp.get("ok"):
+        log(f"artifact upload warning: {resp.get('error')}")
+    else:
+        log(f"uploaded {len(resp.get('uploaded') or [])} file(s), {resp.get('total_bytes')} bytes")
+    return resp
+
+
 def run_harbor(
     *,
     dataset: str,
@@ -323,6 +383,7 @@ def run_harbor(
         env=env,
     )
     combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    (work_dir / "harbor-full.log").write_text(combined, encoding="utf-8", errors="replace")
     metrics = parse_harbor_metrics(combined)
     infra_ok = proc.returncode == 0
     task_ok = infra_ok and not metrics.get("exception_counts") and (metrics.get("reward_mean") or 0) > 0
@@ -333,6 +394,8 @@ def run_harbor(
         "harbor_returncode": proc.returncode,
         "harbor_cmd": harbor_cmd,
         "harbor_log_tail": combined[-8000:],
+        "harbor_log_bytes": len(combined),
+        "_harbor_combined": combined,
         **metrics,
     }
 
@@ -425,6 +488,16 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             "prereq_wait_cap_s": prereq_wait_s,
             "harbor_timeout_cap_s": int(cfg["harbor_timeout_s"]),
         }
+
+        upload_resp = upload_harbor_artifacts(
+            client,
+            job_id,
+            work_dir,
+            str(result.pop("_harbor_combined", "") or ""),
+        )
+        if upload_resp.get("ok"):
+            result["artifacts_uploaded"] = upload_resp.get("uploaded")
+            result["artifacts_total_bytes"] = upload_resp.get("total_bytes")
 
         log(
             f"complete {job_id} task_ok={result.get('task_ok')} "

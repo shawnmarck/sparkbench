@@ -13,6 +13,7 @@ Job types:
 from __future__ import annotations
 
 import argparse
+import base64
 import importlib.util
 import json
 import os
@@ -39,6 +40,8 @@ JOB_TYPES = frozenset({"ctx_ladder", "kv_sweep", "golden_workflow", "perf_sweep"
 GPU_JOB_TYPES = frozenset({"ctx_ladder", "kv_sweep", "golden_workflow", "perf_sweep"})
 PERF_SWEEP_PHASES = ("golden_workflow", "kv_sweep", "ctx_ladder")
 DEFAULT_INTEL_LEASE_SECS = 28800
+MAX_INTEL_ARTIFACT_BYTES = 5 * 1024 * 1024
+MAX_INTEL_ARTIFACT_TOTAL_BYTES = 25 * 1024 * 1024
 HARNESS_DATASETS: dict[str, str] = {
     "terminal-bench@2.1": "terminal-bench/terminal-bench-2-1",
 }
@@ -608,6 +611,96 @@ def intel_progress_update(
     )
     append_event("intel_progress", job_id=job_id, worker_id=worker_id, stage=stage)
     return {"ok": True, "job_id": job_id, "stage": stage}
+
+
+def _safe_artifact_name(name: str) -> str:
+    name = str(name or "").replace("\\", "/").lstrip("/")
+    parts = [p for p in name.split("/") if p and p not in {".", ".."}]
+    if not parts:
+        raise ValueError("invalid artifact name")
+    return "/".join(parts)
+
+
+def intel_upload_artifacts(
+    job_id: str,
+    worker_id: str,
+    files: dict[str, Any],
+) -> dict[str, Any]:
+    with _QUEUE_LOCK:
+        item = find_job(load_queue()["items"], job_id)
+        if not item:
+            raise ValueError(f"unknown job: {job_id}")
+        if str(item.get("type")) != "intel_eval":
+            raise ValueError("not an intel_eval job")
+        if str(item.get("claimed_by") or "") != worker_id:
+            raise ValueError("job not claimed by this worker")
+
+    run_dir = _job_run_dir(job_id)
+    dest_root = run_dir / "mac-artifacts"
+    dest_root.mkdir(parents=True, exist_ok=True)
+    manifest: list[dict[str, Any]] = []
+    total_bytes = 0
+
+    for raw_name, payload in (files or {}).items():
+        safe_name = _safe_artifact_name(raw_name)
+        if isinstance(payload, str):
+            encoding = "base64"
+            data_b64 = payload
+        elif isinstance(payload, dict):
+            encoding = str(payload.get("encoding") or "base64")
+            data_b64 = str(payload.get("data") or "")
+        else:
+            raise ValueError(f"invalid payload for {safe_name}")
+
+        try:
+            raw = base64.b64decode(data_b64, validate=True)
+        except Exception as exc:
+            raise ValueError(f"invalid base64 for {safe_name}: {exc}") from exc
+
+        if encoding == "gzip+base64":
+            import gzip
+
+            try:
+                raw = gzip.decompress(raw)
+            except Exception as exc:
+                raise ValueError(f"invalid gzip for {safe_name}: {exc}") from exc
+        elif encoding != "base64":
+            raise ValueError(f"unsupported encoding: {encoding}")
+
+        if len(raw) > MAX_INTEL_ARTIFACT_BYTES:
+            raise ValueError(f"{safe_name} exceeds {MAX_INTEL_ARTIFACT_BYTES} byte limit")
+        total_bytes += len(raw)
+        if total_bytes > MAX_INTEL_ARTIFACT_TOTAL_BYTES:
+            raise ValueError(f"artifact batch exceeds {MAX_INTEL_ARTIFACT_TOTAL_BYTES} byte limit")
+
+        dest = dest_root / safe_name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(raw)
+        manifest.append(
+            {
+                "name": safe_name,
+                "path": str(dest),
+                "bytes": len(raw),
+                "encoding": encoding,
+            }
+        )
+
+    manifest_doc = {
+        "updated_at": utc_now(),
+        "worker_id": worker_id,
+        "job_id": job_id,
+        "files": manifest,
+        "total_bytes": total_bytes,
+    }
+    (run_dir / "mac-artifacts.json").write_text(json.dumps(manifest_doc, indent=2) + "\n")
+    append_event(
+        "intel_artifacts_uploaded",
+        job_id=job_id,
+        worker_id=worker_id,
+        count=len(manifest),
+        total_bytes=total_bytes,
+    )
+    return {"ok": True, "job_id": job_id, "uploaded": manifest, "total_bytes": total_bytes}
 
 
 def intel_prereq_status(job_id: str) -> dict[str, Any]:
@@ -1422,7 +1515,14 @@ def get_run(job_id: str) -> dict[str, Any]:
     summary = json.loads(summary_path.read_text())
     with _QUEUE_LOCK:
         item = find_job(load_queue()["items"], job_id)
-    return {"ok": True, "job": item, "summary": summary, "run_dir": str(run_dir)}
+    artifacts_manifest = run_dir / "mac-artifacts.json"
+    artifacts = None
+    if artifacts_manifest.is_file():
+        try:
+            artifacts = json.loads(artifacts_manifest.read_text())
+        except json.JSONDecodeError:
+            artifacts = None
+    return {"ok": True, "job": item, "summary": summary, "run_dir": str(run_dir), "artifacts": artifacts}
 
 
 def tail_events(since: int = 0, limit: int = 200) -> list[dict[str, Any]]:
@@ -1599,6 +1699,16 @@ def api_dispatch(method: str, path: str, body: dict[str, Any] | None) -> tuple[i
                 job_id,
                 str(body.get("worker_id") or ""),
                 extend_secs=body.get("extend_secs"),
+            )
+        except ValueError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+
+    if method == "POST" and job_id and job_action == "upload":
+        try:
+            return 200, intel_upload_artifacts(
+                job_id,
+                str(body.get("worker_id") or ""),
+                body.get("files") or {},
             )
         except ValueError as exc:
             return 400, {"ok": False, "error": str(exc)}

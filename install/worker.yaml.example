@@ -36,3 +36,6 @@ poll_interval_s: 30
 
 # Local OpenAI-compatible gateway on Sparky ignores this; Harbor/LiteLLM still wants a key.
 openai_api_key: local
+
+# After Harbor, worker uploads logs + jobs/*/result.json to Sparky:
+#   run/benchmaster/runs/<job_id>/mac-artifacts/

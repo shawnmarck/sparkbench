@@ -43,7 +43,53 @@ except ImportError:
     yaml = None  # type: ignore[assignment]
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sparkbench" / "worker.yaml"
-WORKER_VERSION = "20260703e"
+WORKER_VERSION = "20260703f"
+
+
+def parse_harbor_job_results(work_dir: Path) -> dict[str, Any]:
+    """Aggregate pass/total from Harbor job result.json when present."""
+    jobs_root = work_dir / "jobs"
+    if not jobs_root.is_dir():
+        return {}
+    job_dirs = sorted(jobs_root.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+    for job_dir in job_dirs:
+        if not job_dir.is_dir():
+            continue
+        result_path = job_dir / "result.json"
+        if not result_path.is_file():
+            continue
+        try:
+            doc = json.loads(result_path.read_text())
+        except json.JSONDecodeError:
+            continue
+        stats = doc.get("stats") or {}
+        total = stats.get("n_total_trials")
+        if total is None:
+            total = (stats.get("n_completed_trials") or 0) + (stats.get("n_errored_trials") or 0)
+        total = int(total or 0)
+        if total <= 0:
+            continue
+        passed = 0
+        for eval_block in (stats.get("evals") or {}).values():
+            reward_stats = (eval_block or {}).get("reward_stats") or {}
+            rewards = (reward_stats.get("reward") or {})
+            for reward_val, trial_ids in rewards.items():
+                try:
+                    if float(reward_val) > 0:
+                        passed += len(trial_ids or [])
+                except (TypeError, ValueError):
+                    pass
+        if passed == 0 and stats.get("n_errored_trials") is not None:
+            passed = max(0, total - int(stats.get("n_errored_trials") or 0))
+        metrics: dict[str, Any] = {
+            "passed": passed,
+            "total": total,
+            "pass_rate": round(passed / max(total, 1), 4),
+        }
+        if stats.get("n_errored_trials") is not None:
+            metrics["errored"] = int(stats.get("n_errored_trials"))
+        return metrics
+    return {}
 
 
 def normalize_harbor_task_name(name: str, harness: str = "terminal-bench@2.1") -> str:
@@ -439,12 +485,19 @@ def run_harbor(
     if timed_out:
         out["error"] = f"harbor subprocess timed out after {timeout_s}s"
         out["primary_exception"] = "HarborSubprocessTimeout"
+    job_metrics = parse_harbor_job_results(work_dir)
+    if job_metrics:
+        out.update(job_metrics)
+    if out.get("total") and int(out["total"]) > 1:
+        out["task_ok"] = infra_ok
+        out["ok"] = infra_ok
     return out
 
 
 def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> None:
     job_id = str(job["id"])
-    lease_secs = int(cfg.get("intel_lease_secs") or 28800)
+    lease_secs = int(job.get("intel_lease_secs") or cfg.get("intel_lease_secs") or 28800)
+    harbor_timeout_s = int(job.get("harbor_timeout_s") or cfg.get("harbor_timeout_s") or 14400)
     prereq_wait_s = int(cfg.get("prereq_wait_s") or 10800)
     t0 = time.time()
     log(f"claiming {job_id} profile={job.get('profile_id')}")
@@ -452,6 +505,8 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
     if not claim.get("ok"):
         log(f"claim failed: {claim.get('error')}")
         return
+    lease_secs = int(claim.get("intel_lease_secs") or job.get("intel_lease_secs") or lease_secs)
+    harbor_timeout_s = int(claim.get("harbor_timeout_s") or job.get("harbor_timeout_s") or harbor_timeout_s)
     t_claim = time.time()
 
     try:
@@ -491,7 +546,7 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             "timeout_multiplier": float(cfg.get("timeout_multiplier") or 8),
             "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 8),
             "prereq_wait_s": prereq_wait_s,
-            "harbor_timeout_s": int(cfg["harbor_timeout_s"]),
+            "harbor_timeout_s": harbor_timeout_s,
             "intel_lease_secs": lease_secs,
         }
         t_harbor_start = time.time()
@@ -516,7 +571,7 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             n_concurrent=int(cfg["n_concurrent"]),
             task_limit=int(task_limit) if task_limit is not None else None,
             task_names=[str(x) for x in task_names],
-            timeout_s=int(cfg["harbor_timeout_s"]),
+            timeout_s=harbor_timeout_s,
             work_dir=work_dir,
             timeout_multiplier=float(cfg.get("timeout_multiplier") or 8),
             agent_timeout_multiplier=float(cfg.get("agent_timeout_multiplier") or 8),
@@ -536,7 +591,7 @@ def run_job(client: SparkClient, cfg: dict[str, Any], job: dict[str, Any]) -> No
             "timeout_multiplier": float(cfg.get("timeout_multiplier") or 8),
             "agent_timeout_multiplier": float(cfg.get("agent_timeout_multiplier") or 8),
             "prereq_wait_cap_s": prereq_wait_s,
-            "harbor_timeout_cap_s": int(cfg["harbor_timeout_s"]),
+            "harbor_timeout_cap_s": harbor_timeout_s,
         }
 
         upload_resp = upload_harbor_artifacts(

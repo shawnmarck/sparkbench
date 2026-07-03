@@ -44,7 +44,10 @@ MAX_INTEL_ARTIFACT_BYTES = 5 * 1024 * 1024
 MAX_INTEL_ARTIFACT_TOTAL_BYTES = 25 * 1024 * 1024
 HARNESS_DATASETS: dict[str, str] = {
     "terminal-bench@2.1": "terminal-bench/terminal-bench-2-1",
+    "swe-bench@verified": "swe-bench/swe-bench-verified",
 }
+DEFAULT_SUITE_HARBOR_TIMEOUT_S = 259200  # 72h — full TB/SWE suites on Mac
+DEFAULT_SUITE_INTEL_LEASE_S = 280800  # 78h
 RESULTS_FILE = ROOT / "data" / "benchmaster-results.yaml"
 
 _QUEUE_LOCK = threading.RLock()
@@ -541,6 +544,8 @@ def claim_job(job_id: str, worker_id: str, *, lease_secs: int | None = None) -> 
         "agent": str(item.get("agent") or "terminus-2"),
         "task_limit": item.get("task_limit"),
         "task_names": item.get("task_names") or [],
+        "harbor_timeout_s": item.get("harbor_timeout_s"),
+        "intel_lease_secs": item.get("intel_lease_secs"),
     }
 
 
@@ -833,7 +838,11 @@ def complete_intel_job(job_id: str, worker_id: str, result: dict[str, Any]) -> d
 
     eval_ok = result.get("task_ok")
     if eval_ok is None:
-        eval_ok = not result.get("exception_counts") and (result.get("reward_mean") or 0) > 0
+        total = int(result.get("total") or 0)
+        if total > 1:
+            eval_ok = bool(result.get("infrastructure_ok", result.get("harbor_returncode") == 0))
+        else:
+            eval_ok = not result.get("exception_counts") and (result.get("reward_mean") or 0) > 0
     summary = {
         "job_id": job_id,
         "type": "intel_eval",
@@ -1193,6 +1202,8 @@ def add_job(
     agent: str | None = None,
     task_limit: int | None = None,
     task_names: list[str] | None = None,
+    harbor_timeout_s: int | None = None,
+    intel_lease_secs: int | None = None,
 ) -> dict[str, Any]:
     if job_type not in JOB_TYPES:
         raise ValueError(f"unsupported job type: {job_type}")
@@ -1226,6 +1237,10 @@ def add_job(
         item["agent"] = agent or "terminus-2"
         item["task_limit"] = int(task_limit) if task_limit is not None else None
         item["task_names"] = normalize_harbor_task_names(task_names, item["harness"])
+        if harbor_timeout_s is not None:
+            item["harbor_timeout_s"] = int(harbor_timeout_s)
+        if intel_lease_secs is not None:
+            item["intel_lease_secs"] = int(intel_lease_secs)
         item["claimed_by"] = None
         item["claimed_at"] = None
         item["lease_expires_at"] = None
@@ -1763,6 +1778,8 @@ def api_dispatch(method: str, path: str, body: dict[str, Any] | None) -> tuple[i
                 agent=body.get("agent"),
                 task_limit=body.get("task_limit"),
                 task_names=body.get("task_names"),
+                harbor_timeout_s=body.get("harbor_timeout_s"),
+                intel_lease_secs=body.get("intel_lease_secs"),
             )
             return 200, {"ok": True, "item": item}
         except ValueError as exc:

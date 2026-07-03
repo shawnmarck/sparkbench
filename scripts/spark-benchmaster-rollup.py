@@ -58,7 +58,7 @@ def perf_from_recipe(recipe: dict[str, Any]) -> dict[str, Any] | None:
 def intel_from_runs(profile_id: str) -> dict[str, Any] | None:
     if not RUNS.is_dir():
         return None
-    best: dict[str, Any] | None = None
+    best_by_harness: dict[str, dict[str, Any]] = {}
     for run_dir in sorted(RUNS.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
         result_path = run_dir / "intel-result.json"
         if not result_path.is_file():
@@ -66,16 +66,19 @@ def intel_from_runs(profile_id: str) -> dict[str, Any] | None:
         row = json.loads(result_path.read_text())
         if str(row.get("profile_id") or "") != profile_id:
             continue
-        if best is None:
-            best = row
-            break
-    if not best:
+        harness = str(row.get("harness") or "terminal-bench@2.1")
+        key = harness.split("@")[0]
+        total = int(row.get("total") or 0)
+        prev = best_by_harness.get(key)
+        if prev is None or total >= int(prev.get("total") or 0):
+            best_by_harness[key] = row
+    if not best_by_harness:
         return None
-    harness = str(best.get("harness") or "terminal-bench@2.1")
-    key = harness.split("@")[0]
-    version = harness.split("@")[-1] if "@" in harness else harness
-    return {
-        key: {
+    intel: dict[str, Any] = {}
+    for key, best in best_by_harness.items():
+        harness = str(best.get("harness") or "terminal-bench@2.1")
+        version = harness.split("@")[-1] if "@" in harness else harness
+        intel[key] = {
             "version": version,
             "harness": harness,
             "agent": best.get("agent"),
@@ -83,10 +86,12 @@ def intel_from_runs(profile_id: str) -> dict[str, Any] | None:
             "pass_rate": best.get("pass_rate"),
             "passed": best.get("passed"),
             "total": best.get("total"),
+            "reward_mean": best.get("reward_mean"),
+            "task_ok": best.get("task_ok"),
             "measured_at": best.get("measured_at"),
             "job_id": best.get("job_id"),
         }
-    }
+    return intel
 
 
 def collect_recipes() -> list[tuple[Path, dict[str, Any]]]:

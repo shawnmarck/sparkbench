@@ -412,6 +412,23 @@ models:
     subpath: hf
     engine: vllm
     hf_repo: google/diffusiongemma-26B-A4B-it
+- id: s-batman/ornith-1.0-35b-nvfp4
+  lab: s-batman
+  name: Ornith 1.0 35B NVFP4 (MTP GGUF)
+  slug: ornith-1.0-35b-nvfp4
+  hf_repo: s-batman/Ornith-1.0-35B-NVFP4-MTP-GGUF
+  param_b: 35
+  capabilities:
+  - general
+  - moe
+  - gguf
+  - llamacpp
+  why_downloaded: "Community MTP GGUF variant — bench v2 golden workflow 2026-07-08.\n"
+  variants:
+  - format: gguf
+    subpath: mtp-gguf
+    engine: llamacpp
+    hf_repo: s-batman/Ornith-1.0-35B-NVFP4-MTP-GGUF
 - id: deepreinforce-ai/ornith-1.0-35b
   lab: deepreinforce-ai
   name: ornith-1.0-35b (llamacpp)

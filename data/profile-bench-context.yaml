@@ -59,3 +59,5 @@ profiles:
     ctx: 262144
   deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr:
     ctx: 262144
+  s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2:
+    ctx: 196608

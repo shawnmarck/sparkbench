@@ -390,3 +390,33 @@ profiles:
       depth: 0
       pp_tok_s: 6116.0
       tg_tok_s: 99.3
+  s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2:
+    tok_s: 8.7
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-07-08T04:37:24.257332+00:00'
+    note: "golden 196k/q8_0 @ 8.7 tok/s \u2014 fill~133k \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 132711
+    tool_roundtrip_ok: true
+  deepreinforce-ai-ornith-1-0-35b-fp8-eugr:
+    tok_s: 10.5
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-02T14:26:29.218661+00:00'
+    note: "golden 262k/fp8 @ 10.5 tok/s \u2014 fill~177k \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 176947
+    tool_roundtrip_ok: true
+  deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr:
+    tok_s: 10.9
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-02T14:39:36.958559+00:00'
+    note: "golden 262k/fp8 @ 10.9 tok/s \u2014 fill~177k \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 176947
+    tool_roundtrip_ok: true

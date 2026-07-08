@@ -181,6 +181,15 @@ models:
     note: "golden 256k/q8_0 @ 28.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
       \ tool_ok=True"
     engine: llamacpp
+  s-batman/ornith-1.0-35b-nvfp4:
+    spark_status: works
+    tok_s: 8.7
+    tok_s_engine: llamacpp
+    tok_s_profile: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
+    updated_at: '2026-07-08T04:37:24.257332+00:00'
+    engine: llamacpp
+    note: "golden 196k/q8_0 @ 8.7 tok/s \u2014 fill~133k \u2014 bench-agent-v2 \u2014\
+      \ tool_ok=True"
   empero-ai/qwythos-9b-claude-mythos-5-1m:
     tok_s: 12.4
     tok_s_engine: eugr

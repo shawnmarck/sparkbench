@@ -1,0 +1,224 @@
+id: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
+name: ornith-1.0-35b-nvfp4 MTP (llama.cpp)
+inventory_path: s-batman/ornith-1.0-35b-nvfp4
+engine: llamacpp
+tier: heavy
+lifecycle: testing
+served_name: ornith-1.0-35b-nvfp4-mtp
+port: 8081
+model: /models/s-batman/ornith-1.0-35b-nvfp4/mtp-gguf/ornith-1.0-35b-NVFP4-MTP.gguf
+tags:
+- lab
+- llamacpp
+- mtp
+- nvfp4
+mtp:
+  method: draft-mtp
+  spec_draft_n_max: 3
+context:
+  default: 262144
+  native: 262144
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Optimal from bench (6.9 tok/s @ 262144)
+      ctx: 262144
+      kv: q8_0
+    batman_spark:
+      label: "s-batman DGX Spark production (3\xD7~200k slots)"
+      ctx: 600000
+      kv: q8_0
+      extended: true
+      np: 3
+    optimal:
+      label: Optimal from bench (6.9 tok/s @ 262144)
+      ctx: 262144
+      kv: q8_0
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-07-08T04:37:24.257332+00:00'
+    peak_cell:
+      preset: batman_spark
+      pool_ctx: 600000
+      np: 3
+      kv: q8_0
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 200192
+      fill_target: 135129
+      tok_s: 7.2
+      fill_estimated: 135819
+      prefill_prompt_tokens: 113481
+      decode_tokens: 766
+      decode_elapsed_s: 106.41
+      tool_ok: true
+      method: bench-agent-v2
+    golden_cell:
+      ctx: 196608
+      kv: q8_0
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 8.7
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 932
+      decode_elapsed_s: 106.87
+      tool_ok: true
+      method: bench-agent-v2
+    kv_sweep:
+    - ctx: 196608
+      kv: q8_0
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 8.7
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 932
+      decode_elapsed_s: 106.91
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 196608
+      kv: q4_0
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 9.0
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 969
+      decode_elapsed_s: 107.19
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 196608
+      kv: f16
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 8.0
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 788
+      decode_elapsed_s: 98.52
+      tool_ok: true
+      method: bench-agent-v2
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-07-08T04:27:14.709198+00:00'
+      golden_ctx: 196608
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: q8_0
+      max_viable_ctx: 262144
+      best_tok_s_ctx: 262144
+      rungs:
+      - ctx: 262144
+        kv: q8_0
+        fill_target: 176947
+        fill_ratio: 0.75
+        status: ok
+        loaded_ctx: 262144
+        tok_s: 6.9
+        fill_estimated: 177469
+        prefill_prompt_tokens: 148586
+        decode_tokens: 1056
+        decode_elapsed_s: 152.59
+        tool_ok: true
+        method: bench-agent-v2
+  kv_sweep:
+    version: '1.0'
+    tested_at: '2026-07-08T04:22:36.316303+00:00'
+    golden_ctx: 196608
+    fill_ratio: 0.75
+    results:
+    - ctx: 196608
+      kv: q8_0
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 8.7
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 932
+      decode_elapsed_s: 106.91
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 196608
+      kv: q4_0
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 9.0
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 969
+      decode_elapsed_s: 107.19
+      tool_ok: true
+      method: bench-agent-v2
+    - ctx: 196608
+      kv: f16
+      fill_target: 132711
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 196608
+      tok_s: 8.0
+      fill_estimated: 133369
+      prefill_prompt_tokens: 111416
+      decode_tokens: 788
+      decode_elapsed_s: 98.52
+      tool_ok: true
+      method: bench-agent-v2
+  ctx_ladder: *id001
+llamacpp_args:
+- -t
+- '20'
+- -ngl
+- '99'
+- -fa
+- '1'
+- --no-mmap
+- --mlock
+- --no-warmup
+- --jinja
+- -cb
+- -ctk
+- q8_0
+- -ctv
+- q8_0
+- --cache-reuse
+- '256'
+- -ctxcp
+- '256'
+- -cms
+- '4096'
+- -b
+- '2048'
+- -ub
+- '2048'
+- -c
+- '600000'
+- -np
+- '3'
+- --chat-template-file
+- /opt/spark/run/ornith-chat_template.jinja
+- --spec-type
+- draft-mtp
+- --spec-draft-n-max
+- '3'
+- --reasoning-budget
+- '2048'
+- --reasoning-budget-message
+- I have thought enough. Let me give my answer now.
+notes: "s-batman Ornith NVFP4+MTP \u2014 llamacpp args match HF README DGX Spark block\
+  \ (draft-mtp only, no ngram-mod). Bench uses presets.golden ctx=196608; production\
+  \ play uses -c 600000 -np 3 (~93 tok/s combined per author). Single-file grafted\
+  \ MTP GGUF.\nOptimal preset: ctx=262144 kv=q8_0 tok_s=6.9 (bench v2)."
+updated_at: '2026-07-08T03:45:00+00:00'

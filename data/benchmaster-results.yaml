@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-07-02T14:47:23.151275+00:00'
+updated_at: '2026-07-08T19:29:51.202401+00:00'
 models:
   deepreinforce-ai/ornith-1.0-35b:
     inventory_path: deepreinforce-ai/ornith-1.0-35b
@@ -7,7 +7,7 @@ models:
     - quant: fp8
       profile_id: deepreinforce-ai-ornith-1-0-35b-fp8-eugr
       engine: eugr
-      lifecycle: testing
+      lifecycle: works
       perf:
         fill_ratio: 0.75
         updated_at: '2026-07-02T14:26:29.218661+00:00'
@@ -220,7 +220,7 @@ models:
     - quant: nvfp4
       profile_id: deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr
       engine: eugr
-      lifecycle: testing
+      lifecycle: works
       perf:
         fill_ratio: 0.75
         updated_at: '2026-07-02T14:39:36.958559+00:00'
@@ -1632,3 +1632,90 @@ models:
           max_viable_ctx: null
           best_tok_s_ctx: null
           rungs: []
+  s-batman/ornith-1.0-35b-nvfp4:
+    inventory_path: s-batman/ornith-1.0-35b-nvfp4
+    quants:
+    - quant: nvfp4
+      profile_id: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
+      engine: llamacpp
+      lifecycle: testing
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-07-08T04:37:24.257332+00:00'
+        golden_cell:
+          ctx: 196608
+          kv: q8_0
+          fill_target: 132711
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 196608
+          tok_s: 8.7
+          fill_estimated: 133369
+          prefill_prompt_tokens: 111416
+          decode_tokens: 932
+          decode_elapsed_s: 106.87
+          tool_ok: true
+          method: bench-agent-v2
+        kv_sweep:
+        - ctx: 196608
+          kv: q8_0
+          fill_target: 132711
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 196608
+          tok_s: 8.7
+          fill_estimated: 133369
+          prefill_prompt_tokens: 111416
+          decode_tokens: 932
+          decode_elapsed_s: 106.91
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 196608
+          kv: q4_0
+          fill_target: 132711
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 196608
+          tok_s: 9.0
+          fill_estimated: 133369
+          prefill_prompt_tokens: 111416
+          decode_tokens: 969
+          decode_elapsed_s: 107.19
+          tool_ok: true
+          method: bench-agent-v2
+        - ctx: 196608
+          kv: f16
+          fill_target: 132711
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 196608
+          tok_s: 8.0
+          fill_estimated: 133369
+          prefill_prompt_tokens: 111416
+          decode_tokens: 788
+          decode_elapsed_s: 98.52
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-07-08T04:27:14.709198+00:00'
+          golden_ctx: 196608
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: q8_0
+          max_viable_ctx: 262144
+          best_tok_s_ctx: 262144
+          rungs:
+          - ctx: 262144
+            kv: q8_0
+            fill_target: 176947
+            fill_ratio: 0.75
+            status: ok
+            loaded_ctx: 262144
+            tok_s: 6.9
+            fill_estimated: 177469
+            prefill_prompt_tokens: 148586
+            decode_tokens: 1056
+            decode_elapsed_s: 152.59
+            tool_ok: true
+            method: bench-agent-v2

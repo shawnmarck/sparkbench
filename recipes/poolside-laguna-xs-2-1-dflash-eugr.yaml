@@ -1,0 +1,77 @@
+id: poolside-laguna-xs-2-1-dflash-eugr
+name: Laguna XS 2.1 DFlash (eugr)
+inventory_path: poolside/laguna-xs-2.1
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: laguna-xs-2.1-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- poolside
+- coder
+speculative:
+  method: dflash
+  sidecar_inventory: poolside/laguna-xs-2.1-dflash
+  sidecar_path: /models/poolside/laguna-xs-2.1-dflash/dflash
+  num_speculative_tokens: 15
+  target_weight_format: hf
+eugr_recipe: /opt/spark/services/eugr-poolside-laguna-xs-2-1-dflash-eugr.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: auto
+  presets:
+    golden:
+      label: Native max (262k)
+      ctx: 262144
+      kv: auto
+    smoke:
+      label: Load smoke (32k)
+      ctx: 32768
+      kv: auto
+  bench_matrix:
+    version: '1.0'
+    fill_ratio: 0.75
+    updated_at: '2026-07-08T20:40:21.850667+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: auto
+      fill_target: 176947
+      fill_ratio: 0.75
+      status: ok
+      loaded_ctx: 262144
+      tok_s: 11.7
+      tool_ok: true
+      method: bench-agent-v2
+    ctx_ladder: &id001
+      version: '1.0'
+      tested_at: '2026-07-08T20:40:21.850667+00:00'
+      golden_ctx: 262144
+      native_ctx: 262144
+      fill_ratio: 0.75
+      kv: auto
+      max_viable_ctx: 262144
+      best_tok_s_ctx: 32768
+      rungs:
+      - ctx: 32768
+        kv: auto
+        status: ok
+        tok_s: 13.7
+        method: bench-agent-v2
+      - ctx: 131072
+        kv: auto
+        status: ok
+        tok_s: 11.6
+        method: bench-agent-v2
+      - ctx: 262144
+        kv: auto
+        status: ok
+        tok_s: 11.7
+        method: bench-agent-v2
+  ctx_ladder: *id001
+notes: Laguna XS 2.1 + poolside/Laguna-XS-2.1-DFlash drafter. Requires vLLM Laguna
+  DFlash support (vllm#46853). Scaffolded 2026-07-08 on sparky.
+promoted_at: '2026-07-09T21:55:35.459000+00:00'

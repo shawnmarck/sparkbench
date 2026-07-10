@@ -3,7 +3,7 @@ name: deepseek-v4-flash (DwarfStar)
 inventory_path: antirez/deepseek-v4-flash
 engine: ds4
 tier: heavy
-lifecycle: works
+lifecycle: failed
 served_name: deepseek-v4-flash
 port: 8000
 tags:
@@ -18,7 +18,7 @@ ds4_args:
 notes: "DwarfStar scaffold 2026-06-22 from /models/antirez/deepseek-v4-flash. Mark\
   \ testing, switch, bench, then promote. Open WebUI: use backend :8002/v1 (chat proxy)\
   \ or model deepseek-chat \u2014 not raw deepseek-v4-flash."
-updated_at: '2026-06-22T04:52:30.912272+00:00'
+updated_at: '2026-07-10T15:39:52.400850+00:00'
 promoted_at: '2026-06-27T03:49:28.441963+00:00'
 context:
   default: 1048576
@@ -60,3 +60,4 @@ context:
       fill_ratio: 0.75
       status: load_fail
       error: /v1/models not ready at ctx=1048576 kv=q8_0 within 600s
+last_error: 'PBM loop2 failed: failed_pbm'

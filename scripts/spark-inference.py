@@ -75,11 +75,22 @@ VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
 INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
 BENCH_METHODS = frozenset({"bench", "bench-agent", "bench-agent-v2"})
+PBM_FILE = ROOT / "data" / "perfbench-metrics.yaml"
+PBM_DISPLAY_FILL = "4k"
 LIFECYCLE_DRAFT = "draft"
 LIFECYCLE_TESTING = "testing"
 LIFECYCLE_PRODUCTION = "production"  # legacy; prefer works
 LIFECYCLE_WORKS = "works"
-LIFECYCLE_VALID = frozenset({LIFECYCLE_DRAFT, LIFECYCLE_TESTING, LIFECYCLE_PRODUCTION, LIFECYCLE_WORKS})
+LIFECYCLE_FAILED = "failed"
+LIFECYCLE_VALID = frozenset(
+    {
+        LIFECYCLE_DRAFT,
+        LIFECYCLE_TESTING,
+        LIFECYCLE_PRODUCTION,
+        LIFECYCLE_WORKS,
+        LIFECYCLE_FAILED,
+    }
+)
 LIFECYCLE_LIVE = frozenset({LIFECYCLE_PRODUCTION, LIFECYCLE_WORKS})
 
 
@@ -1112,7 +1123,8 @@ def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
     path = resolve_recipe_path(profile_id)
     if path is None:
         raise RuntimeError(f"unknown profile: {profile_id}")
-    if path.parent == RECIPES_DIR and lifecycle not in LIFECYCLE_LIVE:
+    # recipes/ holds live + failed; drafts/ holds draft/testing until promote.
+    if path.parent == RECIPES_DIR and lifecycle == LIFECYCLE_DRAFT:
         raise RuntimeError("production recipes live in recipes/ — use discard to remove")
     recipe = load_yaml(path)
     recipe["lifecycle"] = lifecycle
@@ -1482,6 +1494,38 @@ def load_benchmarks() -> dict[str, Any]:
     return profiles
 
 
+_PBM_CACHE: tuple[float, dict[str, Any]] | None = None
+
+
+def load_pbm_profiles() -> dict[str, Any]:
+    """profile_id → perfbench-metrics entry."""
+    global _PBM_CACHE
+    mtime = PBM_FILE.stat().st_mtime if PBM_FILE.is_file() else 0.0
+    if _PBM_CACHE is not None and _PBM_CACHE[0] == mtime:
+        return _PBM_CACHE[1]
+    if not PBM_FILE.is_file():
+        profiles: dict[str, Any] = {}
+    else:
+        data = load_yaml(PBM_FILE)
+        raw = data.get("profiles") or {}
+        profiles = raw if isinstance(raw, dict) else {}
+    _PBM_CACHE = (mtime, profiles)
+    return profiles
+
+
+def pbm_display_tok_s(profile_id: str) -> float | None:
+    entry = load_pbm_profiles().get(profile_id)
+    if not isinstance(entry, dict):
+        return None
+    val = entry.get(f"tok_s_{PBM_DISPLAY_FILL}")
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
 def save_benchmarks(profiles: dict[str, Any]) -> None:
     BENCHMARKS_FILE.parent.mkdir(parents=True, exist_ok=True)
     BENCHMARKS_FILE.write_text(
@@ -1797,7 +1841,15 @@ def recipe_public(
     mtp = recipe.get("mtp")
     if isinstance(mtp, dict) and mtp:
         out["mtp"] = mtp
-    if bench and bench.get("tok_s") is not None and bench.get("method") in BENCH_METHODS:
+    pbm_tok = pbm_display_tok_s(profile_id) if profile_id else None
+    if pbm_tok is not None:
+        out["tok_s"] = pbm_tok
+        out["tok_s_method"] = "perfbench-metrics"
+        out["pbm_tok_s_4k"] = pbm_tok
+        pbm_entry = load_pbm_profiles().get(profile_id) or {}
+        if pbm_entry.get("measured_at"):
+            out["tok_s_measured_at"] = pbm_entry.get("measured_at")
+    elif bench and bench.get("tok_s") is not None and bench.get("method") in BENCH_METHODS:
         out["tok_s"] = bench.get("tok_s")
         out["tok_s_method"] = bench.get("method")
         out["tok_s_measured_at"] = bench.get("measured_at")
@@ -1810,6 +1862,20 @@ def recipe_public(
                 out["bench_run_count"] = len(runs) if isinstance(runs, list) else 0
             else:
                 out["bench_run_count"] = bench_history_count(profile_id)
+    if (
+        bench
+        and bench.get("latest_run_id")
+        and "latest_run_id" not in out
+        and bench.get("method") in BENCH_METHODS
+    ):
+        out["latest_run_id"] = bench.get("latest_run_id")
+    if profile_id and "bench_run_count" not in out:
+        if history_profiles is not None:
+            prof = history_profiles.get(profile_id) or {}
+            runs = prof.get("runs") or []
+            out["bench_run_count"] = len(runs) if isinstance(runs, list) else 0
+        else:
+            out["bench_run_count"] = bench_history_count(profile_id)
     return out
 
 

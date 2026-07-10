@@ -4,7 +4,7 @@ catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
 engine: eugr
 tier: heavy
-lifecycle: testing
+lifecycle: works
 eugr_recipe: /opt/spark/services/eugr-qwen36-35b-a3b-mtp-eugr.yaml
 served_name: nvidia/Qwen3.6-35B-A3B-NVFP4
 port: 8000
@@ -57,3 +57,4 @@ notes: "NVFP4 Qwen3.6-35B-A3B with native MTP speculative decoding (262k ctx).\n
   \ modelopt, fp8 KV, gpu-mem 0.65, qwen3_coder parser, async-scheduling.\nCompanion\
   \ to golden opencode-qwen36-250k \u2014 does not replace it.\n"
 updated_at: '2026-06-29T07:52:24.580768+00:00'
+promoted_at: '2026-07-08T20:41:28.974119+00:00'

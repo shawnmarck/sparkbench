@@ -1,0 +1,14 @@
+id: nvidia-qwen3-6-27b-eugr-2
+name: qwen3.6-27b (eugr)
+inventory_path: nvidia/qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: qwen3.6-27b
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-07-07 from /models/nvidia/qwen3.6-27b. Mark testing, switch,
+  bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-nvidia-qwen3-6-27b-eugr-2.yaml

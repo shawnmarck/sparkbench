@@ -1,0 +1,35 @@
+id: qwen-qwen3-6-35b-a3b-dflash-eugr
+name: qwen3.6-35b-a3b DFlash (eugr)
+inventory_path: qwen/qwen3.6-35b-a3b
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: qwen3.6-35b-a3b-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- sidecar
+speculative:
+  method: dflash
+  sidecar_inventory: z-lab/qwen3.6-35b-a3b
+  sidecar_path: /models/z-lab/qwen3.6-35b-a3b/dflash
+  num_speculative_tokens: 15
+  target_weight_format: fp8
+  blocked: true
+  blocked_reason: 'DFlash + Qwen3.6 MoE hits KV cache page-size mismatch in current
+    vLLM (hybrid GDN/attention + drafter); needs vLLM PR #40898 or SGLang. Use dense
+    27B DFlash or MoE baseline without DFlash.'
+eugr_recipe: /opt/spark/services/eugr-qwen-qwen3-6-35b-a3b-dflash-eugr.yaml
+notes: 'DFlash sidecar scaffold 2026-06-29: target /models/qwen/qwen3.6-35b-a3b, drafter
+  /models/z-lab/qwen3.6-35b-a3b/dflash. No prefix caching. Bench vs baseline before
+  promote.
+
+  [triage] Official Qwen3.6-35B-A3B DFlash/dense path failed overnight bench (failed:qwen-qwen3-6-35b-a3b-dflash-eugr).
+  nvidia/qwen3.6-35b-a3b @58.9 remains the working 35B golden.
+
+  [triage] Overnight failed: failed'
+updated_at: '2026-07-10T07:45:33.163262+00:00'
+last_error: 'Overnight failed: failed'
+last_error_at: '2026-07-10T14:30:26.664381+00:00'

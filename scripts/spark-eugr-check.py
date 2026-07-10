@@ -100,14 +100,17 @@ def docker_image_info() -> dict[str, str]:
 
 
 def load_state() -> dict[str, Any]:
+    candidates: list[dict[str, Any]] = []
     for path in (STATE_FILE, PENDING_STATE_FILE):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(data, dict) and data:
-                return data
+                candidates.append(data)
         except (OSError, json.JSONDecodeError):
             continue
-    return {}
+    if not candidates:
+        return {}
+    return max(candidates, key=lambda d: str(d.get("promoted_at") or ""))
 
 
 def save_state(state: dict[str, Any]) -> None:

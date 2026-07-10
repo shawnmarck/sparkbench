@@ -328,14 +328,25 @@ def context_presets(recipe: dict[str, Any]) -> list[dict[str, Any]]:
         for pid, cfg in block["presets"].items():
             if not isinstance(cfg, dict):
                 continue
-            out.append(
-                {
-                    "id": pid,
-                    "label": str(cfg.get("label") or pid),
-                    "ctx": int(cfg["ctx"]),
-                    "kv": str(cfg.get("kv") or "auto"),
-                }
-            )
+            entry: dict[str, Any] = {
+                "id": pid,
+                "label": str(cfg.get("label") or pid),
+                "ctx": int(cfg["ctx"]),
+                "kv": str(cfg.get("kv") or "auto"),
+            }
+            if cfg.get("extended"):
+                entry["extended"] = True
+            if cfg.get("np") is not None:
+                entry["np"] = int(cfg["np"])
+            for key in (
+                "gpu_memory_utilization",
+                "max_num_seqs",
+                "max_num_batched_tokens",
+                "prefix_caching",
+            ):
+                if cfg.get(key) is not None:
+                    entry[key] = cfg[key]
+            out.append(entry)
         if out:
             return out
     default = default_context(recipe) or 32768
@@ -429,16 +440,18 @@ def resolve_launch_ctx_kv(
     preset: str | None = None,
 ) -> tuple[int, str]:
     presets = {p["id"]: p for p in enriched_context_presets(recipe)}
+    extended = False
     if preset and preset in presets:
         p = presets[preset]
         ctx = int(p["ctx"])
         kv = str(p.get("kv") or "auto")
+        extended = bool(p.get("extended"))
     if ctx is None:
         ctx = default_context(recipe) or 32768
     if not kv:
         kv = default_kv(recipe)
     native = native_context(recipe)
-    if native:
+    if native and not extended:
         ctx = min(int(ctx), int(native))
     ctx = max(4096, int(ctx))
     return ctx, str(kv)
@@ -459,13 +472,43 @@ def _set_arg(args: list[str], flag: str, value: str) -> list[str]:
     return out
 
 
-def materialize_llama_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
+def _get_arg(args: list[str], flag: str) -> str | None:
+    for i, a in enumerate(args):
+        if a == flag and i + 1 < len(args):
+            return str(args[i + 1])
+    return None
+
+
+def materialize_llama_recipe(
+    recipe: dict[str, Any],
+    ctx: int,
+    kv: str,
+    *,
+    preset: str | None = None,
+) -> Path:
     LLAMA_LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
     out = copy.deepcopy(recipe)
-    args = [str(a) for a in (out.get("llamacpp_args") or ["-ngl", "999", "-fa", "1", "--no-mmap", "-c", "32768"])]
-    args = _set_arg(args, "-c", str(ctx))
+    base_args = [str(a) for a in (out.get("llamacpp_args") or ["-ngl", "999", "-fa", "1", "--no-mmap", "-c", "32768"])]
+    base_c = _get_arg(base_args, "-c")
+    base_np = _get_arg(base_args, "-np") or "1"
+    preset_cfg = {p["id"]: p for p in context_presets(recipe)}.get(preset or "")
+    extended = bool(preset_cfg and preset_cfg.get("extended"))
+
+    args = list(base_args)
+    if extended and preset_cfg:
+        args = _set_arg(args, "-c", str(int(preset_cfg["ctx"])))
+        if preset_cfg.get("np") is not None:
+            args = _set_arg(args, "-np", str(int(preset_cfg["np"])))
+    else:
+        args = _set_arg(args, "-c", str(ctx))
+        # Multi-slot recipes split -c across -np; bench probes need single-slot ctx.
+        if base_np != "1" and str(ctx) != str(base_c):
+            args = _set_arg(args, "-np", "1")
+
     llama_kv = LLAMA_KV_MAP.get(kv) or LLAMA_KV_MAP.get(kv.replace("-", "_"))
     if llama_kv:
+        args = _set_arg(args, "-ctk", llama_kv)
+        args = _set_arg(args, "-ctv", llama_kv)
         args = _set_arg(args, "--cache-type-k", llama_kv)
         args = _set_arg(args, "--cache-type-v", llama_kv)
     out["llamacpp_args"] = args
@@ -476,7 +519,24 @@ def materialize_llama_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
     return path
 
 
-def materialize_eugr_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
+def _preset_cfg(recipe: dict[str, Any], preset: str | None) -> dict[str, Any]:
+    if not preset:
+        return {}
+    block = recipe.get("context") or {}
+    presets = block.get("presets") if isinstance(block, dict) else None
+    if not isinstance(presets, dict):
+        return {}
+    cfg = presets.get(preset)
+    return cfg if isinstance(cfg, dict) else {}
+
+
+def materialize_eugr_recipe(
+    recipe: dict[str, Any],
+    ctx: int,
+    kv: str,
+    *,
+    preset: str | None = None,
+) -> Path:
     import yaml
 
     base_path = Path(str(recipe.get("eugr_recipe") or ""))
@@ -485,6 +545,10 @@ def materialize_eugr_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
     data = yaml.safe_load(base_path.read_text(encoding="utf-8")) or {}
     defaults = dict(data.get("defaults") or {})
     defaults["max_model_len"] = int(ctx)
+    preset_cfg = _preset_cfg(recipe, preset)
+    for key in ("gpu_memory_utilization", "max_num_seqs", "max_num_batched_tokens"):
+        if preset_cfg.get(key) is not None:
+            defaults[key] = preset_cfg[key]
     data["defaults"] = defaults
     cmd = str(data.get("command") or "")
     if kv and kv != "auto":
@@ -492,6 +556,8 @@ def materialize_eugr_recipe(recipe: dict[str, Any], ctx: int, kv: str) -> Path:
             cmd = re.sub(r"--kv-cache-dtype\s+\S+", f"--kv-cache-dtype {kv}", cmd)
         else:
             cmd = cmd.replace("--trust-remote-code \\", f"--trust-remote-code \\\n    --kv-cache-dtype {kv} \\")
+    if preset_cfg.get("prefix_caching") is False:
+        cmd = re.sub(r"\s*--enable-prefix-caching\s*\\?\n?", "\n", cmd)
     data["command"] = cmd
     EUgr_LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
     path = EUgr_LAUNCH_DIR / f"{recipe.get('id', 'launch')}.yaml"
@@ -517,10 +583,10 @@ def prepare_launch(recipe: dict[str, Any], profile_id: str, *, ctx: int | None =
     engine = recipe.get("engine")
     env: dict[str, str] = {}
     if engine == "llamacpp":
-        path = materialize_llama_recipe(recipe, ctx_i, kv_s)
+        path = materialize_llama_recipe(recipe, ctx_i, kv_s, preset=preset)
         env["SPARK_LLAMA_RECIPE"] = str(path)
     elif engine == "eugr":
-        path = materialize_eugr_recipe(recipe, ctx_i, kv_s)
+        path = materialize_eugr_recipe(recipe, ctx_i, kv_s, preset=preset)
         env["SPARK_EUGR_RECIPE"] = str(path)
     elif engine == "ds4":
         path = materialize_ds4_recipe(recipe, ctx_i, kv_s)

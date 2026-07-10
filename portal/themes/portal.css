@@ -234,6 +234,7 @@ body.inf-view .inf-log:not(.inf-log-overlay-log) { max-height: min(200px, 22vh);
 .inf-profile .notes { display: block; width: 100%; margin: 0; color: #7a8088; font-size: .7rem; line-height: 1.35; font-style: italic; }
 .inf-life { display: inline-block; font-size: .68rem; padding: .12rem .4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-right: .35rem; }
 .inf-life.life-testing { border-color: #2a3a4a; color: #8ab4d8; }
+.inf-life.life-failed { border-color: #4a2a2a; color: var(--err, #e07070); }
 .inf-life.life-draft { border-color: #3a3a3a; color: var(--muted); opacity: .85; }
 .inf-life.life-production, .inf-life.life-works { border-color: #2a4a2a; color: var(--ok); }
 .inf-spec {

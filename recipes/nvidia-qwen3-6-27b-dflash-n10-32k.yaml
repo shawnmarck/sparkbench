@@ -1,0 +1,37 @@
+id: nvidia-qwen3-6-27b-dflash-n10-32k
+name: nvidia 27B NVFP4 + DFlash n10@32k
+inventory_path: nvidia/qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: failed
+served_name: qwen3.6-27b-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- nvfp4
+- retune
+speculative:
+  method: dflash
+  sidecar_inventory: z-lab/qwen3.6-27b
+  sidecar_path: /models/z-lab/qwen3.6-27b/dflash
+  num_speculative_tokens: 10
+  target_weight_format: nvfp4
+eugr_recipe: /opt/spark/run/recipes/eugr-nvidia-qwen3-6-27b-dflash-n10-32k.yaml
+notes: 'NVIDIA NVFP4 + DFlash n=10 @ 32k retune 2026-07-10.
+
+  [triage] Engine crash on load during overnight. Parent nvidia dense @11.1 still
+  works.'
+context:
+  default: 32768
+  native: 262144
+  kv_default: auto
+  presets:
+    golden:
+      label: Retune 32k
+      ctx: 32768
+      kv: auto
+last_error: 'PBM loop2 failed: failed_ready'
+last_error_at: '2026-07-10T07:48:03.443734+00:00'
+updated_at: '2026-07-10T15:39:52.400850+00:00'

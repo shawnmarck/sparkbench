@@ -3,7 +3,7 @@ name: qwen3.6-27b (eugr)
 inventory_path: qwen/qwen3.6-27b
 engine: eugr
 tier: heavy
-lifecycle: works
+lifecycle: failed
 served_name: qwen3.6-27b
 port: 8000
 tags:
@@ -12,5 +12,6 @@ tags:
 notes: Scaffolded 2026-06-21 from /models/qwen/qwen3.6-27b. Mark testing, switch,
   bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-qwen-qwen3-6-27b-eugr.yaml
-updated_at: '2026-06-21T22:52:24.273852+00:00'
+updated_at: '2026-07-10T15:39:52.400850+00:00'
 promoted_at: '2026-06-22T02:48:58.528981+00:00'
+last_error: 'PBM loop2 failed: failed_up'

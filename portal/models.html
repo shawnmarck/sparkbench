@@ -698,7 +698,7 @@
       { key: 'arch',    label: 'Arch',      sortable: false },
       { key: 'engine',  label: 'Engine',    sortable: false },
       { key: 'inf',     label: 'Inference', sortable: false },
-      { key: 'bench',   label: 'Bench',     sortable: true  },
+      { key: 'bench',   label: 'Bench 4k',  sortable: true  },
       { key: 'caps',    label: 'Caps',      sortable: false },
     ];
     const COL_AUTO_DEFAULT = [
@@ -1316,6 +1316,7 @@
       }
       if (queued) modelCell += `<span class="pending-del-tag">✕ delete</span>`;
       if (m.is_golden) modelCell += `<span class="badge golden-tag">Golden</span>`;
+      if (m.has_speculative_addon) modelCell += `<span class="badge cap" title="Has speculative decoding recipe">Spec</span>`;
       if (requiresTargetLine(m)) modelCell += requiresTargetLine(m);
 
       const spark = sparkStatus(m);
@@ -1924,6 +1925,8 @@
       hfTaskFilter = tagKey($('hf-task').value);
       savePrefs();
       let filtered = all.filter(m => {
+        // Sidecars are recipe features of a base model — not first-class model rows.
+        if (m.model_kind === 'speculative_sidecar') return false;
         if (lab && m.lab !== lab) return false;
         if (tagFilter.length && !tagFilter.every((t) => catalogTagSet(m).has(t))) return false;
         if (hfTaskFilter && tagKey(m.pipeline_tag) !== hfTaskFilter) return false;
@@ -1936,6 +1939,7 @@
         return true;
       });
       filtered = sortModels(filtered);
+      const primaryTotal = all.filter((m) => m.model_kind !== 'speculative_sidecar').length;
       const queuedTotal = all.filter(removalPending).length;
       const queuedPart = queuedTotal ? ` · ${queuedTotal} pending delete` : '';
       const filterBits = [];
@@ -1945,9 +1949,9 @@
       const dateStr = window.__generated ? `${fmtDate(window.__generated)} ${fmtTime(window.__generated)}` : '';
       const suffix = `${tagPart}${queuedPart}${dateStr ? ' · updated ' + dateStr : ''}`.trim();
       if (window.SparkInventoryGrid) {
-        SparkInventoryGrid.renderSummary($('summary'), { filtered: filtered.length, total: all.length, suffix });
+        SparkInventoryGrid.renderSummary($('summary'), { filtered: filtered.length, total: primaryTotal, suffix });
       } else {
-        $('summary').textContent = `Showing ${filtered.length} of ${all.length} ${suffix}`;
+        $('summary').textContent = `Showing ${filtered.length} of ${primaryTotal} ${suffix}`;
       }
       $('summary').classList.toggle('meta-danger', !!queuedTotal);
       render(filtered);

@@ -3,7 +3,7 @@ name: diffusiongemma-26b-a4b-it (eugr)
 inventory_path: google/diffusiongemma-26b-a4b-it
 engine: eugr
 tier: heavy
-lifecycle: works
+lifecycle: failed
 served_name: diffusiongemma-26b-a4b-it
 port: 8000
 tags:
@@ -13,7 +13,7 @@ tags:
 notes: Scaffolded 2026-06-22 from /models/google/diffusiongemma-26b-a4b-it. Mark testing,
   switch, bench, then promote.
 eugr_recipe: /opt/spark/services/eugr-google-diffusiongemma-26b-a4b-it-eugr.yaml
-updated_at: '2026-06-22T04:08:49.335371+00:00'
+updated_at: '2026-07-10T15:39:52.400850+00:00'
 promoted_at: '2026-06-27T04:55:37.923016+00:00'
 context:
   default: 262144
@@ -69,3 +69,4 @@ context:
       decode_elapsed_s: 10.08
       tool_ok: false
       method: bench-agent-v2
+last_error: 'PBM loop2 failed: failed_pbm'

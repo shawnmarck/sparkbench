@@ -1,0 +1,33 @@
+id: qwen-qwen3-6-27b-dflash-n10-128k
+name: qwen3.6-27b DFlash n10@128k (eugr)
+inventory_path: qwen/qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: failed
+served_name: qwen3.6-27b-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- retune
+speculative:
+  method: dflash
+  sidecar_inventory: z-lab/qwen3.6-27b
+  sidecar_path: /models/z-lab/qwen3.6-27b/dflash
+  num_speculative_tokens: 10
+  target_weight_format: fp8
+eugr_recipe: /opt/spark/run/recipes/eugr-qwen-qwen3-6-27b-dflash-n10-128k.yaml
+notes: 'DFlash retune 2026-07-10: n_spec=10 @ 128k, flashinfer + fp8 KV.'
+context:
+  default: 131072
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Retune 128k
+      ctx: 131072
+      kv: fp8
+promoted_at: '2026-07-10T07:25:37.794098+00:00'
+last_error: 'PBM loop2 failed: failed_up'
+updated_at: '2026-07-10T15:39:52.400850+00:00'

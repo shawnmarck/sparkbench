@@ -1,0 +1,26 @@
+id: s-batman-ornith-1-0-35b-nvfp4-mtp-llama
+name: ornith-1.0-35b-nvfp4 MTP (llama.cpp)
+inventory_path: s-batman/ornith-1.0-35b-nvfp4
+engine: llamacpp
+tier: fast
+lifecycle: draft
+served_name: ornith-1.0-35b-nvfp4-mtp
+port: 8081
+model: /models/s-batman/ornith-1.0-35b-nvfp4/mtp-gguf/ornith-1.0-35b-NVFP4-MTP.gguf
+tags:
+- lab
+- llamacpp
+- mtp
+mtp:
+  method: mtp
+  draft_model: /models/s-batman/ornith-1.0-35b-nvfp4/mtp-gguf/ornith-1.0-35b-NVFP4-MTP.gguf
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: 'MTP GGUF scaffold 2026-07-08: main ornith-1.0-35b-NVFP4-MTP.gguf, draft ornith-1.0-35b-NVFP4-MTP.gguf.
+  Wire draft model in spark-llama when runner supports it; bench first.'

@@ -278,6 +278,7 @@ def _run_golden_cell_phase(
         kv=kv,
         progress_path=progress_path,
         phase="golden_workflow",
+        preset="golden",
     )
     on_line(json.dumps(row, indent=2))
     if row.get("status") != "ok":

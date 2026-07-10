@@ -1,0 +1,44 @@
+id: nvidia-nvidia-nemotron-labs-3-puzzle-75b-a9b-mtp-eugr
+name: nvidia-nemotron-labs-3-puzzle-75b-a9b MTP (eugr)
+inventory_path: nvidia/nvidia-nemotron-labs-3-puzzle-75b-a9b
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: nvidia-nemotron-labs-3-puzzle-75b-a9b-mtp
+port: 8000
+tags:
+- lab
+- eugr
+- mtp
+- nvfp4
+- nemotron
+mtp:
+  method: mtp
+  num_speculative_tokens: 3
+eugr_recipe: /opt/spark/services/eugr-nvidia-nvidia-nemotron-labs-3-puzzle-75b-a9b-mtp-eugr.yaml
+context:
+  default: 32768
+  native: 262144
+  kv_default: auto
+  presets:
+    smoke:
+      label: Smoke (32k, low footprint — boot here on GB10)
+      ctx: 32768
+      kv: auto
+      gpu_memory_utilization: 0.75
+      max_num_seqs: 1
+      prefix_caching: false
+    golden:
+      label: Bench golden (64k, safe first sweep)
+      ctx: 65536
+      kv: auto
+      gpu_memory_utilization: 0.75
+      max_num_seqs: 2
+    nvidia_production:
+      label: NVIDIA HF target (256k — only after ctx_ladder ok)
+      ctx: 262144
+      kv: auto
+notes: "BLOCKED on GB10 (2026-07-08): 75B NVFP4+MTP exhausts unified memory — NV_ERR_NO_MEMORY\
+  \ and full system hang at 256k, 64k, and smoke 32k. verify=failed. Retry only with\
+  \ no-MTP / much lower ctx after vLLM or driver fixes."
+updated_at: '2026-07-08T19:06:00+00:00'

@@ -1137,7 +1137,7 @@
       }
 
       function infProfileSort(a, b) {
-        const rank = { works: 0, production: 0, testing: 1, draft: 2 };
+        const rank = { works: 0, production: 0, testing: 1, failed: 2, draft: 3 };
         const ra = rank[a.lifecycle || 'works'] ?? 1;
         const rb = rank[b.lifecycle || 'works'] ?? 1;
         if (ra !== rb) return ra - rb;
@@ -1286,7 +1286,7 @@
           { label: 'Tier', key: 'tier', cls: 'grid-head-rail', sortable: true },
           { label: 'Lifecycle', key: 'lifecycle', cls: 'grid-head-rail', sortable: true },
           { label: 'Ctx', key: 'ctx', cls: 'grid-head-rail', sortable: true },
-          { label: 'Bench', key: 'bench', cls: 'grid-head-rail bench', sortable: true },
+          { label: 'Bench 4k', key: 'bench', cls: 'grid-head-rail bench', sortable: true },
           { label: 'Status', key: 'status', cls: 'grid-head-rail', sortable: true },
         ];
         const cells = cols.map((c) => {

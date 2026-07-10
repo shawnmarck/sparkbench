@@ -254,6 +254,7 @@ def probe_cell(
     ready_timeout: int | None = None,
     progress_path: Path | None = None,
     phase: str = "probe",
+    preset: str | None = None,
 ) -> dict[str, Any]:
     """Load at (ctx, kv), bench once at fill_ratio of usable window."""
     if benchv2 is None:
@@ -291,20 +292,20 @@ def probe_cell(
     tick("down", "running")
     run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)
     tick("down", "done")
-    tick("up", "running", f"ctx={ctx} kv={kv}")
-    up = run_cmd(
-        [
-            "/usr/local/bin/spark",
-            "inference",
-            "up",
-            profile_id,
-            "--ctx",
-            str(ctx),
-            "--kv",
-            kv,
-        ],
-        timeout=3600,
-    )
+    tick("up", "running", f"ctx={ctx} kv={kv}" + (f" preset={preset}" if preset else ""))
+    up_cmd = [
+        "/usr/local/bin/spark",
+        "inference",
+        "up",
+        profile_id,
+        "--ctx",
+        str(ctx),
+        "--kv",
+        kv,
+    ]
+    if preset:
+        up_cmd.extend(["--preset", preset])
+    up = run_cmd(up_cmd, timeout=3600)
     try:
         if up.returncode != 0:
             tick("up", "failed", (up.stderr or up.stdout or "inference up failed")[-120:])
@@ -365,6 +366,132 @@ def probe_cell(
         run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)
 
 
+def probe_peak_cell(
+    profile_id: str,
+    recipe: dict[str, Any],
+    *,
+    preset: str = "batman_spark",
+    fill_ratio: float = FILL_RATIO,
+    benchv2: Any | None = None,
+    ready_timeout: int | None = None,
+    progress_path: Path | None = None,
+) -> dict[str, Any]:
+    """Bench at extended multi-slot preset (e.g. batman -c 600000 -np 3 → ~200k/slot)."""
+    if benchv2 is None:
+        benchv2 = load_benchv2()
+    port = int(recipe.get("port") or 8081)
+    served = str(recipe.get("served_name") or profile_id)
+    engine = recipe.get("engine")
+    presets = {p["id"]: p for p in load_ctxmod().context_presets(recipe)}
+    pcfg = presets.get(preset)
+    if not pcfg or not pcfg.get("extended"):
+        return {"status": "config_fail", "error": f"preset {preset!r} missing or not extended"}
+
+    row: dict[str, Any] = {
+        "preset": preset,
+        "pool_ctx": int(pcfg["ctx"]),
+        "np": int(pcfg.get("np") or 1),
+        "kv": str(pcfg.get("kv") or "q8_0"),
+        "fill_ratio": fill_ratio,
+        "status": "pending",
+    }
+
+    probe_path = progress_path or live_probe_path()
+    substeps = default_probe_substeps()
+    write_live_probe(
+        probe_path,
+        substeps,
+        phase="peak_cell",
+        extra={"profile_id": profile_id, "preset": preset},
+    )
+
+    def tick(step_id: str, state: str, detail: str | None = None) -> None:
+        _set_substep(substeps, step_id, state, detail=detail)
+        write_live_probe(
+            probe_path,
+            substeps,
+            phase="peak_cell",
+            extra={"profile_id": profile_id, "preset": preset},
+        )
+
+    tick("down", "running")
+    run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)
+    tick("down", "done")
+    tick("up", "running", f"preset={preset}")
+    up = run_cmd(
+        [
+            "/usr/local/bin/spark",
+            "inference",
+            "up",
+            profile_id,
+            "--preset",
+            preset,
+        ],
+        timeout=3600,
+    )
+    ok = False
+    try:
+        if up.returncode != 0:
+            tick("up", "failed", (up.stderr or up.stdout or "inference up failed")[-120:])
+            row["status"] = "load_fail"
+            row["error"] = (up.stderr or up.stdout or "inference up failed")[-500:]
+            return row
+        tick("up", "done")
+
+        timeout = ready_timeout or 1800
+        tick("ready", "running", f"up to {timeout}s")
+        if not wait_ready(port, expected_ctx=None, timeout=timeout):
+            tick("ready", "failed", f"not ready within {timeout}s")
+            row["status"] = "load_fail"
+            row["error"] = f"/v1/models not ready within {timeout}s"
+            return row
+
+        loaded = loaded_ctx(port)
+        row["loaded_ctx"] = loaded
+        if loaded is None or loaded < 131072:
+            tick("ready", "failed", f"loaded ctx={loaded}")
+            row["status"] = "load_fail"
+            row["error"] = f"expected per-slot ctx >= 131072, loaded={loaded}"
+            return row
+        tick("ready", "done", f"per-slot ctx={loaded}")
+
+        fill = fill_target_for_ctx(int(loaded), fill_ratio=fill_ratio)
+        row["fill_target"] = fill
+        tick("bench", "running", f"fill ~{fill} tokens")
+        try:
+            stats = benchv2._bench_v2_session(
+                port,
+                served,
+                fill_target_tokens=fill,
+                engine=engine,
+                use_tools=True,
+            )
+        except Exception as exc:
+            tick("bench", "failed", str(exc)[:120])
+            row["status"] = "bench_fail"
+            row["error"] = str(exc)[:500]
+            return row
+
+        row.update(
+            {
+                "status": "ok",
+                "tok_s": round(stats["decode_tok_s"], 1),
+                "fill_estimated": stats.get("context_fill_estimated_tokens"),
+                "prefill_prompt_tokens": stats.get("prefill_prompt_tokens"),
+                "decode_tokens": stats.get("decode_completion_tokens"),
+                "decode_elapsed_s": round(stats.get("decode_elapsed_s") or 0, 2),
+                "tool_ok": stats.get("tool_roundtrip_ok"),
+                "method": "bench-agent-v2",
+            }
+        )
+        tick("bench", "done", f"{row['tok_s']} tok/s per slot")
+        ok = True
+        return row
+    finally:
+        if not ok:
+            run_cmd(["/usr/local/bin/spark", "inference", "down"], timeout=120)
+
+
 def _load_site_publish():
     spec = importlib.util.spec_from_file_location(
         "site_publish", ROOT / "scripts" / "spark-site-publish.py"
@@ -378,6 +505,7 @@ def merge_bench_matrix(
     profile_id: str,
     *,
     golden_cell: dict[str, Any] | None = None,
+    peak_cell: dict[str, Any] | None = None,
     kv_sweep: list[dict[str, Any]] | None = None,
     ctx_ladder: dict[str, Any] | None = None,
     fill_ratio: float = FILL_RATIO,
@@ -395,6 +523,8 @@ def merge_bench_matrix(
     ).isoformat()
     if golden_cell is not None:
         matrix["golden_cell"] = golden_cell
+    if peak_cell is not None:
+        matrix["peak_cell"] = peak_cell
     if kv_sweep is not None:
         matrix["kv_sweep"] = kv_sweep
     if ctx_ladder is not None:

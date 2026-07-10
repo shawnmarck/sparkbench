@@ -1,0 +1,32 @@
+id: qwen-qwen3-6-27b-dflash-n10-32k
+name: qwen3.6-27b DFlash n10@32k (eugr)
+inventory_path: qwen/qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.6-27b-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- retune
+speculative:
+  method: dflash
+  sidecar_inventory: z-lab/qwen3.6-27b
+  sidecar_path: /models/z-lab/qwen3.6-27b/dflash
+  num_speculative_tokens: 10
+  target_weight_format: fp8
+eugr_recipe: /opt/spark/run/recipes/eugr-qwen-qwen3-6-27b-dflash-n10-32k.yaml
+notes: 'DFlash retune 2026-07-10: n_spec=10, max_model_len=32k, flash_attn, kv=auto.
+  Compare to short-ctx 29 tok/s and 262k golden 3.0.'
+context:
+  default: 32768
+  native: 262144
+  kv_default: auto
+  presets:
+    golden:
+      label: Retune 32k
+      ctx: 32768
+      kv: auto
+promoted_at: '2026-07-10T07:00:46.458159+00:00'

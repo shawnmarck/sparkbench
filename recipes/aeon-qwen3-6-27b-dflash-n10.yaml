@@ -1,0 +1,32 @@
+id: aeon-qwen3-6-27b-dflash-n10
+name: AEON 27B NVFP4 + DFlash n10@32k
+inventory_path: aeon-7/qwen3.6-27b-aeon-ultimate-uncensored
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.6-27b-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- aeon
+- nvfp4
+speculative:
+  method: dflash
+  sidecar_inventory: z-lab/qwen3.6-27b
+  sidecar_path: /models/z-lab/qwen3.6-27b/dflash
+  num_speculative_tokens: 10
+eugr_recipe: /opt/spark/run/recipes/eugr-aeon-qwen3-6-27b-dflash-n10.yaml
+notes: AEON Ultimate Uncensored NVFP4 + z-lab DFlash n=10. Community Spark path claiming
+  ~30-50 tok/s. Waiting on download.
+context:
+  default: 32768
+  native: 262144
+  kv_default: auto
+  presets:
+    golden:
+      label: AEON DFlash 32k
+      ctx: 32768
+      kv: auto
+promoted_at: '2026-07-10T07:39:21.282946+00:00'

@@ -14,4 +14,6 @@ tags:
 notes: "Primary reasoning model via eugr spark-vllm-docker. ~3\u20135 min cold start.\n\
   Tool/reasoning parsers enabled in eugr recipe command block.\nStop llama.cpp before\
   \ switching: spark inference down"
-lifecycle: works
+lifecycle: failed
+last_error: 'PBM loop2 failed: failed_up'
+updated_at: '2026-07-10T15:39:52.400850+00:00'

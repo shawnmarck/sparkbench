@@ -24,13 +24,41 @@ BENCHMARKS_FILE = Path("/opt/spark/data/inference-benchmarks.yaml")
 BENCHMARK_HISTORY_FILE = Path("/opt/spark/run/inference-benchmark-history.yaml")
 BENCHMARK_HISTORY_LEGACY = Path("/opt/spark/data/inference-benchmark-history.yaml")
 GOLDEN_RECIPES = Path("/opt/spark/data/golden-recipes.yaml")
+PBM_FILE = Path("/opt/spark/data/perfbench-metrics.yaml")
 OUT_JSON = Path("/opt/spark/portal/models.json")
 HF_CACHE_FILE = Path("/opt/spark/run/hf-metadata-cache.json")
 HF_CACHE_TTL_DAYS = 7
 README_SUMMARY_VERSION = 6
 SPARK_VERIFY_VALID = frozenset({"unverified", "wip", "works", "failed"})
 BENCH_METHODS = frozenset({"bench", "bench-agent", "bench-agent-v2"})
+# Display / sort headline: PBM 4k fill (perfbench-metrics). Falls back to bench-v2.
+PBM_DISPLAY_FILL = "4k"
 HF = Path("/opt/spark/venv/bin/python")
+
+
+def load_pbm_profiles() -> dict:
+    """profile_id → perfbench-metrics entry (tok_s_4k / tok_s_50k / tok_s_100k)."""
+    if not yaml or not PBM_FILE.is_file():
+        return {}
+    try:
+        data = yaml.safe_load(PBM_FILE.read_text()) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    raw = data.get("profiles") or {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def pbm_display_tok_s(entry: dict | None) -> float | None:
+    if not isinstance(entry, dict):
+        return None
+    key = f"tok_s_{PBM_DISPLAY_FILL}"
+    val = entry.get(key)
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
 
 
 def shelf_mounted() -> bool:
@@ -1174,6 +1202,7 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         except (OSError, yaml.YAMLError):
             benchmarks = {}
     history_counts = load_bench_history_counts()
+    pbm_profiles = load_pbm_profiles()
 
     by_path: dict[str, list[dict]] = {}
     recipe_files = sorted(RECIPES_DIR.glob("*.yaml"))
@@ -1198,6 +1227,7 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         bench = benchmarks.get(profile_id) or {}
         method = bench.get("method")
         measured = method in BENCH_METHODS
+        pbm_tok = pbm_display_tok_s(pbm_profiles.get(profile_id))
         notes = (recipe.get("notes") or "").strip()
         first_note = notes.split("\n", 1)[0].strip() if notes else None
         lifecycle = recipe.get("lifecycle")
@@ -1210,6 +1240,19 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
         ctx_ladder = ctx_block.get("ctx_ladder") if isinstance(ctx_block.get("ctx_ladder"), dict) else None
         kv_sweep = ctx_block.get("kv_sweep") if isinstance(ctx_block.get("kv_sweep"), dict) else None
         bench_matrix = ctx_block.get("bench_matrix") if isinstance(ctx_block.get("bench_matrix"), dict) else None
+        # Prefer PBM 4k for UI column/sort; fall back to bench-v2.
+        if pbm_tok is not None:
+            display_tok = pbm_tok
+            display_method = "perfbench-metrics"
+            display_at = (pbm_profiles.get(profile_id) or {}).get("measured_at")
+        elif measured:
+            display_tok = bench.get("tok_s")
+            display_method = method
+            display_at = bench.get("measured_at")
+        else:
+            display_tok = None
+            display_method = None
+            display_at = None
         info = {
             "id": profile_id,
             "name": recipe.get("name"),
@@ -1217,9 +1260,10 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             "tier": recipe.get("tier"),
             "lifecycle": lifecycle,
             "enabled": profile_id in enabled or (lifecycle in ("production", "works")),
-            "tok_s": bench.get("tok_s") if measured else None,
-            "bench_method": method if measured else None,
-            "bench_measured_at": bench.get("measured_at") if measured else None,
+            "tok_s": display_tok,
+            "bench_method": display_method,
+            "bench_measured_at": display_at,
+            "pbm_tok_s_4k": pbm_tok,
             "latest_run_id": bench.get("latest_run_id") if measured else None,
             "bench_run_count": history_counts.get(profile_id, 0),
             "notes": first_note,

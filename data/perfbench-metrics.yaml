@@ -1,0 +1,1254 @@
+standard:
+  id: perfbench-metrics
+  version: '1.0'
+  fills:
+  - 4096
+  - 50000
+  - 100000
+  headroom_tokens: 8192
+profiles:
+  aeon-qwen3-6-27b-dflash-n10:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: aeon-7/qwen3.6-27b-aeon-ultimate-uncensored
+    measured_at: '2026-07-10T08:34:56.755911+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 26.0
+        tok_s_min: 26.0
+        tok_s_max: 26.0
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 44.32
+        run_tok_s:
+        - 26.0
+      '50000':
+        tok_s: 14.5
+        tok_s_min: 14.5
+        tok_s_max: 14.5
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 79.2
+        run_tok_s:
+        - 14.5
+      '100000':
+        tok_s: 11.4
+        tok_s_min: 11.4
+        tok_s_max: 11.4
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 101.31
+        run_tok_s:
+        - 11.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=26.0 / 50000=14.5 / 100000=11.4
+    tok_s_4k: 26.0
+    tok_s_50k: 14.5
+    tok_s_100k: 11.4
+  deepreinforce-ai-ornith-1-0-35b-fp8-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: deepreinforce-ai/ornith-1.0-35b
+    measured_at: '2026-07-10T08:48:49.437422+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 35.0
+        tok_s_min: 35.0
+        tok_s_max: 35.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 911
+        elapsed_s: 26.04
+        run_tok_s:
+        - 35.0
+      '50000':
+        tok_s: 24.9
+        tok_s_min: 24.9
+        tok_s_max: 24.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 924
+        elapsed_s: 37.04
+        run_tok_s:
+        - 24.9
+      '100000':
+        tok_s: 19.9
+        tok_s_min: 19.9
+        tok_s_max: 19.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 954
+        elapsed_s: 47.99
+        run_tok_s:
+        - 19.9
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=35.0 / 50000=24.9 / 100000=19.9
+    tok_s_4k: 35.0
+    tok_s_50k: 24.9
+    tok_s_100k: 19.9
+  deepreinforce-ai-ornith-1-0-35b-llama:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: deepreinforce-ai/ornith-1.0-35b
+    measured_at: '2026-07-10T08:55:26.771191+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 37.8
+        tok_s_min: 37.8
+        tok_s_max: 37.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 764
+        elapsed_s: 20.21
+        run_tok_s:
+        - 37.8
+      '50000':
+        tok_s: 15.8
+        tok_s_min: 15.8
+        tok_s_max: 15.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 953
+        elapsed_s: 60.47
+        run_tok_s:
+        - 15.8
+      '100000':
+        tok_s: 5.8
+        tok_s_min: 5.8
+        tok_s_max: 5.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 930
+        elapsed_s: 159.23
+        run_tok_s:
+        - 5.8
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=37.8 / 50000=15.8 / 100000=5.8
+    tok_s_4k: 37.8
+    tok_s_50k: 15.8
+    tok_s_100k: 5.8
+  deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: deepreinforce-ai/ornith-1.0-35b
+    measured_at: '2026-07-10T09:02:05.084986+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 35.6
+        tok_s_min: 35.6
+        tok_s_max: 35.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1028
+        elapsed_s: 28.87
+        run_tok_s:
+        - 35.6
+      '50000':
+        tok_s: 25.6
+        tok_s_min: 25.6
+        tok_s_max: 25.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 993
+        elapsed_s: 38.78
+        run_tok_s:
+        - 25.6
+      '100000':
+        tok_s: 20.2
+        tok_s_min: 20.2
+        tok_s_max: 20.2
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 933
+        elapsed_s: 46.14
+        run_tok_s:
+        - 20.2
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=35.6 / 50000=25.6 / 100000=20.2
+    tok_s_4k: 35.6
+    tok_s_50k: 25.6
+    tok_s_100k: 20.2
+  deepseek-ai-deepseek-r1-distill-qwen-32b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: deepseek-ai/deepseek-r1-distill-qwen-32b
+    measured_at: '2026-07-10T09:28:06.522217+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 3.6
+        tok_s_min: 3.6
+        tok_s_max: 3.6
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 904
+        elapsed_s: 253.87
+        run_tok_s:
+        - 3.6
+      '50000':
+        tok_s: 3.5
+        tok_s_min: 3.5
+        tok_s_max: 3.5
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 897
+        elapsed_s: 256.06
+        run_tok_s:
+        - 3.5
+      '100000':
+        tok_s: 3.4
+        tok_s_min: 3.4
+        tok_s_max: 3.4
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 951
+        elapsed_s: 276.91
+        run_tok_s:
+        - 3.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=3.6 / 50000=3.5 / 100000=3.4
+    tok_s_4k: 3.6
+    tok_s_50k: 3.5
+    tok_s_100k: 3.4
+  empero-ai-qwythos-9b-claude-mythos-5-1m-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: empero-ai/qwythos-9b-claude-mythos-5-1m
+    measured_at: '2026-07-10T09:39:38.305049+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 12.6
+        tok_s_min: 12.6
+        tok_s_max: 12.6
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1006
+        elapsed_s: 80.12
+        run_tok_s:
+        - 12.6
+      '50000':
+        tok_s: 12.4
+        tok_s_min: 12.4
+        tok_s_max: 12.4
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 956
+        elapsed_s: 77.15
+        run_tok_s:
+        - 12.4
+      '100000':
+        tok_s: 12.3
+        tok_s_min: 12.3
+        tok_s_max: 12.3
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 955
+        elapsed_s: 77.74
+        run_tok_s:
+        - 12.3
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=12.6 / 50000=12.4 / 100000=12.3
+    tok_s_4k: 12.6
+    tok_s_50k: 12.4
+    tok_s_100k: 12.3
+  gemma4-12b-agentic-v2-q4:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: yuxinlu1/gemma-4-12b-agentic-v2
+    measured_at: '2026-07-10T09:41:37.266010+00:00'
+    loaded_ctx: 32768
+    fills:
+      '4096':
+        tok_s: 18.9
+        tok_s_min: 18.9
+        tok_s_max: 18.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 595
+        elapsed_s: 31.53
+        run_tok_s:
+        - 18.9
+    skipped:
+      '50000': needs>=58192 ctx (loaded=32768)
+      '100000': needs>=108192 ctx (loaded=32768)
+    primary_fill: 4096
+    note: PBM 4096=18.9 skipped=['50000', '100000']
+    tok_s_4k: 18.9
+  gemma4-12b-coder-q4:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1
+    measured_at: '2026-07-10T09:47:52.649933+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 19.1
+        tok_s_min: 19.1
+        tok_s_max: 19.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 840
+        elapsed_s: 43.96
+        run_tok_s:
+        - 19.1
+      '50000':
+        tok_s: 8.5
+        tok_s_min: 8.5
+        tok_s_max: 8.5
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 769
+        elapsed_s: 90.2
+        run_tok_s:
+        - 8.5
+      '100000':
+        tok_s: 13.0
+        tok_s_min: 13.0
+        tok_s_max: 13.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 794
+        elapsed_s: 61.13
+        run_tok_s:
+        - 13.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=19.1 / 50000=8.5 / 100000=13.0
+    tok_s_4k: 19.1
+    tok_s_50k: 8.5
+    tok_s_100k: 13.0
+  gemma4-12b-opus-reasoning-q4:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: yuxinlu1/gemma-4-12b-opus-reasoning
+    measured_at: '2026-07-10T09:49:56.624854+00:00'
+    loaded_ctx: 32768
+    fills:
+      '4096':
+        tok_s: 19.1
+        tok_s_min: 19.1
+        tok_s_max: 19.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 850
+        elapsed_s: 44.52
+        run_tok_s:
+        - 19.1
+    skipped:
+      '50000': needs>=58192 ctx (loaded=32768)
+      '100000': needs>=108192 ctx (loaded=32768)
+    primary_fill: 4096
+    note: PBM 4096=19.1 skipped=['50000', '100000']
+    tok_s_4k: 19.1
+  google-gemma-4-12b-it-llama:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: google/gemma-4-12b-it
+    measured_at: '2026-07-10T10:08:06.399012+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 19.8
+        tok_s_min: 19.8
+        tok_s_max: 19.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 955
+        elapsed_s: 48.3
+        run_tok_s:
+        - 19.8
+      '50000':
+        tok_s: 10.0
+        tok_s_min: 10.0
+        tok_s_max: 10.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1133
+        elapsed_s: 113.49
+        run_tok_s:
+        - 10.0
+      '100000':
+        tok_s: 4.0
+        tok_s_min: 4.0
+        tok_s_max: 4.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 940
+        elapsed_s: 236.57
+        run_tok_s:
+        - 4.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=19.8 / 50000=10.0 / 100000=4.0
+    tok_s_4k: 19.8
+    tok_s_50k: 10.0
+    tok_s_100k: 4.0
+  google-gemma-4-26b-a4b-it-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: google/gemma-4-26b-a4b-it
+    measured_at: '2026-07-10T10:19:05.779850+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 23.0
+        tok_s_min: 23.0
+        tok_s_max: 23.0
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 254
+        elapsed_s: 11.06
+        run_tok_s:
+        - 23.0
+      '50000':
+        tok_s: 22.0
+        tok_s_min: 22.0
+        tok_s_max: 22.0
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 259
+        elapsed_s: 11.77
+        run_tok_s:
+        - 22.0
+      '100000':
+        tok_s: 21.4
+        tok_s_min: 21.4
+        tok_s_max: 21.4
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 251
+        elapsed_s: 11.71
+        run_tok_s:
+        - 21.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=23.0 / 50000=22.0 / 100000=21.4
+    tok_s_4k: 23.0
+    tok_s_50k: 22.0
+    tok_s_100k: 21.4
+  kaitchup-qwen3-6-27b-llama:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: kaitchup/qwen3.6-27b
+    measured_at: '2026-07-10T10:41:34.707057+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 9.1
+        tok_s_min: 9.1
+        tok_s_max: 9.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1109
+        elapsed_s: 121.96
+        run_tok_s:
+        - 9.1
+      '50000':
+        tok_s: 5.5
+        tok_s_min: 5.5
+        tok_s_max: 5.5
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1174
+        elapsed_s: 215.02
+        run_tok_s:
+        - 5.5
+      '100000':
+        tok_s: 5.4
+        tok_s_min: 5.4
+        tok_s_max: 5.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1174
+        elapsed_s: 216.44
+        run_tok_s:
+        - 5.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=9.1 / 50000=5.5 / 100000=5.4
+    tok_s_4k: 9.1
+    tok_s_50k: 5.5
+    tok_s_100k: 5.4
+  mellum2-12b-opus-q4:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: yuxinlu1/mellum2-12b-opus-thinking
+    measured_at: '2026-07-10T10:42:26.831938+00:00'
+    loaded_ctx: 32768
+    fills:
+      '4096':
+        tok_s: 83.8
+        tok_s_min: 83.8
+        tok_s_max: 83.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1005
+        elapsed_s: 11.99
+        run_tok_s:
+        - 83.8
+    skipped:
+      '50000': needs>=58192 ctx (loaded=32768)
+      '100000': needs>=108192 ctx (loaded=32768)
+    primary_fill: 4096
+    note: PBM 4096=83.8 skipped=['50000', '100000']
+    tok_s_4k: 83.8
+  microsoft-phi-4-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: microsoft/phi-4
+    measured_at: '2026-07-10T10:46:33.085550+00:00'
+    loaded_ctx: 12288
+    fills:
+      '4096':
+        tok_s: 8.0
+        tok_s_min: 8.0
+        tok_s_max: 8.0
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 477
+        elapsed_s: 59.86
+        run_tok_s:
+        - 8.0
+    skipped:
+      '50000': needs>=58192 ctx (loaded=12288)
+      '100000': needs>=108192 ctx (loaded=12288)
+    primary_fill: 4096
+    note: PBM 4096=8.0 skipped=['50000', '100000']
+    tok_s_4k: 8.0
+  nousresearch-hermes-4-14b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: nousresearch/hermes-4-14b
+    measured_at: '2026-07-10T10:50:35.426057+00:00'
+    loaded_ctx: 12288
+    fills:
+      '4096':
+        tok_s: 7.9
+        tok_s_min: 7.9
+        tok_s_max: 7.9
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 256
+        elapsed_s: 32.28
+        run_tok_s:
+        - 7.9
+    skipped:
+      '50000': needs>=58192 ctx (loaded=12288)
+      '100000': needs>=108192 ctx (loaded=12288)
+    primary_fill: 4096
+    note: PBM 4096=7.9 skipped=['50000', '100000']
+    tok_s_4k: 7.9
+  nvidia-qwen3-30b-a3b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: nvidia/qwen3-30b-a3b
+    measured_at: '2026-07-10T10:53:21.927182+00:00'
+    loaded_ctx: 12288
+    fills:
+      '4096':
+        tok_s: 74.2
+        tok_s_min: 74.2
+        tok_s_max: 74.2
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 983
+        elapsed_s: 13.26
+        run_tok_s:
+        - 74.2
+    skipped:
+      '50000': needs>=58192 ctx (loaded=12288)
+      '100000': needs>=108192 ctx (loaded=12288)
+    primary_fill: 4096
+    note: PBM 4096=74.2 skipped=['50000', '100000']
+    tok_s_4k: 74.2
+  nvidia-qwen3-6-27b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: nvidia/qwen3.6-27b
+    measured_at: '2026-07-10T11:09:50.238894+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 12.1
+        tok_s_min: 12.1
+        tok_s_max: 12.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1144
+        elapsed_s: 94.72
+        run_tok_s:
+        - 12.1
+      '50000':
+        tok_s: 8.1
+        tok_s_min: 8.1
+        tok_s_max: 8.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1166
+        elapsed_s: 143.51
+        run_tok_s:
+        - 8.1
+      '100000':
+        tok_s: 7.0
+        tok_s_min: 7.0
+        tok_s_max: 7.0
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 165.45
+        run_tok_s:
+        - 7.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=12.1 / 50000=8.1 / 100000=7.0
+    tok_s_4k: 12.1
+    tok_s_50k: 8.1
+    tok_s_100k: 7.0
+  opencode-qwen27-dflash-262k:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: qwen/qwen3.6-27b
+    measured_at: '2026-07-10T11:41:04.435733+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 19.2
+        tok_s_min: 19.2
+        tok_s_max: 19.2
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 59.93
+        run_tok_s:
+        - 19.2
+      '50000':
+        tok_s: 3.4
+        tok_s_min: 3.4
+        tok_s_max: 3.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1171
+        elapsed_s: 344.4
+        run_tok_s:
+        - 3.4
+      '100000':
+        tok_s: 1.9
+        tok_s_min: 1.9
+        tok_s_max: 1.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1278
+        elapsed_s: 657.52
+        run_tok_s:
+        - 1.9
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=19.2 / 50000=3.4 / 100000=1.9
+    tok_s_4k: 19.2
+    tok_s_50k: 3.4
+    tok_s_100k: 1.9
+  opencode-qwen36-250k:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: nvidia/qwen3.6-35b-a3b
+    measured_at: '2026-07-10T11:47:41.830628+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 70.0
+        tok_s_min: 70.0
+        tok_s_max: 70.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1034
+        elapsed_s: 14.77
+        run_tok_s:
+        - 70.0
+      '50000':
+        tok_s: 42.5
+        tok_s_min: 42.5
+        tok_s_max: 42.5
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 27.12
+        run_tok_s:
+        - 42.5
+      '100000':
+        tok_s: 32.6
+        tok_s_min: 32.6
+        tok_s_max: 32.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1310
+        elapsed_s: 40.15
+        run_tok_s:
+        - 32.6
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=70.0 / 50000=42.5 / 100000=32.6
+    tok_s_4k: 70.0
+    tok_s_50k: 42.5
+    tok_s_100k: 32.6
+  poolside-laguna-xs-2-1-dflash-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: poolside/laguna-xs-2.1
+    measured_at: '2026-07-10T12:01:36.443845+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 21.4
+        tok_s_min: 21.4
+        tok_s_max: 21.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 362
+        elapsed_s: 16.91
+        run_tok_s:
+        - 21.4
+      '50000':
+        tok_s: 8.8
+        tok_s_min: 8.8
+        tok_s_max: 8.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 348
+        elapsed_s: 39.64
+        run_tok_s:
+        - 8.8
+      '100000':
+        tok_s: 6.3
+        tok_s_min: 6.3
+        tok_s_max: 6.3
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 358
+        elapsed_s: 56.74
+        run_tok_s:
+        - 6.3
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=21.4 / 50000=8.8 / 100000=6.3
+    tok_s_4k: 21.4
+    tok_s_50k: 8.8
+    tok_s_100k: 6.3
+  qwen-qwen-agentworld-35b-a3b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: qwen/qwen-agentworld-35b-a3b
+    measured_at: '2026-07-10T12:10:25.073256+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 29.6
+        tok_s_min: 29.6
+        tok_s_max: 29.6
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 38.97
+        run_tok_s:
+        - 29.6
+      '50000':
+        tok_s: 22.3
+        tok_s_min: 22.3
+        tok_s_max: 22.3
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 51.64
+        run_tok_s:
+        - 22.3
+      '100000':
+        tok_s: 18.7
+        tok_s_min: 18.7
+        tok_s_max: 18.7
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 61.47
+        run_tok_s:
+        - 18.7
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=29.6 / 50000=22.3 / 100000=18.7
+    tok_s_4k: 29.6
+    tok_s_50k: 22.3
+    tok_s_100k: 18.7
+  qwen-qwen3-6-27b-dflash-n10-32k:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: qwen/qwen3.6-27b
+    measured_at: '2026-07-10T13:05:39.660094+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 17.3
+        tok_s_min: 17.3
+        tok_s_max: 17.3
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1287
+        elapsed_s: 74.32
+        run_tok_s:
+        - 17.3
+      '50000':
+        tok_s: 1.9
+        tok_s_min: 1.9
+        tok_s_max: 1.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1238
+        elapsed_s: 653.33
+        run_tok_s:
+        - 1.9
+      '100000':
+        tok_s: 1.0
+        tok_s_min: 1.0
+        tok_s_max: 1.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1430
+        elapsed_s: 1395.89
+        run_tok_s:
+        - 1.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=17.3 / 50000=1.9 / 100000=1.0
+    tok_s_4k: 17.3
+    tok_s_50k: 1.9
+    tok_s_100k: 1.0
+  qwen-qwen3-coder-next-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: qwen/qwen3-coder-next
+    measured_at: '2026-07-10T13:10:59.999819+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 38.7
+        tok_s_min: 38.7
+        tok_s_max: 38.7
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 400
+        elapsed_s: 10.33
+        run_tok_s:
+        - 38.7
+      '50000':
+        tok_s: 38.4
+        tok_s_min: 38.4
+        tok_s_max: 38.4
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 417
+        elapsed_s: 10.87
+        run_tok_s:
+        - 38.4
+      '100000':
+        tok_s: 37.5
+        tok_s_min: 37.5
+        tok_s_max: 37.5
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 445
+        elapsed_s: 11.88
+        run_tok_s:
+        - 37.5
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=38.7 / 50000=38.4 / 100000=37.5
+    tok_s_4k: 38.7
+    tok_s_50k: 38.4
+    tok_s_100k: 37.5
+  qwen36-35b-a3b-mtp-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: nvidia/qwen3.6-35b-a3b
+    measured_at: '2026-07-10T13:15:32.749745+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 82.3
+        tok_s_min: 82.3
+        tok_s_max: 82.3
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 759
+        elapsed_s: 9.22
+        run_tok_s:
+        - 82.3
+      '50000':
+        tok_s: 35.9
+        tok_s_min: 35.9
+        tok_s_max: 35.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 652
+        elapsed_s: 18.16
+        run_tok_s:
+        - 35.9
+      '100000':
+        tok_s: 28.0
+        tok_s_min: 28.0
+        tok_s_max: 28.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 743
+        elapsed_s: 26.51
+        run_tok_s:
+        - 28.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=82.3 / 50000=35.9 / 100000=28.0
+    tok_s_4k: 82.3
+    tok_s_50k: 35.9
+    tok_s_100k: 28.0
+  qwen36-q4-llama:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: unsloth/qwen3.6-35b-a3b
+    measured_at: '2026-07-10T13:21:47.522045+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 46.8
+        tok_s_min: 46.8
+        tok_s_max: 46.8
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1527
+        elapsed_s: 32.65
+        run_tok_s:
+        - 46.8
+      '50000':
+        tok_s: 20.2
+        tok_s_min: 20.2
+        tok_s_max: 20.2
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 57.01
+        run_tok_s:
+        - 20.2
+      '100000':
+        tok_s: 7.9
+        tok_s_min: 7.9
+        tok_s_max: 7.9
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 146.5
+        run_tok_s:
+        - 7.9
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=46.8 / 50000=20.2 / 100000=7.9
+    tok_s_4k: 46.8
+    tok_s_50k: 20.2
+    tok_s_100k: 7.9
+  rdtand-qwen3-6-27b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: rdtand/qwen3.6-27b
+    measured_at: '2026-07-10T13:38:40.185646+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 10.6
+        tok_s_min: 10.6
+        tok_s_max: 10.6
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 907
+        elapsed_s: 85.51
+        run_tok_s:
+        - 10.6
+      '50000':
+        tok_s: 10.3
+        tok_s_min: 10.3
+        tok_s_max: 10.3
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 897
+        elapsed_s: 87.45
+        run_tok_s:
+        - 10.3
+      '100000':
+        tok_s: 10.3
+        tok_s_min: 10.3
+        tok_s_max: 10.3
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1016
+        elapsed_s: 98.93
+        run_tok_s:
+        - 10.3
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=10.6 / 50000=10.3 / 100000=10.3
+    tok_s_4k: 10.6
+    tok_s_50k: 10.3
+    tok_s_100k: 10.3
+  s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: s-batman/ornith-1.0-35b-nvfp4
+    measured_at: '2026-07-10T13:42:53.446739+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 46.5
+        tok_s_min: 46.5
+        tok_s_max: 46.5
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 794
+        elapsed_s: 17.08
+        run_tok_s:
+        - 46.5
+      '50000':
+        tok_s: 19.2
+        tok_s_min: 19.2
+        tok_s_max: 19.2
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 839
+        elapsed_s: 43.77
+        run_tok_s:
+        - 19.2
+      '100000':
+        tok_s: 10.1
+        tok_s_min: 10.1
+        tok_s_max: 10.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 762
+        elapsed_s: 75.42
+        run_tok_s:
+        - 10.1
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=46.5 / 50000=19.2 / 100000=10.1
+    tok_s_4k: 46.5
+    tok_s_50k: 19.2
+    tok_s_100k: 10.1
+  saricles-qwen3-coder-next-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: saricles/qwen3-coder-next
+    measured_at: '2026-07-10T13:47:33.298589+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 58.9
+        tok_s_min: 58.9
+        tok_s_max: 58.9
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 433
+        elapsed_s: 7.35
+        run_tok_s:
+        - 58.9
+      '50000':
+        tok_s: 56.3
+        tok_s_min: 56.3
+        tok_s_max: 56.3
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 377
+        elapsed_s: 6.7
+        run_tok_s:
+        - 56.3
+      '100000':
+        tok_s: 55.0
+        tok_s_min: 55.0
+        tok_s_max: 55.0
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 400
+        elapsed_s: 7.27
+        run_tok_s:
+        - 55.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=58.9 / 50000=56.3 / 100000=55.0
+    tok_s_4k: 58.9
+    tok_s_50k: 56.3
+    tok_s_100k: 55.0
+  stepfun-ai-step-3-7-flash-llama:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: stepfun-ai/step-3.7-flash
+    measured_at: '2026-07-10T14:04:39.685013+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 20.5
+        tok_s_min: 20.5
+        tok_s_max: 20.5
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1021
+        elapsed_s: 49.8
+        run_tok_s:
+        - 20.5
+      '50000':
+        tok_s: 6.9
+        tok_s_min: 6.9
+        tok_s_max: 6.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1025
+        elapsed_s: 148.94
+        run_tok_s:
+        - 6.9
+      '100000':
+        tok_s: 2.5
+        tok_s_min: 2.5
+        tok_s_max: 2.5
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1034
+        elapsed_s: 412.1
+        run_tok_s:
+        - 2.5
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=20.5 / 50000=6.9 / 100000=2.5
+    tok_s_4k: 20.5
+    tok_s_50k: 6.9
+    tok_s_100k: 2.5
+  unsloth-qwen3-6-27b-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: unsloth/qwen3.6-27b
+    measured_at: '2026-07-10T14:22:26.453952+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 9.4
+        tok_s_min: 9.4
+        tok_s_max: 9.4
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 908
+        elapsed_s: 96.09
+        run_tok_s:
+        - 9.4
+      '50000':
+        tok_s: 9.2
+        tok_s_min: 9.2
+        tok_s_max: 9.2
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 930
+        elapsed_s: 101.04
+        run_tok_s:
+        - 9.2
+      '100000':
+        tok_s: 9.2
+        tok_s_min: 9.2
+        tok_s_max: 9.2
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 125.53
+        run_tok_s:
+        - 9.2
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=9.4 / 50000=9.2 / 100000=9.2
+    tok_s_4k: 9.4
+    tok_s_50k: 9.2
+    tok_s_100k: 9.2
+  unsloth-qwen3-coder-30b-a3b-instruct-llama:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: llamacpp
+    inventory_path: unsloth/qwen3-coder-30b-a3b-instruct
+    measured_at: '2026-07-10T14:30:20.150146+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 42.1
+        tok_s_min: 42.1
+        tok_s_max: 42.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 430
+        elapsed_s: 10.22
+        run_tok_s:
+        - 42.1
+      '50000':
+        tok_s: 4.7
+        tok_s_min: 4.7
+        tok_s_max: 4.7
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 436
+        elapsed_s: 93.41
+        run_tok_s:
+        - 4.7
+      '100000':
+        tok_s: 2.2
+        tok_s_min: 2.2
+        tok_s_max: 2.2
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 454
+        elapsed_s: 208.53
+        run_tok_s:
+        - 2.2
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=42.1 / 50000=4.7 / 100000=2.2
+    tok_s_4k: 42.1
+    tok_s_50k: 4.7
+    tok_s_100k: 2.2
+updated_at: '2026-07-10T14:30:20.150146+00:00'

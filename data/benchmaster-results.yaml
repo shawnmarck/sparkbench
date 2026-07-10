@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-07-08T19:29:51.202401+00:00'
+updated_at: '2026-07-09T21:55:35.679110+00:00'
 models:
   deepreinforce-ai/ornith-1.0-35b:
     inventory_path: deepreinforce-ai/ornith-1.0-35b
@@ -88,6 +88,31 @@ models:
             decode_elapsed_s: 94.31
             tool_ok: true
             method: bench-agent-v2
+      intel:
+        terminal-bench:
+          version: '2.1'
+          harness: terminal-bench@2.1
+          agent: terminus-2
+          worker_id: macbook-air
+          pass_rate: null
+          passed: null
+          total: null
+          reward_mean: null
+          task_ok: null
+          measured_at: '2026-07-02T15:29:19.349368+00:00'
+          job_id: bm-20260702145124-6ba318
+        swe-bench:
+          version: verified
+          harness: swe-bench@verified
+          agent: terminus-2
+          worker_id: macbook-air
+          pass_rate: null
+          passed: null
+          total: null
+          reward_mean: null
+          task_ok: false
+          measured_at: '2026-07-04T03:21:38.179835+00:00'
+          job_id: bm-20260703230215-c57a90
     - quant: llama
       profile_id: deepreinforce-ai-ornith-1-0-35b-llama
       engine: llamacpp
@@ -359,7 +384,7 @@ models:
     - quant: nvfp4
       profile_id: qwen36-35b-a3b-mtp-eugr
       engine: eugr
-      lifecycle: testing
+      lifecycle: works
       perf:
         fill_ratio: 0.75
         updated_at: '2026-06-29T07:22:35.624394+00:00'
@@ -1638,7 +1663,7 @@ models:
     - quant: nvfp4
       profile_id: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
       engine: llamacpp
-      lifecycle: testing
+      lifecycle: works
       perf:
         fill_ratio: 0.75
         updated_at: '2026-07-08T04:37:24.257332+00:00'
@@ -1718,4 +1743,49 @@ models:
             decode_tokens: 1056
             decode_elapsed_s: 152.59
             tool_ok: true
+            method: bench-agent-v2
+  poolside/laguna-xs-2.1:
+    inventory_path: poolside/laguna-xs-2.1
+    quants:
+    - quant: ''
+      profile_id: poolside-laguna-xs-2-1-dflash-eugr
+      engine: eugr
+      lifecycle: works
+      perf:
+        fill_ratio: 0.75
+        updated_at: '2026-07-08T20:40:21.850667+00:00'
+        golden_cell:
+          ctx: 262144
+          kv: auto
+          fill_target: 176947
+          fill_ratio: 0.75
+          status: ok
+          loaded_ctx: 262144
+          tok_s: 11.7
+          tool_ok: true
+          method: bench-agent-v2
+        ctx_ladder:
+          version: '1.0'
+          tested_at: '2026-07-08T20:40:21.850667+00:00'
+          golden_ctx: 262144
+          native_ctx: 262144
+          fill_ratio: 0.75
+          kv: auto
+          max_viable_ctx: 262144
+          best_tok_s_ctx: 32768
+          rungs:
+          - ctx: 32768
+            kv: auto
+            status: ok
+            tok_s: 13.7
+            method: bench-agent-v2
+          - ctx: 131072
+            kv: auto
+            status: ok
+            tok_s: 11.6
+            method: bench-agent-v2
+          - ctx: 262144
+            kv: auto
+            status: ok
+            tok_s: 11.7
             method: bench-agent-v2

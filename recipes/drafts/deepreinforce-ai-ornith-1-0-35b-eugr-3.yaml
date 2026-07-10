@@ -1,0 +1,14 @@
+id: deepreinforce-ai-ornith-1-0-35b-eugr-3
+name: ornith-1.0-35b (eugr)
+inventory_path: deepreinforce-ai/ornith-1.0-35b
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: ornith-1.0-35b
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-07-02 from /models/deepreinforce-ai/ornith-1.0-35b. Mark testing,
+  switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-deepreinforce-ai-ornith-1-0-35b-eugr-3.yaml

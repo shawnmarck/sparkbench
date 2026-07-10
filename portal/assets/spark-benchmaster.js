@@ -169,7 +169,7 @@
   function renderCurrent(st) {
     const el = $('bm-current');
     if (!el) return;
-    const job = st.current_job;
+    const job = st.current_job || st.attention_job;
     if (!job) {
       el.innerHTML = '<div class="bm-empty">No active job</div>';
       return;
@@ -177,8 +177,12 @@
     const p = job.progress || {};
     const step = p.step || 0;
     const total = p.total_steps || '?';
+    const remote = job.awaiting === 'remote_worker'
+      ? '<div class="bm-remote-hint">Awaiting Mac worker — run <code>python3 spark-benchmaster-worker.py once</code></div>'
+      : '';
     el.innerHTML =
-      '<div class="bm-current-row"><strong>' + esc(job.profile_id) + '</strong>'
+      remote
+      + '<div class="bm-current-row"><strong>' + esc(job.profile_id) + '</strong>'
       + ' <span class="bm-muted">' + esc(job.type) + '</span></div>'
       + renderPhaseList(job)
       + '<div class="bm-progress" aria-hidden="true"><i style="width:' + (total && step ? Math.min(100, (step / total) * 100) : 10) + '%"></i></div>'
@@ -198,11 +202,15 @@
     el.innerHTML = rows.map(function (job, idx) {
       const st = job.state || 'queued';
       const cls = st === 'running' ? 'running' : st === 'failed' ? 'failed' : '';
+      const intelHint = (job.type === 'intel_eval' && st === 'queued')
+        ? '<span class="bm-muted">await Mac worker</span>'
+        : '';
       return '<div class="bm-queue-row ' + cls + '" data-job-id="' + esc(job.id) + '">'
         + '<span class="bm-q-idx">' + (idx + 1) + '</span>'
         + '<span class="bm-q-profile">' + esc(job.profile_id) + '</span>'
         + '<span class="bm-q-type">' + esc(job.type) + '</span>'
         + '<span class="bm-q-state">' + esc(st) + '</span>'
+        + intelHint
         + (job.claimed_by ? '<span class="bm-muted">' + esc(job.claimed_by) + '</span>' : '')
         + (st !== 'running'
           ? '<button type="button" class="bm-btn tiny" data-bm-remove="' + esc(job.id) + '">remove</button>'
@@ -234,8 +242,17 @@
   function renderStatus(st) {
     const head = $('bm-head-meta');
     if (head) {
+      const iq = (st.counts && st.counts.intel_queued) || 0;
+      const gq = (st.counts && st.counts.gpu_queued) || 0;
+      let queueMeta = '';
+      if (gq) queueMeta += ' · gpu queued ' + gq;
+      if (iq) queueMeta += ' · intel awaiting Mac ' + iq;
+      if (!gq && !iq && st.counts && st.counts.queued) {
+        queueMeta += ' · queued ' + st.counts.queued;
+      }
       head.innerHTML = controlBadge(st.control)
-        + ' · queued ' + ((st.counts && st.counts.queued) || 0)
+        + queueMeta
+        + (st.intel_claimable ? ' · intel claimable' : '')
         + ' · worker ' + (st.worker_alive ? 'up' : 'down')
         + (st.schedule_open === false ? ' · outside schedule' : '');
     }

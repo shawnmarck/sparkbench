@@ -32,7 +32,8 @@ AUXILIARY_PREFIXES = ("z-lab/",)
 # inventory_path -> golden profile id (explicit overrides)
 DEFAULT_GOLDEN: dict[str, str] = {
     "nvidia/qwen3.6-35b-a3b": "opencode-qwen36-250k",
-    "qwen/qwen3.6-27b": "opencode-qwen27-dflash-262k",
+    "nvidia/qwen3.6-27b": "nvidia-qwen3-6-27b-eugr",
+    "qwen/qwen3.6-27b": "qwen-qwen3-6-27b-dflash-n10-32k",
     "antirez/deepseek-v4-flash": "antirez-deepseek-v4-flash-ds4",
     "google/diffusiongemma-26b-a4b-it": "google-diffusiongemma-26b-a4b-it-eugr",
     "google/gemma-4-12b-it": "google-gemma-4-12b-it-llama",

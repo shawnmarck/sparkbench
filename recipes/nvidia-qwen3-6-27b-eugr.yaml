@@ -1,0 +1,27 @@
+id: nvidia-qwen3-6-27b-eugr
+name: qwen3.6-27b NVFP4 (nvidia/eugr)
+inventory_path: nvidia/qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.6-27b
+port: 8000
+tags:
+- lab
+- eugr
+- nvfp4
+- golden
+notes: NVIDIA modelopt NVFP4 (FP8 attn + W4A16 MLP). language_model_only + modelopt
+  + fp8 KV. Golden audit 2026-07-10.
+eugr_recipe: /opt/spark/run/recipes/eugr-nvidia-qwen3-6-27b-eugr.yaml
+updated_at: '2026-07-10T05:55:00+00:00'
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8
+_path: /opt/spark/recipes/nvidia-qwen3-6-27b-eugr.yaml

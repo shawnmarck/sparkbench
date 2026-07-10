@@ -1,18 +1,12 @@
-# Golden recipe map — one production profile per inventory path
-# Used by scripts/golden-inventory-audit.py
-# KV sweep: llamacpp + eugr only; skipped for deepseek/* and ds4 (see spark-golden-bench.py)
-
-bench_standard: "2.0"
-
-# Permanently hidden from sparkbench.dev leaderboard (models may still run locally).
+bench_standard: '2.0'
 leaderboard_exclude:
-  - microsoft/phi-4
-  - nousresearch/hermes-4-14b
-  - deepseek-ai/deepseek-r1-distill-qwen-32b
-
+- microsoft/phi-4
+- nousresearch/hermes-4-14b
+- deepseek-ai/deepseek-r1-distill-qwen-32b
 golden:
   nvidia/qwen3.6-35b-a3b: opencode-qwen36-250k
-  qwen/qwen3.6-27b: opencode-qwen27-dflash-262k
+  nvidia/qwen3.6-27b: nvidia-qwen3-6-27b-eugr
+  qwen/qwen3.6-27b: qwen-qwen3-6-27b-dflash-n10-32k
   antirez/deepseek-v4-flash: antirez-deepseek-v4-flash-ds4
   google/diffusiongemma-26b-a4b-it: google-diffusiongemma-26b-a4b-it-eugr
   google/gemma-4-12b-it: google-gemma-4-12b-it-llama
@@ -34,13 +28,14 @@ golden:
   empero-ai/qwythos-9b-claude-mythos-5-1m: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
   deepreinforce-ai/ornith-1.0-35b: deepreinforce-ai-ornith-1-0-35b-llama
   jackrong/qwopus3.6-27b-coder-compat: jackrong-qwopus3-6-27b-coder-compat-llama
-  # 0xsero/deepseek-v4-flash-spark: skipped — REAP GGUF load fails on llamacpp (see SKIP in audit script)
-
+  aeon-7/qwen3.6-27b-aeon-ultimate-uncensored: aeon-qwen3-6-27b-dflash-n10
+  qwen/qwen3.6-35b-a3b: qwen-qwen3-6-35b-a3b-dflash-eugr
+  poolside/laguna-xs-2.1: poolside-laguna-xs-2-1-dflash-eugr
+  s-batman/ornith-1.0-35b-nvfp4: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
 deprecated_profiles:
-  - qwen36-nvfp4
-  - qwen-qwen3-6-27b-dflash-eugr
-  - qwen-qwen3-6-27b-eugr
-  - 0xsero-deepseek-v4-flash-spark-llama-2
-
+- qwen36-nvfp4
+- qwen-qwen3-6-27b-dflash-eugr
+- qwen-qwen3-6-27b-eugr
+- 0xsero-deepseek-v4-flash-spark-llama-2
 auxiliary_inventory:
-  - z-lab/qwen3.6-27b
+- z-lab/qwen3.6-27b

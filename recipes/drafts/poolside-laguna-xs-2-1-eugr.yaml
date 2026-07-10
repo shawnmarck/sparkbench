@@ -1,0 +1,14 @@
+id: poolside-laguna-xs-2-1-eugr
+name: laguna-xs-2.1 (eugr)
+inventory_path: poolside/laguna-xs-2.1
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: laguna-xs-2.1
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-07-08 from /models/poolside/laguna-xs-2.1. Mark testing, switch,
+  bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-poolside-laguna-xs-2-1-eugr.yaml

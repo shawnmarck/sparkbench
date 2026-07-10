@@ -429,27 +429,68 @@ models:
     subpath: mtp-gguf
     engine: llamacpp
     hf_repo: s-batman/Ornith-1.0-35B-NVFP4-MTP-GGUF
-- id: deepreinforce-ai/ornith-1.0-35b
-  lab: deepreinforce-ai
-  name: ornith-1.0-35b (llamacpp)
-  slug: ornith-1.0-35b
-  hf_repo: deepreinforce-ai/ornith-1.0-35b
+- id: poolside/laguna-xs-2.1
+  lab: poolside
+  name: Laguna XS 2.1
+  slug: laguna-xs-2.1
+  hf_repo: poolside/Laguna-XS-2.1
   capabilities:
-  - lab
-  - llamacpp
-  - golden
-  - gguf
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe deepreinforce-ai-ornith-1-0-35b-llama.\n"
-  param_b: 35
+  - coding
+  - agentic
+  - vllm
+  - eugr
+  - dflash
+  why_downloaded: "Poolside Laguna XS 2.1 + DFlash sidecar — bench v2 golden 262k @ 11.7 tok/s 2026-07-08.\n"
   variants:
   - format: hf
     subpath: hf
     engine: vllm
-    hf_repo: deepreinforce-ai/Ornith-1.0-35B-GGUF
+    hf_repo: poolside/Laguna-XS-2.1
+- id: poolside/laguna-xs-2.1-dflash
+  lab: poolside
+  name: Laguna XS 2.1 DFlash (drafter)
+  slug: laguna-xs-2.1-dflash
+  hf_repo: poolside/Laguna-XS-2.1-DFlash
+  capabilities:
+  - dflash
+  - vllm
+  why_downloaded: "DFlash drafter for poolside/Laguna-XS-2.1 — sidecar only, not a standalone serve target.\n"
+  variants:
+  - format: dflash
+    subpath: dflash
+    engine: vllm
+    hf_repo: poolside/Laguna-XS-2.1-DFlash
+- id: deepreinforce-ai/ornith-1.0-35b
+  lab: deepreinforce-ai
+  name: Ornith 1.0 35B
+  slug: ornith-1.0-35b
+  hf_repo: deepreinforce-ai/Ornith-1.0-35B
+  capabilities:
+  - lab
+  - llamacpp
+  - eugr
+  - golden
+  - gguf
+  - moe
+  why_downloaded: "Golden fleet target \u2014 multi-quant (FP8 / NVFP4 / GGUF / HF). Primary golden recipe deepreinforce-ai-ornith-1-0-35b-llama.\n"
+  param_b: 35
+  variants:
+  - format: fp8
+    subpath: fp8
+    engine: vllm
+    hf_repo: deepreinforce-ai/Ornith-1.0-35B
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: deepreinforce-ai/Ornith-1.0-35B
   - format: hf
     subpath: hf
     engine: vllm
     hf_repo: deepreinforce-ai/Ornith-1.0-35B
+  - format: gguf
+    subpath: hf
+    engine: llamacpp
+    hf_repo: deepreinforce-ai/Ornith-1.0-35B-GGUF
 - id: empero-ai/qwythos-9b-claude-mythos-5-1m
   lab: empero-ai
   name: qwythos-9b-claude-mythos-5-1m (eugr)
@@ -466,7 +507,7 @@ models:
   lab: jackrong
   name: qwopus3.6-27b-coder-compat (llamacpp)
   slug: qwopus3.6-27b-coder-compat
-  hf_repo: jackrong/qwopus3.6-27b-coder-compat
+  hf_repo: Jackrong/Qwopus3.6-27B-Coder-Compat-MTP-GGUF
   capabilities:
   - lab
   - llamacpp
@@ -474,6 +515,11 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe jackrong-qwopus3-6-27b-coder-compat-llama.\n"
   param_b: 27
+  variants:
+  - format: gguf
+    subpath: mtp-gguf
+    engine: llamacpp
+    hf_repo: Jackrong/Qwopus3.6-27B-Coder-Compat-MTP-GGUF
 - id: qwen/qwen-agentworld-35b-a3b
   lab: qwen
   name: qwen-agentworld-35b-a3b (eugr)
@@ -490,7 +536,7 @@ models:
   lab: yuxinlu1
   name: "Gemma 4 12B Agentic v2 (Fable5\xD7Composer2.5) Q4"
   slug: gemma-4-12b-agentic-v2
-  hf_repo: yuxinlu1/gemma-4-12b-agentic-v2-gguf
+  hf_repo: yuxinlu1/gemma-4-12B-agentic-fable5-composer2.5-v2-3.5x-tau2-GGUF
   capabilities:
   - testing
   - agentic
@@ -500,11 +546,16 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-agentic-v2-q4.\n"
   param_b: 12
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: yuxinlu1/gemma-4-12B-agentic-fable5-composer2.5-v2-3.5x-tau2-GGUF
 - id: yuxinlu1/gemma-4-12b-opus-reasoning
   lab: yuxinlu1
   name: Gemma 4 12B Opus Reasoning Q4
   slug: gemma-4-12b-opus-reasoning
-  hf_repo: yuxinlu1/gemma-4-12b-opus-reasoning-gguf
+  hf_repo: yuxinlu1/gemma-4-12B-it-Claude-4.6-4.8-Opus-GGUF
   capabilities:
   - testing
   - reasoning
@@ -513,11 +564,16 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-opus-reasoning-q4.\n"
   param_b: 12
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: yuxinlu1/gemma-4-12B-it-Claude-4.6-4.8-Opus-GGUF
 - id: yuxinlu1/mellum2-12b-opus-thinking
   lab: yuxinlu1
   name: Mellum2 12B MoE Opus Thinking Q4
   slug: mellum2-12b-opus-thinking
-  hf_repo: yuxinlu1/mellum2-12b-opus-thinking-gguf
+  hf_repo: yuxinlu1/Mellum2-12B-A2.5B-Claude-4.6-4.8-Opus-Thinking-GGUF
   capabilities:
   - testing
   - coding
@@ -527,6 +583,11 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe mellum2-12b-opus-q4.\n"
   param_b: 12
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: yuxinlu1/Mellum2-12B-A2.5B-Claude-4.6-4.8-Opus-Thinking-GGUF
 - id: nvidia/qwen3.6-35b-a3b
   lab: nvidia
   name: "OpenCode \xB7 Qwen3.6 250k NVFP4"
@@ -557,13 +618,18 @@ models:
   lab: saricles
   name: qwen3-coder-next (eugr)
   slug: qwen3-coder-next
-  hf_repo: saricles/qwen3-coder-next
+  hf_repo: saricles/Qwen3-Coder-Next-NVFP4-GB10
   capabilities:
   - lab
   - eugr
   - golden
   - vllm
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe saricles-qwen3-coder-next-eugr.\n"
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: saricles/Qwen3-Coder-Next-NVFP4-GB10
 - id: unsloth/qwen3.6-35b-a3b
   lab: unsloth
   name: Qwen3.6 35B Q4 (llama.cpp)
@@ -580,7 +646,7 @@ models:
   lab: yuxinlu1
   name: "Gemma 4 12B Coder (Fable5\xD7Composer2.5) Q4"
   slug: gemma-4-12b-coder-fable5-composer2.5-v1
-  hf_repo: yuxinlu1/gemma-4-12b-coder-gguf
+  hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
   capabilities:
   - testing
   - coding
@@ -589,6 +655,11 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-coder-q4.\n"
   param_b: 12
+  variants:
+  - format: gguf
+    subpath: gguf
+    engine: llamacpp
+    hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
 - id: yuxinlu1/gemma-4-12b-agentic-fable5-composer2.5-v2-3.5x-tau2
   lab: yuxinlu1
   name: Gemma 4 12B Agentic Fable5 Composer2 5 V2 3 5X Tau2

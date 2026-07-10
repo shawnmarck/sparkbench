@@ -1850,6 +1850,8 @@
         if (hp && base.includes('models.html')) {
           url += (url.includes('?') ? '&' : '?') + 'highlight=' + encodeURIComponent(hp);
         }
+        // Bust iframe cache when Models UI changes (quant rows, variant labels, …)
+        url += (url.includes('?') ? '&' : '?') + 'ui=20260710-quants';
         return url;
       }
 
@@ -2421,21 +2423,24 @@
         }
         body.innerHTML = expSlVariants.map((v) => {
           const sel = v.id === expSlSelectedVariantId ? ' selected' : '';
-          return '<tr class="exp-variant-row' + sel + '" data-sl-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
+          const rowCls = 'exp-variant-row' + sel + (v.on_disk ? ' on-disk' : '');
+          return '<tr class="' + rowCls + '" data-sl-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
             + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
             + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
             + '<td class="exp-var-size">' + escHtml(v.size_human || '—') + '</td>'
             + '<td>' + sparkBadgeHtml(v) + '</td>'
-            + '<td class="exp-var-note">' + escHtml(v.explanation || '') + '</td>'
-            + '<td><button type="button" class="exp-var-dl" data-sl-variant-dl="' + attrEsc(v.id) + '"'
-            + (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended' ? ' disabled' : '')
-            + '>Download</button></td></tr>';
+            + '<td class="exp-var-note">' + escHtml(v.on_disk ? ('Already on disk' + (v.on_disk_path ? ' · ' + String(v.on_disk_path).replace(/^\/models\//, '') : '')) : (v.explanation || '')) + '</td>'
+            + '<td>' + expVariantDlCell(v, 'sl-variant-dl') + '</td></tr>';
         }).join('');
       }
 
       async function expSlQueueVariant(variantId) {
         const v = expSlVariants.find((vv) => vv.id === variantId);
         if (!v) return;
+        if (v.on_disk) {
+          setExpSlMsg('Already on disk' + (v.on_disk_path ? ' · ' + v.on_disk_path : ''), 'ok');
+          return;
+        }
         const drawer = $('exp-shortlist-drawer');
         const repo = drawer ? $('exp-sl-detail-title').textContent : null;
         if (!repo) return;
@@ -2557,6 +2562,19 @@
         return 'vLLM · HF';
       }
 
+      function expVariantDlCell(v, attrName) {
+        const onDisk = !!v.on_disk;
+        const blocked = !onDisk && (expSparkWarning || v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended');
+        if (onDisk) {
+          const title = v.on_disk_path
+            ? ('Already on disk at ' + v.on_disk_path)
+            : 'Already on disk';
+          return '<button type="button" class="exp-var-dl on-disk" disabled title="' + attrEsc(title) + '">On disk</button>';
+        }
+        return '<button type="button" class="exp-var-dl" data-' + attrName + '="' + attrEsc(v.id) + '"'
+          + (blocked ? ' disabled' : '') + '>Download</button>';
+      }
+
       function renderExpVariants(variants) {
         const body = $('exp-variants-body');
         if (!body) return;
@@ -2566,22 +2584,23 @@
           expSelectedVariantId = null;
           return;
         }
-        const firstPick = expVariants.find((v) => v.spark_fit === 'recommended') || expVariants[0];
+        const firstPick = expVariants.find((v) => v.spark_fit === 'recommended' && !v.on_disk)
+          || expVariants.find((v) => !v.on_disk)
+          || expVariants.find((v) => v.spark_fit === 'recommended')
+          || expVariants[0];
         if (!expSelectedVariantId || !expVariants.some((v) => v.id === expSelectedVariantId)) {
           expSelectedVariantId = firstPick.id;
         }
         body.innerHTML = expVariants.map((v) => {
           const sel = v.id === expSelectedVariantId ? ' selected' : '';
-          const blocked = expSparkWarning || v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended';
-          const disabled = blocked ? ' disabled' : '';
-          return '<tr class="exp-variant-row' + sel + '" data-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
+          const rowCls = 'exp-variant-row' + sel + (v.on_disk ? ' on-disk' : '');
+          return '<tr class="' + rowCls + '" data-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
             + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
             + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
             + '<td class="exp-var-size">' + escHtml(v.size_human || '—') + '</td>'
             + '<td>' + sparkBadgeHtml(v) + '</td>'
-            + '<td class="exp-var-note">' + escHtml(v.explanation || '') + '</td>'
-            + '<td><button type="button" class="exp-var-dl" data-variant-dl="' + attrEsc(v.id) + '"' + disabled
-            + '>Download</button></td></tr>';
+            + '<td class="exp-var-note">' + escHtml(v.on_disk ? ('Already on disk' + (v.on_disk_path ? ' · ' + String(v.on_disk_path).replace(/^\/models\//, '') : '')) : (v.explanation || '')) + '</td>'
+            + '<td>' + expVariantDlCell(v, 'variant-dl') + '</td></tr>';
         }).join('');
       }
 
@@ -2645,6 +2664,10 @@
       async function expQueueVariant(variantId) {
         const v = expVariantById(variantId);
         if (!v || !expSelectedRepo) return;
+        if (v.on_disk) {
+          setExpDetailMsg('Already on disk' + (v.on_disk_path ? ' · ' + v.on_disk_path : ''), 'ok');
+          return;
+        }
         if (expSparkWarning) {
           setExpDetailMsg(expSparkWarning.message || 'This model does not work on Spark', 'err');
           return;

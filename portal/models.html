@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Sparky — Model Inventory</title>
   <link rel="stylesheet" href="/themes/theme-ui.css">
   <link rel="stylesheet" href="/themes/theme-b.css" id="theme-b-stylesheet" media="not all">
@@ -366,8 +367,11 @@
     .model-summary::-webkit-scrollbar { width: 8px; }
     .model-summary::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 4px; }
     .variants table { width: 100%; border-collapse: collapse; font-size: .8rem; }
-    .variants th, .variants td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--border); }
+    .variants th, .variants td { text-align: left; padding: .35rem .4rem; border-top: 1px solid var(--border); vertical-align: top; }
     .variants th { color: var(--muted); font-weight: 500; }
+    .variants td.variant-name strong { color: #e6e6e6; font-size: .84rem; }
+    .variants .variant-path { margin-top: .15rem; }
+    .variants .variant-path code { font-size: .68rem; color: var(--muted); word-break: break-all; }
     .empty { color: var(--muted); padding: 2rem; text-align: center; }
     code { background: #12151c; padding: .1rem .35rem; border-radius: 4px; font-size: .85em; }
     .job-banner { display: none; margin-bottom: 1rem; padding: .65rem .85rem; border-radius: 10px; border: 1px solid #2a3a4a; background: #121a24; color: #c5d4e8; font-size: .84rem; font-family: ui-monospace, monospace; }
@@ -1016,6 +1020,7 @@
     const removalPending = (m) => !!(m.spark_verify && m.spark_verify.removal_pending);
     const removalShelf = (m) => !!(m.spark_verify && m.spark_verify.removal_shelf);
     const localSize = (m) => {
+      if (m.weight_unit && m.local && m.local.size_human) return m.local.size_human;
       if (m.model_kind === 'speculative_sidecar' && m.combined_size_human) return m.combined_size_human;
       return (m.local && m.local.present) ? m.local.size_human : '—';
     };
@@ -1230,7 +1235,11 @@
     }
 
     /* ── FAMILY GROUPING ─────────────────────────────────── */
-    function modelFamilyKey(m) { return m.slug || (m.rel_path || m.id || '').split('/').pop() || m.id || 'other'; }
+    function modelFamilyKey(m) {
+      if (m.family_key) return m.family_key;
+      if (m.parent_id) return String(m.parent_id).split('/').pop() || m.parent_id;
+      return m.slug || (m.rel_path || m.id || '').split('/').pop() || m.id || 'other';
+    }
     function slugFamilyLabel(slug) {
       return (slug || '').split('-').map((w) => {
         if (/^\d+(\.\d+)?$/.test(w)) return w;
@@ -1246,6 +1255,7 @@
       return pick || names[0];
     }
     function modelVariantTitle(m, familyLabel) {
+      if (m.weight_unit && m.weight_label) return m.weight_label;
       const name = m.name || '';
       if (!name || name === familyLabel) return '';
       if (name.startsWith(familyLabel)) { const tail = name.slice(familyLabel.length).trim(); return tail.replace(/^\((.+)\)$/, '$1') || tail; }
@@ -1584,10 +1594,33 @@
         const label = s === 'unverified' ? 'Untested' : s === 'wip' ? 'Testing' : s === 'works' ? 'Works' : 'Failed';
         return `<button type="button" class="btn verify${spark === s ? ' active active-' + s : ''}" data-verify="${s}" data-path="${rel}">${label}</button>`;
       }).join('');
-      const vars = (m.variants || []).length ? `<div class="variants detail-section"><table><tr><th>Format</th><th>Engine</th><th>Size</th><th>Status</th></tr>${m.variants.map(v => `<tr><td>${esc(v.format)}</td><td>${esc(v.engine)}</td><td>${esc(v.size_human)}</td><td>${esc(v.status)}</td></tr>`).join('')}</table></div>` : '';
+      const variantRows = (m.variants || []).map((v) => {
+        const name = v.label || v.file || v.subpath || v.format || '—';
+        const pathBits = [];
+        if (v.file) pathBits.push(v.file);
+        else if (v.subpath) pathBits.push(v.subpath + '/');
+        if (v.path && !v.file) pathBits.push(String(v.path).replace(/^\/models\//, ''));
+        const pathHtml = pathBits.length
+          ? '<div class="variant-path"><code>' + esc(pathBits[0]) + '</code></div>'
+          : '';
+        return '<tr>'
+          + '<td class="variant-name"><strong>' + esc(name) + '</strong>' + pathHtml + '</td>'
+          + '<td>' + esc(v.format || '—') + '</td>'
+          + '<td>' + esc(v.engine || '—') + '</td>'
+          + '<td>' + esc(v.size_human || '—') + '</td>'
+          + '<td>' + esc(v.status || '—') + '</td>'
+          + '</tr>';
+      }).join('');
+      const vars = (m.variants || []).length
+        ? '<div class="variants detail-section"><h4>On-disk weights</h4><table><tr><th>Variant</th><th>Format</th><th>Engine</th><th>Size</th><th>Status</th></tr>'
+          + variantRows + '</table></div>'
+        : '';
+      const siblings = (m.weight_unit && (m.sibling_units || []).length > 1)
+        ? `<div class="detail-section"><h4>Other quants on disk</h4><div class="verify-note">${(m.sibling_units || []).filter((u) => (u.key || u.path) !== m.weight_key).map((u) => esc((u.label || u.file || u.subpath) + ' · ' + (u.size_human || '—'))).join('<br>')}</div><div class="verify-note">Family total · ${esc(m.family_size_human || '—')}</div></div>`
+        : '';
       const queueBtn = queued
         ? `<button type="button" class="btn danger active" data-action="queue-removal" data-pending="0" data-path="${rel}">Cancel removal</button>`
-        : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-scope="local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) ? 'disabled' : ''}>Queue local removal</button><button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-scope="both" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || !(m.shelf && m.shelf.present) || !shelfMounted ? 'disabled' : ''} title="${!(m.shelf && m.shelf.present) ? 'Not on NAS shelf' : ''}">Queue full removal</button>`;
+        : `<button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-scope="local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(m.family_size_human || localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) && !m.family_size_bytes ? 'disabled' : ''}>Queue local removal</button><button type="button" class="btn danger" data-action="queue-removal" data-pending="1" data-scope="both" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(m.family_size_human || localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || !(m.shelf && m.shelf.present) || !shelfMounted ? 'disabled' : ''} title="${!(m.shelf && m.shelf.present) ? 'Not on NAS shelf' : ''}">Queue full removal</button>`;
       const caps = catalogCapabilities(m);
       const task = m.pipeline_tag;
       const hfTags = notableHfTags(m);
@@ -1595,7 +1628,7 @@
       const hfExtra = hfTags.slice(4);
       const tagBlock = (caps.length || task || hfPreview.length) ? `<div class="detail-section tag-block">${caps.length ? `<div class="tag-line"><span class="tag-line-label">Catalog</span><span class="tag-line-val">${tagLine(caps)}</span></div>` : ''}${task ? `<div class="tag-line"><span class="tag-line-label">HF task</span><span class="tag-line-val"><span class="badge hf-task">${esc(formatTagLabel(task))}</span></span></div>` : ''}${hfPreview.length ? `<div class="tag-line"><span class="tag-line-label">HF tags</span><span class="tag-line-val">${tagLine(hfPreview)}</span></div>` : ''}${hfExtra.length ? `<details class="tag-more"><summary>${hfExtra.length} more HF tag${hfExtra.length === 1 ? '' : 's'}</summary>${tagLine(hfExtra)}</details>` : ''}${m.hf_url ? `<div class="tag-line" style="margin-top:.5rem"><span class="tag-line-label"></span><span class="tag-line-val"><a href="${esc(m.hf_url)}" target="_blank" rel="noopener">All tags on Hugging Face ↗</a></span></div>` : ''}</div>` : '';
       const goldenBlock = renderGoldenBlock(m);
-      const fetchBtn = m.is_golden && !(m.local && m.local.present)
+      const fetchBtn = m.is_golden && !(m.local && m.local.present) && !m.weight_unit
         ? `<button type="button" class="btn primary" data-action="fetch" data-path="${rel}" ${busy ? 'disabled' : ''}>Download from HF</button>`
         : '';
       const queueNote = queued
@@ -1603,7 +1636,15 @@
           ? '<div class="queue-note">Pending delete — local + NAS copies purge daily at 03:00.</div>'
           : '<div class="queue-note">Pending delete — local copy purges daily at 03:00. NAS shelf copy is kept.</div>')
         : '';
-      return `${tagBlock}${summaryBlock(m)}${goldenBlock}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${isSidecarModel(m) ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}` : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions">${fetchBtn}<button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || !(m.local && m.local.present) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.name)}" data-local="${esc(localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${!(m.local && m.local.present) || busy ? 'disabled' : ''}>Delete local now</button></div>${queueNote}</div>${vars}`;
+      const weightNote = m.weight_unit
+        ? `<div class="detail-section"><h4>Weight unit</h4><div class="verify-note"><code>${esc(m.weight_path || (m.variants && m.variants[0] && m.variants[0].path) || '')}</code></div><div class="verify-note">List size is this quant only. Delete / shelf actions still target the whole family folder <code>${esc(m.rel_path || m.parent_id || '')}</code>.</div></div>`
+        : '';
+      const storageLocal = m.weight_unit
+        ? `<div class="storage-row"><span class="storage-label">This quant</span><span class="loc-badge on">${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Family</span><span>${esc(m.family_size_human || '—')}</span></div>`
+        : (isSidecarModel(m)
+          ? `<div class="storage-row"><span class="storage-label">Combined</span><span>${esc(localSize(m))}</span></div><div class="storage-row"><span class="storage-label">Add-on</span>${locBadge('Local add-on', m.local, true)}</div>${m.requires_target ? `<div class="storage-row"><span class="storage-label">Requires</span><span><code>${esc(m.requires_target)}</code>${m.requires_target_size_human ? ' · ' + esc(m.requires_target_size_human) + ' base' : ''}</span></div>` : ''}`
+          : `<div class="storage-row"><span class="storage-label">Local</span>${locBadge('Local', m.local, true)}</div>`);
+      return `${tagBlock}${summaryBlock(m)}${weightNote}${siblings}${goldenBlock}${isSidecarModel(m) && m.requires_target ? `<div class="detail-section"><h4>Speculative sidecar</h4><div class="verify-note">DFlash add-on for <code>${esc(m.requires_target)}</code>. Bench score and combined disk size include base + drafter.</div></div>` : ''}${inferenceSection(m)}<div class="detail-section verify-row"><span class="verify-label">Spark</span>${verifyBtns}</div>${sv.note ? `<div class="verify-note">${esc(sv.note)}</div>` : ''}<div class="detail-section storage">${storageLocal}<div class="storage-row"><span class="storage-label">NAS</span>${locBadge('NAS', m.shelf, shelfMounted)}</div><div class="actions">${fetchBtn}<button type="button" class="btn primary" data-action="pull" data-path="${rel}" ${!shelfMounted || !(m.shelf && m.shelf.present) || busy ? 'disabled' : ''}>Fetch ↓</button><button type="button" class="btn" data-action="push" data-path="${rel}" ${!shelfMounted || (!(m.local && m.local.present) && !m.family_size_bytes) || busy ? 'disabled' : ''}>Push ↑</button>${queueBtn}<button type="button" class="btn warn-outline" data-action="remove-local" data-path="${rel}" data-name="${esc(m.parent_id || m.name)}" data-local="${esc(m.family_size_human || localSize(m))}" data-shelf="${esc(shelfSize(m))}" ${(!(m.local && m.local.present) && !m.family_size_bytes) || busy ? 'disabled' : ''}>Delete local now</button></div>${queueNote}</div>${vars}`;
     }
 
     /* ── BENCH HISTORY ───────────────────────────────────── */
@@ -2094,16 +2135,116 @@
     $('col-picker-done').addEventListener('click', () => closeColPicker());
     initColumnLayoutObserver();
 
+    function presentWeightUnits(m) {
+      return (m.variants || []).filter((v) => {
+        if (!v) return false;
+        if (v.status === 'ready') return true;
+        return (v.size_bytes || 0) > 0 && v.status !== 'missing';
+      });
+    }
+
+    function profilesForWeightUnit(profiles, unit) {
+      const list = profiles || [];
+      if (!list.length || !unit) return list;
+      const sub = String(unit.subpath || '').toLowerCase();
+      const file = String(unit.file || '').toLowerCase();
+      const fmt = String(unit.format || '').toLowerCase();
+      const label = String(unit.label || '').toLowerCase();
+      const eng = String(unit.engine || '').toLowerCase();
+      const scored = list.map((p) => {
+        const id = String(p.id || '').toLowerCase();
+        const name = String(p.name || '').toLowerCase();
+        const model = String(p.model || '').toLowerCase();
+        const tags = (p.tags || []).map((t) => String(t).toLowerCase());
+        let score = 0;
+        if (file && model && model.endsWith(file)) score += 10;
+        if (file && model && model.includes(file)) score += 8;
+        if (file) {
+          const quant = (file.match(/(?:^|[-_.])((?:iq|q|uq)\d[\w.]*)/i) || [])[1];
+          if (quant && (id.includes(quant.toLowerCase()) || name.includes(quant.toLowerCase()) || model.includes(quant.toLowerCase()))) score += 6;
+        }
+        if (sub && (id.includes(sub) || name.includes(sub) || tags.includes(sub) || model.includes('/' + sub))) score += 5;
+        if (fmt === 'gguf' && (p.engine === 'llamacpp' || tags.includes('llamacpp') || tags.includes('gguf'))) score += 2;
+        if (fmt && fmt !== 'gguf' && (id.includes(fmt) || name.includes(fmt) || tags.includes(fmt))) score += 4;
+        if (label && (name.includes(label) || id.includes(label.replace(/\s+/g, '-')))) score += 2;
+        if (eng && p.engine === eng) score += 1;
+        return { p, score };
+      });
+      const matched = scored.filter((x) => x.score >= 4).sort((a, b) => b.score - a.score).map((x) => x.p);
+      if (matched.length) return matched;
+      // Soft fallback: same engine only when that narrows the set
+      if (eng) {
+        const byEng = list.filter((p) => p.engine === eng);
+        if (byEng.length && byEng.length < list.length) return byEng;
+      }
+      return list;
+    }
+
+    function expandWeightUnitRows(models) {
+      const out = [];
+      (models || []).forEach((m) => {
+        const units = presentWeightUnits(m);
+        if (units.length < 2) {
+          out.push(m);
+          return;
+        }
+        const baseName = String(m.name || m.slug || m.id || '')
+          .replace(/\s*\([^)]*\)\s*$/, '')
+          .trim() || m.id;
+        const familyTotal = (m.local && m.local.size_human) || m.size_human || '—';
+        const familyBytes = (m.local && m.local.size_bytes) || m.size_bytes || 0;
+        units.forEach((unit) => {
+          const key = unit.key || (unit.file ? (unit.subpath + '/' + unit.file) : unit.subpath) || unit.path;
+          const label = unit.label || unit.file || unit.subpath || unit.format || 'weights';
+          const profiles = profilesForWeightUnit(m.inference_profiles || [], unit);
+          const best = profiles.map((p) => p.tok_s).filter((t) => t != null && !Number.isNaN(Number(t)));
+          const bestTok = best.length ? Math.max(...best.map(Number)) : m.best_bench_tok_s;
+          out.push({
+            ...m,
+            id: m.id + '@' + key,
+            parent_id: m.id,
+            family_key: m.slug || String(m.id).split('/').pop() || m.id,
+            weight_unit: true,
+            weight_key: key,
+            weight_label: label,
+            weight_path: unit.path,
+            name: baseName + ' · ' + label,
+            variants: [unit],
+            engines: unit.engine ? [unit.engine] : (m.engines || []),
+            status: unit.status || m.status,
+            size_bytes: unit.size_bytes || 0,
+            size_human: unit.size_human || '—',
+            local: {
+              ...(m.local || {}),
+              present: (unit.size_bytes || 0) > 0 || unit.status === 'ready',
+              size_bytes: unit.size_bytes || 0,
+              size_human: unit.size_human || '—',
+              path: unit.path || (m.local && m.local.path),
+            },
+            family_size_human: familyTotal,
+            family_size_bytes: familyBytes,
+            sibling_units: units,
+            inference_profiles: profiles,
+            best_bench_tok_s: bestTok,
+            // Keep verify/golden/delete keyed to the catalog family path
+            rel_path: m.rel_path || m.id,
+          });
+        });
+      });
+      return out;
+    }
+
     /* ── DATA LOADING ────────────────────────────────────── */
     function loadData(preserve) {
       return fetch('models.json?' + Date.now(), { cache: 'no-store' })
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(data => {
-          all = data.models || [];
+          all = expandWeightUnitRows(data.models || []);
           shelfMounted = !!data.shelf_mounted;
           window.__generated = data.generated_at;
           if (highlightPath) {
-            const hit = all.find((m) => m.rel_path === highlightPath || m.id === highlightPath);
+            const hit = all.find((m) => m.id === highlightPath)
+              || all.find((m) => m.rel_path === highlightPath || m.parent_id === highlightPath);
             if (hit) {
               selectedModelId = hit.id;
               modelGroupsOpen.add(modelFamilyKey(hit));

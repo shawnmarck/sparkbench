@@ -471,6 +471,15 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 }
 .exp-var-dl:hover { border-color: #3a4a2a; }
 .exp-var-dl:disabled { opacity: .4; cursor: not-allowed; }
+.exp-var-dl.on-disk,
+.exp-var-dl.on-disk:disabled {
+  opacity: 1;
+  cursor: default;
+  border-color: #2a4a2a;
+  color: #6bc46d;
+  background: #141a10;
+}
+.exp-variant-row.on-disk .exp-var-label { color: #9ec89e; }
 .exp-queues { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-top: .55rem; }
 @media (max-width: 720px) { .exp-queues { grid-template-columns: 1fr; } }
 .exp-queue-panel {

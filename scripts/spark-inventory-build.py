@@ -268,6 +268,7 @@ def discover_hf_repos(model_dir: Path) -> list[str]:
     seen: set[str] = set()
     if not model_dir.is_dir():
         return repos
+    _repos_from_manifest(model_dir, repos, seen)
     _repos_from_config(model_dir, repos, seen)
     readme = model_dir / "README.md"
     if readme.is_file():
@@ -275,11 +276,48 @@ def discover_hf_repos(model_dir: Path) -> list[str]:
     for sub in sorted(model_dir.iterdir()):
         if not sub.is_dir() or sub.name.startswith("."):
             continue
+        _repos_from_manifest(sub, repos, seen)
         _repos_from_config(sub, repos, seen)
         sub_readme = sub / "README.md"
         if sub_readme.is_file():
             _repos_from_readme(sub_readme, repos, seen)
     return repos
+
+
+def _repos_from_manifest(model_dir: Path, repos: list[str], seen: set[str]) -> None:
+    path = model_dir / "manifest.yaml"
+    if not path.is_file() or yaml is None:
+        return
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except Exception:
+        return
+    if not isinstance(data, dict):
+        return
+    _add_hf_repo(repos, seen, data.get("hf_repo"))
+    for variant in data.get("variants") or []:
+        if isinstance(variant, dict):
+            _add_hf_repo(repos, seen, variant.get("hf_repo"))
+
+
+def local_earliest_mtime(model_path: Path) -> str | None:
+    """ISO timestamp of oldest non-cache file under model_path (fallback release date)."""
+    if not model_path.is_dir():
+        return None
+    earliest: float | None = None
+    for root, dirs, files in os.walk(model_path):
+        dirs[:] = [d for d in dirs if d not in (".cache", ".git")]
+        for name in files:
+            fp = Path(root) / name
+            try:
+                mtime = fp.stat().st_mtime
+            except OSError:
+                continue
+            if earliest is None or mtime < earliest:
+                earliest = mtime
+    if earliest is None:
+        return None
+    return datetime.fromtimestamp(earliest, tz=timezone.utc).isoformat()
 
 
 def infer_hf_repo_from_path(model_dir: Path) -> str | None:
@@ -305,8 +343,9 @@ def resolve_release_date(
     hf_cache: dict,
 ) -> tuple[str | None, str | None]:
     repos = collect_hf_repos(hf_repo, variants)
-    if not repos:
-        repos = discover_hf_repos(model_path)
+    for repo in discover_hf_repos(model_path):
+        if repo not in repos:
+            repos.append(repo)
     best_date: str | None = None
     for repo in repos:
         info = hf_enrich(repo, hf_cache)
@@ -315,6 +354,9 @@ def resolve_release_date(
             best_date = release_date
     if best_date:
         return best_date, "huggingface"
+    local = local_earliest_mtime(model_path)
+    if local:
+        return local, "local_earliest"
     return None, None
 
 
@@ -1103,6 +1145,7 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
             "ctx_ladder": ctx_ladder,
             "kv_sweep": kv_sweep,
             "bench_matrix": bench_matrix,
+            "model": recipe.get("model"),
         }
         by_path.setdefault(str(inv_path), []).append(info)
 
@@ -1130,6 +1173,46 @@ def load_catalog() -> list:
     raise SystemExit("PyYAML required: pip install pyyaml in /opt/spark/venv")
 
 
+WEIGHT_SUBDIR_NAMES = frozenset(
+    {
+        "hf",
+        "fp8",
+        "nvfp4",
+        "gguf",
+        "mtp-gguf",
+        "awq",
+        "gptq",
+        "int4",
+        "int8",
+        "bnb",
+        "exl2",
+        "dflash",
+        "compressed-tensors",
+    }
+)
+SKIP_WEIGHT_DIR_NAMES = frozenset({"assets", ".cache", "__pycache__"})
+ENGINE_BY_SUBPATH = {
+    "gguf": "llamacpp",
+    "mtp-gguf": "llamacpp",
+    "fp8": "vllm",
+    "nvfp4": "vllm",
+    "hf": "vllm",
+    "dflash": "vllm",
+    "awq": "vllm",
+    "gptq": "vllm",
+}
+LABEL_BY_SUBPATH = {
+    "hf": "HF weights",
+    "fp8": "FP8",
+    "nvfp4": "NVFP4",
+    "gguf": "GGUF",
+    "mtp-gguf": "MTP GGUF",
+    "dflash": "DFlash",
+    "awq": "AWQ",
+    "gptq": "GPTQ",
+}
+
+
 def variant_status(base: Path, subpath: str) -> tuple[str, int]:
     p = base / subpath
     if not p.exists():
@@ -1138,11 +1221,11 @@ def variant_status(base: Path, subpath: str) -> tuple[str, int]:
     if size == 0:
         return "empty", 0
     # partial heuristic: nvfp4/hf expect config; gguf expects .gguf
-    if subpath == "gguf":
+    if subpath in ("gguf", "mtp-gguf"):
         ggufs = list(p.glob("*.gguf"))
         if not ggufs:
             return "downloading", size
-    elif subpath in ("nvfp4", "hf"):
+    elif subpath in ("nvfp4", "hf", "fp8"):
         if not (p / "config.json").exists() and not list(p.glob("*.gguf")):
             # may still be downloading safetensors
             st = list(p.glob("*.safetensors")) + list(p.glob("model-*"))
@@ -1151,6 +1234,165 @@ def variant_status(base: Path, subpath: str) -> tuple[str, int]:
             if not st and size > 0:
                 return "downloading", size
     return "ready", size
+
+
+def _looks_like_weight_dir(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    if (path / "config.json").exists():
+        return True
+    if any(path.glob("*.safetensors")):
+        return True
+    if any(path.glob("*.gguf")):
+        return True
+    return False
+
+
+def _gguf_label(filename: str, subpath: str | None = None) -> str:
+    stem = Path(filename).stem
+    # Prefer trailing quant token: Q4_K_M, Q8_0, IQ4_XS, NVFP4-MTP, etc.
+    m = re.search(
+        r"(?:^|[-_.])((?:IQ|Q|UQ)\d[\w.]*|NVFP4(?:-MTP)?|FP\d+|BF16|F16|F32|MXFP\d+(?:_MOE)?)(?:$|[-_.])",
+        stem,
+        re.I,
+    )
+    if m:
+        label = f"{m.group(1).upper()} GGUF"
+    else:
+        label = f"{stem} GGUF"
+    if subpath == "mtp-gguf" and "MTP" not in label.upper():
+        label = label.replace(" GGUF", " MTP GGUF")
+    return label
+
+
+def _variant_label(subpath: str, format_: str | None, file: str | None = None) -> str:
+    if file:
+        return _gguf_label(file, subpath)
+    if subpath in LABEL_BY_SUBPATH:
+        return LABEL_BY_SUBPATH[subpath]
+    if format_ in LABEL_BY_SUBPATH:
+        return LABEL_BY_SUBPATH[format_]
+    return (format_ or subpath or "weights").upper()
+
+
+def _variant_key(subpath: str, file: str | None = None) -> str:
+    return f"{subpath}/{file}" if file else subpath
+
+
+def build_weight_variants(base: Path, catalog_variants: list | None) -> list[dict]:
+    """Build deduped on-disk weight units (subdir and/or per-GGUF file).
+
+    Catalog variants are hints (engine/hf_repo). Disk wins for what exists and sizes.
+    Mixed dirs (safetensors + GGUFs in the same folder) emit separate units so the
+    Models page can show one row per servable artifact.
+    """
+    catalog_by_sub: dict[str, dict] = {}
+    for v in catalog_variants or []:
+        sub = (v or {}).get("subpath")
+        if not sub or sub in catalog_by_sub:
+            continue
+        catalog_by_sub[sub] = v
+
+    found_subs: set[str] = set(catalog_by_sub.keys())
+    if base.is_dir():
+        for child in base.iterdir():
+            if not child.is_dir() or child.name.startswith(".") or child.name in SKIP_WEIGHT_DIR_NAMES:
+                continue
+            if child.name in WEIGHT_SUBDIR_NAMES or _looks_like_weight_dir(child):
+                found_subs.add(child.name)
+
+    variants: list[dict] = []
+    for sub in sorted(found_subs):
+        meta = catalog_by_sub.get(sub) or {}
+        p = base / sub
+        hf_repo = meta.get("hf_repo")
+        hf_url = f"https://huggingface.co/{hf_repo}" if hf_repo else None
+        note = meta.get("note")
+
+        if not p.exists():
+            variants.append(
+                {
+                    "format": meta.get("format") or sub,
+                    "engine": meta.get("engine") or ENGINE_BY_SUBPATH.get(sub),
+                    "subpath": sub,
+                    "path": str(p),
+                    "label": _variant_label(sub, meta.get("format")),
+                    "key": _variant_key(sub),
+                    "hf_repo": hf_repo,
+                    "hf_url": hf_url,
+                    "status": "missing",
+                    "size_bytes": 0,
+                    "size_human": human_size(0),
+                    "note": note,
+                }
+            )
+            continue
+
+        ggufs = sorted(p.glob("*.gguf"))
+        has_tensors = bool(
+            (p / "config.json").exists()
+            or list(p.glob("*.safetensors"))
+            or list(p.glob("model-*.safetensors"))
+        )
+        gguf_bytes = 0
+        for g in ggufs:
+            try:
+                sz = int(g.stat().st_size)
+            except OSError:
+                sz = 0
+            gguf_bytes += sz
+            variants.append(
+                {
+                    "format": "gguf",
+                    "engine": "llamacpp",
+                    "subpath": sub,
+                    "file": g.name,
+                    "path": str(g),
+                    "label": _gguf_label(g.name, sub),
+                    "key": _variant_key(sub, g.name),
+                    "hf_repo": hf_repo,
+                    "hf_url": hf_url,
+                    "status": "ready" if sz > 0 else "empty",
+                    "size_bytes": sz,
+                    "size_human": human_size(sz),
+                    "note": note,
+                }
+            )
+
+        if has_tensors or not ggufs:
+            status, full_size = variant_status(base, sub)
+            if ggufs and has_tensors:
+                size = max(0, full_size - gguf_bytes)
+                status = "ready" if size > 0 else status
+            else:
+                size = full_size
+            # Skip empty leftover after splitting GGUFs out of a GGUF-only dir
+            if size <= 0 and ggufs:
+                continue
+            fmt = meta.get("format") or (sub if sub in WEIGHT_SUBDIR_NAMES else "hf")
+            if fmt == "gguf" and has_tensors:
+                fmt = sub if sub in ("fp8", "nvfp4") else "hf"
+            engine = meta.get("engine") or ENGINE_BY_SUBPATH.get(sub) or ENGINE_BY_SUBPATH.get(fmt)
+            if fmt == "gguf":
+                engine = "llamacpp"
+            variants.append(
+                {
+                    "format": fmt,
+                    "engine": engine,
+                    "subpath": sub,
+                    "path": str(p),
+                    "label": _variant_label(sub, fmt),
+                    "key": _variant_key(sub),
+                    "hf_repo": hf_repo,
+                    "hf_url": hf_url,
+                    "status": status,
+                    "size_bytes": size,
+                    "size_human": human_size(size),
+                    "note": note,
+                }
+            )
+
+    return variants
 
 
 def main() -> int:
@@ -1178,9 +1420,6 @@ def main() -> int:
         hf_repo = _normalize_hf_repo(m.get("hf_repo", "")) or (m.get("hf_repo") or "").strip()
         hf_info = hf_enrich(hf_repo, hf_cache) if hf_repo else {}
 
-        variants = []
-        total_size = 0
-        statuses = []
         max_ctx = resolve_max_context(
             catalog_max=m.get("max_context"),
             hf_repo=hf_repo or None,
@@ -1189,27 +1428,17 @@ def main() -> int:
             hf_cache=hf_cache,
         )
 
-        for v in m.get("variants", []):
-            sub = v["subpath"]
-            status, size = variant_status(base, sub)
-            total_size += size
-            statuses.append(status)
-            variants.append(
-                {
-                    "format": v.get("format"),
-                    "engine": v.get("engine"),
-                    "subpath": sub,
-                    "path": str(base / sub),
-                    "hf_repo": v.get("hf_repo"),
-                    "hf_url": f"https://huggingface.co/{v['hf_repo']}" if v.get("hf_repo") else None,
-                    "status": status,
-                    "size_bytes": size,
-                    "size_human": human_size(size),
-                    "note": v.get("note"),
-                }
-            )
+        variants = build_weight_variants(base, m.get("variants", []))
+        statuses = [v.get("status") or "missing" for v in variants]
+        # Prefer real on-disk tree size so list totals match `du` (no double-count).
+        local = location_info(MODELS_ROOT, lab, slug)
+        total_size = int(local.get("size_bytes") or 0)
+        if not total_size:
+            total_size = sum(int(v.get("size_bytes") or 0) for v in variants)
 
-        if all(s == "missing" for s in statuses):
+        if not statuses:
+            overall = "ready" if total_size > 0 else "missing"
+        elif all(s == "missing" for s in statuses):
             overall = "missing"
         elif any(s == "downloading" for s in statuses):
             overall = "downloading"
@@ -1233,6 +1462,9 @@ def main() -> int:
             base,
             hf_cache,
         )
+        if m.get("release_date"):
+            release_date = str(m.get("release_date"))
+            release_date_source = "catalog"
         if not release_date:
             release_date = hf_info.get("release_date")
             release_date_source = "huggingface" if release_date else None
@@ -1260,7 +1492,7 @@ def main() -> int:
                 "slug": slug,
                 "rel_path": f"{lab}/{slug}",
                 "path": str(base),
-                "local": location_info(MODELS_ROOT, lab, slug),
+                "local": local,
                 "shelf": shelf,
                 "hf_repo": hf_repo,
                 "hf_url": f"https://huggingface.co/{hf_repo}" if hf_repo else None,

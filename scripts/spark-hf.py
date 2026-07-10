@@ -416,6 +416,105 @@ def inventory_path_for_repo(repo_id: str) -> str:
     return f"{repo_to_lab(repo_id)}/{repo_to_slug(repo_id)}"
 
 
+def _norm_hf_repo(repo: str | None) -> str:
+    return str(repo or "").strip().strip("/").lower()
+
+
+def _inventory_roots_for_repo(repo_id: str) -> list[Path]:
+    """Candidate /models/<lab>/<slug> roots for a HF repo (derived + catalog matches)."""
+    roots: list[Path] = []
+    seen: set[str] = set()
+
+    def add(rel: str | None) -> None:
+        rel_n = str(rel or "").strip().strip("/")
+        if not rel_n or rel_n in seen:
+            return
+        seen.add(rel_n)
+        roots.append(MODELS_ROOT / rel_n)
+
+    add(inventory_path_for_repo(repo_id))
+    want = _norm_hf_repo(repo_id)
+    try:
+        catalog = load_yaml(CATALOG_FILE)
+        models = catalog.get("models") if isinstance(catalog, dict) else None
+    except Exception:
+        models = None
+    if isinstance(models, list):
+        for entry in models:
+            if not isinstance(entry, dict):
+                continue
+            hit = _norm_hf_repo(entry.get("hf_repo")) == want
+            if not hit:
+                for v in entry.get("variants") or []:
+                    if isinstance(v, dict) and _norm_hf_repo(v.get("hf_repo")) == want:
+                        hit = True
+                        break
+            if hit:
+                lab = entry.get("lab")
+                slug = entry.get("slug")
+                if lab and slug:
+                    add(f"{lab}/{slug}")
+                elif entry.get("id"):
+                    add(str(entry.get("id")))
+    return roots
+
+
+def _files_present_in_dir(dest: Path, files: list[str]) -> bool:
+    if not dest.is_dir() or not files:
+        return False
+    for f in files:
+        p = dest / f
+        if p.is_file():
+            continue
+        # HF sometimes nests; also accept basename match in the dest dir
+        if (dest / Path(f).name).is_file():
+            continue
+        return False
+    return True
+
+
+def _files_present_under(root: Path, files: list[str]) -> bool:
+    """True when every file exists under root (relative path or basename walk)."""
+    if not root.is_dir() or not files:
+        return False
+    if _files_present_in_dir(root, files):
+        return True
+    names = {Path(f).name for f in files}
+    if not names:
+        return False
+    found: set[str] = set()
+    for dirpath, dirnames, filenames in os.walk(root):
+        # Skip HF cache blobs
+        dirnames[:] = [d for d in dirnames if d not in (".cache", ".git")]
+        for name in filenames:
+            if name in names:
+                found.add(name)
+                if found == names:
+                    return True
+    return found == names
+
+
+def _variant_on_disk(
+    *,
+    repo_id: str,
+    subpath: str,
+    files: list[str],
+    dest: Path | None = None,
+) -> tuple[bool, str | None]:
+    """Return (on_disk, path) when the exact variant files are already local."""
+    if not files:
+        return False, None
+    if dest is not None and _files_present_in_dir(dest, files):
+        return True, str(dest)
+    for root in _inventory_roots_for_repo(repo_id):
+        preferred = root / subpath
+        if _files_present_in_dir(preferred, files):
+            return True, str(preferred)
+        if _files_present_under(root, files):
+            return True, str(root)
+    return False, None
+
+
 def repo_siblings(repo_id: str) -> list[Any]:
     api = _hf_api()
     info = api.model_info(repo_id)
@@ -852,6 +951,9 @@ def discover_model_variants(repo_id: str) -> list[dict[str, Any]]:
         if shard_count > 1:
             explanation = f"{shard_count} shard files — " + explanation
         dest = MODELS_ROOT / inv / "gguf"
+        on_disk, on_disk_path = _variant_on_disk(
+            repo_id=repo_id, subpath="gguf", files=files, dest=dest
+        )
         variants.append(
             {
                 "id": f"gguf:{group_key}",
@@ -869,6 +971,8 @@ def discover_model_variants(repo_id: str) -> list[dict[str, Any]]:
                 "explanation": explanation,
                 "spark_fit": fit,
                 "spark_fit_label": fit_label,
+                "on_disk": on_disk,
+                "on_disk_path": on_disk_path,
             }
         )
 
@@ -887,6 +991,9 @@ def discover_model_variants(repo_id: str) -> list[dict[str, Any]]:
                 + explanation
             )
         dest = MODELS_ROOT / inv / fmt
+        on_disk, on_disk_path = _variant_on_disk(
+            repo_id=repo_id, subpath=fmt, files=weight_files, dest=dest
+        )
         variants.append(
             {
                 "id": f"{fmt}:bundle",
@@ -904,6 +1011,8 @@ def discover_model_variants(repo_id: str) -> list[dict[str, Any]]:
                 "explanation": explanation,
                 "spark_fit": fit,
                 "spark_fit_label": fit_label,
+                "on_disk": on_disk,
+                "on_disk_path": on_disk_path,
             }
         )
 

@@ -794,7 +794,10 @@ def attach_spark_verify(entries: list, store: dict, benchmarks: dict[str, dict])
         profile = sv.get("tok_s_profile")
         if profile:
             bench = benchmarks.get(profile) or {}
-            if bench.get("method") not in BENCH_METHODS:
+            method = bench.get("method")
+            # Only strip when the profile is present with a non-v2/legacy method.
+            # Missing benchmark rows must not erase a recorded verify tok_s.
+            if method and method not in BENCH_METHODS:
                 sv["tok_s"] = None
                 sv["tok_s_engine"] = None
                 sv["tok_s_profile"] = None
@@ -1018,6 +1021,40 @@ def attach_best_bench_tok(entries: list, golden_by_inv: dict[str, str] | None = 
         entry["best_bench_tok_s"] = best.get("tok_s") if best else None
         entry["latest_bench_tok_s"] = entry["best_bench_tok_s"]
         entry.pop("best_speculative_tok_s", None)
+
+
+def propagate_sidecar_bench_to_targets(entries: list) -> None:
+    """Surface DFlash/sidecar tok/s on the base model row users actually click."""
+    by_id = {str(e.get("id") or e.get("rel_path")): e for e in entries}
+    for entry in entries:
+        if entry.get("model_kind") != "speculative_sidecar":
+            continue
+        tok = entry.get("best_bench_tok_s")
+        if tok is None:
+            continue
+        target = by_id.get(str(entry.get("requires_target") or ""))
+        if not target:
+            continue
+        target["has_speculative_addon"] = True
+        if target.get("best_bench_tok_s") is None:
+            target["best_bench_tok_s"] = tok
+            target["latest_bench_tok_s"] = tok
+
+
+def fill_best_bench_from_verify(entries: list) -> None:
+    """Last resort: verification tok_s when profiles/benchmarks didn't attach a score."""
+    for entry in entries:
+        if entry.get("best_bench_tok_s") is not None:
+            continue
+        sv = entry.get("spark_verify") or {}
+        tok = sv.get("tok_s")
+        if tok is None:
+            continue
+        try:
+            entry["best_bench_tok_s"] = float(tok)
+            entry["latest_bench_tok_s"] = entry["best_bench_tok_s"]
+        except (TypeError, ValueError):
+            continue
 
 
 def reconcile_spark_verify_with_profiles(
@@ -1694,8 +1731,10 @@ def main() -> int:
         if entry.get("lab") == "z-lab" and ("dflash" in caps or "speculative" in caps):
             entry.setdefault("model_kind", "speculative_sidecar")
     attach_best_bench_tok(entries, golden_by_inv)
+    propagate_sidecar_bench_to_targets(entries)
     for entry in entries:
         reconcile_spark_verify_with_profiles(entry, golden_by_inv)
+    fill_best_bench_from_verify(entries)
 
     payload = {
         "generated_at": now,

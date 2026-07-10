@@ -1320,7 +1320,7 @@
 
       const spark = sparkStatus(m);
       const paramsVal = m.param_b ? m.param_b + 'B' : '—';
-      const activeVal = m.param_active_b ? m.param_active_b + 'B' : '—';
+      const activeVal = m.param_active_b != null ? m.param_active_b + 'B' : '—';
       const caps = catalogCapabilities(m).slice(0, 3);
       const capsHtml = caps.length ? caps.map(c => `<span class="badge cap">${esc(formatTagLabel(c))}</span>`).join('') : '<span class="rail-empty">—</span>';
 

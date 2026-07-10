@@ -686,6 +686,8 @@ def parse_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None
         return 80.0
     if re.search(r"\bphi-4\b", text, re.I):
         return 14.0
+    if re.search(r"laguna-xs", text, re.I) and "dflash" not in text.lower():
+        return 33.0
     m = re.search(r"(\d+(?:\.\d+)?)\s*[- ]?[Bb](?:\b|[-/])", text)
     if m:
         try:
@@ -695,8 +697,15 @@ def parse_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None
     return None
 
 
-def parse_active_param_b(name: str, slug: str, cfg: dict | None = None) -> float | None:
-    text = f"{name} {slug}"
+def parse_active_param_b(
+    name: str,
+    slug: str,
+    cfg: dict | None = None,
+    *,
+    hf_repo: str | None = None,
+) -> float | None:
+    text = f"{name} {slug} {hf_repo or ''}"
+    # 35B-A3B / 12B-A2.5B / 30b/a3b
     m = re.search(
         r"(\d+(?:\.\d+)?)\s*[- ]?[Bb]\s*[-/]\s*[Aa]?(\d+(?:\.\d+)?)\s*[Bb]",
         text,
@@ -707,11 +716,48 @@ def parse_active_param_b(name: str, slug: str, cfg: dict | None = None) -> float
             return float(m.group(2))
         except ValueError:
             pass
+    # Standalone A3B / A2.5B token (common in HF repo ids)
+    m = re.search(r"(?:^|[^a-z0-9])[Aa](\d+(?:\.\d+)?)\s*[Bb](?:\b|[-_/])", text)
+    if m:
+        try:
+            return float(m.group(1))
+        except ValueError:
+            pass
     if re.search(r"coder-next", text, re.I):
         return 3.0
     if re.search(r"deepseek-v4-flash|deepseek-v4", text, re.I):
         return 13.0
+    if re.search(r"laguna-xs", text, re.I) and "dflash" not in text.lower():
+        return 3.0
+    # Ornith-1.0-35B is Qwen3.5-35B-A3B MoE (~3B active)
+    if re.search(r"ornith", text, re.I) and re.search(r"35", text):
+        return 3.0
+    # JetBrains Mellum2 is 12B-A2.5B
+    if re.search(r"mellum", text, re.I):
+        return 2.5
     return None
+
+
+def _config_blocks(cfg: dict | None) -> list[dict]:
+    cfg = cfg or {}
+    blocks = [cfg]
+    for nest in ("text_config", "llm_config", "language_config"):
+        sub = cfg.get(nest)
+        if isinstance(sub, dict):
+            blocks.append(sub)
+    return blocks
+
+
+def config_looks_moe(cfg: dict | None) -> bool:
+    """True when local config.json exposes MoE expert routing."""
+    for block in _config_blocks(cfg):
+        try:
+            n_experts = int(block.get("num_experts") or block.get("n_routed_experts") or 0)
+        except (TypeError, ValueError):
+            n_experts = 0
+        if n_experts > 1:
+            return True
+    return False
 
 
 def normalize_param_active_b(
@@ -734,9 +780,10 @@ def infer_architecture(
     param_active_b: float | None,
     name: str = "",
     slug: str = "",
+    cfg: dict | None = None,
 ) -> str | None:
     caps = {str(c).lower() for c in (capabilities or [])}
-    if param_active_b or "moe" in caps:
+    if param_active_b or "moe" in caps or config_looks_moe(cfg):
         return "moe"
     if "dense" in caps:
         return "dense"
@@ -1511,14 +1558,21 @@ def main() -> int:
 
         best_cfg = _best_local_config(base, m.get("variants", []))
         param_b = m.get("param_b") or parse_param_b(m["name"], slug, best_cfg)
-        param_active_b = m.get("param_active_b") or parse_active_param_b(m["name"], slug, best_cfg)
-        architecture = infer_architecture(
-            capabilities=m.get("capabilities", []),
-            param_b=param_b,
-            param_active_b=param_active_b,
-            name=m["name"],
-            slug=slug,
+        param_active_b = m.get("param_active_b") or parse_active_param_b(
+            m["name"], slug, best_cfg, hf_repo=hf_repo
         )
+        catalog_arch = m.get("architecture")
+        if catalog_arch in ("moe", "dense"):
+            architecture = catalog_arch
+        else:
+            architecture = infer_architecture(
+                capabilities=m.get("capabilities", []),
+                param_b=param_b,
+                param_active_b=param_active_b,
+                name=m["name"],
+                slug=slug,
+                cfg=best_cfg,
+            )
         param_active_b = normalize_param_active_b(architecture, param_b, param_active_b)
 
         entries.append(
@@ -1593,6 +1647,7 @@ def main() -> int:
                     param_active_b=untracked_param_active_b,
                     name=model_dir.name,
                     slug=slug,
+                    cfg=untracked_cfg,
                 )
                 untracked_param_active_b = normalize_param_active_b(
                     untracked_arch, untracked_param_b, untracked_param_active_b
@@ -1674,6 +1729,7 @@ def main() -> int:
                     param_active_b=shelf_param_active_b,
                     name=model_dir.name,
                     slug=model_dir.name,
+                    cfg=shelf_cfg,
                 )
                 shelf_param_active_b = normalize_param_active_b(
                     shelf_arch, shelf_param_b, shelf_param_active_b

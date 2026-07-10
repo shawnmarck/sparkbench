@@ -418,6 +418,8 @@ models:
   slug: ornith-1.0-35b-nvfp4
   hf_repo: s-batman/Ornith-1.0-35B-NVFP4-MTP-GGUF
   param_b: 35
+  param_active_b: 3
+  architecture: moe
   capabilities:
   - general
   - moe
@@ -434,12 +436,16 @@ models:
   name: Laguna XS 2.1
   slug: laguna-xs-2.1
   hf_repo: poolside/Laguna-XS-2.1
+  param_b: 33
+  param_active_b: 3
+  architecture: moe
   capabilities:
   - coding
   - agentic
   - vllm
   - eugr
   - dflash
+  - moe
   why_downloaded: "Poolside Laguna XS 2.1 + DFlash sidecar — bench v2 golden 262k @ 11.7 tok/s 2026-07-08.\n"
   variants:
   - format: hf
@@ -474,6 +480,8 @@ models:
   - moe
   why_downloaded: "Golden fleet target \u2014 multi-quant (FP8 / NVFP4 / GGUF / HF). Primary golden recipe deepreinforce-ai-ornith-1-0-35b-llama.\n"
   param_b: 35
+  param_active_b: 3
+  architecture: moe
   variants:
   - format: fp8
     subpath: fp8
@@ -583,6 +591,8 @@ models:
   - gguf
   why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe mellum2-12b-opus-q4.\n"
   param_b: 12
+  param_active_b: 2.5
+  architecture: moe
   variants:
   - format: gguf
     subpath: gguf

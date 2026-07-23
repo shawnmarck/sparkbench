@@ -1251,4 +1251,92 @@ profiles:
     tok_s_4k: 42.1
     tok_s_50k: 4.7
     tok_s_100k: 2.2
-updated_at: '2026-07-10T14:30:20.150146+00:00'
+  poolside-laguna-s-2-1-dflash-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: poolside/laguna-s-2.1
+    measured_at: '2026-07-23T19:29:28.432228+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 25.6
+        tok_s_min: 25.6
+        tok_s_max: 25.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 452
+        elapsed_s: 17.63
+        run_tok_s:
+        - 25.6
+      '50000':
+        tok_s: 23.4
+        tok_s_min: 23.4
+        tok_s_max: 23.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 497
+        elapsed_s: 21.23
+        run_tok_s:
+        - 23.4
+      '100000':
+        tok_s: 11.0
+        tok_s_min: 11.0
+        tok_s_max: 11.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 490
+        elapsed_s: 44.49
+        run_tok_s:
+        - 11.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=25.6 / 50000=23.4 / 100000=11.0
+    tok_s_4k: 25.6
+    tok_s_50k: 23.4
+    tok_s_100k: 11.0
+  poolside-laguna-s-2-1-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: poolside/laguna-s-2.1
+    measured_at: '2026-07-23T19:42:00.534065+00:00'
+    loaded_ctx: 108192
+    fills:
+      '4096':
+        tok_s: 18.9
+        tok_s_min: 18.9
+        tok_s_max: 18.9
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 406
+        elapsed_s: 21.53
+        run_tok_s:
+        - 18.9
+      '50000':
+        tok_s: 11.7
+        tok_s_min: 11.7
+        tok_s_max: 11.7
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 485
+        elapsed_s: 41.48
+        run_tok_s:
+        - 11.7
+      '100000':
+        tok_s: 9.4
+        tok_s_min: 9.4
+        tok_s_max: 9.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 482
+        elapsed_s: 51.37
+        run_tok_s:
+        - 9.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=18.9 / 50000=11.7 / 100000=9.4
+    tok_s_4k: 18.9
+    tok_s_50k: 11.7
+    tok_s_100k: 9.4
+updated_at: '2026-07-23T19:42:00.534065+00:00'

@@ -35,5 +35,6 @@ context:
       ctx: 32768
       kv: auto
 notes: Laguna S 2.1 NVFP4 + poolside/Laguna-S-2.1-DFlash-NVFP4. Adapted from Poolside
-  DGX Spark recipe (max-num-seqs 32, poolside_v1 parsers, moe-backend marlin (flashinfer_cutlass @32 seqs OOMd host; re-try later)). Native ctx 1M; golden at 262k fp8 KV. Bench v2 22.0 tok/s 2026-07-23.
+  DGX Spark recipe (max-num-seqs 4, poolside_v1 parsers, moe-backend marlin). Native ctx 1M;
+  golden at 262k fp8 KV. PBM 4k/50k/100k = 25.6/23.4/11.0 tok/s (2026-07-23); bench-v2 ~23.4.
 promoted_at: '2026-07-23T08:36:20.493635+00:00'

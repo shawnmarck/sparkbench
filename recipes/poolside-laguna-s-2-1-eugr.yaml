@@ -1,0 +1,34 @@
+id: poolside-laguna-s-2-1-eugr
+name: Laguna S 2.1 NVFP4 (eugr, no DFlash)
+inventory_path: poolside/laguna-s-2.1
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: laguna-s-2.1
+port: 8000
+tags:
+- lab
+- eugr
+- poolside
+- coder
+- nvfp4
+eugr_recipe: /opt/spark/services/eugr-poolside-laguna-s-2-1-eugr.yaml
+context:
+  default: 262144
+  native: 1048576
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8
+    smoke:
+      label: Load smoke (32k)
+      ctx: 32768
+      kv: auto
+    pbm:
+      label: PBM ladder fit (108k)
+      ctx: 108192
+      kv: fp8
+notes: Baseline Laguna S 2.1 NVFP4 without DFlash — comparison recipe (golden remains
+  poolside-laguna-s-2-1-dflash-eugr). PBM 4k/50k/100k = 18.9/11.7/9.4 tok/s (2026-07-23).

@@ -190,13 +190,12 @@ models:
     engine: llamacpp
   s-batman/ornith-1.0-35b-nvfp4:
     spark_status: works
-    tok_s: 8.7
+    updated_at: '2026-07-10T15:39:52.400850+00:00'
+    engine: llamacpp
+    tok_s: 46.5
     tok_s_engine: llamacpp
     tok_s_profile: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
-    updated_at: '2026-07-08T04:37:24.257332+00:00'
-    engine: llamacpp
-    note: "golden 196k/q8_0 @ 8.7 tok/s \u2014 fill~133k \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: "PBM 4k @ 46.5 tok/s \u2014 perfbench-metrics \u2014 profile=s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2"
   empero-ai/qwythos-9b-claude-mythos-5-1m:
     tok_s: 12.6
     tok_s_engine: eugr
@@ -248,14 +247,6 @@ models:
     removal_shelf: false
     removal_queued_at: '2026-07-10T07:21:38.355727+00:00'
     note: 'Overnight full-coverage failed after retries: failed:qwen-qwen3-6-35b-a3b-dflash-eugr'
-  s-batman/ornith-1.0-35b-nvfp4:
-    spark_status: works
-    updated_at: '2026-07-10T15:39:52.400850+00:00'
-    engine: llamacpp
-    tok_s: 46.5
-    tok_s_engine: llamacpp
-    tok_s_profile: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
-    note: "PBM 4k @ 46.5 tok/s \u2014 perfbench-metrics \u2014 profile=s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2"
   nvidia/nvidia-nemotron-labs-3-puzzle-75b-a9b:
     spark_status: failed
     updated_at: '2026-07-10T14:30:26.504715+00:00'
@@ -292,3 +283,12 @@ models:
     engine: llamacpp
     note: On disk under hf/*.gguf but scaffold cannot find weights (expects top-level
       gguf or nvfp4/hf). Needs manual llamacpp recipe pointing at hf/gemma4-v2-Q4_K_M.gguf.
+  poolside/laguna-s-2.1:
+    tok_s: 25.6
+    tok_s_engine: eugr
+    tok_s_profile: poolside-laguna-s-2-1-dflash-eugr
+    updated_at: '2026-07-23T20:38:04.108571+00:00'
+    spark_status: works
+    note: "PBM 4k @ 25.6 tok/s (50k=23.4, 100k=11.0) \u2014 DFlash; baseline no-DFlash\
+      \ PBM 18.9/11.7/9.4 \u2014 profile=poolside-laguna-s-2-1-dflash-eugr"
+    engine: eugr

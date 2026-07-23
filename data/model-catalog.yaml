@@ -466,6 +466,43 @@ models:
     subpath: dflash
     engine: vllm
     hf_repo: poolside/Laguna-XS-2.1-DFlash
+- id: poolside/laguna-s-2.1
+  lab: poolside
+  name: Laguna S 2.1
+  slug: laguna-s-2.1
+  hf_repo: poolside/Laguna-S-2.1-NVFP4
+  param_b: 118
+  param_active_b: 8
+  architecture: moe
+  capabilities:
+  - coding
+  - agentic
+  - vllm
+  - eugr
+  - dflash
+  - moe
+  - nvfp4
+  why_downloaded: "Poolside Laguna S 2.1 NVFP4 (118B-A8B) — DGX Spark native path with matched DFlash-NVFP4 speculative decoding.\n"
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: poolside/Laguna-S-2.1-NVFP4
+- id: poolside/laguna-s-2.1-dflash
+  lab: poolside
+  name: Laguna S 2.1 DFlash (drafter)
+  slug: laguna-s-2.1-dflash
+  hf_repo: poolside/Laguna-S-2.1-DFlash-NVFP4
+  capabilities:
+  - dflash
+  - vllm
+  - nvfp4
+  why_downloaded: "DFlash-NVFP4 drafter for poolside/Laguna-S-2.1-NVFP4 — sidecar only, not a standalone serve target.\n"
+  variants:
+  - format: dflash
+    subpath: dflash
+    engine: vllm
+    hf_repo: poolside/Laguna-S-2.1-DFlash-NVFP4
 - id: deepreinforce-ai/ornith-1.0-35b
   lab: deepreinforce-ai
   name: Ornith 1.0 35B

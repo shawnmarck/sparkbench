@@ -31,7 +31,13 @@ golden:
   aeon-7/qwen3.6-27b-aeon-ultimate-uncensored: aeon-qwen3-6-27b-dflash-n10
   qwen/qwen3.6-35b-a3b: qwen-qwen3-6-35b-a3b-dflash-eugr
   poolside/laguna-xs-2.1: poolside-laguna-xs-2-1-dflash-eugr
+  poolside/laguna-s-2.1: poolside-laguna-s-2-1-dflash-eugr
   s-batman/ornith-1.0-35b-nvfp4: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
+  aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs: aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m
+  sakamakismile/thinkingcap-qwen3.6-27b: sakamakismile-thinkingcap-qwen3-6-27b-eugr
+  unsloth/qwen3.6-35b-a3b-nvfp4-fast: unsloth-qwen3-6-35b-a3b-nvfp4-fast-eugr
+  inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb: inference-snaps-glm-4-7-flash-30b-a3b-q4-k-m-5gb-llama
+  protolabsai/thinkingcap-qwen3.6-27b: protolabsai-thinkingcap-qwen3-6-27b-llama
 deprecated_profiles:
 - qwen36-nvfp4
 - qwen-qwen3-6-27b-dflash-eugr
@@ -39,3 +45,5 @@ deprecated_profiles:
 - 0xsero-deepseek-v4-flash-spark-llama-2
 auxiliary_inventory:
 - z-lab/qwen3.6-27b
+- hikari07jp/dspark-qwen3.6-27b-aeon-draft
+- alittlehammmer/qwen3.6-27b-dflash-gguf-llama.cpp

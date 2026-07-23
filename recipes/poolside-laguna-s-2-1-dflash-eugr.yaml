@@ -1,0 +1,39 @@
+id: poolside-laguna-s-2-1-dflash-eugr
+name: Laguna S 2.1 NVFP4 DFlash (eugr)
+inventory_path: poolside/laguna-s-2.1
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: laguna-s-2.1-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- poolside
+- coder
+- nvfp4
+- golden
+speculative:
+  method: dflash
+  sidecar_inventory: poolside/laguna-s-2.1-dflash
+  sidecar_path: /models/poolside/laguna-s-2.1-dflash/dflash
+  num_speculative_tokens: 15
+  target_weight_format: nvfp4
+eugr_recipe: /opt/spark/services/eugr-poolside-laguna-s-2-1-dflash-eugr.yaml
+context:
+  default: 262144
+  native: 1048576
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8
+    smoke:
+      label: Load smoke (32k)
+      ctx: 32768
+      kv: auto
+notes: Laguna S 2.1 NVFP4 + poolside/Laguna-S-2.1-DFlash-NVFP4. Adapted from Poolside
+  DGX Spark recipe (max-num-seqs 32, poolside_v1 parsers, moe-backend marlin (flashinfer_cutlass @32 seqs OOMd host; re-try later)). Native ctx 1M; golden at 262k fp8 KV. Bench v2 22.0 tok/s 2026-07-23.
+promoted_at: '2026-07-23T08:36:20.493635+00:00'

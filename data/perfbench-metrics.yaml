@@ -1256,45 +1256,39 @@ profiles:
     version: '1.0'
     engine: eugr
     inventory_path: poolside/laguna-s-2.1
-    measured_at: '2026-07-23T19:29:28.432228+00:00'
+    measured_at: '2026-07-24T00:19:15.988777+00:00'
     loaded_ctx: 262144
     fills:
       '4096':
-        tok_s: 25.6
-        tok_s_min: 25.6
-        tok_s_max: 25.6
+        tok_s: 28.9
+        tok_s_min: 28.9
+        tok_s_max: 28.9
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 452
-        elapsed_s: 17.63
         run_tok_s:
-        - 25.6
+        - 28.9
       '50000':
-        tok_s: 23.4
-        tok_s_min: 23.4
-        tok_s_max: 23.4
+        tok_s: 15.1
+        tok_s_min: 15.1
+        tok_s_max: 15.1
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 497
-        elapsed_s: 21.23
         run_tok_s:
-        - 23.4
+        - 15.1
       '100000':
-        tok_s: 11.0
-        tok_s_min: 11.0
-        tok_s_max: 11.0
+        tok_s: 10.9
+        tok_s_min: 10.9
+        tok_s_max: 10.9
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 490
-        elapsed_s: 44.49
         run_tok_s:
-        - 11.0
+        - 10.9
     skipped: {}
     primary_fill: 50000
-    note: PBM 4096=25.6 / 50000=23.4 / 100000=11.0
-    tok_s_4k: 25.6
-    tok_s_50k: 23.4
-    tok_s_100k: 11.0
+    note: PBM 4096=28.9 / 50000=15.1 / 100000=10.9 (DFlash n_spec=3, max_num_seqs=1)
+    tok_s_4k: 28.9
+    tok_s_50k: 15.1
+    tok_s_100k: 10.9
   poolside-laguna-s-2-1-eugr:
     method: perfbench-metrics
     version: '1.0'
@@ -1339,4 +1333,4 @@ profiles:
     tok_s_4k: 18.9
     tok_s_50k: 11.7
     tok_s_100k: 9.4
-updated_at: '2026-07-23T19:42:00.534065+00:00'
+updated_at: '2026-07-24T00:19:15.988777+00:00'

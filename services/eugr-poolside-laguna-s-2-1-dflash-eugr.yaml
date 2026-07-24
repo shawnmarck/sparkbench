@@ -39,4 +39,4 @@ command: |
     --max-num-batched-tokens {max_num_batched_tokens} \
     --enable-chunked-prefill \
     --load-format auto \
-    --speculative-config '{{"method": "dflash", "model": "/models/poolside/laguna-s-2.1-dflash/dflash", "num_speculative_tokens": 15}}'
+    --speculative-config '{{"method": "dflash", "model": "/models/poolside/laguna-s-2.1-dflash/dflash", "num_speculative_tokens": 3}}'

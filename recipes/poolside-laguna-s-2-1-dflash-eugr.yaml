@@ -18,7 +18,7 @@ speculative:
   method: dflash
   sidecar_inventory: poolside/laguna-s-2.1-dflash
   sidecar_path: /models/poolside/laguna-s-2.1-dflash/dflash
-  num_speculative_tokens: 15
+  num_speculative_tokens: 3
   target_weight_format: nvfp4
 eugr_recipe: /opt/spark/services/eugr-poolside-laguna-s-2-1-dflash-eugr.yaml
 context:
@@ -36,5 +36,6 @@ context:
       kv: auto
 notes: Laguna S 2.1 NVFP4 + poolside/Laguna-S-2.1-DFlash-NVFP4. Adapted from Poolside
   DGX Spark recipe (max-num-seqs 4, poolside_v1 parsers, moe-backend marlin). Native ctx 1M;
-  golden at 262k fp8 KV. PBM 4k/50k/100k = 25.6/23.4/11.0 tok/s (2026-07-23); bench-v2 ~23.4.
+  golden at 262k fp8 KV. DFlash n_spec=3 (nspec sweep beat n=15). PBM 4k/50k/100k =
+  28.9/15.1/10.9 tok/s @ max_num_seqs=1 (2026-07-24); baseline no-DFlash 18.9/11.7/9.4.
 promoted_at: '2026-07-23T08:36:20.493635+00:00'

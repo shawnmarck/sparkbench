@@ -227,13 +227,14 @@ def list_recipe_ids() -> list[str]:
 
 def switchable_profile_ids() -> list[str]:
     out: list[str] = []
+    production = set(enabled_profiles())
     for profile_id in list_recipe_ids():
         try:
             recipe = load_recipe(profile_id)
         except SystemExit:
             continue
         lifecycle = recipe.get("lifecycle")
-        if lifecycle in LIFECYCLE_LIVE and profile_id in enabled_profiles():
+        if lifecycle in LIFECYCLE_LIVE and profile_id in production:
             out.append(profile_id)
         elif lifecycle == LIFECYCLE_TESTING:
             out.append(profile_id)
@@ -1245,9 +1246,13 @@ def api_recipe_list() -> list[dict[str, Any]]:
         except SystemExit:
             continue
         item = recipe_public(recipe)
-        item["lifecycle"] = recipe.get("lifecycle")
+        lifecycle = recipe.get("lifecycle")
+        item["lifecycle"] = lifecycle
         item["enabled"] = profile_id in production
-        item["switchable"] = profile_id in switchable_profile_ids()
+        item["switchable"] = (
+            lifecycle == LIFECYCLE_TESTING
+            or (lifecycle in LIFECYCLE_LIVE and profile_id in production)
+        )
         items.append(item)
     return items
 

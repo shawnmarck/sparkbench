@@ -145,7 +145,7 @@ export async function getShelfStatus(): Promise<ShelfStatus> {
   }
 }
 
-export async function switchProfile(profile: string): Promise<unknown> {
+export async function switchProfile(profile: string, confirmHeavy = false): Promise<unknown> {
   if (USE_FIXTURES) {
     await delay(800)
     return { ok: true, profile }
@@ -153,7 +153,7 @@ export async function switchProfile(profile: string): Promise<unknown> {
   return apiFetch('/api/inference/switch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ profile, confirm: true }),
+    body: JSON.stringify({ profile, confirm: true, confirm_heavy: confirmHeavy }),
   })
 }
 

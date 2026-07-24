@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowDownWideNarrow, ArrowLeft, ArrowUp, Info, Plus, Search } from 'lucide-react'
+import { ArrowDown, ArrowDownWideNarrow, ArrowLeft, ArrowUp, Info, Loader2, Pencil, Play, Plus, Search } from 'lucide-react'
 import {
   discardRecipe,
+  getInferenceStatus,
   getInventory,
   getRecipes,
   markRecipeTesting,
@@ -166,15 +167,24 @@ export function RecipesPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [activeProfile, setActiveProfile] = useState<string | null>(null)
+  const [startingProfile, setStartingProfile] = useState<string | null>(null)
+  const [servingId, setServingId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   async function refresh() {
     setLoading(true)
     setError('')
     try {
-      const [list, inv] = await Promise.all([getRecipes(), getInventory()])
+      const [list, inv, status] = await Promise.all([
+        getRecipes(),
+        getInventory(),
+        getInferenceStatus(true).catch(() => null),
+      ])
       setRecipes(list)
       setModels(inv.models)
+      setActiveProfile(status?.active?.profile || status?.active?.id || null)
+      setStartingProfile(status?.switch?.running ? status.switch.profile || null : null)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -190,6 +200,27 @@ export function RecipesPage() {
     localStorage.setItem(RECIPE_SORT_KEY, sort)
     localStorage.setItem(RECIPE_SORT_DIRECTION_KEY, sortDirection)
   }, [sort, sortDirection])
+
+  useEffect(() => {
+    if (!startingProfile) return
+    let cancelled = false
+    const timer = window.setInterval(() => {
+      void getInferenceStatus(true).then((status) => {
+        if (cancelled) return
+        const active = status.active?.profile || status.active?.id || null
+        const starting = status.switch?.running ? status.switch.profile || startingProfile : null
+        setActiveProfile(active)
+        setStartingProfile(starting)
+        if (!starting && active === startingProfile) {
+          setMessage(`${startingProfile} is now serving.`)
+        }
+      }).catch(() => undefined)
+    }, 2000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [startingProfile])
 
   function changeSort(key: SortKey) {
     if (key === sort) {
@@ -247,6 +278,26 @@ export function RecipesPage() {
   function backToList() {
     setParams(new URLSearchParams())
     setMessage('')
+  }
+
+  async function serveRecipe(recipe: Recipe) {
+    if (recipe.switchable === false || servingId || startingProfile) return
+    const heavy = recipe.tier === 'heavy'
+    if (
+      heavy
+      && !window.confirm(`Load the heavy recipe “${recipe.name || recipe.id}”? This can take several minutes and replaces the active engine.`)
+    ) return
+    setServingId(recipe.id)
+    setMessage(`Starting ${recipe.name || recipe.id}…`)
+    try {
+      await switchProfile(recipe.id, heavy)
+      setStartingProfile(recipe.id)
+      setMessage(`${recipe.name || recipe.id} is starting. The active engine will switch when it is ready.`)
+    } catch (err) {
+      setMessage(`Serve failed: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setServingId(null)
+    }
   }
 
   async function act(label: string, fn: () => Promise<unknown>, confirmMessage?: string) {
@@ -437,7 +488,7 @@ export function RecipesPage() {
                 <col className="hidden w-20 xl:table-column" />
                 <col className="hidden w-20 xl:table-column" />
                 <col className="w-20" />
-                <col className="hidden w-16 md:table-column" />
+                <col className="hidden w-40 md:table-column" />
               </colgroup>
               <thead className="border-b bg-muted/40 text-xs text-muted-foreground">
                 <tr>
@@ -449,7 +500,7 @@ export function RecipesPage() {
                   <SortableHeader className="hidden xl:table-cell" label="Active" sortKey="active" sort={sort} direction={sortDirection} onSort={changeSort} />
                   <SortableHeader className="hidden xl:table-cell" label="Total" sortKey="params" sort={sort} direction={sortDirection} onSort={changeSort} />
                   <SortableHeader label="tok/s" sortKey="speed" sort={sort} direction={sortDirection} onSort={changeSort} />
-                  <th className="hidden px-3 py-3 md:table-cell" />
+                  <th className="hidden px-3 py-3 font-medium md:table-cell">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -462,14 +513,24 @@ export function RecipesPage() {
                 )}
                 {filtered.map((r) => {
                   const model = findModel(models, r.inventory_path)
+                  const isActive = activeProfile === r.id
+                  const isStarting = startingProfile === r.id || servingId === r.id
+                  const serveDisabled = (
+                    r.switchable === false
+                    || isActive
+                    || servingId != null
+                    || startingProfile != null
+                  )
                   return (
                     <tr
                       key={r.id}
-                      className="border-b last:border-0 cursor-pointer hover:bg-muted/40"
-                      onClick={() => openRecipe(r.id)}
+                      className={cn('border-b last:border-0', isActive && 'bg-primary/[0.04]')}
                     >
                       <td className="min-w-0 px-3 py-3 align-top">
-                        <div className="truncate font-medium" title={r.name}>{r.name}</div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="truncate font-medium" title={r.name}>{r.name}</div>
+                          {isActive && <Badge variant="success" className="shrink-0 text-[10px]">serving</Badge>}
+                        </div>
                         <div className="truncate font-mono text-[11px] text-muted-foreground" title={r.id}>{r.id}</div>
                         <div className="truncate font-mono text-[11px] text-muted-foreground 2xl:hidden" title={r.inventory_path}>
                           {r.inventory_path || '—'}
@@ -480,6 +541,21 @@ export function RecipesPage() {
                               {t}
                             </Badge>
                           ))}
+                        </div>
+                        <div className="mt-2 flex gap-2 md:hidden">
+                          <Button
+                            size="sm"
+                            disabled={serveDisabled}
+                            title={r.switchable === false ? 'This recipe is not switchable yet' : undefined}
+                            onClick={() => void serveRecipe(r)}
+                          >
+                            {isStarting ? <Loader2 className="animate-spin" /> : <Play />}
+                            {isActive ? 'Serving' : isStarting ? 'Starting' : 'Serve'}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openRecipe(r.id)}>
+                            <Pencil />
+                            Edit
+                          </Button>
                         </div>
                       </td>
                       <td className="hidden min-w-0 px-3 py-3 align-top 2xl:table-cell">
@@ -513,16 +589,21 @@ export function RecipesPage() {
                         {r.tok_s ?? model?.best_bench_tok_s ?? '—'}
                       </td>
                       <td className="hidden px-3 py-3 align-top text-right md:table-cell">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openRecipe(r.id)
-                          }}
-                        >
-                          Edit
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            disabled={serveDisabled}
+                            title={r.switchable === false ? 'This recipe is not switchable yet' : undefined}
+                            onClick={() => void serveRecipe(r)}
+                          >
+                            {isStarting ? <Loader2 className="animate-spin" /> : <Play />}
+                            {isActive ? 'Serving' : isStarting ? 'Starting' : 'Serve'}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => openRecipe(r.id)}>
+                            <Pencil />
+                            Edit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -1048,7 +1129,7 @@ function RecipeStudio({
                       onClick={() =>
                         onAct(
                           'Serve',
-                          () => switchProfile(recipe!.id),
+                          () => switchProfile(recipe!.id, recipe?.tier === 'heavy'),
                           recipe?.tier === 'heavy'
                             ? `Load the heavy recipe “${recipe.name}”? This can take several minutes and replaces the active engine.`
                             : undefined,

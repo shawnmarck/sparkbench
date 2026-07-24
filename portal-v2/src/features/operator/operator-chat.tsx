@@ -42,6 +42,13 @@ const suggestions = [
   'Which recipes are fastest?',
 ]
 
+function createChatId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
+
 function loadHistory(): ChatMessage[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') as unknown
@@ -137,8 +144,8 @@ export function OperatorChat({
     setConnectionError('')
     setInput('')
     setSending(true)
-    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text }
-    const assistantId = crypto.randomUUID()
+    const userMessage: ChatMessage = { id: createChatId(), role: 'user', content: text }
+    const assistantId = createChatId()
     setMessages((current) => [
       ...current,
       userMessage,

@@ -9,6 +9,8 @@ __pycache__/
 logs/
 run/
 portal/models.json
+portal-v2/node_modules/
+portal-v2/dist/
 
 # Host-local portal/HF runtime (not shared cookbook)
 data/hf-download-queue.yaml

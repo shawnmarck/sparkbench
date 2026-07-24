@@ -25,13 +25,23 @@ export OPENAI_API_KEY="any-string-the-gateway-doesnt-check"
 Bundled installer: `sudo bash install/spark-install openwebui`. Browse to `http://<host>:3000`
 once it's up and point it at the gateway URL above.
 
-### Option B — Hermes (the agent we run in our own lab)
+### Option B — Spark operator (Hermes)
 
-Hermes is **not part of SparkBench**. We run it as a separate service in our homelab.
-A reference compose + deploy script lives at the link below — clone it next to SparkBench
-and follow its README:
+Portal v2 includes **Spark**, an embedded operator backed by the official
+Hermes Agent image and an out-of-band provider:
 
-> **https://github.com/shawnmarck/sparky-hermes** *(repo not yet public; see ./setup-hermes.sh below for a local-only bootstrap)*
+```bash
+sudo bash install/spark-install hermes
+```
+
+The installer preserves existing `/opt/hermes` sessions, memory, OAuth tokens,
+provider configuration, and secrets. It adds typed SparkBench MCP tools and
+the `/operator` portal experience. Spark can perform reads immediately;
+inference, queue, recipe, shelf, install, provider, and scheduler changes only
+run after an explicit portal confirmation.
+
+Advanced Hermes dashboard: `http://<host>:9119/`. Newly generated dashboard
+credentials are stored mode `0600` at `/opt/hermes/dashboard-credentials`.
 
 ### Option C — bring your own
 
@@ -40,16 +50,15 @@ and follow its README:
 
 ## Helper: `setup-hermes.sh`
 
-Optional script that scaffolds a local Hermes deployment outside `/opt/spark`
+Legacy helper that scaffolds a local Hermes deployment outside `/opt/spark`
 (defaults to `/opt/hermes`). It will:
 
 1. Prompt for confirmation
 2. Create the runtime dir + data layout
-3. Pull a starter `compose.yml`
-4. Print next-step instructions
+3. Print next-step instructions
 
-It does **not** ship secrets, OAuth tokens, or persona files — those are
-deployment-specific and you generate them yourself.
+New Portal v2 installs should use `spark-install hermes`; this helper remains
+for external-compose deployments.
 
 ```bash
 bash services/spark-bot/setup-hermes.sh

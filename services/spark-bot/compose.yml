@@ -1,0 +1,32 @@
+services:
+  spark-bot:
+    image: nousresearch/hermes-agent:latest
+    container_name: spark-bot
+    restart: unless-stopped
+    command: gateway run
+    ports:
+      - "9119:9119"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${HERMES_DATA_DIR:-/opt/hermes/data/spark-bot/data}:/opt/data
+      - ${HERMES_WORKSPACE_DIR:-/opt/hermes/data/workspace}:/workspace
+      - ${SPARK_ROOT:-/opt/spark}:/opt/spark:ro
+      - ${SPARK_OPERATOR_STATE:-/opt/spark/run/operator}:/operator-state
+    env_file:
+      - ${HERMES_DATA_DIR:-/opt/hermes/data/spark-bot/data}/.env
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: "0.0.0.0"
+      HERMES_DASHBOARD_PORT: "9119"
+      HERMES_UID: "${HERMES_UID:-1000}"
+      HERMES_GID: "${HERMES_GID:-1000}"
+      SPARK_API_BASE: http://host.docker.internal
+      SPARK_OPERATOR_STATE: /operator-state
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+    shm_size: 512m

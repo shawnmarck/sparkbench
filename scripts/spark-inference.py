@@ -1137,6 +1137,65 @@ def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
     return recipe
 
 
+def update_recipe_fields(profile_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+    """Update editable recipe fields (portal Recipe studio)."""
+    path = resolve_recipe_path(profile_id)
+    if path is None:
+        raise RuntimeError(f"unknown profile: {profile_id}")
+    recipe = load_yaml(path)
+
+    if "name" in fields and fields["name"] is not None:
+        recipe["name"] = str(fields["name"]).strip() or recipe.get("name")
+    if "notes" in fields and fields["notes"] is not None:
+        recipe["notes"] = str(fields["notes"])
+    if "tier" in fields and fields["tier"] is not None:
+        tier = str(fields["tier"]).strip()
+        if tier in {"fast", "heavy", "experimental"}:
+            recipe["tier"] = tier
+    if "tags" in fields and isinstance(fields["tags"], list):
+        recipe["tags"] = [str(t).strip() for t in fields["tags"] if str(t).strip()]
+
+    ctx_block = recipe.get("context")
+    if not isinstance(ctx_block, dict):
+        ctx_block = {}
+    if fields.get("ctx") is not None:
+        ctx_block["default"] = int(fields["ctx"])
+    if fields.get("kv") is not None:
+        ctx_block["kv_default"] = str(fields["kv"]).strip()
+    if fields.get("golden_ctx") is not None or fields.get("golden_kv") is not None:
+        presets = ctx_block.get("presets")
+        if not isinstance(presets, dict):
+            presets = {}
+        golden = presets.get("golden") if isinstance(presets.get("golden"), dict) else {}
+        if fields.get("golden_ctx") is not None:
+            golden["ctx"] = int(fields["golden_ctx"])
+        if fields.get("golden_kv") is not None:
+            golden["kv"] = str(fields["golden_kv"]).strip()
+        golden.setdefault("label", "Golden max fit")
+        golden.setdefault("ctx", ctx_block.get("default") or 32768)
+        golden.setdefault("kv", ctx_block.get("kv_default") or "auto")
+        presets["golden"] = golden
+        ctx_block["presets"] = presets
+    if ctx_block:
+        recipe["context"] = ctx_block
+
+    if fields.get("speculative") is not None:
+        spec = fields["speculative"]
+        if spec is False or spec == {}:
+            recipe.pop("speculative", None)
+        elif isinstance(spec, dict):
+            recipe["speculative"] = {
+                "method": str(spec.get("method") or "dflash"),
+                "sidecar_inventory": str(spec.get("sidecar_inventory") or "").strip(),
+                "num_speculative_tokens": int(spec.get("num_speculative_tokens") or 10),
+            }
+
+    recipe["updated_at"] = datetime.now(timezone.utc).isoformat()
+    save_recipe_file(path, recipe)
+    recipe["id"] = profile_id
+    return recipe
+
+
 def promote_recipe(profile_id: str) -> dict[str, Any]:
     draft_path = draft_recipe_path(profile_id)
     if not draft_path.is_file():
@@ -2963,6 +3022,20 @@ def api_dispatch(
         except RuntimeError as exc:
             return 400, {"ok": False, "error": str(exc)}
         return 200, {"ok": True, "recipe": recipe_public(recipe)}
+
+    if route == "/api/inference/recipes/update":
+        if not body.get("confirm"):
+            return 400, {"ok": False, "error": "confirmation required"}
+        profile = str(body.get("profile", "")).strip()
+        try:
+            recipe = update_recipe_fields(profile, body)
+        except RuntimeError as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        except (TypeError, ValueError) as exc:
+            return 400, {"ok": False, "error": str(exc)}
+        pub = recipe_public(recipe)
+        pub["lifecycle"] = recipe.get("lifecycle")
+        return 200, {"ok": True, "recipe": pub}
 
     if route == "/api/inference/recipes/promote":
         if not body.get("confirm"):

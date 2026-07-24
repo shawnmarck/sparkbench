@@ -14,8 +14,9 @@ Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUD
 
 ```
 /opt/spark/
-├── portal/          Static UI (nginx :80) — index.html is the main app
-├── scripts/         spark CLI + runtime (spark-inference.py, spark-hf.py, …)
+├── portal/          Legacy static UI served at /
+├── portal-v2/       Portal v2 SPA (Vite/React/shadcn) served at /v2/
+├── scripts/         spark CLI + runtime (spark-inference.py, spark-hf.py, spark-install-api.py, …)
 ├── install/         spark-install orchestrator + modules/ — see install/INSTALL.md
 ├── data/            Catalog, verification, golden map; profiles/benchmarks are host-local
 ├── recipes/         Inference profile YAML (draft → testing → production)
@@ -23,7 +24,9 @@ Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUD
 └── services/        Optional compose (Open WebUI, bots)
 ```
 
-**Gitignored / host-local:** `portal/models.json`, `logs/`, `run/`, `venv/`, `host.env`, HF queue files under `data/`.
+**Portal v2 IA:** Catalog · Library · Recipes · Health · Add-ons · Setup (retires System|Models|Explore|Inference|Benchmaster tabs).
+
+**Gitignored / host-local:** `portal/models.json`, `portal-v2/node_modules/`, `portal-v2/dist/`, `logs/`, `run/`, `venv/`, `host.env`, HF queue files under `data/`.
 
 ## Canonical docs
 
@@ -48,6 +51,7 @@ Replace `sparky` with `$SPARK_HOST` or your hostname.
 |---------|-----|
 | Portal | http://sparky/ |
 | Inference API | http://sparky/api/inference/status (→ :8767) |
+| Install agent | http://sparky/api/install/status (→ :8771; mutations need X-Spark-Install-Token) |
 | Gateway | http://sparky:9000/v1 |
 | Activity | http://sparky/api/activity (→ :8769) |
 | GPU / shelf | http://sparky/api/gpu , /api/shelf/status |

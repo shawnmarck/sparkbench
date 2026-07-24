@@ -1,0 +1,24 @@
+# Deep-merged into the host-local Hermes config by the optional installer.
+# Provider/model configuration remains host-local and is never overwritten.
+approvals:
+  mode: manual
+  timeout: 180
+
+mcp_servers:
+  sparkbench:
+    command: /opt/hermes/.venv/bin/python
+    args:
+      - /opt/spark/scripts/spark-operator-mcp.py
+    env:
+      SPARK_API_BASE: http://host.docker.internal
+      SPARK_OPERATOR_STATE: /operator-state
+
+memory:
+  enabled: true
+
+skills:
+  auto_save: true
+
+display:
+  compact: true
+  show_reasoning: false

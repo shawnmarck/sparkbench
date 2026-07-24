@@ -54,6 +54,19 @@ CLI: `spark hf …` · Portal: **Explore** tab
 | Activity API | GET `/api/activity` | Client session rollups (:8769) |
 | OpenAI gateway | `http://$SPARK_HOST:9000/v1` | Chat completions, model aliases |
 
+## Install agent (`/api/install/*` → :8771)
+
+Privileged allowlisted `spark-install` jobs. Bind loopback; nginx proxies. Mutations require header `X-Spark-Install-Token` matching `/etc/spark/install-token`.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/install/status` | Service probes + active job |
+| GET | `/api/install/targets` | Allowlisted targets |
+| POST | `/api/install/jobs` | Start job `{target, args?}` |
+| GET | `/api/install/jobs/{id}` | Job state |
+| GET | `/api/install/jobs/{id}/stream` | SSE log tail |
+| POST | `/api/install/jobs/{id}/cancel` | Best-effort cancel |
+
 ## Engine upstream (direct)
 
 | Engine | URL |
@@ -63,6 +76,29 @@ CLI: `spark hf …` · Portal: **Explore** tab
 | ds4 | `http://$SPARK_HOST:8000/v1` (mutually exclusive with eugr) |
 
 Prefer gateway `:9000` for agents — handles profile aliases and auto-switch.
+
+## Spark operator (`/api/operator/*` → :8772)
+
+Loopback Hermes adapter for Portal v2. Chat uses an out-of-band provider and
+typed SparkBench MCP tools. Mutations are proposals and cannot execute before
+an explicit confirmation.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/operator/status` | Runtime, provider, goals, checks, pending actions |
+| POST | `/api/operator/turns` | Start an asynchronous chat turn |
+| GET | `/api/operator/turns/<id>` | Read turn state/result |
+| GET | `/api/operator/turns/<id>/stream` | SSE turn updates |
+| GET/POST | `/api/operator/goals` | List/create durable goals |
+| GET | `/api/operator/checks` | List Spark-owned Hermes cron jobs |
+| POST | `/api/operator/proposals` | Prepare an allowlisted action |
+| POST | `/api/operator/proposals/<id>/confirm` | Execute the exact proposed action |
+| POST | `/api/operator/proposals/<id>/cancel` | Cancel a proposal |
+| GET | `/api/operator/models?provider=<slug>&refresh=0` | Hermes provider catalog and live/cached models |
+| GET/POST | `/api/operator/settings` | Redacted state / confirmed Hermes provider + model selection |
+
+Confirming an `install` proposal and changing provider settings also require
+the `X-Spark-Install-Token` header.
 
 ## Benchmaster (`/api/benchmaster/*` → :8770)
 

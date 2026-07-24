@@ -48,19 +48,21 @@ maybe_write_nginx_portal_site() {
 }
 
 write_nginx_portal_site() {
+  local portal_root="${SPARK_ROOT}/portal"
+
   cat > /etc/nginx/sites-available/spark-portal <<NGINX
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name ${SPARK_HOST} ${SPARK_LAN_IP} _;
 
-    root ${SPARK_ROOT}/portal;
+    root ${portal_root};
     index index.html;
 
     location = /models.json {
+        alias ${SPARK_ROOT}/portal/models.json;
         add_header Cache-Control "no-store, no-cache, must-revalidate";
         add_header Pragma "no-cache";
-        try_files \$uri =404;
     }
 
     location /api/models/ {
@@ -112,6 +114,35 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location /api/install/ {
+        proxy_pass http://127.0.0.1:8771/api/install/;
+        proxy_http_version 1.1;
+        proxy_read_timeout 3600s;
+        proxy_connect_timeout 10s;
+        proxy_buffering off;
+        add_header Cache-Control "no-store";
+    }
+
+    location /api/operator/ {
+        proxy_pass http://127.0.0.1:8772/api/operator/;
+        proxy_http_version 1.1;
+        proxy_read_timeout 1200s;
+        proxy_connect_timeout 10s;
+        proxy_buffering off;
+        add_header X-Accel-Buffering "no";
+        add_header Cache-Control "no-store";
+    }
+
+    location = /v2 {
+        return 308 /v2/;
+    }
+
+    location ^~ /v2/ {
+        alias ${SPARK_ROOT}/portal-v2/dist/;
+        try_files \$uri \$uri/ /v2/index.html;
+        add_header Cache-Control "no-store";
+    }
+
     location ~* \.css$ {
         add_header Cache-Control "public, max-age=86400";
         try_files \$uri =404;
@@ -124,7 +155,7 @@ server {
     }
 
     location / {
-        try_files \$uri \$uri/ =404;
+        try_files \$uri \$uri/ /index.html;
     }
 }
 NGINX

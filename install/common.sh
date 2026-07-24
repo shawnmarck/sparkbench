@@ -26,6 +26,7 @@ if [[ -z "${SPARK_USER:-}" ]]; then
 fi
 SPARK_STAGING="${SPARK_STAGING:-${SPARK_ROOT}}"
 SPARK_HOST="${SPARK_HOST:-sparky}"
+SPARK_PORTAL_V2_DIST="${SPARK_PORTAL_V2_DIST:-${SPARK_ROOT}/portal-v2/dist}"
 # Set SPARK_LAN_IP to your Spark's LAN IP if you want nginx to also serve on
 # that address (server_name). Leave blank to serve on hostname + default_server.
 SPARK_LAN_IP="${SPARK_LAN_IP:-}"
@@ -138,7 +139,7 @@ server {
     }
 
     location ^~ /v2/ {
-        alias ${SPARK_ROOT}/portal-v2/dist/;
+        alias ${SPARK_PORTAL_V2_DIST}/;
         try_files \$uri \$uri/ /v2/index.html;
         add_header Cache-Control "no-store";
     }

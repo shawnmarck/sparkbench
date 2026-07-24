@@ -54,28 +54,6 @@ AUDIT_PATH = STATE_DIR / "audit.jsonl"
 
 LOCK = threading.RLock()
 
-READ_ONLY_TOOLS = [
-    "sparkbench:get_system_status",
-    "sparkbench:list_recipes",
-    "sparkbench:search_inventory",
-    "sparkbench:get_benchmaster_queue",
-    "sparkbench:get_recent_activity",
-    "sparkbench:get_operator_goals",
-    "sparkbench:get_scheduled_checks",
-]
-PROPOSAL_TOOLS = [
-    "sparkbench:propose_inference_switch",
-    "sparkbench:propose_inference_stop",
-    "sparkbench:propose_benchmaster_control",
-    "sparkbench:propose_benchmaster_job",
-    "sparkbench:propose_recipe_change",
-    "sparkbench:propose_shelf_action",
-    "sparkbench:propose_install",
-    "sparkbench:propose_goal",
-    "sparkbench:propose_scheduled_check",
-    "sparkbench:propose_check_action",
-]
-
 ACTION_META: dict[str, tuple[str, str]] = {
     "inference_switch": ("Serve inference profile", "Evicts the active engine and loads another profile."),
     "inference_stop": ("Stop inference", "Stops the active GPU inference engine."),
@@ -817,7 +795,6 @@ def run_turn(turn_id: str, message: str, session_id: str | None) -> None:
     item.update({"state": "running", "started_at": now()})
     atomic_json(path, item)
     try:
-        toolsets = ",".join([*READ_ONLY_TOOLS, *PROPOSAL_TOOLS])
         args = [
             HERMES_BIN,
             "chat",
@@ -828,7 +805,7 @@ def run_turn(turn_id: str, message: str, session_id: str | None) -> None:
             "--max-turns",
             "24",
             "--toolsets",
-            toolsets,
+            "sparkbench",
             "--skills",
             "sparkbench",
         ]

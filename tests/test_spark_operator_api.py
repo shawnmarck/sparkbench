@@ -169,6 +169,25 @@ class OperatorApiTests(unittest.TestCase):
         self.assertEqual(checks[0]["goal_id"], "goal-1")
         self.assertEqual(checks[0]["prompt"], "Check health")
 
+    def test_turn_enables_the_sparkbench_mcp_toolset(self) -> None:
+        turn_id = "turn-toolset"
+        self.api.atomic_json(
+            self.api.turn_path(turn_id),
+            {"id": turn_id, "state": "queued", "message": "Check health"},
+        )
+        completed = subprocess.CompletedProcess(
+            [],
+            0,
+            "healthy\nsession_id: session_123456\n",
+            "",
+        )
+        with mock.patch.object(self.api, "docker_exec", return_value=completed) as execute:
+            self.api.run_turn(turn_id, "Check health", None)
+        args = execute.call_args.args[0]
+        self.assertEqual(args[args.index("--toolsets") + 1], "sparkbench")
+        self.assertNotIn("sparkbench:get_system_status", args)
+        self.assertEqual(self.api.load_json(self.api.turn_path(turn_id), {})["state"], "succeeded")
+
     def test_provider_update_uses_hermes_assignment_and_recreates_container(self) -> None:
         hermes_root = self.root / "managed-hermes"
         data = hermes_root / "data" / "spark-bot" / "data"

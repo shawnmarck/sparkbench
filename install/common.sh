@@ -138,10 +138,28 @@ server {
         return 308 /v2/;
     }
 
-    location ^~ /v2/ {
-        alias ${SPARK_PORTAL_V2_DIST}/;
-        try_files \$uri \$uri/ /v2/index.html;
+    location = /v2/index.html {
+        alias ${SPARK_PORTAL_V2_DIST}/index.html;
         add_header Cache-Control "no-store";
+    }
+
+    location ^~ /v2/assets/ {
+        alias ${SPARK_PORTAL_V2_DIST}/assets/;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    location = /v2/favicon.svg {
+        alias ${SPARK_PORTAL_V2_DIST}/favicon.svg;
+        add_header Cache-Control "public, max-age=86400";
+    }
+
+    location = /v2/icons.svg {
+        alias ${SPARK_PORTAL_V2_DIST}/icons.svg;
+        add_header Cache-Control "public, max-age=86400";
+    }
+
+    location /v2/ {
+        rewrite ^ /v2/index.html last;
     }
 
     location ~* \.css$ {

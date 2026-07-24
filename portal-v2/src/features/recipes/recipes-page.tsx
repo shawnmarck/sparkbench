@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowDownWideNarrow, ArrowLeft, Info, Plus, Search } from 'lucide-react'
+import { ArrowDown, ArrowDownWideNarrow, ArrowLeft, ArrowUp, Info, Plus, Search } from 'lucide-react'
 import {
   discardRecipe,
   getInventory,
@@ -28,9 +28,22 @@ import { findSidecarsForModel, nativeContext } from '@/lib/sidecars'
 
 type LifeFilter = 'all' | 'works' | 'testing' | 'draft' | 'failed'
 type EngineFilter = 'all' | 'eugr' | 'llama' | 'ds4'
-type SortKey = 'smart' | 'speed' | 'ctx' | 'active' | 'params' | 'engine'
+type SortKey = 'smart' | 'model' | 'speed' | 'ctx' | 'active' | 'params' | 'engine' | 'lifecycle'
+type SortDirection = 'asc' | 'desc'
 
 const RECIPE_SORT_KEY = 'spark-recipes-sort'
+const RECIPE_SORT_DIRECTION_KEY = 'spark-recipes-sort-direction'
+
+function isSortKey(value: string | null): value is SortKey {
+  return value === 'smart'
+    || value === 'model'
+    || value === 'speed'
+    || value === 'ctx'
+    || value === 'active'
+    || value === 'params'
+    || value === 'engine'
+    || value === 'lifecycle'
+}
 
 function normalizeEngine(engine?: string) {
   if (!engine) return ''
@@ -50,8 +63,12 @@ function findModel(models: InventoryModel[], path?: string) {
   return models.find((m) => (m.rel_path || m.id) === path)
 }
 
-function recipeMetric(recipe: Recipe, models: InventoryModel[], key: SortKey) {
+function recipeSortValue(recipe: Recipe, models: InventoryModel[], key: SortKey) {
   const model = findModel(models, recipe.inventory_path)
+  if (key === 'smart') return recipe.name || recipe.id
+  if (key === 'model') return recipe.inventory_path || ''
+  if (key === 'engine') return normalizeEngine(recipe.engine)
+  if (key === 'lifecycle') return recipe.lifecycle || 'works'
   if (key === 'speed') return recipe.tok_s ?? model?.best_bench_tok_s ?? null
   if (key === 'ctx') {
     return recipe.context?.presets?.golden?.ctx ?? recipe.context?.default ?? model?.max_context ?? null
@@ -61,20 +78,67 @@ function recipeMetric(recipe: Recipe, models: InventoryModel[], key: SortKey) {
   return null
 }
 
-function compareRecipes(a: Recipe, b: Recipe, models: InventoryModel[], sort: SortKey) {
-  if (sort === 'smart') {
-    return (a.name || a.id).localeCompare(b.name || b.id, undefined, { numeric: true, sensitivity: 'base' })
-  }
-  if (sort === 'engine') {
-    const engineOrder = normalizeEngine(a.engine).localeCompare(normalizeEngine(b.engine))
-    return engineOrder || (a.name || a.id).localeCompare(b.name || b.id, undefined, { numeric: true })
-  }
-  const aValue = recipeMetric(a, models, sort)
-  const bValue = recipeMetric(b, models, sort)
+function defaultSortDirection(key: SortKey): SortDirection {
+  return key === 'speed' || key === 'ctx' ? 'desc' : 'asc'
+}
+
+function compareRecipes(
+  a: Recipe,
+  b: Recipe,
+  models: InventoryModel[],
+  sort: SortKey,
+  direction: SortDirection,
+) {
+  const aValue = recipeSortValue(a, models, sort)
+  const bValue = recipeSortValue(b, models, sort)
   if (aValue == null && bValue == null) return (a.name || a.id).localeCompare(b.name || b.id)
   if (aValue == null) return 1
   if (bValue == null) return -1
-  return sort === 'speed' || sort === 'ctx' ? bValue - aValue : aValue - bValue
+  const order = typeof aValue === 'number' && typeof bValue === 'number'
+    ? aValue - bValue
+    : String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' })
+  if (order !== 0) return direction === 'asc' ? order : -order
+  return (a.name || a.id).localeCompare(b.name || b.id, undefined, { numeric: true, sensitivity: 'base' })
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  direction,
+  onSort,
+  className,
+}: {
+  label: string
+  sortKey: SortKey
+  sort: SortKey
+  direction: SortDirection
+  onSort: (key: SortKey) => void
+  className?: string
+}) {
+  const active = sort === sortKey
+  return (
+    <th
+      className={cn('px-3 py-3 font-medium', className)}
+      aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        className={cn(
+          'inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-foreground',
+          active && 'text-foreground',
+        )}
+        onClick={() => onSort(sortKey)}
+      >
+        {label}
+        {active
+          ? direction === 'asc'
+            ? <ArrowUp className="h-3 w-3" />
+            : <ArrowDown className="h-3 w-3" />
+          : <ArrowDownWideNarrow className="h-3 w-3 opacity-35" />}
+      </button>
+    </th>
+  )
 }
 
 export function RecipesPage() {
@@ -91,9 +155,13 @@ export function RecipesPage() {
   const [engine, setEngine] = useState<EngineFilter>('all')
   const [sort, setSort] = useState<SortKey>(() => {
     const saved = localStorage.getItem(RECIPE_SORT_KEY)
-    return saved === 'speed' || saved === 'ctx' || saved === 'active' || saved === 'params' || saved === 'engine'
-      ? saved
-      : 'smart'
+    return isSortKey(saved) ? saved : 'smart'
+  })
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const savedDirection = localStorage.getItem(RECIPE_SORT_DIRECTION_KEY)
+    if (savedDirection === 'asc' || savedDirection === 'desc') return savedDirection
+    const savedSort = localStorage.getItem(RECIPE_SORT_KEY)
+    return defaultSortDirection(isSortKey(savedSort) ? savedSort : 'smart')
   })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -120,7 +188,17 @@ export function RecipesPage() {
 
   useEffect(() => {
     localStorage.setItem(RECIPE_SORT_KEY, sort)
-  }, [sort])
+    localStorage.setItem(RECIPE_SORT_DIRECTION_KEY, sortDirection)
+  }, [sort, sortDirection])
+
+  function changeSort(key: SortKey) {
+    if (key === sort) {
+      setSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
+      return
+    }
+    setSort(key)
+    setSortDirection(defaultSortDirection(key))
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -137,8 +215,8 @@ export function RecipesPage() {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     })
-    return matches.sort((a, b) => compareRecipes(a, b, models, sort))
-  }, [recipes, models, query, life, engine, sort])
+    return matches.sort((a, b) => compareRecipes(a, b, models, sort, sortDirection))
+  }, [recipes, models, query, life, engine, sort, sortDirection])
 
   const counts = useMemo(() => {
     const c = { all: recipes.length, works: 0, testing: 0, draft: 0, failed: 0 }
@@ -306,16 +384,31 @@ export function RecipesPage() {
           <select
             className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             value={sort}
-            onChange={(event) => setSort(event.target.value as SortKey)}
+            onChange={(event) => {
+              const key = event.target.value as SortKey
+              setSort(key)
+              setSortDirection(defaultSortDirection(key))
+            }}
             aria-label="Sort recipes"
           >
-            <option value="smart">Name (smart)</option>
-            <option value="speed">Speed (fastest)</option>
-            <option value="ctx">Context (largest)</option>
-            <option value="active">Active params (smallest)</option>
-            <option value="params">Total params (smallest)</option>
+            <option value="smart">Recipe</option>
+            <option value="model">Model</option>
             <option value="engine">Engine</option>
+            <option value="lifecycle">Lifecycle</option>
+            <option value="ctx">Context</option>
+            <option value="active">Active params</option>
+            <option value="params">Total params</option>
+            <option value="speed">Speed</option>
           </select>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+            onClick={() => setSortDirection((current) => current === 'asc' ? 'desc' : 'asc')}
+          >
+            {sortDirection === 'asc' ? <ArrowUp /> : <ArrowDown />}
+          </Button>
         </div>
       </div>
 
@@ -333,19 +426,30 @@ export function RecipesPage() {
         <p className="text-sm text-muted-foreground">Loading recipes…</p>
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-left text-sm">
+          <div className="w-full">
+            <table className="w-full table-fixed text-left text-sm">
+              <colgroup>
+                <col />
+                <col className="hidden w-[24%] 2xl:table-column" />
+                <col className="hidden w-20 sm:table-column" />
+                <col className="w-24" />
+                <col className="hidden w-20 md:table-column" />
+                <col className="hidden w-20 xl:table-column" />
+                <col className="hidden w-20 xl:table-column" />
+                <col className="w-20" />
+                <col className="hidden w-16 md:table-column" />
+              </colgroup>
               <thead className="border-b bg-muted/40 text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Recipe</th>
-                  <th className="px-4 py-3 font-medium">Model</th>
-                  <th className="px-4 py-3 font-medium">Engine</th>
-                  <th className="px-4 py-3 font-medium">Lifecycle</th>
-                  <th className="px-4 py-3 font-medium">Ctx</th>
-                  <th className="px-4 py-3 font-medium">Active</th>
-                  <th className="px-4 py-3 font-medium">Total</th>
-                  <th className="px-4 py-3 font-medium">tok/s</th>
-                  <th className="px-4 py-3 font-medium" />
+                  <SortableHeader label="Recipe" sortKey="smart" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader className="hidden 2xl:table-cell" label="Model" sortKey="model" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader className="hidden sm:table-cell" label="Engine" sortKey="engine" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader label="Lifecycle" sortKey="lifecycle" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader className="hidden md:table-cell" label="Ctx" sortKey="ctx" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader className="hidden xl:table-cell" label="Active" sortKey="active" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader className="hidden xl:table-cell" label="Total" sortKey="params" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader label="tok/s" sortKey="speed" sort={sort} direction={sortDirection} onSort={changeSort} />
+                  <th className="hidden px-3 py-3 md:table-cell" />
                 </tr>
               </thead>
               <tbody>
@@ -364,9 +468,12 @@ export function RecipesPage() {
                       className="border-b last:border-0 cursor-pointer hover:bg-muted/40"
                       onClick={() => openRecipe(r.id)}
                     >
-                      <td className="px-4 py-3 align-top">
-                        <div className="font-medium">{r.name}</div>
-                        <div className="font-mono text-[11px] text-muted-foreground">{r.id}</div>
+                      <td className="min-w-0 px-3 py-3 align-top">
+                        <div className="truncate font-medium" title={r.name}>{r.name}</div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground" title={r.id}>{r.id}</div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground 2xl:hidden" title={r.inventory_path}>
+                          {r.inventory_path || '—'}
+                        </div>
                         <div className="mt-1 flex flex-wrap gap-1">
                           {(r.tags || []).slice(0, 3).map((t) => (
                             <Badge key={t} variant={t === 'golden' ? 'success' : 'secondary'} className="text-[10px]">
@@ -375,37 +482,37 @@ export function RecipesPage() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="font-mono text-xs">{r.inventory_path || '—'}</div>
+                      <td className="hidden min-w-0 px-3 py-3 align-top 2xl:table-cell">
+                        <div className="truncate font-mono text-xs" title={r.inventory_path}>{r.inventory_path || '—'}</div>
                         {model?.lab && (
                           <div className="text-xs text-muted-foreground">{model.lab}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 align-top">
+                      <td className="hidden px-3 py-3 align-top sm:table-cell">
                         <Badge variant="outline">{normalizeEngine(r.engine) || r.engine}</Badge>
                       </td>
-                      <td className="px-4 py-3 align-top">
+                      <td className="px-3 py-3 align-top">
                         <Badge variant={lifeTone(r.lifecycle)}>{r.lifecycle || 'works'}</Badge>
                       </td>
-                      <td className="px-4 py-3 align-top text-muted-foreground">
+                      <td className="hidden whitespace-nowrap px-3 py-3 align-top text-muted-foreground tabular-nums md:table-cell">
                         {r.context?.presets?.golden?.ctx?.toLocaleString() ||
                           r.context?.default?.toLocaleString() ||
                           '—'}
                       </td>
-                      <td className="px-4 py-3 align-top text-muted-foreground tabular-nums">
+                      <td className="hidden px-3 py-3 align-top text-muted-foreground tabular-nums xl:table-cell">
                         {model?.param_active_b != null
                           ? `${model.param_active_b}B`
                           : model?.param_b != null
                             ? `${model.param_b}B`
                             : '—'}
                       </td>
-                      <td className="px-4 py-3 align-top text-muted-foreground tabular-nums">
+                      <td className="hidden px-3 py-3 align-top text-muted-foreground tabular-nums xl:table-cell">
                         {model?.param_b != null ? `${model.param_b}B` : '—'}
                       </td>
-                      <td className="px-4 py-3 align-top text-muted-foreground">
+                      <td className="whitespace-nowrap px-3 py-3 align-top text-muted-foreground tabular-nums">
                         {r.tok_s ?? model?.best_bench_tok_s ?? '—'}
                       </td>
-                      <td className="px-4 py-3 align-top text-right">
+                      <td className="hidden px-3 py-3 align-top text-right md:table-cell">
                         <Button
                           size="sm"
                           variant="ghost"

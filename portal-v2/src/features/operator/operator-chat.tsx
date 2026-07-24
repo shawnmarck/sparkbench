@@ -310,7 +310,9 @@ export function OperatorChat({
               }
             }}
             rows={compact ? 1 : 2}
-            placeholder={status?.available ? 'Ask Spark…' : 'Install the Spark operator to begin'}
+            placeholder={input.length === 0
+              ? (status?.available ? 'Ask Spark…' : 'Install the Spark operator to begin')
+              : undefined}
             disabled={!status?.available || sending}
             className="max-h-36 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
           />

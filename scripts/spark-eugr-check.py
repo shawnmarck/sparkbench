@@ -160,12 +160,10 @@ def fetch_upstream(force: bool = False) -> tuple[dict[str, str], dict[str, Any]]
     cache = load_cache()
     fetched_at = cache.get("fetched_at")
     upstream = cache.get("upstream") if isinstance(cache.get("upstream"), dict) else {}
-    if (
-        not force
-        and fetched_at
-        and upstream.get("vllm_commit")
-        and upstream.get("flashinfer_commit")
-    ):
+    # Reuse any fresh cache entry — including failed fetches with empty commits.
+    # Otherwise DNS/timeouts re-block every status poll (~15s × 2) and wedge the
+    # single-threaded inference API (portal charts go blank).
+    if not force and fetched_at and isinstance(upstream, dict) and upstream:
         try:
             age = time.time() - datetime.fromisoformat(fetched_at).timestamp()
         except ValueError:
@@ -178,7 +176,8 @@ def fetch_upstream(force: bool = False) -> tuple[dict[str, str], dict[str, Any]]
     flashinfer_commit = ""
     try:
         html = fetch_url(
-            f"https://github.com/{WHEELS_REPO}/releases/tag/{VLLM_RELEASE_TAG}"
+            f"https://github.com/{WHEELS_REPO}/releases/tag/{VLLM_RELEASE_TAG}",
+            timeout=5.0,
         )
         vllm_commit = parse_vllm_commit(html)
     except (URLError, TimeoutError, OSError) as exc:
@@ -186,7 +185,8 @@ def fetch_upstream(force: bool = False) -> tuple[dict[str, str], dict[str, Any]]
 
     try:
         html = fetch_url(
-            f"https://github.com/{WHEELS_REPO}/releases/tag/{FLASHINFER_RELEASE_TAG}"
+            f"https://github.com/{WHEELS_REPO}/releases/tag/{FLASHINFER_RELEASE_TAG}",
+            timeout=5.0,
         )
         flashinfer_commit = parse_flashinfer_commit(html)
     except (URLError, TimeoutError, OSError) as exc:

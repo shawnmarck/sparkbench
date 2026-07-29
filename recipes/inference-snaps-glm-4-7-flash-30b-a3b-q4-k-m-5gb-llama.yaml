@@ -1,0 +1,32 @@
+id: inference-snaps-glm-4-7-flash-30b-a3b-q4-k-m-5gb-llama
+name: GLM-4.7-Flash-30B-A3B Q4_K_M (llamacpp)
+inventory_path: inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb
+engine: llamacpp
+tier: heavy
+lifecycle: testing
+served_name: glm-4.7-flash-30b-a3b-q4
+port: 8081
+model: /models/inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb/hf/GLM-4.7-Flash-Q4_K_M-00001-of-00004.gguf
+tags:
+- lab
+- llamacpp
+- golden
+- testing
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: 'Split Q4_K_M GGUF under hf/ (4 shards). Point at first shard for llama.cpp.'
+context:
+  default: 32768
+  native: 32768
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 32768
+      kv: q8_0

@@ -1,0 +1,16 @@
+id: unsloth-qwen3-6-35b-a3b-nvfp4-fast-eugr
+name: qwen3.6-35b-a3b-nvfp4-fast (eugr)
+inventory_path: unsloth/qwen3.6-35b-a3b-nvfp4-fast
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: qwen3.6-35b-a3b-nvfp4-fast
+port: 8000
+tags:
+- lab
+- eugr
+- golden
+- testing
+notes: Scaffolded 2026-07-11 from /models/unsloth/qwen3.6-35b-a3b-nvfp4-fast. Mark
+  testing, switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-unsloth-qwen3-6-35b-a3b-nvfp4-fast-eugr.yaml

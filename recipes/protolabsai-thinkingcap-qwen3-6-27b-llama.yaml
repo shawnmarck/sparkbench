@@ -1,0 +1,32 @@
+id: protolabsai-thinkingcap-qwen3-6-27b-llama
+name: ThinkingCap Qwen3.6-27B Q5_K_M (llamacpp)
+inventory_path: protolabsai/thinkingcap-qwen3.6-27b
+engine: llamacpp
+tier: heavy
+lifecycle: testing
+served_name: thinkingcap-qwen3.6-27b
+port: 8081
+model: /models/protolabsai/thinkingcap-qwen3.6-27b/mtp-gguf/ThinkingCap-Qwen3.6-27B-Q5_K_M-MTP.gguf
+tags:
+- lab
+- llamacpp
+- golden
+- testing
+llamacpp_args:
+- -ngl
+- '999'
+- -fa
+- '1'
+- --no-mmap
+- -c
+- '32768'
+notes: 'Full ~19G Q5_K_M GGUF shipped under mtp-gguf/ (HF repo name includes MTP).'
+context:
+  default: 32768
+  native: 32768
+  kv_default: q8_0
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 32768
+      kv: q8_0

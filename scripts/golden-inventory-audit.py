@@ -29,6 +29,18 @@ PROFILES_FILE = ROOT / "data" / "inference-profiles.yaml"
 
 AUXILIARY_PREFIXES = ("z-lab/",)
 
+
+def _auxiliary_from_golden() -> set[str]:
+    try:
+        data = load_yaml(GOLDEN_FILE)
+    except Exception:
+        return set()
+    return {
+        str(p)
+        for p in (data.get("auxiliary_inventory") or [])
+        if isinstance(p, str) and p
+    }
+
 # inventory_path -> golden profile id (explicit overrides)
 DEFAULT_GOLDEN: dict[str, str] = {
     "nvidia/qwen3.6-35b-a3b": "opencode-qwen36-250k",
@@ -154,7 +166,9 @@ def inv_path(m: dict[str, Any]) -> str:
 
 
 def is_auxiliary(path: str) -> bool:
-    return path.startswith(AUXILIARY_PREFIXES) or path.split("/")[0] == "z-lab"
+    if path.startswith(AUXILIARY_PREFIXES) or path.split("/")[0] == "z-lab":
+        return True
+    return path in _auxiliary_from_golden()
 
 
 def ready_timeout_secs(recipe: dict[str, Any]) -> int:
@@ -193,15 +207,17 @@ def eugr_startup_failed() -> str | None:
         blob = (r.stdout or "") + (r.stderr or "")
     except Exception:
         return None
+    # Do not match bare "Free memory on device" — newer vLLM logs that as INFO
+    # when suggesting --kv-cache-memory, which is not a startup failure.
     for needle in (
         "Engine core initialization failed",
-        "Free memory on device",
         "CUDA out of memory",
         "ValueError: Free memory",
+        "ValueError: Free memory on device",
     ):
         if needle in blob:
             for line in reversed(blob.splitlines()):
-                if needle.split()[0] in line or "ValueError" in line or "RuntimeError" in line:
+                if needle in line or "ValueError" in line or "RuntimeError" in line:
                     return line.strip()[:500]
             return needle
     return None

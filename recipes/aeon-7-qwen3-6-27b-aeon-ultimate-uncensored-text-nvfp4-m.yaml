@@ -1,0 +1,26 @@
+id: aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m
+name: qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs (eugr)
+inventory_path: aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-
+port: 8000
+tags:
+- lab
+- eugr
+- golden
+- testing
+notes: Scaffolded 2026-07-11 from /models/aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs.
+  Mark testing, switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m.yaml
+_path: /opt/spark/recipes/aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: Golden max fit
+      ctx: 262144
+      kv: fp8

@@ -1,0 +1,39 @@
+recipe_version: "1"
+name: aeon-qwen3-6-27b-dflash-n10-128k
+description: AEON Ultimate Uncensored NVFP4 + z-lab DFlash n=10 @ 128k (fp8 KV + flashinfer)
+
+model: qwen3.6-27b-dflash
+container: vllm-node
+
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 131072
+  max_num_seqs: 4
+  max_num_batched_tokens: 32768
+
+command: |
+  vllm serve /models/aeon-7/qwen3.6-27b-aeon-ultimate-uncensored/nvfp4 \
+    --host {host} \
+    --port {port} \
+    --served-model-name qwen3.6-27b-dflash \
+    --tensor-parallel-size {tensor_parallel} \
+    --trust-remote-code \
+    --kv-cache-dtype fp8 \
+    --quantization compressed-tensors \
+    --attention-backend flashinfer \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_xml \
+    --reasoning-parser qwen3 \
+    --mamba-cache-dtype float32 \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --enable-chunked-prefill \
+    --load-format safetensors \
+    --speculative-config '{{"method": "dflash", "model": "/models/z-lab/qwen3.6-27b/dflash", "num_speculative_tokens": 10}}' \
+    --generation-config vllm \
+    --override-generation-config '{{"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0.0, "repetition_penalty": 1.0}}'

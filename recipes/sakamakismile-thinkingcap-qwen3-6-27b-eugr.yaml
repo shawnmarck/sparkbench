@@ -1,0 +1,16 @@
+id: sakamakismile-thinkingcap-qwen3-6-27b-eugr
+name: thinkingcap-qwen3.6-27b (eugr)
+inventory_path: sakamakismile/thinkingcap-qwen3.6-27b
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: thinkingcap-qwen3.6-27b
+port: 8000
+tags:
+- lab
+- eugr
+- golden
+- testing
+notes: Scaffolded 2026-07-11 from /models/sakamakismile/thinkingcap-qwen3.6-27b. Mark
+  testing, switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-sakamakismile-thinkingcap-qwen3-6-27b-eugr.yaml

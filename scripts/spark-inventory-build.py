@@ -1042,14 +1042,14 @@ def attach_unlinked_sidecar_metadata(entries: list) -> None:
         entry["combined_size_human"] = human_size(combined) if combined else None
 
 
-def load_golden_recipe_maps() -> tuple[dict[str, str], set[str]]:
-    """Return (inventory_path -> golden profile id, deprecated profile ids)."""
+def load_golden_recipe_maps() -> tuple[dict[str, str], set[str], set[str]]:
+    """Return (inventory→golden profile, deprecated profiles, auxiliary inventory paths)."""
     if yaml is None or not GOLDEN_RECIPES.is_file():
-        return {}, set()
+        return {}, set(), set()
     try:
         data = yaml.safe_load(GOLDEN_RECIPES.read_text()) or {}
     except (OSError, yaml.YAMLError):
-        return {}, set()
+        return {}, set(), set()
     golden = data.get("golden") or {}
     inv_to_profile = {
         str(k): str(v)
@@ -1061,14 +1061,36 @@ def load_golden_recipe_maps() -> tuple[dict[str, str], set[str]]:
         for p in (data.get("deprecated_profiles") or [])
         if isinstance(p, str) and p
     }
-    return inv_to_profile, deprecated
+    auxiliary = {
+        str(p)
+        for p in (data.get("auxiliary_inventory") or [])
+        if isinstance(p, str) and p
+    }
+    return inv_to_profile, deprecated, auxiliary
 
 
 def _bench_profile_for_entry(entry: dict, profiles: list[dict], golden_by_inv: dict[str, str]) -> dict | None:
-    """Pick the headline bench profile — golden production recipe, not experimental max."""
+    """Pick the headline bench profile for the portal Bench 4k column.
+
+    Prefer the best perfbench-metrics (PBM) 4k across this inventory's recipes
+    (e.g. MTP companion over a slower golden daily-driver). Fall back to the
+    golden production recipe, then max rated tok/s.
+    """
     rated = [p for p in profiles if p.get("tok_s") is not None]
     if not rated:
         return None
+
+    def _pbm_score(p: dict) -> float:
+        if p.get("pbm_tok_s_4k") is not None:
+            return float(p["pbm_tok_s_4k"])
+        if p.get("bench_method") == "perfbench-metrics":
+            return float(p["tok_s"])
+        return float("-inf")
+
+    pbm_rated = [p for p in rated if _pbm_score(p) != float("-inf")]
+    if pbm_rated:
+        return max(pbm_rated, key=_pbm_score)
+
     rel = str(entry.get("rel_path") or entry.get("id") or "")
     golden_id = entry.get("golden_profile") or golden_by_inv.get(rel)
     if golden_id:
@@ -1183,7 +1205,7 @@ def load_inference_profile_map() -> dict[str, list[dict]]:
     if yaml is None or not RECIPES_DIR.is_dir():
         return {}
 
-    _, deprecated_profiles = load_golden_recipe_maps()
+    _, deprecated_profiles, _ = load_golden_recipe_maps()
 
     enabled: set[str] = set()
     if INFERENCE_PROFILES.is_file():
@@ -1817,7 +1839,7 @@ def main() -> int:
 
     profile_benchmarks = load_profile_benchmarks()
     attach_spark_verify(entries, load_spark_verification(), profile_benchmarks)
-    golden_by_inv, _ = load_golden_recipe_maps()
+    golden_by_inv, _, auxiliary_inv = load_golden_recipe_maps()
     for entry in entries:
         rel = entry.get("rel_path") or ""
         entry["is_golden"] = rel in golden_by_inv
@@ -1828,13 +1850,23 @@ def main() -> int:
     attach_unlinked_sidecar_metadata(entries)
     for entry in entries:
         caps = {str(c).lower() for c in (entry.get("capabilities") or [])}
-        if entry.get("lab") == "z-lab" and ("dflash" in caps or "speculative" in caps):
+        rel = entry.get("rel_path") or ""
+        if rel in auxiliary_inv or (
+            entry.get("lab") == "z-lab" and ("dflash" in caps or "speculative" in caps)
+        ):
             entry.setdefault("model_kind", "speculative_sidecar")
     attach_best_bench_tok(entries, golden_by_inv)
     propagate_sidecar_bench_to_targets(entries)
     for entry in entries:
         reconcile_spark_verify_with_profiles(entry, golden_by_inv)
     fill_best_bench_from_verify(entries)
+    # Failed models must not keep a stale tok/s from an older profile/bench.
+    for entry in entries:
+        sv = entry.get("spark_verify") or {}
+        if str(sv.get("spark_status") or "").lower() == "failed":
+            entry["best_bench_tok_s"] = None
+            entry["latest_bench_tok_s"] = None
+            entry.pop("best_speculative_tok_s", None)
 
     payload = {
         "generated_at": now,

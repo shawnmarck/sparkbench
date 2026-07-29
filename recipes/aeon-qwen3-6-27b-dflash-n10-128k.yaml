@@ -1,0 +1,36 @@
+id: aeon-qwen3-6-27b-dflash-n10-128k
+name: AEON 27B NVFP4 + DFlash n10@128k
+inventory_path: aeon-7/qwen3.6-27b-aeon-ultimate-uncensored
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.6-27b-dflash
+port: 8000
+tags:
+- lab
+- eugr
+- dflash
+- aeon
+- nvfp4
+- retune
+speculative:
+  method: dflash
+  sidecar_inventory: z-lab/qwen3.6-27b
+  sidecar_path: /models/z-lab/qwen3.6-27b/dflash
+  num_speculative_tokens: 10
+eugr_recipe: /opt/spark/services/eugr-aeon-qwen3-6-27b-dflash-n10-128k.yaml
+notes: AEON NVFP4 + DFlash n=10 @ 128k with fp8 KV + flashinfer. PBM 4k/50k/100k =
+  24.1/7.6/3.9.
+context:
+  default: 131072
+  native: 262144
+  kv_default: fp8
+  presets:
+    golden:
+      label: AEON DFlash 128k fp8 KV
+      ctx: 131072
+      kv: fp8
+      gpu_memory_utilization: 0.85
+      max_num_seqs: 4
+      max_num_batched_tokens: 32768
+promoted_at: '2026-07-11T00:33:22+00:00'

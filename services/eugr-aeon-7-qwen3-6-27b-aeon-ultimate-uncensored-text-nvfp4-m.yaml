@@ -1,0 +1,23 @@
+recipe_version: '1'
+name: aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m
+description: eugr vLLM serve for aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs
+model: qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-
+container: vllm-node
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: '1'
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 262144
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+command: "vllm serve /models/aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs/nvfp4\
+  \ \\\n  --host {host} \\\n  --port {port} \\\n  --served-model-name qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-\
+  \ \\\n  --tensor-parallel-size {tensor_parallel} \\\n  --trust-remote-code \\\n\
+  \  --enable-auto-tool-choice \\\n  --tool-call-parser qwen3_xml \\\n  --kv-cache-dtype\
+  \ auto \\\n  --language-model-only \\\n  --moe-backend marlin \\\n  --gpu-memory-utilization\
+  \ {gpu_memory_utilization} \\\n  --max-model-len {max_model_len} \\\n  --max-num-seqs\
+  \ {max_num_seqs} \\\n  --max-num-batched-tokens {max_num_batched_tokens} \\\n  --enable-chunked-prefill\
+  \ \\\n  --enable-prefix-caching \\\n  --load-format fastsafetensors\n"

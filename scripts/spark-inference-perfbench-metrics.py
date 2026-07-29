@@ -26,6 +26,24 @@ PBM_MEASURED_SESSIONS = int(os.environ.get("PBM_MEASURED_SESSIONS", "1"))
 PBM_WARMUP = os.environ.get("PBM_WARMUP", "1") not in ("0", "false", "no")
 
 
+def parse_fills_arg(raw: str | None) -> tuple[int, ...]:
+    """Comma-separated fill sizes, e.g. '4096' or '4096,50000'."""
+    if not raw:
+        env = os.environ.get("PBM_FILLS", "").strip()
+        raw = env or None
+    if not raw:
+        return PBM_FILLS
+    out: list[int] = []
+    for part in str(raw).split(","):
+        part = part.strip().lower().replace("k", "000")
+        if not part:
+            continue
+        out.append(int(part))
+    if not out:
+        return PBM_FILLS
+    return tuple(out)
+
+
 def _load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -58,9 +76,10 @@ def recipe_max_ctx(recipe: dict[str, Any]) -> int:
     return int(recipe.get("max_model_len") or 32768)
 
 
-def fills_for_ctx(max_ctx: int) -> list[int]:
+def fills_for_ctx(max_ctx: int, fills: tuple[int, ...] | None = None) -> list[int]:
+    ladder = fills or PBM_FILLS
     usable = max(0, max_ctx - PBM_HEADROOM)
-    return [f for f in PBM_FILLS if f <= usable]
+    return [f for f in ladder if f <= usable]
 
 
 
@@ -124,6 +143,7 @@ def run_pbm_on_active(
     profile_id: str,
     recipe: dict[str, Any],
     engine_ready: Any,
+    fills_wanted: tuple[int, ...] | None = None,
 ) -> dict[str, Any]:
     """Run PBM ladder against the already-up profile. Does not start/stop engines."""
     benchv2 = _load_module(
@@ -132,6 +152,7 @@ def run_pbm_on_active(
     if not engine_ready(recipe):
         raise RuntimeError("active profile not ready — wait for /v1/models")
 
+    ladder = fills_wanted or PBM_FILLS
     max_ctx = recipe_max_ctx(recipe)
     # Prefer LIVE engine max_model_len — recipe context.default often stays at golden 32k
     # even when `spark inference up --ctx 108192` loaded a larger window.
@@ -140,10 +161,10 @@ def run_pbm_on_active(
         or recipe.get("loaded_ctx")
         or max_ctx
     )
-    fills = fills_for_ctx(loaded)
+    fills = fills_for_ctx(loaded, ladder)
     skipped = {
         str(f): f"needs>={f + PBM_HEADROOM} ctx (loaded={loaded})"
-        for f in PBM_FILLS
+        for f in ladder
         if f not in fills
     }
     if not fills:
@@ -212,6 +233,11 @@ def run_pbm_on_active(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run perfbench-metrics on active profile")
     parser.add_argument("--profile", help="profile id (default: active)")
+    parser.add_argument(
+        "--fills",
+        help="comma-separated fill sizes (default: 4096,50000,100000). "
+        "Also honored via PBM_FILLS env.",
+    )
     args = parser.parse_args(argv)
 
     inf = _load_module("spark_inference", ROOT / "scripts" / "spark-inference.py")
@@ -224,10 +250,12 @@ def main(argv: list[str] | None = None) -> int:
             f"active profile is {active['profile']}, not {profile_id} — up it first"
         )
     recipe = active["recipe"]
+    fills_wanted = parse_fills_arg(args.fills)
     result = run_pbm_on_active(
         profile_id=profile_id,
         recipe=recipe,
         engine_ready=inf.engine_ready,
+        fills_wanted=fills_wanted,
     )
     fills = result.get("fills") or {}
     parts = [f"{k}:{v['tok_s']}" for k, v in fills.items()]

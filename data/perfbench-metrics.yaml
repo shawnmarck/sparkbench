@@ -1333,4 +1333,48 @@ profiles:
     tok_s_4k: 18.9
     tok_s_50k: 11.7
     tok_s_100k: 9.4
+  aeon-qwen3-6-27b-dflash-n10-128k:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: aeon-7/qwen3.6-27b-aeon-ultimate-uncensored
+    measured_at: '2026-07-11T00:33:22.253278+00:00'
+    loaded_ctx: 131072
+    fills:
+      '4096':
+        tok_s: 24.1
+        tok_s_min: 24.1
+        tok_s_max: 24.1
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 47.81
+        run_tok_s:
+        - 24.1
+      '50000':
+        tok_s: 7.6
+        tok_s_min: 7.6
+        tok_s_max: 7.6
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 150.87
+        run_tok_s:
+        - 7.6
+      '100000':
+        tok_s: 3.9
+        tok_s_min: 3.9
+        tok_s_max: 3.9
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 1152
+        elapsed_s: 294.67
+        run_tok_s:
+        - 3.9
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=24.1 / 50000=7.6 / 100000=3.9
+    tok_s_4k: 24.1
+    tok_s_50k: 7.6
+    tok_s_100k: 3.9
 updated_at: '2026-07-24T00:19:15.988777+00:00'

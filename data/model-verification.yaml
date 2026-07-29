@@ -4,12 +4,12 @@ models:
     tok_s: 70.0
     tok_s_engine: eugr
     tok_s_profile: opencode-qwen36-250k
-    note: "PBM 4k @ 70.0 tok/s \u2014 perfbench-metrics \u2014 profile=opencode-qwen36-250k"
+    note: PBM 4k @ 70.0 tok/s — perfbench-metrics — profile=opencode-qwen36-250k
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
-    note: "PBM 4k @ 46.8 tok/s \u2014 perfbench-metrics \u2014 profile=qwen36-q4-llama"
+    note: PBM 4k @ 46.8 tok/s — perfbench-metrics — profile=qwen36-q4-llama
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     tok_s: 46.8
     tok_s_engine: llamacpp
@@ -21,7 +21,7 @@ models:
     tok_s: 19.1
     tok_s_engine: llamacpp
     tok_s_profile: gemma4-12b-coder-q4
-    note: "PBM 4k @ 19.1 tok/s \u2014 perfbench-metrics \u2014 profile=gemma4-12b-coder-q4"
+    note: PBM 4k @ 19.1 tok/s — perfbench-metrics — profile=gemma4-12b-coder-q4
     updated_at: '2026-07-10T15:39:52.400850+00:00'
   google/gemma-4-12b-it:
     spark_status: works
@@ -30,13 +30,13 @@ models:
     tok_s_engine: llamacpp
     tok_s_profile: google-gemma-4-12b-it-llama
     engine: llamacpp
-    note: "PBM 4k @ 19.8 tok/s \u2014 perfbench-metrics \u2014 profile=google-gemma-4-12b-it-llama"
+    note: PBM 4k @ 19.8 tok/s — perfbench-metrics — profile=google-gemma-4-12b-it-llama
   microsoft/phi-4:
     spark_status: works
     leaderboard_excluded: true
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
-    note: "PBM 4k @ 8.0 tok/s \u2014 perfbench-metrics \u2014 profile=microsoft-phi-4-eugr"
+    note: PBM 4k @ 8.0 tok/s — perfbench-metrics — profile=microsoft-phi-4-eugr
     removal_pending: true
     removal_shelf: true
     removal_queued_at: '2026-07-10T07:10:38.285563+00:00'
@@ -49,13 +49,13 @@ models:
     tok_s: 74.2
     tok_s_engine: eugr
     tok_s_profile: nvidia-qwen3-30b-a3b-eugr
-    note: "PBM 4k @ 74.2 tok/s \u2014 perfbench-metrics \u2014 profile=nvidia-qwen3-30b-a3b-eugr"
+    note: PBM 4k @ 74.2 tok/s — perfbench-metrics — profile=nvidia-qwen3-30b-a3b-eugr
   deepseek-ai/deepseek-r1-distill-qwen-32b:
     spark_status: works
     leaderboard_excluded: true
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
-    note: "PBM 4k @ 3.6 tok/s \u2014 perfbench-metrics \u2014 profile=deepseek-ai-deepseek-r1-distill-qwen-32b-eugr"
+    note: PBM 4k @ 3.6 tok/s — perfbench-metrics — profile=deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
     removal_pending: true
     removal_shelf: true
     removal_queued_at: '2026-07-10T07:10:48.662753+00:00'
@@ -66,7 +66,7 @@ models:
     leaderboard_excluded: true
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
-    note: "PBM 4k @ 7.9 tok/s \u2014 perfbench-metrics \u2014 profile=nousresearch-hermes-4-14b-eugr"
+    note: PBM 4k @ 7.9 tok/s — perfbench-metrics — profile=nousresearch-hermes-4-14b-eugr
     removal_pending: true
     removal_shelf: true
     removal_queued_at: '2026-07-10T07:11:03.673554+00:00'
@@ -79,7 +79,7 @@ models:
     tok_s: 42.1
     tok_s_engine: llamacpp
     tok_s_profile: unsloth-qwen3-coder-30b-a3b-instruct-llama
-    note: "PBM 4k @ 42.1 tok/s \u2014 perfbench-metrics \u2014 profile=unsloth-qwen3-coder-30b-a3b-instruct-llama"
+    note: PBM 4k @ 42.1 tok/s — perfbench-metrics — profile=unsloth-qwen3-coder-30b-a3b-instruct-llama
     removal_pending: true
     removal_shelf: true
     removal_queued_at: '2026-07-10T07:11:28.833140+00:00'
@@ -90,7 +90,7 @@ models:
     tok_s: 23.0
     tok_s_engine: eugr
     tok_s_profile: google-gemma-4-26b-a4b-it-eugr
-    note: "PBM 4k @ 23.0 tok/s \u2014 perfbench-metrics \u2014 profile=google-gemma-4-26b-a4b-it-eugr"
+    note: PBM 4k @ 23.0 tok/s — perfbench-metrics — profile=google-gemma-4-26b-a4b-it-eugr
   unsloth/qwen3.6-27b:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -98,7 +98,7 @@ models:
     tok_s: 9.4
     tok_s_engine: eugr
     tok_s_profile: unsloth-qwen3-6-27b-eugr
-    note: "PBM 4k @ 9.4 tok/s \u2014 perfbench-metrics \u2014 profile=unsloth-qwen3-6-27b-eugr"
+    note: PBM 4k @ 9.4 tok/s — perfbench-metrics — profile=unsloth-qwen3-6-27b-eugr
   0xsero/deepseek-v4-flash-spark:
     spark_status: failed
     updated_at: '2026-07-10T14:30:26.458546+00:00'
@@ -112,12 +112,12 @@ models:
     tok_s: 38.7
     tok_s_engine: eugr
     tok_s_profile: qwen-qwen3-coder-next-eugr
-    note: "PBM 4k @ 38.7 tok/s \u2014 perfbench-metrics \u2014 profile=qwen-qwen3-coder-next-eugr"
+    note: PBM 4k @ 38.7 tok/s — perfbench-metrics — profile=qwen-qwen3-coder-next-eugr
   qwen/qwen3.6-27b:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
-    note: "PBM 4k @ 17.3 tok/s \u2014 perfbench-metrics \u2014 profile=qwen-qwen3-6-27b-dflash-n10-32k"
+    note: PBM 4k @ 17.3 tok/s — perfbench-metrics — profile=qwen-qwen3-6-27b-dflash-n10-32k
     tok_s: 17.3
     tok_s_engine: eugr
     tok_s_profile: qwen-qwen3-6-27b-dflash-n10-32k
@@ -128,7 +128,7 @@ models:
     tok_s: 10.6
     tok_s_engine: eugr
     tok_s_profile: rdtand-qwen3-6-27b-eugr
-    note: "PBM 4k @ 10.6 tok/s \u2014 perfbench-metrics \u2014 profile=rdtand-qwen3-6-27b-eugr"
+    note: PBM 4k @ 10.6 tok/s — perfbench-metrics — profile=rdtand-qwen3-6-27b-eugr
   saricles/qwen3-coder-next:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -136,7 +136,7 @@ models:
     tok_s: 58.9
     tok_s_engine: eugr
     tok_s_profile: saricles-qwen3-coder-next-eugr
-    note: "PBM 4k @ 58.9 tok/s \u2014 perfbench-metrics \u2014 profile=saricles-qwen3-coder-next-eugr"
+    note: PBM 4k @ 58.9 tok/s — perfbench-metrics — profile=saricles-qwen3-coder-next-eugr
   z-lab/qwen3.6-35b-a3b:
     spark_status: failed
     updated_at: '2026-07-10T14:30:26.549840+00:00'
@@ -153,16 +153,16 @@ models:
     tok_s: 20.5
     tok_s_engine: llamacpp
     tok_s_profile: stepfun-ai-step-3-7-flash-llama
-    note: "PBM 4k @ 20.5 tok/s \u2014 perfbench-metrics \u2014 profile=stepfun-ai-step-3-7-flash-llama"
+    note: PBM 4k @ 20.5 tok/s — perfbench-metrics — profile=stepfun-ai-step-3-7-flash-llama
   google/diffusiongemma-26b-a4b-it:
     spark_status: failed
-    updated_at: '2026-07-10T15:39:52.400850+00:00'
+    updated_at: '2026-07-11T01:08:51.756098+00:00'
     engine: eugr
     tok_s: null
     tok_s_engine: eugr
     tok_s_profile: google-diffusiongemma-26b-a4b-it-eugr
-    note: PBM failed (google-diffusiongemma-26b-a4b-it-eugr); no successful 4k/50k/100k
-      ladder run.
+    note: Failed current PBM ladder (google-diffusiongemma-26b-a4b-it-eugr). Older
+      bench-v2 score (~39 t/s) is stale and not a current works gate.
   kaitchup/qwen3.6-27b:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -170,7 +170,7 @@ models:
     tok_s: 9.1
     tok_s_engine: llamacpp
     tok_s_profile: kaitchup-qwen3-6-27b-llama
-    note: "PBM 4k @ 9.1 tok/s \u2014 perfbench-metrics \u2014 profile=kaitchup-qwen3-6-27b-llama"
+    note: PBM 4k @ 9.1 tok/s — perfbench-metrics — profile=kaitchup-qwen3-6-27b-llama
   antirez/deepseek-v4-flash:
     spark_status: failed
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -186,7 +186,7 @@ models:
     tok_s_profile: deepreinforce-ai-ornith-1-0-35b-llama
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 37.8 tok/s \u2014 perfbench-metrics \u2014 profile=deepreinforce-ai-ornith-1-0-35b-llama"
+    note: PBM 4k @ 37.8 tok/s — perfbench-metrics — profile=deepreinforce-ai-ornith-1-0-35b-llama
     engine: llamacpp
   s-batman/ornith-1.0-35b-nvfp4:
     spark_status: works
@@ -195,14 +195,14 @@ models:
     tok_s: 46.5
     tok_s_engine: llamacpp
     tok_s_profile: s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
-    note: "PBM 4k @ 46.5 tok/s \u2014 perfbench-metrics \u2014 profile=s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2"
+    note: PBM 4k @ 46.5 tok/s — perfbench-metrics — profile=s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2
   empero-ai/qwythos-9b-claude-mythos-5-1m:
     tok_s: 12.6
     tok_s_engine: eugr
     tok_s_profile: empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 12.6 tok/s \u2014 perfbench-metrics \u2014 profile=empero-ai-qwythos-9b-claude-mythos-5-1m-eugr"
+    note: PBM 4k @ 12.6 tok/s — perfbench-metrics — profile=empero-ai-qwythos-9b-claude-mythos-5-1m-eugr
   jackrong/qwopus3.6-27b-coder-compat:
     tok_s: null
     tok_s_engine: llamacpp
@@ -217,28 +217,28 @@ models:
     tok_s_profile: qwen-qwen-agentworld-35b-a3b-eugr
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 29.6 tok/s \u2014 perfbench-metrics \u2014 profile=qwen-qwen-agentworld-35b-a3b-eugr"
+    note: PBM 4k @ 29.6 tok/s — perfbench-metrics — profile=qwen-qwen-agentworld-35b-a3b-eugr
   yuxinlu1/gemma-4-12b-agentic-v2:
     tok_s: 18.9
     tok_s_engine: llamacpp
     tok_s_profile: gemma4-12b-agentic-v2-q4
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 18.9 tok/s \u2014 perfbench-metrics \u2014 profile=gemma4-12b-agentic-v2-q4"
+    note: PBM 4k @ 18.9 tok/s — perfbench-metrics — profile=gemma4-12b-agentic-v2-q4
   yuxinlu1/gemma-4-12b-opus-reasoning:
     tok_s: 19.1
     tok_s_engine: llamacpp
     tok_s_profile: gemma4-12b-opus-reasoning-q4
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 19.1 tok/s \u2014 perfbench-metrics \u2014 profile=gemma4-12b-opus-reasoning-q4"
+    note: PBM 4k @ 19.1 tok/s — perfbench-metrics — profile=gemma4-12b-opus-reasoning-q4
   yuxinlu1/mellum2-12b-opus-thinking:
     tok_s: 83.8
     tok_s_engine: llamacpp
     tok_s_profile: mellum2-12b-opus-q4
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 83.8 tok/s \u2014 perfbench-metrics \u2014 profile=mellum2-12b-opus-q4"
+    note: PBM 4k @ 83.8 tok/s — perfbench-metrics — profile=mellum2-12b-opus-q4
   qwen/qwen3.6-35b-a3b:
     spark_status: failed
     updated_at: '2026-07-10T14:30:26.654117+00:00'
@@ -251,15 +251,15 @@ models:
     spark_status: failed
     updated_at: '2026-07-10T14:30:26.504715+00:00'
     engine: eugr
-    note: "GB10 unified memory OOM (NV_ERR_NO_MEMORY) loading 75B NVFP4+MTP \u2014\
-      \ cannot run on single Spark."
+    note: GB10 unified memory OOM (NV_ERR_NO_MEMORY) loading 75B NVFP4+MTP — cannot
+      run on single Spark.
   poolside/laguna-xs-2.1:
     tok_s: 21.4
     tok_s_engine: eugr
     tok_s_profile: poolside-laguna-xs-2-1-dflash-eugr
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 21.4 tok/s \u2014 perfbench-metrics \u2014 profile=poolside-laguna-xs-2-1-dflash-eugr"
+    note: PBM 4k @ 21.4 tok/s — perfbench-metrics — profile=poolside-laguna-xs-2-1-dflash-eugr
     engine: eugr
   nvidia/qwen3.6-27b:
     tok_s: 12.1
@@ -267,7 +267,7 @@ models:
     tok_s_profile: nvidia-qwen3-6-27b-eugr
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 12.1 tok/s \u2014 perfbench-metrics \u2014 profile=nvidia-qwen3-6-27b-eugr"
+    note: PBM 4k @ 12.1 tok/s — perfbench-metrics — profile=nvidia-qwen3-6-27b-eugr
     engine: eugr
   aeon-7/qwen3.6-27b-aeon-ultimate-uncensored:
     tok_s: 26.0
@@ -275,7 +275,7 @@ models:
     tok_s_profile: aeon-qwen3-6-27b-dflash-n10
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     spark_status: works
-    note: "PBM 4k @ 26.0 tok/s \u2014 perfbench-metrics \u2014 profile=aeon-qwen3-6-27b-dflash-n10"
+    note: PBM 4k @ 26.0 tok/s — perfbench-metrics — profile=aeon-qwen3-6-27b-dflash-n10
     engine: eugr
   yuxinlu1/gemma-4-12b-agentic-fable5-composer2.5-v2-3.5x-tau2:
     spark_status: failed
@@ -289,6 +289,56 @@ models:
     tok_s_profile: poolside-laguna-s-2-1-dflash-eugr
     updated_at: '2026-07-24T00:19:15.988777+00:00'
     spark_status: works
-    note: "PBM 4k @ 28.9 tok/s (50k=15.1, 100k=10.9) \u2014 DFlash n_spec=3; baseline no-DFlash\
-      \ PBM 18.9/11.7/9.4 \u2014 profile=poolside-laguna-s-2-1-dflash-eugr"
+    note: PBM 4k @ 28.9 tok/s (50k=15.1, 100k=10.9) — DFlash n_spec=3; baseline no-DFlash
+      PBM 18.9/11.7/9.4 — profile=poolside-laguna-s-2-1-dflash-eugr
+    engine: eugr
+  hikari07jp/dspark-qwen3.6-27b-aeon-draft:
+    spark_status: failed
+    updated_at: '2026-07-11T01:08:51.756098+00:00'
+    note: DFlash draft sidecar only (DFlashDraftModel, 5 layers, 3.5GB). Not a standalone
+      model — pair with AEON base via DFlash recipe.
+  alittlehammmer/qwen3.6-27b-dflash-gguf-llama.cpp:
+    spark_status: failed
+    updated_at: '2026-07-11T01:08:51.756098+00:00'
+    note: DFlash GGUF drafter pack only (no base weights). Speculative sidecar for
+      llama.cpp — not a standalone model.
+  aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs:
+    tok_s: 11.4
+    tok_s_engine: eugr
+    tok_s_profile: aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m
+    updated_at: '2026-07-11T01:28:47.850248+00:00'
+    spark_status: works
+    note: bench-v2 avg 11.4 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    engine: eugr
+  inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb:
+    tok_s: 23.9
+    tok_s_engine: llamacpp
+    tok_s_profile: inference-snaps-glm-4-7-flash-30b-a3b-q4-k-m-5gb-llama
+    updated_at: '2026-07-11T01:27:48.631276+00:00'
+    spark_status: works
+    note: bench-v2 avg 23.9 decode tok/s (2 sessions, ~14k ctx fill, tool_ok=True)
+    engine: llamacpp
+  protolabsai/thinkingcap-qwen3.6-27b:
+    tok_s: 6.8
+    tok_s_engine: llamacpp
+    tok_s_profile: protolabsai-thinkingcap-qwen3-6-27b-llama
+    updated_at: '2026-07-11T01:38:37.136167+00:00'
+    spark_status: works
+    note: bench-v2 avg 6.8 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    engine: llamacpp
+  sakamakismile/thinkingcap-qwen3.6-27b:
+    tok_s: 11.4
+    tok_s_engine: eugr
+    tok_s_profile: sakamakismile-thinkingcap-qwen3-6-27b-eugr
+    updated_at: '2026-07-11T01:51:02.010064+00:00'
+    spark_status: works
+    note: bench-v2 avg 11.4 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    engine: eugr
+  unsloth/qwen3.6-35b-a3b-nvfp4-fast:
+    tok_s: 55.6
+    tok_s_engine: eugr
+    tok_s_profile: unsloth-qwen3-6-35b-a3b-nvfp4-fast-eugr
+    updated_at: '2026-07-11T01:57:40.719781+00:00'
+    spark_status: works
+    note: bench-v2 avg 55.6 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
     engine: eugr

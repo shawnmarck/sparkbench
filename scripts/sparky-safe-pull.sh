@@ -44,7 +44,8 @@ for path in "${HOST_LOCAL_DATA[@]}"; do
 done
 
 git fetch origin "$BRANCH"
-git pull --ff-only "origin/$BRANCH"
+# Use remote + branch (not "origin/main" as a remote name).
+git pull --ff-only origin "$BRANCH"
 
 for path in "${HOST_LOCAL_DATA[@]}"; do
   base="$(basename "$path")"

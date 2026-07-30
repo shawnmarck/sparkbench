@@ -13,8 +13,10 @@ models:
   - nvfp4
   - gguf
   - agentic
-  why_downloaded: "Dense 27B Qwen3.6 line for Spark bake-off \u2014 NVFP4 (eugr vLLM),\
-    \ GGUF (llama.cpp), and MTP GGUF variants.\n"
+  why_downloaded: 'Dense 27B Qwen3.6 line for Spark bake-off — NVFP4 (eugr vLLM),
+    GGUF (llama.cpp), and MTP GGUF variants.
+
+    '
   variants:
   - format: nvfp4
     subpath: nvfp4
@@ -40,8 +42,10 @@ models:
   - dense
   - vllm
   - fp8
-  why_downloaded: "Official Qwen FP8 checkpoint \u2014 reference vLLM path for the\
-    \ dense 27B base model.\n"
+  why_downloaded: 'Official Qwen FP8 checkpoint — reference vLLM path for the dense
+    27B base model.
+
+    '
   variants:
   - format: fp8
     subpath: fp8
@@ -58,8 +62,10 @@ models:
   - dense
   - vllm
   - experimental
-  why_downloaded: "Community PrismaQuant 5.5-bit vLLM quant for Qwen3.6-27B \u2014\
-    \ Spark A/B vs NVFP4/FP8.\n"
+  why_downloaded: 'Community PrismaQuant 5.5-bit vLLM quant for Qwen3.6-27B — Spark
+    A/B vs NVFP4/FP8.
+
+    '
   variants:
   - format: prismaquant
     subpath: prismaquant
@@ -78,8 +84,10 @@ models:
   - vllm
   - dflash
   - speculative
-  why_downloaded: "DFlash drafter for Qwen3.6-27B \u2014 speculative decoding experiments\
-    \ on Spark.\n"
+  why_downloaded: 'DFlash drafter for Qwen3.6-27B — speculative decoding experiments
+    on Spark.
+
+    '
   variants:
   - format: dflash
     subpath: dflash
@@ -99,12 +107,16 @@ models:
   - ds4
   - experimental
   - long-context
-  summary: "Native DeepSeek V4 Flash via antirez DwarfStar (ds4) \u2014 not generic\
-    \ llama.cpp or vLLM. Q2 imatrix hybrid quant (~81 GB) tuned for 128 GB machines.\
-    \ OpenAI /v1 API with DS4 thinking and tool calling. Spark build pinned to Entrpi/decode-perf-tuning\
-    \ (see data/ds4-dwarfstar.yaml). Control-plane integration pending.\n"
-  why_downloaded: "Queued for DwarfStar engine bake-off on GB10 \u2014 antirez Q2-imatrix\
-    \ GGUF.\n"
+  summary: 'Native DeepSeek V4 Flash via antirez DwarfStar (ds4) — not generic llama.cpp
+    or vLLM. Q2 imatrix hybrid quant (~81 GB) tuned for 128 GB machines. OpenAI /v1
+    API with DS4 thinking and tool calling. Spark build pinned to Entrpi/decode-perf-tuning
+    (see data/ds4-dwarfstar.yaml). Control-plane integration pending.
+
+    '
+  why_downloaded: 'Queued for DwarfStar engine bake-off on GB10 — antirez Q2-imatrix
+    GGUF.
+
+    '
   variants:
   - format: gguf
     subpath: gguf
@@ -126,14 +138,18 @@ models:
   - gguf
   - experimental
   - long-context
-  summary: "GGUF build of 0xSero's DeepSeek V4 Flash Spark line \u2014 REAP-pruned\
-    \ MoE checkpoints quantized with DS4/DwarfStar REAP (Q3 Dynamic REAP) for single\
-    \ DGX Spark (128 GB). REAP (arXiv:2510.13999) one-shot expert pruning from Cerebras\
-    \ research; 0xSero validates long-context profiles up to 200K tokens. Upstream\
-    \ Spark runtime uses vLLM Studio with thinking, tool calling, and FP8 MLA KV (github.com/0xSero/deepseek-spark);\
-    \ this GGUF slot is the llama.cpp bake-off path.\n"
-  why_downloaded: "Community REAP GGUF for GB10 \u2014 Q3-Dynamic-REAP-ds4 via llama.cpp.\
-    \ From 0xSero / Sybil Solutions DGX Spark recipes.\n"
+  summary: 'GGUF build of 0xSero''s DeepSeek V4 Flash Spark line — REAP-pruned MoE
+    checkpoints quantized with DS4/DwarfStar REAP (Q3 Dynamic REAP) for single DGX
+    Spark (128 GB). REAP (arXiv:2510.13999) one-shot expert pruning from Cerebras
+    research; 0xSero validates long-context profiles up to 200K tokens. Upstream Spark
+    runtime uses vLLM Studio with thinking, tool calling, and FP8 MLA KV (github.com/0xSero/deepseek-spark);
+    this GGUF slot is the llama.cpp bake-off path.
+
+    '
+  why_downloaded: 'Community REAP GGUF for GB10 — Q3-Dynamic-REAP-ds4 via llama.cpp.
+    From 0xSero / Sybil Solutions DGX Spark recipes.
+
+    '
   variants:
   - format: gguf
     subpath: gguf
@@ -157,9 +173,10 @@ models:
   - llamacpp
   - gguf
   - long-context
-  why_downloaded: "StepFun frontier VLM MoE for Spark \u2014 IQ4_XS GGUF (~105 GB)\
-    \ + mmproj for llama.cpp. NVIDIA blog + StepFun benches validated on DGX Spark\
-    \ 128 GB.\n"
+  why_downloaded: 'StepFun frontier VLM MoE for Spark — IQ4_XS GGUF (~105 GB) + mmproj
+    for llama.cpp. NVIDIA blog + StepFun benches validated on DGX Spark 128 GB.
+
+    '
   variants:
   - format: gguf
     subpath: gguf
@@ -199,9 +216,11 @@ models:
   - vllm
   - nvfp4
   - agentic
-  why_downloaded: "Your requested flagship Qwen3.6 MoE (~3B active / 35B total). NVIDIA\
-    \ NVFP4 build is the native Spark/Blackwell vLLM path \u2014 primary production\
-    \ inference target.\n"
+  why_downloaded: 'Your requested flagship Qwen3.6 MoE (~3B active / 35B total). NVIDIA
+    NVFP4 build is the native Spark/Blackwell vLLM path — primary production inference
+    target.
+
+    '
   variants:
   - format: nvfp4
     subpath: nvfp4
@@ -240,8 +259,10 @@ models:
   - vllm
   - nvfp4
   - tool-calling
-  why_downloaded: "Faster MoE sibling for interactive agent loops \u2014 lower latency\
-    \ and memory pressure when max intelligence isn't required.\n"
+  why_downloaded: 'Faster MoE sibling for interactive agent loops — lower latency
+    and memory pressure when max intelligence isn''t required.
+
+    '
   variants:
   - format: nvfp4
     subpath: nvfp4
@@ -260,9 +281,9 @@ models:
   - function-calling
   - router
   - hermes-4
-  why_downloaded: "Nous Hermes 4 (Aug 2025) \u2014 smallest Hermes 4 size (14B Qwen3\
-    \ base). Hybrid reasoning, tool calling, structured outputs. Replaces Hermes-3-8B\
-    \ as the lightweight Nous agent/router slot on Spark."
+  why_downloaded: Nous Hermes 4 (Aug 2025) — smallest Hermes 4 size (14B Qwen3 base).
+    Hybrid reasoning, tool calling, structured outputs. Replaces Hermes-3-8B as the
+    lightweight Nous agent/router slot on Spark.
   variants:
   - format: hf
     subpath: hf
@@ -299,9 +320,10 @@ models:
   - intelligence
   - chain-of-thought
   - vllm
-  why_downloaded: "Reasoning slot \u2014 distilled R1 CoT in 32B dense. Hard planning\
-    \ without 671B MoE complexity. Note: R1 distill lineage; not the newest frontier\
-    \ model.\n"
+  why_downloaded: 'Reasoning slot — distilled R1 CoT in 32B dense. Hard planning without
+    671B MoE complexity. Note: R1 distill lineage; not the newest frontier model.
+
+    '
   variants:
   - format: hf
     subpath: hf
@@ -317,9 +339,11 @@ models:
   - fast
   - low-latency
   - vllm
-  why_downloaded: "Spark community fast-general pick \u2014 quick drafts, classification,\
-    \ first-pass before escalating to larger models. Released late 2024; smaller but\
-    \ capable.\n"
+  why_downloaded: 'Spark community fast-general pick — quick drafts, classification,
+    first-pass before escalating to larger models. Released late 2024; smaller but
+    capable.
+
+    '
   variants:
   - format: hf
     subpath: hf
@@ -369,9 +393,11 @@ models:
   - coding
   - vllm
   - apache-2.0
-  why_downloaded: "Popular MoE pick (~3.8B active / 26B total) \u2014 same efficiency\
-    \ class as Qwen3.6 MoE. 256K context, text+image. Heavier than 12B but fast inference\
-    \ per token.\n"
+  why_downloaded: 'Popular MoE pick (~3.8B active / 26B total) — same efficiency class
+    as Qwen3.6 MoE. 256K context, text+image. Heavier than 12B but fast inference
+    per token.
+
+    '
   variants:
   - format: hf
     subpath: hf
@@ -379,7 +405,7 @@ models:
     hf_repo: google/gemma-4-26B-A4B-it
 - id: yuxinlu1/gemma-4-12b-coder-gguf
   lab: yuxinlu1
-  name: "Gemma-4-12B-Coder (Fable5\xD7Composer2.5)"
+  name: Gemma-4-12B-Coder (Fable5×Composer2.5)
   slug: gemma-4-12b-coder-fable5-composer2.5-v1
   hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
   capabilities:
@@ -389,9 +415,11 @@ models:
   - gguf
   - thinking
   - testing
-  why_downloaded: "Community coding fine-tune of Gemma 4 12B \u2014 verifiable Python\
-    \ CoT, thinking mode. Q4_K_M ~7.4GB. Niche vs official -it; v2 agentic release\
-    \ exists if you want newer.\n"
+  why_downloaded: 'Community coding fine-tune of Gemma 4 12B — verifiable Python CoT,
+    thinking mode. Q4_K_M ~7.4GB. Niche vs official -it; v2 agentic release exists
+    if you want newer.
+
+    '
   variants:
   - format: gguf
     subpath: gguf
@@ -425,7 +453,9 @@ models:
   - moe
   - gguf
   - llamacpp
-  why_downloaded: "Community MTP GGUF variant — bench v2 golden workflow 2026-07-08.\n"
+  why_downloaded: 'Community MTP GGUF variant — bench v2 golden workflow 2026-07-08.
+
+    '
   variants:
   - format: gguf
     subpath: mtp-gguf
@@ -446,7 +476,10 @@ models:
   - eugr
   - dflash
   - moe
-  why_downloaded: "Poolside Laguna XS 2.1 + DFlash sidecar — bench v2 golden 262k @ 11.7 tok/s 2026-07-08.\n"
+  why_downloaded: 'Poolside Laguna XS 2.1 + DFlash sidecar — bench v2 golden 262k
+    @ 11.7 tok/s 2026-07-08.
+
+    '
   variants:
   - format: hf
     subpath: hf
@@ -460,7 +493,10 @@ models:
   capabilities:
   - dflash
   - vllm
-  why_downloaded: "DFlash drafter for poolside/Laguna-XS-2.1 — sidecar only, not a standalone serve target.\n"
+  why_downloaded: 'DFlash drafter for poolside/Laguna-XS-2.1 — sidecar only, not a
+    standalone serve target.
+
+    '
   variants:
   - format: dflash
     subpath: dflash
@@ -482,7 +518,11 @@ models:
   - dflash
   - moe
   - nvfp4
-  why_downloaded: "Poolside Laguna S 2.1 NVFP4 (118B-A8B) + DFlash-NVFP4. PBM 4k/50k/100k: DFlash n_spec=3 28.9/15.1/10.9 tok/s; baseline (no DFlash) 18.9/11.7/9.4. Golden: poolside-laguna-s-2-1-dflash-eugr @ 262k fp8.\n"
+  why_downloaded: 'Poolside Laguna S 2.1 NVFP4 (118B-A8B) + DFlash-NVFP4. PBM 4k/50k/100k:
+    DFlash n_spec=3 28.9/15.1/10.9 tok/s; baseline (no DFlash) 18.9/11.7/9.4. Golden:
+    poolside-laguna-s-2-1-dflash-eugr @ 262k fp8.
+
+    '
   variants:
   - format: nvfp4
     subpath: nvfp4
@@ -497,7 +537,10 @@ models:
   - dflash
   - vllm
   - nvfp4
-  why_downloaded: "DFlash-NVFP4 drafter for poolside/Laguna-S-2.1-NVFP4 — sidecar only, not a standalone serve target.\n"
+  why_downloaded: 'DFlash-NVFP4 drafter for poolside/Laguna-S-2.1-NVFP4 — sidecar
+    only, not a standalone serve target.
+
+    '
   variants:
   - format: dflash
     subpath: dflash
@@ -515,7 +558,10 @@ models:
   - golden
   - gguf
   - moe
-  why_downloaded: "Golden fleet target \u2014 multi-quant (FP8 / NVFP4 / GGUF / HF). Primary golden recipe deepreinforce-ai-ornith-1-0-35b-llama.\n"
+  why_downloaded: 'Golden fleet target — multi-quant (FP8 / NVFP4 / GGUF / HF). Primary
+    golden recipe deepreinforce-ai-ornith-1-0-35b-llama.
+
+    '
   param_b: 35
   param_active_b: 3
   architecture: moe
@@ -546,7 +592,9 @@ models:
   - eugr
   - golden
   - vllm
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe empero-ai-qwythos-9b-claude-mythos-5-1m-eugr.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe empero-ai-qwythos-9b-claude-mythos-5-1m-eugr.
+
+    '
   param_b: 9
 - id: jackrong/qwopus3.6-27b-coder-compat
   lab: jackrong
@@ -558,7 +606,9 @@ models:
   - llamacpp
   - golden
   - gguf
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe jackrong-qwopus3-6-27b-coder-compat-llama.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe jackrong-qwopus3-6-27b-coder-compat-llama.
+
+    '
   param_b: 27
   variants:
   - format: gguf
@@ -575,11 +625,13 @@ models:
   - eugr
   - golden
   - vllm
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe qwen-qwen-agentworld-35b-a3b-eugr.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe qwen-qwen-agentworld-35b-a3b-eugr.
+
+    '
   param_b: 35
 - id: yuxinlu1/gemma-4-12b-agentic-v2
   lab: yuxinlu1
-  name: "Gemma 4 12B Agentic v2 (Fable5\xD7Composer2.5) Q4"
+  name: Gemma 4 12B Agentic v2 (Fable5×Composer2.5) Q4
   slug: gemma-4-12b-agentic-v2
   hf_repo: yuxinlu1/gemma-4-12B-agentic-fable5-composer2.5-v2-3.5x-tau2-GGUF
   capabilities:
@@ -589,7 +641,9 @@ models:
   - llamacpp
   - golden
   - gguf
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-agentic-v2-q4.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe gemma4-12b-agentic-v2-q4.
+
+    '
   param_b: 12
   variants:
   - format: gguf
@@ -607,7 +661,9 @@ models:
   - llamacpp
   - golden
   - gguf
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-opus-reasoning-q4.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe gemma4-12b-opus-reasoning-q4.
+
+    '
   param_b: 12
   variants:
   - format: gguf
@@ -626,7 +682,9 @@ models:
   - llamacpp
   - golden
   - gguf
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe mellum2-12b-opus-q4.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe mellum2-12b-opus-q4.
+
+    '
   param_b: 12
   param_active_b: 2.5
   architecture: moe
@@ -637,7 +695,7 @@ models:
     hf_repo: yuxinlu1/Mellum2-12B-A2.5B-Claude-4.6-4.8-Opus-Thinking-GGUF
 - id: nvidia/qwen3.6-35b-a3b
   lab: nvidia
-  name: "OpenCode \xB7 Qwen3.6 250k NVFP4"
+  name: OpenCode · Qwen3.6 250k NVFP4
   slug: qwen3.6-35b-a3b
   hf_repo: nvidia/qwen3.6-35b-a3b-nvfp4
   capabilities:
@@ -648,7 +706,9 @@ models:
   - eugr
   - golden
   - vllm
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe opencode-qwen36-250k.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe opencode-qwen36-250k.
+
+    '
   param_b: 35
 - id: qwen/qwen3-coder-next
   lab: qwen
@@ -660,7 +720,9 @@ models:
   - eugr
   - golden
   - vllm
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe qwen-qwen3-coder-next-eugr.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe qwen-qwen3-coder-next-eugr.
+
+    '
 - id: saricles/qwen3-coder-next
   lab: saricles
   name: qwen3-coder-next (eugr)
@@ -671,7 +733,9 @@ models:
   - eugr
   - golden
   - vllm
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe saricles-qwen3-coder-next-eugr.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe saricles-qwen3-coder-next-eugr.
+
+    '
   variants:
   - format: nvfp4
     subpath: nvfp4
@@ -687,11 +751,13 @@ models:
   - gguf
   - llamacpp
   - golden
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe qwen36-q4-llama.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe qwen36-q4-llama.
+
+    '
   param_b: 35
 - id: yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1
   lab: yuxinlu1
-  name: "Gemma 4 12B Coder (Fable5\xD7Composer2.5) Q4"
+  name: Gemma 4 12B Coder (Fable5×Composer2.5) Q4
   slug: gemma-4-12b-coder-fable5-composer2.5-v1
   hf_repo: yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
   capabilities:
@@ -700,7 +766,9 @@ models:
   - llamacpp
   - golden
   - gguf
-  why_downloaded: "Golden fleet target \u2014 auto-scaffolded from recipe gemma4-12b-coder-q4.\n"
+  why_downloaded: 'Golden fleet target — auto-scaffolded from recipe gemma4-12b-coder-q4.
+
+    '
   param_b: 12
   variants:
   - format: gguf
@@ -735,3 +803,29 @@ models:
     subpath: hf
     engine: vllm
     hf_repo: nvidia/Qwen3.6-27B-NVFP4
+- id: unsloth/qwen3.6-35b-a3b-nvfp4
+  lab: unsloth
+  name: Qwen3.6-35B-A3B NVFP4 (Mia recipe)
+  slug: qwen3.6-35b-a3b-nvfp4
+  hf_repo: unsloth/Qwen3.6-35B-A3B-NVFP4
+  capabilities:
+  - general
+  - moe
+  - multimodal
+  - vllm
+  - nvfp4
+  - agentic
+  - mtp
+  - mia
+  why_downloaded: 'Exact HF weights for MiaAI-Lab Unsloth-Qwen3.6-35b-NVFP4-DGX-Spark
+    recipe comparison on eugr (mixed FP8 dense + NVFP4 MoE).
+
+    '
+  param_b: 35
+  param_active_b: 3
+  architecture: moe
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: unsloth/Qwen3.6-35B-A3B-NVFP4

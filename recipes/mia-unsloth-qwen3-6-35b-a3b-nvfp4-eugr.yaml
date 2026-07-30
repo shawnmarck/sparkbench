@@ -1,0 +1,33 @@
+id: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
+name: "Mia · Unsloth Qwen3.6-35B NVFP4"
+catalog_id: unsloth/qwen3.6-35b-a3b-nvfp4
+inventory_path: unsloth/qwen3.6-35b-a3b-nvfp4
+engine: eugr
+tier: heavy
+lifecycle: testing
+eugr_recipe: /opt/spark/services/eugr-mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr.yaml
+served_name: unsloth/Qwen3.6-35B-A3B-NVFP4
+port: 8000
+tags:
+- mia
+- lab
+- eugr
+- mtp
+- nvfp4
+- unsloth
+- experimental
+speculative:
+  method: mtp
+  num_speculative_tokens: 2
+  moe_backend: triton
+context:
+  default: 262144
+  kv_default: fp8
+  native: 262144
+notes: >-
+  Port of MiaAI-Lab Unsloth-Qwen3.6-35b-NVFP4-DGX-Spark start.sh flags onto eugr
+  vllm-node. Exact HF weights: unsloth/Qwen3.6-35B-A3B-NVFP4. MTP×2, FP8 KV,
+  flashinfer attn, seqs=24, batch=32768, vision limits. Omits
+  --linear-backend flashinfer_b12x (eugr lacks Mia soft-fallback for mixed FP8).
+  Source: https://github.com/MiaAI-Lab/Unsloth-Qwen3.6-35b-NVFP4-DGX-Spark
+updated_at: '2026-07-30T01:22:00+00:00'

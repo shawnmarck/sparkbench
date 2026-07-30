@@ -1,0 +1,31 @@
+recipe_version: '1'
+name: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
+description: "Mia's Unsloth Qwen3.6-35B-A3B-NVFP4 flags on eugr (MTP\xD72, FP8 KV,\
+  \ high concurrency; B12X linear omitted \u2014 needs Mia image soft-fallback)."
+model: unsloth/Qwen3.6-35B-A3B-NVFP4
+container: vllm-node
+env:
+  VLLM_TARGET_DEVICE: cuda
+  CUTE_DSL_ARCH: sm_121a
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.8
+  max_model_len: 262144
+  max_num_seqs: 24
+  max_num_batched_tokens: 32768
+command: "vllm serve /models/unsloth/qwen3.6-35b-a3b-nvfp4/nvfp4 \\\n  --host {host}\
+  \ \\\n  --port {port} \\\n  --served-model-name unsloth/Qwen3.6-35B-A3B-NVFP4 \\\
+  \n  --served-model-name mia-unsloth-qwen3.6-35b-a3b-nvfp4 \\\n  --tensor-parallel-size\
+  \ {tensor_parallel} \\\n  --trust-remote-code \\\n  --moe-backend auto \\\n  --gpu-memory-utilization\
+  \ {gpu_memory_utilization} \\\n  --attention-backend flashinfer \\\n  --max-model-len\
+  \ {max_model_len} \\\n  --max-num-seqs {max_num_seqs} \\\n  --max-num-batched-tokens\
+  \ {max_num_batched_tokens} \\\n  --enable-chunked-prefill \\\n  --async-scheduling\
+  \ \\\n  --kv-cache-dtype fp8 \\\n  --limit-mm-per-prompt '{{\"image\":4}}' \\\n\
+  \  --allowed-media-domains '*' \\\n  --speculative-config '{{\"method\":\"mtp\"\
+  ,\"num_speculative_tokens\":2,\"moe_backend\":\"triton\"}}' \\\n  --reasoning-parser\
+  \ qwen3 \\\n  --default-chat-template-kwargs '{{\"enable_thinking\":true,\"preserve_thinking\"\
+  :true}}' \\\n  --tool-call-parser qwen3_coder \\\n  --enable-auto-tool-choice \\\
+  \n  --override-generation-config '{{\"temperature\":0.6,\"top_p\":0.95,\"top_k\"\
+  :20,\"min_p\":0.0,\"presence_penalty\":0.0,\"repetition_penalty\":1.0}}'\n"

@@ -284,13 +284,13 @@ models:
     note: On disk under hf/*.gguf but scaffold cannot find weights (expects top-level
       gguf or nvfp4/hf). Needs manual llamacpp recipe pointing at hf/gemma4-v2-Q4_K_M.gguf.
   poolside/laguna-s-2.1:
-    tok_s: 28.9
+    tok_s: 29.1
     tok_s_engine: eugr
     tok_s_profile: poolside-laguna-s-2-1-dflash-eugr
-    updated_at: '2026-07-24T00:19:15.988777+00:00'
+    updated_at: '2026-07-30T02:57:48.146006+00:00'
     spark_status: works
-    note: PBM 4k @ 28.9 tok/s (50k=15.1, 100k=10.9) — DFlash n_spec=3; baseline no-DFlash
-      PBM 18.9/11.7/9.4 — profile=poolside-laguna-s-2-1-dflash-eugr
+    note: PBM 4k @ 29.1 tok/s (50k=13.2, 100k=10.6) — DFlash n_spec=3; DFlash-NVFP4
+      sidecar 4cdcc6e9 rebench 2026-07-30; bench-v2 27.5 tool_ok — profile=poolside-laguna-s-2-1-dflash-eugr
     engine: eugr
   hikari07jp/dspark-qwen3.6-27b-aeon-draft:
     spark_status: failed
@@ -341,4 +341,12 @@ models:
     updated_at: '2026-07-11T01:57:40.719781+00:00'
     spark_status: works
     note: bench-v2 avg 55.6 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    engine: eugr
+  unsloth/qwen3.6-35b-a3b-nvfp4:
+    spark_status: works
+    updated_at: '2026-07-30T02:22:24.682902+00:00'
+    tok_s: 23.8
+    tok_s_engine: eugr
+    tok_s_profile: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
+    note: golden 256k/fp8 @ 23.8 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     engine: eugr

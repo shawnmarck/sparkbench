@@ -1256,39 +1256,45 @@ profiles:
     version: '1.0'
     engine: eugr
     inventory_path: poolside/laguna-s-2.1
-    measured_at: '2026-07-24T00:19:15.988777+00:00'
+    measured_at: '2026-07-30T02:56:18.292497+00:00'
     loaded_ctx: 262144
     fills:
       '4096':
-        tok_s: 28.9
-        tok_s_min: 28.9
-        tok_s_max: 28.9
+        tok_s: 29.1
+        tok_s_min: 29.1
+        tok_s_max: 29.1
         sessions: 1
         tool_roundtrip_ok: true
+        completion_tokens: 403
+        elapsed_s: 13.86
         run_tok_s:
-        - 28.9
+        - 29.1
       '50000':
-        tok_s: 15.1
-        tok_s_min: 15.1
-        tok_s_max: 15.1
+        tok_s: 13.2
+        tok_s_min: 13.2
+        tok_s_max: 13.2
         sessions: 1
         tool_roundtrip_ok: true
+        completion_tokens: 378
+        elapsed_s: 28.57
         run_tok_s:
-        - 15.1
+        - 13.2
       '100000':
-        tok_s: 10.9
-        tok_s_min: 10.9
-        tok_s_max: 10.9
+        tok_s: 10.6
+        tok_s_min: 10.6
+        tok_s_max: 10.6
         sessions: 1
         tool_roundtrip_ok: true
+        completion_tokens: 408
+        elapsed_s: 38.45
         run_tok_s:
-        - 10.9
+        - 10.6
     skipped: {}
     primary_fill: 50000
-    note: PBM 4096=28.9 / 50000=15.1 / 100000=10.9 (DFlash n_spec=3, max_num_seqs=1)
-    tok_s_4k: 28.9
-    tok_s_50k: 15.1
-    tok_s_100k: 10.9
+    note: PBM 4096=29.1 / 50000=13.2 / 100000=10.6
+    tok_s_4k: 29.1
+    tok_s_50k: 13.2
+    tok_s_100k: 10.6
   poolside-laguna-s-2-1-eugr:
     method: perfbench-metrics
     version: '1.0'
@@ -1377,4 +1383,48 @@ profiles:
     tok_s_4k: 24.1
     tok_s_50k: 7.6
     tok_s_100k: 3.9
+  mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: unsloth/qwen3.6-35b-a3b-nvfp4
+    measured_at: '2026-07-30T02:11:33.528330+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 70.3
+        tok_s_min: 70.3
+        tok_s_max: 70.3
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 956
+        elapsed_s: 13.59
+        run_tok_s:
+        - 70.3
+      '50000':
+        tok_s: 24.3
+        tok_s_min: 24.3
+        tok_s_max: 24.3
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 955
+        elapsed_s: 39.23
+        run_tok_s:
+        - 24.3
+      '100000':
+        tok_s: 11.2
+        tok_s_min: 11.2
+        tok_s_max: 11.2
+        sessions: 1
+        tool_roundtrip_ok: false
+        completion_tokens: 980
+        elapsed_s: 87.13
+        run_tok_s:
+        - 11.2
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=70.3 / 50000=24.3 / 100000=11.2
+    tok_s_4k: 70.3
+    tok_s_50k: 24.3
+    tok_s_100k: 11.2
 updated_at: '2026-07-24T00:19:15.988777+00:00'

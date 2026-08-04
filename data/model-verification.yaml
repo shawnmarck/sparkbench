@@ -1,12 +1,13 @@
 models:
   nvidia/qwen3.6-35b-a3b:
     spark_status: works
-    tok_s: 70.0
+    tok_s: 86.3
     tok_s_engine: eugr
-    tok_s_profile: opencode-qwen36-250k
-    note: PBM 4k @ 70.0 tok/s — perfbench-metrics — profile=opencode-qwen36-250k
-    updated_at: '2026-07-10T15:39:52.400850+00:00'
+    tok_s_profile: qwen36-35b-a3b-mtp-eugr
     engine: eugr
+    updated_at: '2026-08-04T05:10:16.818085+00:00'
+    note: PBM 4k @ 86.3 / 50k @ 78.8 / 100k @ 31.5 tok/s — perfbench-metrics — profile=qwen36-35b-a3b-mtp-eugr
+      (post eugr vLLM 1ea84d74b, 2026-08-04); Editor's pick
   unsloth/qwen3.6-35b-a3b:
     spark_status: works
     note: PBM 4k @ 46.8 tok/s — perfbench-metrics — profile=qwen36-q4-llama
@@ -172,9 +173,8 @@ models:
     tok_s: 19.5
     tok_s_engine: ds4
     tok_s_profile: antirez-deepseek-v4-flash-ds4
-    note: >-
-      Production 0731+DSpark on Entrpi/ds4 v0.5.0. bench-v2 19.5 tok/s @ ~14k fill
-      (tool_ok=True). Short-decode mean ~36.6 (math 45, code 39, prose 22).
+    note: Production 0731+DSpark on Entrpi/ds4 v0.5.0. bench-v2 19.5 tok/s @ ~14k
+      fill (tool_ok=True). Short-decode mean ~36.6 (math 45, code 39, prose 22).
   deepreinforce-ai/ornith-1.0-35b:
     tok_s: 37.8
     tok_s_engine: llamacpp

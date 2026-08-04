@@ -1,5 +1,5 @@
 id: qwen36-35b-a3b-mtp-eugr
-name: "Qwen3.6 35B A3B \xB7 MTP"
+name: Qwen3.6 35B A3B · MTP
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
 engine: eugr
@@ -14,6 +14,8 @@ tags:
 - mtp
 - nvfp4
 - experimental
+- golden
+- editors-pick
 speculative:
   method: mtp
   num_speculative_tokens: 3
@@ -25,15 +27,21 @@ context:
   bench_matrix:
     version: '1.0'
     fill_ratio: 0.75
-    updated_at: '2026-06-29T07:22:35.624394+00:00'
+    updated_at: '2026-08-04T05:10:16.818085+00:00'
     golden_cell:
       ctx: 262144
       kv: fp8
-      tok_s: 68.2
+      tok_s: 86.3
       tool_ok: true
-      method: bench-agent-v2
-      bench_standard: '2.0'
-      fill_target: 50000
+      method: perfbench-metrics
+      bench_standard: '3.0'
+      fill_target: 4096
+      note: 'PBM ladder post eugr upgrade: 4k=86.3 / 50k=78.8 / 100k=31.5; Editor''s
+        pick'
+      pbm:
+        tok_s_4k: 86.3
+        tok_s_50k: 78.8
+        tok_s_100k: 31.5
     micro_bench:
       method: llama-benchy
       version: 0.3.8
@@ -51,10 +59,16 @@ context:
       baseline_profile: opencode-qwen36-250k
       baseline_pp_tok_s: 5451.0
       baseline_tg_tok_s: 75.4
-notes: "NVFP4 Qwen3.6-35B-A3B with native MTP speculative decoding (262k ctx).\nAgent\
-  \ bench v2 (~50k fill): 68.2 tok/s vs opencode-qwen36-250k 58.9 tok/s (+16%).\n\
-  llama-benchy pp2048/tg128/d0: pp 6116, tg 99.3 tok/s.\nServe flags: instanttensor,\
-  \ modelopt, fp8 KV, gpu-mem 0.65, qwen3_coder parser, async-scheduling.\nCompanion\
-  \ to golden opencode-qwen36-250k \u2014 does not replace it.\n"
-updated_at: '2026-06-29T07:52:24.580768+00:00'
+notes: 'NVFP4 Qwen3.6-35B-A3B with native MTP speculative decoding (262k ctx).
+
+  Agent bench v2 (~50k fill): 68.2 tok/s vs opencode-qwen36-250k 58.9 tok/s (+16%).
+
+  llama-benchy pp2048/tg128/d0: pp 6116, tg 99.3 tok/s.
+
+  Serve flags: instanttensor, modelopt, fp8 KV, gpu-mem 0.65, qwen3_coder parser,
+  async-scheduling.
+
+  Companion to golden opencode-qwen36-250k — does not replace it. Editor''s pick on
+  sparkbench.dev. PBM 4k/50k/100k @ 86.3/78.8/31.5 (2026-08-04, vLLM 1ea84d74b).'
+updated_at: '2026-08-04T05:17:47.907639+00:00'
 promoted_at: '2026-07-08T20:41:28.974119+00:00'

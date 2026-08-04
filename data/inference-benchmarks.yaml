@@ -4,8 +4,7 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:31.850019+00:00'
-    note: "golden 8k/q8_0 @ 19.5 tok/s \u2014 fill~2048 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 8k/q8_0 @ 19.5 tok/s — fill~2048 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 2048
     tool_roundtrip_ok: true
@@ -26,15 +25,14 @@ profiles:
     - 73.3
     - 73.6
     - 73.6
-    note: "agent bench avg 73.5 tok/s over 3 sessions \xD7 3 turns (2304 tok in 31.3s)"
+    note: agent bench avg 73.5 tok/s over 3 sessions × 3 turns (2304 tok in 31.3s)
     latest_run_id: 20260621T08535201-16a13c
   qwen36-q4-llama:
     tok_s: 33.6
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:09.459355+00:00'
-    note: "golden 256k/q8_0 @ 33.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/q8_0 @ 33.6 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -44,8 +42,7 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:28.755050+00:00'
-    note: "golden 256k/q8_0 @ 14.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 256k/q8_0 @ 14.1 tok/s — fill~50000 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
@@ -82,7 +79,7 @@ profiles:
     run_tok_s:
     - 7.9
     - 7.9
-    note: "golden ?/? @ 7.9 tok/s \u2014 fill~18432 \u2014 bench-agent-v2 \u2014 tool_ok=False"
+    note: golden ?/? @ 7.9 tok/s — fill~18432 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 18432
     tool_roundtrip_ok: false
@@ -92,8 +89,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:07.396102+00:00'
-    note: "golden 40k/fp8 @ 72.3 tok/s \u2014 fill~18432 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 40k/fp8 @ 72.3 tok/s — fill~18432 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 18432
     tool_roundtrip_ok: false
@@ -103,8 +99,7 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:31.205917+00:00'
-    note: "golden 256k/q8_0 @ 13.0 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/q8_0 @ 13.0 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -114,8 +109,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-27T07:22:07.457864+00:00'
-    note: "golden 128k/fp8 @ 3.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 128k/fp8 @ 3.6 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -125,8 +119,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:28.946402+00:00'
-    note: "golden 256k/fp8 @ 22.2 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/fp8 @ 22.2 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -136,8 +129,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:08.072528+00:00'
-    note: "golden 256k/fp8 @ 38.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/fp8 @ 38.7 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -158,15 +150,14 @@ profiles:
     - 7.8
     - 7.8
     - 7.7
-    note: "agent bench avg 7.8 tok/s over 3 sessions \xD7 3 turns (2304 tok in 295.5s)"
+    note: agent bench avg 7.8 tok/s over 3 sessions × 3 turns (2304 tok in 295.5s)
     latest_run_id: 20260621T23063864-c07788
   rdtand-qwen3-6-27b-eugr:
     tok_s: 10.2
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:08.524691+00:00'
-    note: "golden 256k/fp8 @ 10.2 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/fp8 @ 10.2 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -176,8 +167,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:09.230214+00:00'
-    note: "golden 256k/fp8 @ 9.3 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/fp8 @ 9.3 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -187,8 +177,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:08.753509+00:00'
-    note: "golden 256k/fp8 @ 57.5 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/fp8 @ 57.5 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -209,15 +198,14 @@ profiles:
     - 29.0
     - 29.0
     - 28.9
-    note: "agent bench avg 29.0 tok/s over 3 sessions \xD7 3 turns (2304 tok in 79.5s)"
+    note: agent bench avg 29.0 tok/s over 3 sessions × 3 turns (2304 tok in 79.5s)
     latest_run_id: 20260622T01393346-90d997
   stepfun-ai-step-3-7-flash-llama:
     tok_s: 14.4
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:08.982613+00:00'
-    note: "golden 256k/q8_0 @ 14.4 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 256k/q8_0 @ 14.4 tok/s — fill~50000 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
@@ -227,8 +215,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:28.567410+00:00'
-    note: "golden 256k/fp8 @ 39.3 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 256k/fp8 @ 39.3 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -238,30 +225,37 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:29.331501+00:00'
-    note: "golden 256k/q8_0 @ 7.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 256k/q8_0 @ 7.6 tok/s — fill~50000 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
     latest_run_id: 20260628T04232933-2abc0d
   antirez-deepseek-v4-flash-ds4:
-    tok_s: 1.7
+    tok_s: 19.5
     engine: ds4
     method: bench-agent-v2
-    measured_at: '2026-06-27T07:22:07.144503+00:00'
-    note: "golden 1024k/q8_0 @ 1.7 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    measured_at: '2026-08-04T03:59:59.442926+00:00'
+    completion_tokens: 980
+    prompt_tokens: 0
+    elapsed_s: 50.28
+    tok_s_min: 19.5
+    tok_s_max: 19.5
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 19.5
+    - 19.5
+    note: bench-v2 avg 19.5 decode tok/s (2 sessions, ~14k ctx fill, tool_ok=True)
     bench_standard_version: '2.0'
-    context_fill_target_tokens: 50000
+    context_fill_target_tokens: 14745
     tool_roundtrip_ok: true
-    latest_run_id: 20260627T07220714-087283
+    latest_run_id: 20260804T03595944-128d06
   opencode-qwen27-dflash-262k:
     tok_s: 3.0
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:08.296927+00:00'
-    note: "golden 256k/fp8 @ 3.0 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 256k/fp8 @ 3.0 tok/s — fill~50000 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
@@ -281,7 +275,8 @@ profiles:
     run_tok_s:
     - 57.9
     - 59.9
-    note: bench-v2 58.9 tok/s (~50k fill) | llama-benchy pp2048/tg128/d0 pp=5451 tg=75.4 tok/s
+    note: bench-v2 58.9 tok/s (~50k fill) | llama-benchy pp2048/tg128/d0 pp=5451 tg=75.4
+      tok/s
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
@@ -291,8 +286,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:28.378751+00:00'
-    note: "golden 781k/fp8 @ 12.4 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 781k/fp8 @ 12.4 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -302,8 +296,7 @@ profiles:
     engine: eugr
     method: bench-agent-v2
     measured_at: '2026-06-28T11:31:07.847322+00:00'
-    note: "golden 250k/fp8 @ 27.6 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=False"
+    note: golden 250k/fp8 @ 27.6 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: false
@@ -313,8 +306,7 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:32.053580+00:00'
-    note: "golden 32k/q8_0 @ 17.3 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 32k/q8_0 @ 17.3 tok/s — fill~14745 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 14745
     tool_roundtrip_ok: true
@@ -324,8 +316,7 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:31.643191+00:00'
-    note: "golden 32k/q8_0 @ 17.1 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 32k/q8_0 @ 17.1 tok/s — fill~14745 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 14745
     tool_roundtrip_ok: true
@@ -335,8 +326,7 @@ profiles:
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:32.265331+00:00'
-    note: "golden 32k/q8_0 @ 74.4 tok/s \u2014 fill~14745 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 32k/q8_0 @ 74.4 tok/s — fill~14745 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 14745
     tool_roundtrip_ok: true
@@ -345,78 +335,339 @@ profiles:
     tok_s: 28.1
     engine: llamacpp
     method: bench-agent-v2
-    measured_at: '2026-06-28T04:23:28.190529+00:00'
-    note: "golden 256k/q8_0 @ 28.1 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    measured_at: '2026-07-08T19:13:59.053959+00:00'
+    note: golden 256k/q8_0 @ 28.1 tok/s — fill~50000 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
-    latest_run_id: 20260628T04232819-46a7c9
+    latest_run_id: 20260708T19135905-753096
   jackrong-qwopus3-6-27b-coder-compat-llama:
     tok_s: 6.9
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-06-28T04:23:29.136970+00:00'
-    note: "golden 256k/q8_0 @ 6.9 tok/s \u2014 fill~50000 \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 256k/q8_0 @ 6.9 tok/s — fill~50000 — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
     latest_run_id: 20260628T04232913-a02e7a
   qwen36-35b-a3b-mtp-eugr:
-    tok_s: 68.2
+    tok_s: 75.7
     engine: eugr
     method: bench-agent-v2
-    measured_at: '2026-06-29T07:22:35.624394+00:00'
-    completion_tokens: 1432
+    measured_at: '2026-08-04T05:06:47.692482+00:00'
+    completion_tokens: 1691
     prompt_tokens: 0
-    elapsed_s: 20.95
-    tok_s_min: 66.2
-    tok_s_max: 70.2
+    elapsed_s: 22.28
+    tok_s_min: 70.4
+    tok_s_max: 81.0
     sessions: 2
     turns_per_session: 4
     run_tok_s:
-    - 66.2
-    - 70.2
-    note: bench-v2 68.2 tok/s (~50k fill) | llama-benchy pp2048/tg128/d0 pp=6116 tg=99.3 tok/s
+    - 81.0
+    - 70.4
+    note: bench-v2 avg 75.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=False)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260804T05064769-854c86
+  deepreinforce-ai-ornith-1-0-35b-fp8-eugr:
+    tok_s: 33.7
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-02T03:31:02.575249+00:00'
+    completion_tokens: 1878
+    prompt_tokens: 0
+    elapsed_s: 55.65
+    tok_s_min: 33.7
+    tok_s_max: 33.8
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 33.8
+    - 33.7
+    note: bench-v2 avg 33.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
     bench_standard_version: '2.0'
     context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
-    latest_run_id: 20260629T07223562-ca541a
-    micro_bench:
-      method: llama-benchy
-      pp: 2048
-      tg: 128
-      depth: 0
-      pp_tok_s: 6116.0
-      tg_tok_s: 99.3
+    latest_run_id: 20260702T03310257-d8ac71
+  deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr:
+    tok_s: 33.0
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-02T03:59:04.510016+00:00'
+    completion_tokens: 2006
+    prompt_tokens: 0
+    elapsed_s: 60.8
+    tok_s_min: 32.9
+    tok_s_max: 33.1
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 33.1
+    - 32.9
+    note: bench-v2 avg 33.0 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260702T03590451-b8d158
+  poolside-laguna-xs-2-1-dflash-eugr:
+    tok_s: 11.7
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-08T20:40:10.201354+00:00'
+    completion_tokens: 795
+    prompt_tokens: 0
+    elapsed_s: 68.19
+    tok_s_min: 11.6
+    tok_s_max: 11.7
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 11.7
+    - 11.6
+    note: bench-v2 avg 11.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260708T20401020-fdb71a
+  nvidia-qwen3-6-27b-eugr:
+    tok_s: 11.1
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-10T06:06:22.533406+00:00'
+    completion_tokens: 2360
+    prompt_tokens: 0
+    elapsed_s: 211.98
+    tok_s_min: 11.1
+    tok_s_max: 11.1
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 11.1
+    - 11.1
+    note: bench-v2 avg 11.1 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260710T06062253-65c1d9
+  qwen-qwen3-6-27b-dflash-n10-32k:
+    tok_s: 8.0
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-10T06:35:32.192631+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 0
+    elapsed_s: 287.96
+    tok_s_min: 8.0
+    tok_s_max: 8.0
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 8.0
+    - 8.0
+    note: bench-v2 avg 8.0 decode tok/s (2 sessions, ~14k ctx fill, tool_ok=False)
+      — preferred over 128k@1.9
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: false
+    latest_run_id: 20260710T06353219-f1a697
   s-batman-ornith-1-0-35b-nvfp4-mtp-llama-2:
     tok_s: 8.7
     engine: llamacpp
     method: bench-agent-v2
     measured_at: '2026-07-08T04:37:24.257332+00:00'
-    note: "golden 196k/q8_0 @ 8.7 tok/s \u2014 fill~133k \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    note: golden 196k/q8_0 @ 8.7 tok/s — fill~133k — bench-agent-v2 — tool_ok=True
     bench_standard_version: '2.0'
     context_fill_target_tokens: 132711
     tool_roundtrip_ok: true
-  deepreinforce-ai-ornith-1-0-35b-fp8-eugr:
-    tok_s: 10.5
+  qwen-qwen3-6-27b-dflash-n10-128k:
+    tok_s: 1.9
     engine: eugr
     method: bench-agent-v2
-    measured_at: '2026-07-02T14:26:29.218661+00:00'
-    note: "golden 262k/fp8 @ 10.5 tok/s \u2014 fill~177k \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    measured_at: '2026-07-10T07:25:24.664828+00:00'
+    completion_tokens: 2456
+    prompt_tokens: 0
+    elapsed_s: 1273.8
+    tok_s_min: 1.9
+    tok_s_max: 1.9
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 1.9
+    - 1.9
+    note: bench-v2 avg 1.9 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
     bench_standard_version: '2.0'
-    context_fill_target_tokens: 176947
+    context_fill_target_tokens: 50000
     tool_roundtrip_ok: true
-  deepreinforce-ai-ornith-1-0-35b-nvfp4-eugr:
-    tok_s: 10.9
+    latest_run_id: 20260710T07252466-825095
+  aeon-qwen3-6-27b-dflash-n10:
+    tok_s: 24.5
     engine: eugr
     method: bench-agent-v2
-    measured_at: '2026-07-02T14:39:36.958559+00:00'
-    note: "golden 262k/fp8 @ 10.9 tok/s \u2014 fill~177k \u2014 bench-agent-v2 \u2014\
-      \ tool_ok=True"
+    measured_at: '2026-07-10T07:39:20.992810+00:00'
+    completion_tokens: 2750
+    prompt_tokens: 0
+    elapsed_s: 112.04
+    tok_s_min: 24.5
+    tok_s_max: 24.6
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 24.5
+    - 24.6
+    note: bench-v2 avg 24.5 decode tok/s (2 sessions, ~14k ctx fill, tool_ok=True)
     bench_standard_version: '2.0'
-    context_fill_target_tokens: 176947
+    context_fill_target_tokens: 14745
     tool_roundtrip_ok: true
+    latest_run_id: 20260710T07392099-31d177
+  aeon-7-qwen3-6-27b-aeon-ultimate-uncensored-text-nvfp4-m:
+    tok_s: 11.4
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-11T01:25:03.785052+00:00'
+    completion_tokens: 2362
+    prompt_tokens: 0
+    elapsed_s: 207.39
+    tok_s_min: 11.4
+    tok_s_max: 11.4
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 11.4
+    - 11.4
+    note: bench-v2 avg 11.4 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260711T01250378-481b1c
+  inference-snaps-glm-4-7-flash-30b-a3b-q4-k-m-5gb-llama:
+    tok_s: 23.9
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-07-11T01:27:48.330958+00:00'
+    completion_tokens: 1920
+    prompt_tokens: 0
+    elapsed_s: 80.33
+    tok_s_min: 23.9
+    tok_s_max: 23.9
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 23.9
+    - 23.9
+    note: bench-v2 avg 23.9 decode tok/s (2 sessions, ~14k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 14745
+    tool_roundtrip_ok: true
+    latest_run_id: 20260711T01274833-74a20e
+  protolabsai-thinkingcap-qwen3-6-27b-llama:
+    tok_s: 6.8
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-07-11T01:38:36.860738+00:00'
+    completion_tokens: 2068
+    prompt_tokens: 0
+    elapsed_s: 302.65
+    tok_s_min: 6.6
+    tok_s_max: 7.0
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 6.6
+    - 7.0
+    note: bench-v2 avg 6.8 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260711T01383686-1f6b5f
+  sakamakismile-thinkingcap-qwen3-6-27b-eugr:
+    tok_s: 11.4
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-11T01:51:01.696994+00:00'
+    completion_tokens: 2126
+    prompt_tokens: 0
+    elapsed_s: 186.88
+    tok_s_min: 11.4
+    tok_s_max: 11.4
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 11.4
+    - 11.4
+    note: bench-v2 avg 11.4 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260711T01510169-97a840
+  unsloth-qwen3-6-35b-a3b-nvfp4-fast-eugr:
+    tok_s: 55.6
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-11T01:57:40.388407+00:00'
+    completion_tokens: 2687
+    prompt_tokens: 0
+    elapsed_s: 48.36
+    tok_s_min: 55.5
+    tok_s_max: 55.6
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 55.5
+    - 55.6
+    note: bench-v2 avg 55.6 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260711T01574038-e088fd
+  poolside-laguna-s-2-1-dflash-eugr:
+    tok_s: 27.5
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-30T02:57:13.315429+00:00'
+    completion_tokens: 841
+    prompt_tokens: 0
+    elapsed_s: 30.46
+    tok_s_min: 26.4
+    tok_s_max: 28.7
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 26.4
+    - 28.7
+    note: bench-v2 avg 27.5 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: true
+    latest_run_id: 20260730T02571331-67802a
+  mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr:
+    tok_s: 23.8
+    engine: eugr
+    method: bench-agent-v2
+    measured_at: '2026-07-30T02:22:24.682902+00:00'
+    note: golden 256k/fp8 @ 23.8 tok/s — fill~50000 — bench-agent-v2 — tool_ok=False
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260730T02222468-d8bf41
+  unsloth-inkling-small-iq2m-llama:
+    tok_s: 16.0
+    engine: llamacpp
+    method: bench-agent-v2
+    measured_at: '2026-08-01T02:58:15.500572+00:00'
+    completion_tokens: 2304
+    prompt_tokens: 0
+    elapsed_s: 144.23
+    tok_s_min: 16.0
+    tok_s_max: 16.0
+    sessions: 2
+    turns_per_session: 4
+    run_tok_s:
+    - 16.0
+    - 16.0
+    note: bench-v2 avg 16.0 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=False)
+    bench_standard_version: '2.0'
+    context_fill_target_tokens: 50000
+    tool_roundtrip_ok: false
+    latest_run_id: 20260801T02581550-5e74d5

@@ -4,7 +4,7 @@ leaderboard_exclude:
 - nousresearch/hermes-4-14b
 - deepseek-ai/deepseek-r1-distill-qwen-32b
 golden:
-  nvidia/qwen3.6-35b-a3b: opencode-qwen36-250k
+  nvidia/qwen3.6-35b-a3b: qwen36-35b-a3b-mtp-eugr
   nvidia/qwen3.6-27b: nvidia-qwen3-6-27b-eugr
   qwen/qwen3.6-27b: qwen-qwen3-6-27b-dflash-n10-32k
   antirez/deepseek-v4-flash: antirez-deepseek-v4-flash-ds4

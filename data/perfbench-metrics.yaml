@@ -904,45 +904,45 @@ profiles:
     version: '1.0'
     engine: eugr
     inventory_path: nvidia/qwen3.6-35b-a3b
-    measured_at: '2026-07-10T13:15:32.749745+00:00'
-    loaded_ctx: 108192
+    measured_at: '2026-08-04T05:10:16.818085+00:00'
+    loaded_ctx: 262144
     fills:
       '4096':
-        tok_s: 82.3
-        tok_s_min: 82.3
-        tok_s_max: 82.3
+        tok_s: 86.3
+        tok_s_min: 86.3
+        tok_s_max: 86.3
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 759
-        elapsed_s: 9.22
+        completion_tokens: 748
+        elapsed_s: 8.67
         run_tok_s:
-        - 82.3
+        - 86.3
       '50000':
-        tok_s: 35.9
-        tok_s_min: 35.9
-        tok_s_max: 35.9
+        tok_s: 78.8
+        tok_s_min: 78.8
+        tok_s_max: 78.8
         sessions: 1
-        tool_roundtrip_ok: true
-        completion_tokens: 652
-        elapsed_s: 18.16
+        tool_roundtrip_ok: false
+        completion_tokens: 889
+        elapsed_s: 11.28
         run_tok_s:
-        - 35.9
+        - 78.8
       '100000':
-        tok_s: 28.0
-        tok_s_min: 28.0
-        tok_s_max: 28.0
+        tok_s: 31.5
+        tok_s_min: 31.5
+        tok_s_max: 31.5
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 743
-        elapsed_s: 26.51
+        completion_tokens: 857
+        elapsed_s: 27.21
         run_tok_s:
-        - 28.0
+        - 31.5
     skipped: {}
     primary_fill: 50000
-    note: PBM 4096=82.3 / 50000=35.9 / 100000=28.0
-    tok_s_4k: 82.3
-    tok_s_50k: 35.9
-    tok_s_100k: 28.0
+    note: PBM 4096=86.3 / 50000=78.8 / 100000=31.5
+    tok_s_4k: 86.3
+    tok_s_50k: 78.8
+    tok_s_100k: 31.5
   qwen36-q4-llama:
     method: perfbench-metrics
     version: '1.0'
@@ -1427,4 +1427,4 @@ profiles:
     tok_s_4k: 70.3
     tok_s_50k: 24.3
     tok_s_100k: 11.2
-updated_at: '2026-07-24T00:19:15.988777+00:00'
+updated_at: '2026-08-04T05:10:16.818085+00:00'

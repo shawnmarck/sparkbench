@@ -38,9 +38,6 @@ models:
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
     note: PBM 4k @ 8.0 tok/s — perfbench-metrics — profile=microsoft-phi-4-eugr
-    removal_pending: true
-    removal_shelf: true
-    removal_queued_at: '2026-07-10T07:10:38.285563+00:00'
     tok_s: 8.0
     tok_s_profile: microsoft-phi-4-eugr
   nvidia/qwen3-30b-a3b:
@@ -57,9 +54,6 @@ models:
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
     note: PBM 4k @ 3.6 tok/s — perfbench-metrics — profile=deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
-    removal_pending: true
-    removal_shelf: true
-    removal_queued_at: '2026-07-10T07:10:48.662753+00:00'
     tok_s: 3.6
     tok_s_profile: deepseek-ai-deepseek-r1-distill-qwen-32b-eugr
   nousresearch/hermes-4-14b:
@@ -68,9 +62,6 @@ models:
     updated_at: '2026-07-10T15:39:52.400850+00:00'
     engine: eugr
     note: PBM 4k @ 7.9 tok/s — perfbench-metrics — profile=nousresearch-hermes-4-14b-eugr
-    removal_pending: true
-    removal_shelf: true
-    removal_queued_at: '2026-07-10T07:11:03.673554+00:00'
     tok_s: 7.9
     tok_s_profile: nousresearch-hermes-4-14b-eugr
   unsloth/qwen3-coder-30b-a3b-instruct:
@@ -81,9 +72,6 @@ models:
     tok_s_engine: llamacpp
     tok_s_profile: unsloth-qwen3-coder-30b-a3b-instruct-llama
     note: PBM 4k @ 42.1 tok/s — perfbench-metrics — profile=unsloth-qwen3-coder-30b-a3b-instruct-llama
-    removal_pending: true
-    removal_shelf: true
-    removal_queued_at: '2026-07-10T07:11:28.833140+00:00'
   google/gemma-4-26b-a4b-it:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -138,9 +126,6 @@ models:
     engine: eugr
     note: 'DFlash + MoE: KV page-size AssertionError on vLLM 0.23.1rc1 even with FP8
       target. Sidecar present; engine blocked.'
-    removal_pending: true
-    removal_shelf: false
-    removal_queued_at: '2026-07-10T07:21:35.601489+00:00'
   stepfun-ai/step-3.7-flash:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -238,9 +223,6 @@ models:
     spark_status: failed
     updated_at: '2026-07-10T14:30:26.654117+00:00'
     engine: eugr
-    removal_pending: true
-    removal_shelf: false
-    removal_queued_at: '2026-07-10T07:21:38.355727+00:00'
     note: 'Overnight full-coverage failed after retries: failed:qwen-qwen3-6-35b-a3b-dflash-eugr'
   nvidia/nvidia-nemotron-labs-3-puzzle-75b-a9b:
     spark_status: failed

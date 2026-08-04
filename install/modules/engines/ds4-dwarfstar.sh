@@ -21,16 +21,16 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq git build-essential
 
-echo "==> Clone / update ds4 (Entrpi decode-perf-tuning)"
+echo "==> Clone / update ds4 (Entrpi v0.5.0)"
 mkdir -p "${TARGET}/vendor"
-COMMIT="5625a99d03d4210b44554708ea3fdb083677a2dc"
+COMMIT="d9c8587"
 if [[ -d "${STAGING_VENDOR}/.git" ]]; then
   rsync -a "${STAGING_VENDOR}/" "${VENDOR}/"
 elif [[ ! -d "${VENDOR}/.git" ]]; then
-  git clone --depth 1 --branch decode-perf-tuning https://github.com/Entrpi/ds4.git "${VENDOR}"
+  git clone --depth 1 --branch v0.5.0 https://github.com/Entrpi/ds4.git "${VENDOR}"
 else
-  git -C "${VENDOR}" fetch origin decode-perf-tuning
-  git -C "${VENDOR}" checkout -f decode-perf-tuning
+  git -C "${VENDOR}" fetch --tags --force origin
+  git -C "${VENDOR}" checkout -f v0.5.0
 fi
 chown -R "${SPARK_USER}:${SPARK_USER}" "${VENDOR}"
 

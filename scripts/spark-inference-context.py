@@ -196,6 +196,9 @@ def default_kv(recipe: dict[str, Any]) -> str:
             if a == "--cache-type-k" and i + 1 < len(args):
                 return args[i + 1]
         return "auto"
+    if engine == "ds4":
+        # Packed FP8/FP4 compressed KV is engine-managed; no recipe KV sweep.
+        return "auto"
     return "auto"
 
 

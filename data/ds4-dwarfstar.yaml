@@ -1,5 +1,5 @@
-# DwarfStar (ds4) — pinned for future Spark control-plane integration.
-# Control plane wiring deferred; weights download queued separately.
+# DwarfStar (ds4) — Entrpi v0.5.0 ship (0731 + DSpark).
+# OOM-safe defaults: ctx 32768 (ship), not 1M on 128GB unified.
 
 engine: ds4
 display_name: DwarfStar
@@ -7,20 +7,23 @@ status: ready
 
 source:
   repo: https://github.com/Entrpi/ds4.git
-  ref: decode-perf-tuning
-  commit: 5625a99d03d4210b44554708ea3fdb083677a2dc
+  ref: v0.5.0
+  commit: d9c8587
   upstream: https://github.com/antirez/ds4
   note: >
-    GB10-tuned CUDA branch via Entrpi/ds4-on-spark (~28 tok/s roofline on Spark).
-    Revert to antirez/ds4 main once decode-perf-tuning lands upstream.
+    GB10-tuned CUDA fork Entrpi/ds4 @ v0.5.0 (0731 cutover).
+    Plain decode ~18-20 tok/s; DSpark suite mean ~27-28 tok/s on Spark.
+    Do not allocate 1M ctx on 128GB — use 32k-128k for headroom.
 
 model:
   hf_repo: antirez/deepseek-v4-gguf
-  gguf_file: DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf
+  gguf_file: DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix-0731.gguf
   inventory_path: antirez/deepseek-v4-flash
   served_name: deepseek-v4-flash
   dest: /models/antirez/deepseek-v4-flash/gguf
   size_bytes: 86720111488
+  dspark_hf_repo: bleysg/DeepSeek-V4-Flash-DSpark-drafter-GGUF
+  dspark_file: DSpark-drafter-Q2K-Q8-0731.gguf
 
 build:
   make_target: cuda-spark
@@ -33,4 +36,8 @@ build:
 runtime:
   port: 8000
   default_ctx: 32768
+  max_safe_ctx: 131072
+  min_avail_mb_before_up: 24000
   api: openai_v1
+  oom_guard: true
+  oom_min_avail_mb: 4096

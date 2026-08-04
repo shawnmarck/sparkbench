@@ -43,7 +43,6 @@ deprecated_profiles:
 - qwen36-nvfp4
 - qwen-qwen3-6-27b-dflash-eugr
 - qwen-qwen3-6-27b-eugr
-- 0xsero-deepseek-v4-flash-spark-llama-2
 auxiliary_inventory:
 - z-lab/qwen3.6-27b
 - hikari07jp/dspark-qwen3.6-27b-aeon-draft

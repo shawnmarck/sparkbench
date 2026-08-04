@@ -99,12 +99,6 @@ models:
     tok_s_engine: eugr
     tok_s_profile: unsloth-qwen3-6-27b-eugr
     note: PBM 4k @ 9.4 tok/s — perfbench-metrics — profile=unsloth-qwen3-6-27b-eugr
-  0xsero/deepseek-v4-flash-spark:
-    spark_status: failed
-    updated_at: '2026-07-10T14:30:26.458546+00:00'
-    engine: llamacpp
-    note: REAP GGUF load blocked (needs dsv4 llama variant). Not supported on current
-      llama.cpp build.
   qwen/qwen3-coder-next:
     spark_status: works
     updated_at: '2026-07-10T15:39:52.400850+00:00'
@@ -172,14 +166,15 @@ models:
     tok_s_profile: kaitchup-qwen3-6-27b-llama
     note: PBM 4k @ 9.1 tok/s — perfbench-metrics — profile=kaitchup-qwen3-6-27b-llama
   antirez/deepseek-v4-flash:
-    spark_status: failed
-    updated_at: '2026-07-10T15:39:52.400850+00:00'
+    spark_status: works
+    updated_at: '2026-08-04T03:59:59.442926+00:00'
     engine: ds4
-    tok_s: null
+    tok_s: 19.5
     tok_s_engine: ds4
     tok_s_profile: antirez-deepseek-v4-flash-ds4
-    note: PBM failed (antirez-deepseek-v4-flash-ds4); no successful 4k/50k/100k ladder
-      run.
+    note: >-
+      Production 0731+DSpark on Entrpi/ds4 v0.5.0. bench-v2 19.5 tok/s @ ~14k fill
+      (tool_ok=True). Short-decode mean ~36.6 (math 45, code 39, prose 22).
   deepreinforce-ai/ornith-1.0-35b:
     tok_s: 37.8
     tok_s_engine: llamacpp

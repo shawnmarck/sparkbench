@@ -107,55 +107,17 @@ models:
   - ds4
   - experimental
   - long-context
-  summary: 'Native DeepSeek V4 Flash via antirez DwarfStar (ds4) — not generic llama.cpp
-    or vLLM. Q2 imatrix hybrid quant (~81 GB) tuned for 128 GB machines. OpenAI /v1
-    API with DS4 thinking and tool calling. Spark build pinned to Entrpi/decode-perf-tuning
-    (see data/ds4-dwarfstar.yaml). Control-plane integration pending.
-
-    '
-  why_downloaded: 'Queued for DwarfStar engine bake-off on GB10 — antirez Q2-imatrix
-    GGUF.
-
-    '
+  summary: "Native DeepSeek V4 Flash via ds4 (DwarfStar / Entrpi v0.5.0) \u2014 not\
+    \ llama.cpp or vLLM. Ship path: 0731 IQ2XXS imatrix GGUF (~81 GB) + DSpark drafter\
+    \ (~6.5 GB). OpenAI /v1 with thinking and tools. Production recipe antirez-deepseek-v4-flash-ds4\
+    \ (pin data/ds4-dwarfstar.yaml).\n"
+  why_downloaded: "Production DSv4-Flash on GB10 via ds4 engine \u2014 0731 + DSpark.\n"
   variants:
   - format: gguf
     subpath: gguf
     engine: ds4
     hf_repo: antirez/deepseek-v4-gguf
-    note: IQ2XXS imatrix Q2 (~81 GB)
-- id: 0xsero/deepseek-v4-flash-spark
-  lab: 0xsero
-  name: DeepSeek V4 Flash Spark
-  slug: deepseek-v4-flash-spark
-  hf_repo: deepseek-ai/DeepSeek-V4-Flash
-  param_b: 180
-  capabilities:
-  - reasoning
-  - coding
-  - agentic
-  - moe
-  - llamacpp
-  - gguf
-  - experimental
-  - long-context
-  summary: 'GGUF build of 0xSero''s DeepSeek V4 Flash Spark line — REAP-pruned MoE
-    checkpoints quantized with DS4/DwarfStar REAP (Q3 Dynamic REAP) for single DGX
-    Spark (128 GB). REAP (arXiv:2510.13999) one-shot expert pruning from Cerebras
-    research; 0xSero validates long-context profiles up to 200K tokens. Upstream Spark
-    runtime uses vLLM Studio with thinking, tool calling, and FP8 MLA KV (github.com/0xSero/deepseek-spark);
-    this GGUF slot is the llama.cpp bake-off path.
-
-    '
-  why_downloaded: 'Community REAP GGUF for GB10 — Q3-Dynamic-REAP-ds4 via llama.cpp.
-    From 0xSero / Sybil Solutions DGX Spark recipes.
-
-    '
-  variants:
-  - format: gguf
-    subpath: gguf
-    engine: llamacpp
-    hf_repo: 0xSero/DeepSeek-V4-Flash-Spark-GGUF
-    note: Q3-Dynamic-REAP-ds4
+    note: 0731 IQ2XXS imatrix + DSpark drafter (~81+6.5 GB)
 - id: stepfun-ai/step-3.7-flash
   lab: stepfun-ai
   name: Step-3.7-Flash

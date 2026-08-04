@@ -173,12 +173,55 @@ case "${cmd}" in
       die "ds4-server already running (pid $(cat "${PID_FILE}"))"
     fi
     args=( -m "${MODEL}" --host "${HOST}" --port "${PORT}" )
-    [[ -n "${CTX}" ]] && args+=( -c "${CTX}" )
+    # Avoid double -c when recipe ds4_args already includes context.
+    has_ctx_in_extra=0
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+      for a in "${EXTRA_ARGS[@]}"; do
+        if [[ "$a" == "-c" || "$a" == "--ctx" ]]; then has_ctx_in_extra=1; break; fi
+      done
+    fi
+    if [[ -n "${CTX}" && "$has_ctx_in_extra" -eq 0 ]]; then
+      args+=( -c "${CTX}" )
+    fi
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
       args+=( "${EXTRA_ARGS[@]}" )
     fi
+    # OOM preflight: need headroom for ~81GiB model + ~7GiB drafter + KV + OS
+    min_avail_mb="${DS4_MIN_AVAIL_MB_BEFORE_UP:-24000}"
+    avail_mb=$(( $(awk '/MemAvailable/ {print $2}' /proc/meminfo) / 1024 ))
+    if (( avail_mb < min_avail_mb )); then
+      die "OOM preflight: MemAvailable ${avail_mb}MiB < ${min_avail_mb}MiB — free memory before ds4 up"
+    fi
+    # Cap ctx hard if someone passes huge -c
+    max_safe_ctx="${DS4_MAX_SAFE_CTX:-131072}"
+    if [[ -n "${CTX}" ]] && (( CTX > max_safe_ctx )); then
+      echo "WARN: clamping ctx ${CTX} -> ${max_safe_ctx} (OOM-safe)" >&2
+      CTX="$max_safe_ctx"
+      new_args=()
+      skip=0
+      for i in "${!args[@]}"; do
+        if (( skip )); then skip=0; continue; fi
+        if [[ "${args[$i]}" == "-c" || "${args[$i]}" == "--ctx" ]]; then
+          new_args+=( "${args[$i]}" "$CTX" ); skip=1
+        else
+          new_args+=( "${args[$i]}" )
+        fi
+      done
+      args=( "${new_args[@]}" )
+    fi
+    # start OOM guard (idempotent)
+    if [[ -x "${ROOT}/scripts/ds4-oom-guard.sh" ]]; then
+      if [[ ! -f "${RUN_DIR}/ds4-oom-guard.pid" ]] || ! kill -0 "$(cat "${RUN_DIR}/ds4-oom-guard.pid" 2>/dev/null)" 2>/dev/null; then
+        nohup "${ROOT}/scripts/ds4-oom-guard.sh" >/dev/null 2>&1 &
+        echo $! >"${RUN_DIR}/ds4-oom-guard.pid"
+      fi
+    fi
+    : >"${LOG_FILE}"
     nohup env DS4_LOCK_FILE="${LOCK_FILE}" "${BIN}" "${args[@]}" >>"${LOG_FILE}" 2>&1 &
     echo $! >"${PID_FILE}"
+    if [[ -w /proc/$(cat "${PID_FILE}")/oom_score_adj ]]; then
+      echo 800 >"/proc/$(cat "${PID_FILE}")/oom_score_adj" 2>/dev/null || true
+    fi
     start_owui_proxy
     echo "Started ds4-server pid $(cat "${PID_FILE}") — ${SERVED_NAME:-ds4} on :${PORT}"
     echo "Log: ${LOG_FILE}"

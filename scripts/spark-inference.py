@@ -493,7 +493,22 @@ def scaffold_ds4_recipe(
     ).strip("-")[:48]
     runtime = pin.get("runtime") or {}
     default_ctx = int(runtime.get("default_ctx") or 32768)
-    display = name or f"{slug} (DwarfStar)"
+    max_safe_ctx = int(runtime.get("max_safe_ctx") or 131072)
+    display = name or f"{slug} (ds4 / DwarfStar)"
+
+    ds4_args: list[str] = ["-c", str(default_ctx)]
+    dspark_name = model_meta.get("dspark_file")
+    if dspark_name:
+        dspark_path = gguf.parent / str(dspark_name)
+        if not dspark_path.is_file():
+            # allow pin dest sibling
+            dest = model_meta.get("dest")
+            if dest:
+                alt = Path(str(dest)) / str(dspark_name)
+                if alt.is_file():
+                    dspark_path = alt
+        if dspark_path.is_file():
+            ds4_args.extend(["--dspark", str(dspark_path)])
 
     recipe: dict[str, Any] = {
         "id": profile_id,
@@ -504,13 +519,34 @@ def scaffold_ds4_recipe(
         "lifecycle": LIFECYCLE_DRAFT,
         "served_name": served_name,
         "port": int(runtime.get("port") or 8000),
-        "tags": ["lab", "ds4", "dwarfstar"],
+        "tags": ["lab", "ds4", "dwarfstar"]
+        + (["dspark"] if "--dspark" in ds4_args else []),
         "model": str(gguf),
-        "ds4_args": ["-c", str(default_ctx)],
+        "ds4_args": ds4_args,
         "notes": (
             f"DwarfStar scaffold {datetime.now(timezone.utc).date().isoformat()} from "
-            f"/models/{inventory_path}. Mark testing, switch, bench, then promote."
+            f"/models/{inventory_path}. Entrpi pin {pin.get('source', {}).get('ref') or 'ds4'}. "
+            f"OOM-safe default ctx={default_ctx} (cap {max_safe_ctx}). "
+            "Mark testing, switch, bench, then promote. "
+            "Open WebUI: :8002/v1 or model deepseek-chat."
         ),
+        "context": {
+            "default": default_ctx,
+            "native": 1048576,
+            "kv_default": "auto",
+            "presets": {
+                "ship": {
+                    "label": "Ship safe (OOM-safe)",
+                    "ctx": default_ctx,
+                    "kv": "auto",
+                },
+                "medium": {
+                    "label": f"Medium {max_safe_ctx // 1024}k",
+                    "ctx": max_safe_ctx,
+                    "kv": "auto",
+                },
+            },
+        },
     }
     path = draft_recipe_path(profile_id)
     save_recipe_file(path, recipe)

@@ -1,11 +1,15 @@
 # Smoke — DwarfStar (ds4) on GB10
 
-Pin: `data/ds4-dwarfstar.yaml` · Model: `antirez/deepseek-v4-flash`
+Pin: `data/ds4-dwarfstar.yaml` (Entrpi **v0.5.0**) · Model: `antirez/deepseek-v4-flash`
+
+**Production recipe:** `antirez-deepseek-v4-flash-ds4` (0731 GGUF + DSpark).
 
 ## Prereqs
 
-- Weights at `/models/antirez/deepseek-v4-flash/gguf/*.gguf` (~81 GB)
+- Base: `…/DeepSeek-V4-Flash-…-imatrix-0731.gguf` (~81 GiB)
+- Drafter: `…/DSpark-drafter-Q2K-Q8-0731.gguf` (~6.5 GiB)
 - eugr and llama.cpp down (one GPU engine at a time)
+- ≥ ~24 GiB MemAvailable before `up` (OOM preflight)
 
 ## Install / build
 
@@ -24,17 +28,16 @@ curl -sf http://127.0.0.1:8000/v1/models | head
 spark engine ds4 down
 ```
 
-## Model Lab path
+## Model Lab path (production profile)
 
 ```bash
-spark recipe scaffold antirez/deepseek-v4-flash ds4
-spark recipe testing antirez-deepseek-v4-flash-ds4
 spark inference up antirez-deepseek-v4-flash-ds4
-spark inference bench
-spark recipe works antirez-deepseek-v4-flash-ds4
+spark inference status
+spark inference bench      # bench-v2 @ recipe default fill (~14k at ctx 32k)
+# Portal: Inference → filter chip "ds4"
 ```
 
-Logs: `/opt/spark/logs/ds4-server.log`
+Logs: `/opt/spark/logs/ds4-server.log` · OOM guard: `/opt/spark/logs/ds4-oom-guard.log`
 
 ## Open WebUI
 

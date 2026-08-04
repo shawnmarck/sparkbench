@@ -165,17 +165,26 @@ Bake-off UIs (Rookery, vLLM Studio) were removed from sparky. Phase 5 is this sp
 
 ### ds4 (DwarfStar) recipe fields
 
+Native **DeepSeek V4 Flash** engine (not vLLM / not llama.cpp). Pin: `data/ds4-dwarfstar.yaml`
+(Entrpi/ds4 **v0.5.0**, 0731 weights + DSpark). Production profile:
+`antirez-deepseek-v4-flash-ds4`.
+
 ```yaml
 engine: ds4
-model: /models/antirez/deepseek-v4-flash/gguf/DeepSeek-V4-Flash-….gguf
+model: /models/antirez/deepseek-v4-flash/gguf/DeepSeek-V4-Flash-…-imatrix-0731.gguf
 served_name: deepseek-v4-flash
-port: 8000
+port: 8000   # same as eugr — mutually exclusive
 ds4_args:
   - -c
-  - "32768"
+  - "32768"   # OOM-safe ship default; hard cap 131072 on 128GB Spark
+  - --dspark
+  - /models/antirez/deepseek-v4-flash/gguf/DSpark-drafter-Q2K-Q8-0731.gguf
 ```
 
-Scaffold: `spark recipe scaffold antirez/deepseek-v4-flash ds4` or auto-detect when catalog marks `engine: ds4`.
+- Scaffold: `spark recipe scaffold antirez/deepseek-v4-flash ds4` (pulls pin + auto-attaches DSpark when present).
+- OOM guard: `scripts/ds4-oom-guard.sh` (started by `spark-ds4 up`); preflight MemAvailable ≥ 24 GiB.
+- Open WebUI: `:8002/v1` chat proxy (thinking off) or model id `deepseek-chat` on `:8000`.
+- Portal Inference filters: **vLLM** · **llama.cpp** · **ds4**.
 
 
 ## OpenCode production profiles (agent coding)

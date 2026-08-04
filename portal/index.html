@@ -370,7 +370,7 @@
         <div class="card" id="inference-card" hidden>
           <div class="card-head">
             <h2>Inference</h2>
-            <div class="card-head-meta" id="inf-head-meta">one GPU profile at a time</div>
+            <div class="card-head-meta" id="inf-head-meta">vLLM · llama.cpp · ds4 — one GPU at a time</div>
           </div>
 
           <div class="inf-card-body">
@@ -413,9 +413,9 @@
                 <input type="search" id="inf-q" placeholder="Search recipes… (/)" autocomplete="off" aria-label="Search recipes">
                 <div class="inf-chip-row" id="inf-filter-chips">
                   <button type="button" class="inf-chip active" data-inf-chip="switchable">Switchable</button>
-                  <button type="button" class="inf-chip" data-inf-chip="eugr">vLLM</button>
-                  <button type="button" class="inf-chip" data-inf-chip="llamacpp">GGUF</button>
-                  <button type="button" class="inf-chip" data-inf-chip="ds4">DwarfStar</button>
+                  <button type="button" class="inf-chip" data-inf-chip="eugr" title="eugr / vLLM">vLLM</button>
+                  <button type="button" class="inf-chip" data-inf-chip="llamacpp" title="llama.cpp GGUF">llama.cpp</button>
+                  <button type="button" class="inf-chip" data-inf-chip="ds4" title="DwarfStar 4 (DeepSeek V4 Flash)">ds4</button>
                   <button type="button" class="inf-chip" data-inf-chip="fast">fast</button>
                   <button type="button" class="inf-chip" data-inf-chip="heavy">heavy</button>
                   <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
@@ -535,13 +535,14 @@
       const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'ds4', 'fast', 'heavy', 'bench', 'drafts'];
       const engineDisplay = (engine) => {
         if (engine === 'eugr' || engine === 'vllm') return 'vLLM';
-        if (engine === 'llamacpp') return 'GGUF';
-        if (engine === 'ds4') return 'DwarfStar';
+        if (engine === 'llamacpp') return 'llama.cpp';
+        if (engine === 'ds4') return 'ds4';
         return engine || '?';
       };
       const engineDisplayMeta = (engine) => {
-        if (engine === 'eugr') return 'vLLM · eugr';
-        if (engine === 'ds4') return 'DwarfStar · ds4';
+        if (engine === 'eugr' || engine === 'vllm') return 'vLLM · eugr';
+        if (engine === 'llamacpp') return 'llama.cpp';
+        if (engine === 'ds4') return 'ds4 · DwarfStar';
         return engineDisplay(engine);
       };
       let infFilterChips = new Set(['switchable']);
@@ -1189,6 +1190,8 @@
       function kvOptionsForEngine(engine) {
         if (engine === 'eugr') return ['auto', 'fp8'];
         if (engine === 'llamacpp') return ['auto', 'q8_0', 'q4_0', 'f16'];
+        // ds4 manages packed FP8/FP4 KV internally; recipe presets only change -c.
+        if (engine === 'ds4') return ['auto'];
         return ['auto', 'fp8', 'q8_0', 'q4_0'];
       }
 
@@ -1249,23 +1252,42 @@
 
         const kvSel = $('inf-ctx-kv');
         const testedKv = (c.kv_tested && c.kv_tested.length) ? c.kv_tested : kvOptionsForEngine(d.engine).filter((k) => k !== 'auto');
-        const kvLabels = { auto: 'auto', fp8: 'fp8 (vLLM)', q8_0: 'q8_0 (GGUF)', q4_0: 'q4_0 (GGUF)', f16: 'f16' };
-        kvSel.innerHTML = testedKv.map((k) => {
+        const kvLabels = {
+          auto: (d.engine === 'ds4' ? 'auto (ds4 packed FP8/FP4)' : 'auto'),
+          fp8: 'fp8 (vLLM)',
+          q8_0: 'q8_0 (llama.cpp)',
+          q4_0: 'q4_0 (llama.cpp)',
+          f16: 'f16',
+        };
+        const kvChoices = testedKv.length ? testedKv : ['auto'];
+        kvSel.innerHTML = kvChoices.map((k) => {
           const lab = kvLabels[k] || k;
           return '<option value="' + attrEsc(k) + '">' + escHtml(lab) + '</option>';
         }).join('');
-        const allowed = new Set(testedKv);
+        kvSel.disabled = d.engine === 'ds4';
+        const allowed = new Set(kvChoices);
         const selKv = infCtxSelection.kv || (infCtxSelection.preset && (c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).kv || c.kv_default || 'auto';
-        kvSel.value = allowed.has(selKv) ? selKv : 'auto';
+        kvSel.value = allowed.has(selKv) ? selKv : (kvChoices[0] || 'auto');
 
         const selCtx = infCtxSelection.ctx != null ? infCtxSelection.ctx
           : ((c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).ctx || c.default;
         $('inf-ctx-custom').value = selCtx != null ? selCtx : '';
+        // OOM-safe soft max for ds4 on 128GB Spark (engine also clamps).
+        if (d.engine === 'ds4') {
+          $('inf-ctx-custom').max = '131072';
+          $('inf-ctx-custom').placeholder = '32768';
+        } else {
+          $('inf-ctx-custom').removeAttribute('max');
+          $('inf-ctx-custom').placeholder = '65536';
+        }
 
         const recLines = (c.recommendations || []).map((r) => r.label + ': ' + fmtCtx(r.ctx) + ' — ' + r.reason).join(' ');
         const mem = c.mem_avail_gb != null && c.weight_gb != null
           ? (' ~' + Math.round(c.weight_gb) + ' GB weights · ' + c.mem_avail_gb + ' GB free.') : '';
-        $('inf-ctx-hint').textContent = recLines + mem;
+        const ds4Hint = d.engine === 'ds4'
+          ? ' ds4: ship ctx 32k (OOM-safe); cap 128k. DSpark on when recipe has --dspark.'
+          : '';
+        $('inf-ctx-hint').textContent = recLines + mem + ds4Hint;
       }
 
       function infLaunchContextPayload() {
@@ -1514,7 +1536,7 @@
             $('inf-active-title').textContent = 'Inference offline';
             $('inf-active-meta').textContent = 'vLLM: ' + (data.engines.eugr ? 'up' : 'down')
               + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down')
-              + ' · DwarfStar: ' + (data.engines.ds4 ? 'up' : 'down');
+              + ' · ds4: ' + (data.engines.ds4 ? 'up' : 'down');
             setInfMsg('');
           }
         }
@@ -2555,7 +2577,7 @@
       }
 
       function engineLabel(engine, format) {
-        if (engine === 'ds4') return 'DwarfStar';
+        if (engine === 'ds4') return 'ds4';
         if (engine === 'llamacpp' || format === 'gguf') return 'llama.cpp';
         if (format === 'nvfp4') return 'vLLM · NVFP4';
         if (format === 'fp8') return 'vLLM · FP8';

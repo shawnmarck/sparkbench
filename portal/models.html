@@ -666,12 +666,13 @@
     let sortCol = 'release_date', sortDir = 'desc';
     const REFRESH_MS = 30000, JOB_POLL_MS = 2000, INF_POLL_MS = 10000, PREFS_KEY = 'spark-models-filters';
     const sparkLabels = { unverified: 'Untested', wip: 'Testing', works: 'Works', failed: 'Failed' };
-    const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'GGUF' };
-    const engineCssClass = (e) => (e === 'eugr' ? 'vllm' : e);
+    const engineLabels = { vllm: 'vLLM', eugr: 'vLLM', llamacpp: 'llama.cpp', ds4: 'ds4' };
+    const engineCssClass = (e) => (e === 'eugr' || e === 'vllm' ? 'vllm' : (e === 'ds4' ? 'ds4' : e));
     const engineTitle = (e) => {
       if (e === 'eugr') return 'vLLM via eugr spark-vllm-docker (port 8000)';
       if (e === 'vllm') return 'vLLM';
       if (e === 'llamacpp') return 'llama.cpp GGUF (port 8081)';
+      if (e === 'ds4') return 'DwarfStar 4 / ds4 — DeepSeek V4 Flash (port 8000)';
       return e || '';
     };
     const jobLabels = { pull: 'Fetching', push: 'Pushing', fetch: 'Downloading', 'remove-local': 'Deleting' };

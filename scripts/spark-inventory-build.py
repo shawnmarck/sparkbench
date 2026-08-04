@@ -397,6 +397,28 @@ def model_engines(variants: list) -> list[str]:
     return seen
 
 
+def engines_from_profiles(profiles: list | None) -> list[str]:
+    seen: list[str] = []
+    for p in profiles or []:
+        engine = (p or {}).get("engine")
+        if engine and engine not in seen:
+            seen.append(engine)
+    return seen
+
+
+def enrich_engines(entry: dict) -> None:
+    """Ensure engines[] is populated from variants and/or inference recipes."""
+    engines = list(entry.get("engines") or [])
+    for e in model_engines(entry.get("variants") or []):
+        if e not in engines:
+            engines.append(e)
+    for e in engines_from_profiles(entry.get("inference_profiles") or []):
+        if e not in engines:
+            engines.append(e)
+    # Normalize eugr → keep as eugr (portal maps to vLLM)
+    entry["engines"] = engines
+
+
 def hf_cache_entry_fresh(entry: dict) -> bool:
     fetched = entry.get("_fetched_at")
     if not fetched:
@@ -818,7 +840,13 @@ def infer_architecture(
     text = f"{name} {slug}".lower()
     if re.search(r"a\d+b|moe", text):
         return "moe"
+    # Speculative drafters / DFlash add-ons are dense small stacks when unlabeled.
+    if "dflash" in text or "dspark" in caps or "dflash" in caps:
+        return "dense"
     if param_b is not None:
+        return "dense"
+    # GGUF / small local checkpoints often lack catalog size — prefer Dense over blank.
+    if re.search(r"gguf|iq\d|q\d|mmproj|inkling", text):
         return "dense"
     return None
 
@@ -1429,12 +1457,53 @@ def _variant_key(subpath: str, file: str | None = None) -> str:
     return f"{subpath}/{file}" if file else subpath
 
 
+def _append_gguf_variants(
+    variants: list[dict],
+    *,
+    ggufs: list[Path],
+    subpath: str,
+    hf_repo: str | None,
+    hf_url: str | None,
+    note: str | None,
+) -> int:
+    """Append one variant per GGUF file. Returns total GGUF bytes."""
+    total = 0
+    for g in ggufs:
+        try:
+            sz = int(g.stat().st_size)
+        except OSError:
+            sz = 0
+        total += sz
+        variants.append(
+            {
+                "format": "gguf",
+                "engine": "llamacpp",
+                "subpath": subpath,
+                "file": g.name,
+                "path": str(g),
+                "label": _gguf_label(g.name, subpath if subpath != "." else None),
+                "key": _variant_key(subpath, g.name),
+                "hf_repo": hf_repo,
+                "hf_url": hf_url,
+                "status": "ready" if sz > 0 else "empty",
+                "size_bytes": sz,
+                "size_human": human_size(sz),
+                "note": note,
+            }
+        )
+    return total
+
+
 def build_weight_variants(base: Path, catalog_variants: list | None) -> list[dict]:
     """Build deduped on-disk weight units (subdir and/or per-GGUF file).
 
     Catalog variants are hints (engine/hf_repo). Disk wins for what exists and sizes.
     Mixed dirs (safetensors + GGUFs in the same folder) emit separate units so the
     Models page can show one row per servable artifact.
+
+    Also discovers:
+    - non-canonical quant dirs (e.g. UD-IQ2_M/) via weight-dir heuristics
+    - root-level GGUFs / HF layouts (no subdir)
     """
     catalog_by_sub: dict[str, dict] = {}
     for v in catalog_variants or []:
@@ -1484,30 +1553,14 @@ def build_weight_variants(base: Path, catalog_variants: list | None) -> list[dic
             or list(p.glob("*.safetensors"))
             or list(p.glob("model-*.safetensors"))
         )
-        gguf_bytes = 0
-        for g in ggufs:
-            try:
-                sz = int(g.stat().st_size)
-            except OSError:
-                sz = 0
-            gguf_bytes += sz
-            variants.append(
-                {
-                    "format": "gguf",
-                    "engine": "llamacpp",
-                    "subpath": sub,
-                    "file": g.name,
-                    "path": str(g),
-                    "label": _gguf_label(g.name, sub),
-                    "key": _variant_key(sub, g.name),
-                    "hf_repo": hf_repo,
-                    "hf_url": hf_url,
-                    "status": "ready" if sz > 0 else "empty",
-                    "size_bytes": sz,
-                    "size_human": human_size(sz),
-                    "note": note,
-                }
-            )
+        gguf_bytes = _append_gguf_variants(
+            variants,
+            ggufs=ggufs,
+            subpath=sub,
+            hf_repo=hf_repo,
+            hf_url=hf_url,
+            note=note,
+        )
 
         if has_tensors or not ggufs:
             status, full_size = variant_status(base, sub)
@@ -1541,6 +1594,58 @@ def build_weight_variants(base: Path, catalog_variants: list | None) -> list[dic
                     "note": note,
                 }
             )
+
+    # Root-level artifacts (no subdir): GGUFs, HF safetensors, or config.json
+    if base.is_dir():
+        root_meta = catalog_by_sub.get(".") or catalog_by_sub.get("") or {}
+        hf_repo = root_meta.get("hf_repo")
+        hf_url = f"https://huggingface.co/{hf_repo}" if hf_repo else None
+        note = root_meta.get("note")
+        root_ggufs = sorted(base.glob("*.gguf"))
+        root_has_tensors = bool(
+            (base / "config.json").exists()
+            or list(base.glob("*.safetensors"))
+            or list(base.glob("model-*.safetensors"))
+        )
+        if root_ggufs:
+            _append_gguf_variants(
+                variants,
+                ggufs=root_ggufs,
+                subpath=".",
+                hf_repo=hf_repo,
+                hf_url=hf_url,
+                note=note,
+            )
+        if root_has_tensors:
+            try:
+                size = dir_size(base)
+            except Exception:
+                size = 0
+            # Avoid double-counting if we already have only root GGUFs as the payload
+            if root_ggufs:
+                try:
+                    gguf_only = sum(int(g.stat().st_size) for g in root_ggufs)
+                except OSError:
+                    gguf_only = 0
+                size = max(0, size - gguf_only)
+            if size > 0 or not root_ggufs:
+                engine = root_meta.get("engine") or "eugr"
+                variants.append(
+                    {
+                        "format": root_meta.get("format") or "hf",
+                        "engine": engine,
+                        "subpath": ".",
+                        "path": str(base),
+                        "label": _variant_label("hf", "hf"),
+                        "key": _variant_key("."),
+                        "hf_repo": hf_repo,
+                        "hf_url": hf_url,
+                        "status": "ready" if size > 0 else "empty",
+                        "size_bytes": size,
+                        "size_human": human_size(size),
+                        "note": note,
+                    }
+                )
 
     return variants
 
@@ -1689,7 +1794,8 @@ def main() -> int:
                 shelf["mounted"] = shelf_mounted()
                 slug = model_dir.name
                 inferred_repo = _normalize_hf_repo(infer_hf_repo_from_path(model_dir)) or infer_hf_repo_from_path(model_dir)
-                untracked_variants = []
+                # Disk wins — same discovery path as catalog models (was previously []).
+                untracked_variants = build_weight_variants(model_dir, [])
                 untracked_release, untracked_source = resolve_release_date(
                     inferred_repo,
                     untracked_variants,
@@ -1771,7 +1877,7 @@ def main() -> int:
                 shelf = location_info(SHELF_ROOT, lab_dir.name, model_dir.name)
                 shelf["mounted"] = True
                 inferred_repo = _normalize_hf_repo(infer_hf_repo_from_path(model_dir)) or infer_hf_repo_from_path(model_dir)
-                shelf_variants = []
+                shelf_variants = build_weight_variants(model_dir, [])
                 shelf_release, shelf_source = resolve_release_date(
                     inferred_repo,
                     shelf_variants,
@@ -1855,6 +1961,22 @@ def main() -> int:
             entry.get("lab") == "z-lab" and ("dflash" in caps or "speculative" in caps)
         ):
             entry.setdefault("model_kind", "speculative_sidecar")
+        # Fill missing engines from variants + recipes (recent untracked models).
+        enrich_engines(entry)
+        # Last-chance architecture if still blank after disk/cfg inference.
+        if not entry.get("architecture"):
+            entry["architecture"] = infer_architecture(
+                capabilities=entry.get("capabilities") or [],
+                param_b=entry.get("param_b"),
+                param_active_b=entry.get("param_active_b"),
+                name=str(entry.get("name") or ""),
+                slug=str(entry.get("slug") or ""),
+                cfg=None,
+            )
+            if entry.get("architecture") == "dense" and entry.get("param_b") is not None:
+                entry["param_active_b"] = normalize_param_active_b(
+                    "dense", entry.get("param_b"), entry.get("param_active_b")
+                )
     attach_best_bench_tok(entries, golden_by_inv)
     propagate_sidecar_bench_to_targets(entries)
     for entry in entries:

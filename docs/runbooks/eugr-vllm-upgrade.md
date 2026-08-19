@@ -55,10 +55,10 @@ Confirm: `curl -sf http://127.0.0.1:8000/v1/models` fails.
 ```bash
 cd /opt/spark/vendor/spark-vllm-docker
 git pull --ff-only              # recipe/script updates
-./build-and-copy.sh             # downloads newer prebuilts when available, rebuilds image
+./build-and-copy.sh --use-wheels --force-download
 ```
 
-`build-and-copy.sh` compares local `wheels/.vllm-commit` and `wheels/.flashinfer-commit` against the GitHub release pages (same logic as `spark engine eugr check`).
+Plain `./build-and-copy.sh` may rebuild the runner from stale `wheels/` copies. `--use-wheels --force-download` pulls current GitHub prebuilts into `.wheel-cache/` and rebuilds `vllm-node:latest`. Pins live at `.wheel-cache/vllm/regular/.vllm-commit` and `.wheel-cache/flashinfer/regular/.flashinfer-commit` (legacy `wheels/.vllm-commit` is no longer updated).
 
 ### 4. Canary smoke (recommended)
 

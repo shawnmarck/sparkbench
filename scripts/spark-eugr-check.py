@@ -17,6 +17,7 @@ from urllib.request import Request, urlopen
 ROOT = Path("/opt/spark")
 VENDOR = ROOT / "vendor" / "spark-vllm-docker"
 WHEELS = VENDOR / "wheels"
+WHEEL_CACHE = VENDOR / ".wheel-cache"
 STATE_FILE = ROOT / "run" / "eugr-stack-state.json"
 PENDING_STATE_FILE = ROOT / "run" / "eugr-stack-state.pending.json"
 CACHE_FILE = ROOT / "run" / "eugr-check-cache.json"
@@ -67,12 +68,67 @@ def commits_match(local: str, remote: str) -> bool:
     return local == remote or local.startswith(remote) or remote.startswith(local)
 
 
-def vllm_version_from_wheels() -> str:
-    for path in sorted(WHEELS.glob("vllm-*.whl")):
-        name = path.name
-        if name.startswith("vllm-"):
-            return name.removeprefix("vllm-").split("-", 1)[0]
+def _commit_candidates(component: str) -> list[Path]:
+    """Newer eugr build-and-copy.sh stores pins under .wheel-cache/<component>/<profile>/."""
+    fname = f".{component}-commit"
+    cache = WHEEL_CACHE / component
+    paths: list[Path] = []
+    if cache.is_dir():
+        regular = cache / "regular" / fname
+        if regular.exists():
+            paths.append(regular)
+        paths.extend(sorted(p for p in cache.glob(f"*/{fname}") if p not in paths))
+    paths.append(WHEELS / fname)
+    return paths
+
+
+def local_commit(component: str) -> str:
+    for path in _commit_candidates(component):
+        value = read_commit(path)
+        if value:
+            return value
     return ""
+
+
+def vllm_version_from_wheels() -> str:
+    search_roots = [WHEEL_CACHE / "vllm" / "regular", WHEEL_CACHE / "vllm", WHEELS]
+    seen: set[Path] = set()
+    for root in search_roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("vllm-*.whl") if root != WHEELS else root.glob("vllm-*.whl")):
+            if path in seen:
+                continue
+            seen.add(path)
+            name = path.name
+            if name.startswith("vllm-"):
+                return name.removeprefix("vllm-").split("-", 1)[0]
+    return ""
+
+
+def image_build_metadata() -> dict[str, str]:
+    """Read pins baked into vllm-node:latest (source of truth after a rebuild)."""
+    try:
+        proc = subprocess.run(
+            ["docker", "run", "--rm", IMAGE_TAG, "cat", "/workspace/build-metadata.yaml"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        return {}
+    meta: dict[str, str] = {}
+    for raw in proc.stdout.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key in {"vllm_commit", "flashinfer_commit", "vllm_version", "build_date"}:
+            meta[key] = value
+    return meta
 
 
 def docker_image_info() -> dict[str, str]:
@@ -129,13 +185,14 @@ def seed_state_if_missing() -> dict[str, Any]:
         return state
 
     image = docker_image_info()
+    baked = image_build_metadata()
     state = {
         "promoted_at": image.get("image_created") or utc_now(),
         "image_id": image.get("image_id", ""),
         "image_tag": image.get("image_tag", IMAGE_TAG),
-        "vllm_commit": read_commit(WHEELS / ".vllm-commit"),
-        "flashinfer_commit": read_commit(WHEELS / ".flashinfer-commit"),
-        "vllm_version": vllm_version_from_wheels(),
+        "vllm_commit": baked.get("vllm_commit") or local_commit("vllm"),
+        "flashinfer_commit": baked.get("flashinfer_commit") or local_commit("flashinfer"),
+        "vllm_version": baked.get("vllm_version") or vllm_version_from_wheels(),
         "seeded": True,
         "seeded_at": utc_now(),
     }
@@ -256,8 +313,8 @@ def build_check_payload(force: bool = False) -> dict[str, Any]:
         message = "vLLM stack matches upstream prebuilt releases"
 
     wheels = {
-        "vllm_commit": read_commit(WHEELS / ".vllm-commit") or None,
-        "flashinfer_commit": read_commit(WHEELS / ".flashinfer-commit") or None,
+        "vllm_commit": local_commit("vllm") or None,
+        "flashinfer_commit": local_commit("flashinfer") or None,
         "vllm_version": vllm_version_from_wheels() or None,
     }
     wheels_staged = any(
@@ -287,14 +344,15 @@ def build_check_payload(force: bool = False) -> dict[str, Any]:
 
 def record_promoted() -> dict[str, Any]:
     image = docker_image_info()
+    baked = image_build_metadata()
     state = {
         "promoted_at": utc_now(),
         "image_id": image.get("image_id", ""),
         "image_tag": image.get("image_tag", IMAGE_TAG),
         "image_created": image.get("image_created", ""),
-        "vllm_commit": read_commit(WHEELS / ".vllm-commit"),
-        "flashinfer_commit": read_commit(WHEELS / ".flashinfer-commit"),
-        "vllm_version": vllm_version_from_wheels(),
+        "vllm_commit": baked.get("vllm_commit") or local_commit("vllm"),
+        "flashinfer_commit": baked.get("flashinfer_commit") or local_commit("flashinfer"),
+        "vllm_version": baked.get("vllm_version") or vllm_version_from_wheels(),
     }
     save_state(state)
     return state

@@ -1,0 +1,24 @@
+id: radixark-qwen3-8-27b-mtp-eugr
+name: qwen3.8-27b MTP (eugr)
+inventory_path: radixark/qwen3.8-27b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.8-27b-mtp
+port: 8000
+tags:
+- lab
+- eugr
+- mtp
+mtp:
+  method: mtp
+  num_speculative_tokens: 3
+eugr_recipe: /opt/spark/services/eugr-radixark-qwen3-8-27b-mtp-eugr.yaml
+notes: MTP scaffold 2026-08-19 from /models/radixark/qwen3.8-27b. Bench vs non-MTP
+  baseline before promote.
+context:
+  default: 65536
+  native: 262144
+  kv_default: fp8
+updated_at: '2026-08-19T02:03:14.072996+00:00'
+promoted_at: '2026-08-19T04:02:48.392786+00:00'

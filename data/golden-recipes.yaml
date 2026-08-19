@@ -39,6 +39,9 @@ golden:
   inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb: inference-snaps-glm-4-7-flash-30b-a3b-q4-k-m-5gb-llama
   protolabsai/thinkingcap-qwen3.6-27b: protolabsai-thinkingcap-qwen3-6-27b-llama
   unsloth/qwen3.6-35b-a3b-nvfp4: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
+  radixark/qwen3.8-27b: radixark-qwen3-8-27b-mtp-eugr
+  radixark/qwen3.8-27b-dspark-nvfp4: radixark-qwen3-8-27b-dspark-eugr
+  qwen/qwen3.8-27b: qwen-qwen3-8-27b-dflash2-eugr
 deprecated_profiles:
 - qwen36-nvfp4
 - qwen-qwen3-6-27b-dflash-eugr
@@ -47,3 +50,6 @@ auxiliary_inventory:
 - z-lab/qwen3.6-27b
 - hikari07jp/dspark-qwen3.6-27b-aeon-draft
 - alittlehammmer/qwen3.6-27b-dflash-gguf-llama.cpp
+- doopeworld/qwen3.8-27b-dspark-vllm
+- radixark/qwen3.8-27b-dspark
+- incoai/qwen3.8-27b-dflash2

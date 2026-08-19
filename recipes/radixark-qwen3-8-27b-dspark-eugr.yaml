@@ -1,0 +1,30 @@
+id: radixark-qwen3-8-27b-dspark-eugr
+name: qwen3.8-27b DSpark (eugr)
+inventory_path: radixark/qwen3.8-27b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.8-27b-dspark
+port: 8000
+tags:
+- lab
+- eugr
+- dspark
+- sidecar
+speculative:
+  method: dspark
+  sidecar_inventory: doopeworld/qwen3.8-27b-dspark-vllm
+  sidecar_path: /models/doopeworld/qwen3.8-27b-dspark-vllm/hf
+  num_speculative_tokens: 7
+  draft_sample_method: probabilistic
+  target_weight_format: nvfp4
+eugr_recipe: /opt/spark/services/eugr-radixark-qwen3-8-27b-dspark-eugr.yaml
+notes: 'DSpark sidecar scaffold 2026-08-19: target /models/radixark/qwen3.8-27b, drafter
+  /models/doopeworld/qwen3.8-27b-dspark-vllm/hf. k=7 probabilistic. Bench vs MTP before
+  promote.'
+context:
+  default: 65536
+  native: 262144
+  kv_default: fp8
+updated_at: '2026-08-19T02:03:14.188334+00:00'
+promoted_at: '2026-08-19T04:02:48.524755+00:00'

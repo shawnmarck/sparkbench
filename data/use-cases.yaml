@@ -35,3 +35,8 @@ models:
 
   # --- Specialty / reasoning-tuned ---
   stepfun-ai/step-3.7-flash:                  [Multimodal, Agents]
+
+  # --- Qwen 3.8-27B speculative bake-off (MTP / DSpark / DFlash2) ---
+  radixark/qwen3.8-27b:                       [Reasoning, Agents, General]
+  radixark/qwen3.8-27b-dspark-nvfp4:          [Reasoning, Agents, General]
+  qwen/qwen3.8-27b:                           [Reasoning, Agents, General]

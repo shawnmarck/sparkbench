@@ -1669,6 +1669,10 @@ def main() -> int:
     now = datetime.now(timezone.utc).isoformat()
 
     for m in catalog:
+        # Public-site aliases are not on-disk models (e.g. DSpark row for
+        # the same NVFP4 weights as the MTP golden). Skip portal inventory.
+        if m.get("model_kind") == "site_alias":
+            continue
         lab = m["lab"]
         slug = m["slug"]
         base = MODELS_ROOT / lab / slug

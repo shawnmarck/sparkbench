@@ -66,11 +66,13 @@ BENCH_HISTORY_LIST_RE = re.compile(
 )
 _history_migrated = False
 VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
+GOLDEN_FILE = ROOT / "data" / "golden-recipes.yaml"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_EUGR_CHECK = ROOT / "scripts" / "spark-eugr-check.py"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 SPARK_DS4 = ROOT / "scripts" / "spark-ds4"
 DS4_PIN_FILE = ROOT / "data" / "ds4-dwarfstar.yaml"
+DFLASH2_MOD_DIR = ROOT / "mods" / "eugr-dflash2"
 VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
 INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
@@ -304,6 +306,24 @@ def eugr_qwen_agent_lines(model_dir: Path) -> str:
         "    --enable-auto-tool-choice \\\n"
         "    --tool-call-parser qwen3_xml \\\n"
     )
+
+
+def eugr_qwen_serve_lines(model_dir: Path) -> str:
+    """Tool + reasoning parsers for Qwen3.x eugr speculative serves."""
+    if not is_qwen36_family(model_dir):
+        return ""
+    return (
+        "    --enable-auto-tool-choice \\\n"
+        "    --tool-call-parser qwen3_xml \\\n"
+        "    --reasoning-parser qwen3 \\\n"
+    )
+
+
+def eugr_attn_line(model_dir: Path) -> str:
+    # Qwen3.5/3.8 hybrid GDN wants FlashInfer even when a vision tower is present.
+    if is_qwen36_family(model_dir) or not is_multimodal_model(model_dir):
+        return "    --attention-backend flashinfer \\\n"
+    return ""
 
 def eugr_language_model_only_line(model_dir: Path) -> str:
     if is_language_model_only(model_dir):
@@ -822,6 +842,440 @@ def scaffold_dflash_recipe(target_inventory_path: str) -> dict[str, Any]:
     return recipe
 
 
+def _dspark_dir_ok(path: Path) -> bool:
+    if not path.is_dir() or not (path / "config.json").is_file():
+        return False
+    return any(path.glob("*.safetensors"))
+
+
+def _dspark_arch_rank(path: Path) -> int:
+    """Prefer the vLLM-safe Qwen3DSparkModel rename over DSparkDraftModel."""
+    try:
+        cfg = json.loads((path / "config.json").read_text())
+    except (json.JSONDecodeError, OSError):
+        return 99
+    archs = [str(a) for a in (cfg.get("architectures") or [])]
+    if "Qwen3DSparkModel" in archs:
+        return 0
+    if "DSparkDraftModel" in archs:
+        return 1
+    return 50
+
+
+def discover_dspark_sidecar(slug: str) -> Path | None:
+    """Find a Qwen DSpark drafter for target slug (e.g. qwen3.8-27b)."""
+    slug_l = slug.lower()
+    slug_compact = slug_l.replace(".", "")
+    candidates: list[Path] = []
+
+    def _consider(path: Path) -> None:
+        if _dspark_dir_ok(path):
+            candidates.append(path)
+
+    for lab in ("doopeworld", "radixark"):
+        for name in (f"{slug}-dspark-vllm", f"{slug}-dspark"):
+            root = MODELS_ROOT / lab / name
+            for sub in ("hf", "dflash", ""):
+                _consider(root / sub if sub else root)
+
+    if MODELS_ROOT.is_dir():
+        for lab_dir in MODELS_ROOT.iterdir():
+            if not lab_dir.is_dir():
+                continue
+            for model_dir in lab_dir.iterdir():
+                if not model_dir.is_dir():
+                    continue
+                name = model_dir.name.lower()
+                if "dspark" not in name:
+                    continue
+                if slug_l not in name and slug_compact not in name.replace(".", ""):
+                    continue
+                for sub in ("hf", "dflash", ""):
+                    _consider(model_dir / sub if sub else model_dir)
+
+    uniq: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        try:
+            key = str(path.resolve())
+        except OSError:
+            key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq.append(path)
+    if not uniq:
+        return None
+    uniq.sort(key=_dspark_arch_rank)
+    return uniq[0]
+
+
+def find_existing_dspark_profile(target_inventory: str) -> str | None:
+    for base in (RECIPES_DRAFTS_DIR, RECIPES_DIR):
+        if not base.is_dir():
+            continue
+        for path in sorted(base.glob("*.yaml")):
+            try:
+                data = load_yaml(path)
+            except SystemExit:
+                continue
+            spec = data.get("speculative") or {}
+            if (
+                data.get("inventory_path") == target_inventory
+                and spec.get("method") == "dspark"
+                and data.get("id")
+            ):
+                return str(data["id"])
+    return None
+
+
+def make_dspark_profile_id(inventory_path: str) -> str:
+    existing = find_existing_dspark_profile(inventory_path)
+    if existing:
+        return existing
+    return make_variant_profile_id(inventory_path, "dspark-eugr")
+
+
+def write_eugr_dspark_service(
+    profile_id: str,
+    target_inventory: str,
+    served_name: str,
+    dspark_path: Path,
+) -> Path:
+    found = discover_vllm_weights_dir(MODELS_ROOT / target_inventory)
+    if found is None:
+        raise RuntimeError(f"no vLLM weights under /models/{target_inventory}")
+    model_dir, weight_format = found
+    max_len = infer_max_model_len(model_dir, weight_format)
+    load_fmt = eugr_load_format(model_dir, weight_format)
+    moe_line = (
+        "    --moe-backend marlin \\\n"
+        if weight_format == "nvfp4" and is_moe_model(model_dir)
+        else ""
+    )
+    parser_lines = eugr_qwen_serve_lines(model_dir)
+    attn_line = eugr_attn_line(model_dir)
+    lmo_line = eugr_language_model_only_line(model_dir)
+    env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
+    gpu_mem = 0.80 if weight_format == "nvfp4" else 0.85
+    spec_json = (
+        f'{{{{"method": "dspark", "model": "{dspark_path}", '
+        f'"num_speculative_tokens": 7, "draft_sample_method": "probabilistic"}}}}'
+    )
+    path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
+    content = f"""# Generated by spark-inference DSpark sidecar scaffold ({profile_id})
+recipe_version: "1"
+name: {profile_id}
+description: eugr vLLM DSpark speculative serve for {target_inventory}
+
+model: {served_name}
+container: vllm-node
+{env_block}
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: {gpu_mem}
+  max_model_len: {max_len}
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+
+command: |
+  vllm serve {model_dir} \\
+    --host {{host}} \\
+    --port {{port}} \\
+    --served-model-name {served_name} \\
+    --tensor-parallel-size {{tensor_parallel}} \\
+    --trust-remote-code \\
+    --kv-cache-dtype fp8 \\
+{attn_line}{lmo_line}{parser_lines}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+    --max-model-len {{max_model_len}} \\
+    --max-num-seqs {{max_num_seqs}} \\
+    --max-num-batched-tokens {{max_num_batched_tokens}} \\
+    --enable-chunked-prefill \\
+    --enable-prefix-caching \\
+    --load-format {load_fmt} \\
+    --speculative-config '{spec_json}'
+"""
+    SERVICES_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return path
+
+
+def scaffold_dspark_recipe(target_inventory_path: str) -> dict[str, Any]:
+    target_inventory_path = target_inventory_path.strip().strip("/")
+    if "/" not in target_inventory_path:
+        raise RuntimeError("inventory_path must be lab/slug")
+
+    slug = target_inventory_path.split("/", 1)[1]
+    dspark_path = discover_dspark_sidecar(slug)
+    if dspark_path is None:
+        raise RuntimeError(
+            f"no DSpark drafter on disk for slug {slug} "
+            f"(expected doopeworld/{slug}-dspark-vllm or radixark/{slug}-dspark)"
+        )
+
+    found = discover_vllm_weights_dir(MODELS_ROOT / target_inventory_path)
+    if found is None:
+        raise RuntimeError(
+            f"no vLLM target weights at /models/{target_inventory_path}"
+        )
+    model_dir, weight_format = found
+    native_len = infer_max_model_len(model_dir, weight_format)
+    profile_id = make_dspark_profile_id(target_inventory_path)
+    base_served = re.sub(r"[^a-z0-9._-]+", "-", slug.lower()).strip("-")[:40]
+    served_name = f"{base_served}-dspark"
+    sidecar_inv = str(dspark_path.relative_to(MODELS_ROOT)).rsplit("/", 1)[0]
+    eugr_path = write_eugr_dspark_service(
+        profile_id, target_inventory_path, served_name, dspark_path
+    )
+
+    existing_path = resolve_recipe_path(profile_id)
+    lifecycle = LIFECYCLE_DRAFT
+    if existing_path and existing_path.is_file():
+        try:
+            prev = load_yaml(existing_path)
+            lifecycle = prev.get("lifecycle") or lifecycle
+        except SystemExit:
+            pass
+
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": f"{slug} DSpark (eugr)",
+        "inventory_path": target_inventory_path,
+        "engine": "eugr",
+        "tier": "heavy",
+        "lifecycle": lifecycle,
+        "served_name": served_name,
+        "port": 8000,
+        "tags": ["lab", "eugr", "dspark", "sidecar"],
+        "speculative": {
+            "method": "dspark",
+            "sidecar_inventory": sidecar_inv,
+            "sidecar_path": str(dspark_path),
+            "num_speculative_tokens": 7,
+            "draft_sample_method": "probabilistic",
+            "target_weight_format": weight_format,
+        },
+        "eugr_recipe": str(eugr_path),
+        "notes": (
+            f"DSpark sidecar scaffold {datetime.now(timezone.utc).date().isoformat()}: "
+            f"target /models/{target_inventory_path}, drafter {dspark_path}. "
+            "k=7 probabilistic. Bench vs MTP before promote."
+        ),
+        "context": {
+            "default": min(65536, native_len),
+            "native": native_len,
+            "kv_default": "fp8",
+        },
+    }
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
+    return recipe
+
+
+def _dflash2_dir_ok(path: Path) -> bool:
+    if not path.is_dir() or not (path / "config.json").is_file():
+        return False
+    if not any(path.glob("*.safetensors")):
+        return False
+    try:
+        cfg = json.loads((path / "config.json").read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    archs = [str(a) for a in (cfg.get("architectures") or [])]
+    return "DFlash2DraftModel" in archs
+
+
+def discover_dflash2_sidecar(slug: str) -> Path | None:
+    slug_l = slug.lower()
+    candidates = [
+        MODELS_ROOT / "incoai" / f"{slug}-dflash2" / "dflash",
+        MODELS_ROOT / "z-lab" / f"{slug}-dflash2" / "dflash",
+        MODELS_ROOT / "z-lab" / slug / "dflash",
+        MODELS_ROOT / "incoai" / f"{slug}-dflash2" / "hf",
+    ]
+    for path in candidates:
+        if _dflash2_dir_ok(path):
+            return path
+    if not MODELS_ROOT.is_dir():
+        return None
+    for lab_dir in MODELS_ROOT.iterdir():
+        if not lab_dir.is_dir():
+            continue
+        for model_dir in lab_dir.iterdir():
+            if not model_dir.is_dir():
+                continue
+            name = model_dir.name.lower()
+            if "dflash2" not in name or slug_l not in name:
+                continue
+            for sub in ("dflash", "hf", ""):
+                path = model_dir / sub if sub else model_dir
+                if _dflash2_dir_ok(path):
+                    return path
+    return None
+
+
+def find_existing_dflash2_profile(target_inventory: str) -> str | None:
+    for base in (RECIPES_DRAFTS_DIR, RECIPES_DIR):
+        if not base.is_dir():
+            continue
+        for path in sorted(base.glob("*.yaml")):
+            try:
+                data = load_yaml(path)
+            except SystemExit:
+                continue
+            spec = data.get("speculative") or {}
+            if (
+                data.get("inventory_path") == target_inventory
+                and spec.get("method") == "dflash"
+                and spec.get("variant") == "dflash2"
+                and data.get("id")
+            ):
+                return str(data["id"])
+    return None
+
+
+def write_eugr_dflash2_service(
+    profile_id: str,
+    target_inventory: str,
+    served_name: str,
+    dflash_path: Path,
+) -> Path:
+    found = discover_vllm_weights_dir(MODELS_ROOT / target_inventory)
+    if found is None:
+        raise RuntimeError(f"no vLLM weights under /models/{target_inventory}")
+    model_dir, weight_format = found
+    max_len = infer_max_model_len(model_dir, weight_format)
+    load_fmt = eugr_load_format(model_dir, weight_format)
+    moe_line = (
+        "    --moe-backend marlin \\\n"
+        if weight_format == "nvfp4" and is_moe_model(model_dir)
+        else ""
+    )
+    parser_lines = eugr_qwen_serve_lines(model_dir)
+    attn_line = eugr_attn_line(model_dir)
+    lmo_line = eugr_language_model_only_line(model_dir)
+    env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
+    gpu_mem = 0.80 if weight_format == "nvfp4" else 0.85
+    spec_json = (
+        f'{{{{"method": "dflash", "model": "{dflash_path}", '
+        f'"num_speculative_tokens": 7}}}}'
+    )
+    path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
+    content = f"""# Generated by spark-inference DFlash2 sidecar scaffold ({profile_id})
+recipe_version: "1"
+name: {profile_id}
+description: eugr vLLM DFlash2 speculative serve for {target_inventory}
+
+model: {served_name}
+container: vllm-node
+{env_block}
+mods:
+  - {DFLASH2_MOD_DIR}
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: {gpu_mem}
+  max_model_len: {max_len}
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+
+command: |
+  vllm serve {model_dir} \\
+    --host {{host}} \\
+    --port {{port}} \\
+    --served-model-name {served_name} \\
+    --tensor-parallel-size {{tensor_parallel}} \\
+    --trust-remote-code \\
+    --kv-cache-dtype fp8 \\
+{attn_line}{lmo_line}{parser_lines}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+    --max-model-len {{max_model_len}} \\
+    --max-num-seqs {{max_num_seqs}} \\
+    --max-num-batched-tokens {{max_num_batched_tokens}} \\
+    --enable-chunked-prefill \\
+    --enable-prefix-caching \\
+    --load-format {load_fmt} \\
+    --speculative-config '{spec_json}'
+"""
+    SERVICES_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return path
+
+
+def scaffold_dflash2_recipe(target_inventory_path: str) -> dict[str, Any]:
+    target_inventory_path = target_inventory_path.strip().strip("/")
+    if "/" not in target_inventory_path:
+        raise RuntimeError("inventory_path must be lab/slug")
+    slug = target_inventory_path.split("/", 1)[1]
+    dflash_path = discover_dflash2_sidecar(slug)
+    if dflash_path is None:
+        raise RuntimeError(
+            f"no DFlash2 drafter on disk for slug {slug} "
+            f"(expected incoai/{slug}-dflash2/dflash)"
+        )
+    found = discover_vllm_weights_dir(MODELS_ROOT / target_inventory_path)
+    if found is None:
+        raise RuntimeError(
+            f"no vLLM target weights at /models/{target_inventory_path}"
+        )
+    model_dir, weight_format = found
+    native_len = infer_max_model_len(model_dir, weight_format)
+    existing = find_existing_dflash2_profile(target_inventory_path)
+    profile_id = existing or make_variant_profile_id(target_inventory_path, "dflash2-eugr")
+    base_served = re.sub(r"[^a-z0-9._-]+", "-", slug.lower()).strip("-")[:40]
+    served_name = f"{base_served}-dflash2"
+    sidecar_inv = str(dflash_path.relative_to(MODELS_ROOT)).rsplit("/", 1)[0]
+    eugr_path = write_eugr_dflash2_service(
+        profile_id, target_inventory_path, served_name, dflash_path
+    )
+    lifecycle = LIFECYCLE_DRAFT
+    existing_path = resolve_recipe_path(profile_id)
+    if existing_path and existing_path.is_file():
+        try:
+            prev = load_yaml(existing_path)
+            lifecycle = prev.get("lifecycle") or lifecycle
+        except SystemExit:
+            pass
+    recipe: dict[str, Any] = {
+        "id": profile_id,
+        "name": f"{slug} DFlash2 (eugr)",
+        "inventory_path": target_inventory_path,
+        "engine": "eugr",
+        "tier": "heavy",
+        "lifecycle": lifecycle,
+        "served_name": served_name,
+        "port": 8000,
+        "tags": ["lab", "eugr", "dflash2", "sidecar"],
+        "speculative": {
+            "method": "dflash",
+            "variant": "dflash2",
+            "sidecar_inventory": sidecar_inv,
+            "sidecar_path": str(dflash_path),
+            "num_speculative_tokens": 7,
+            "target_weight_format": weight_format,
+            "requires_mod": str(DFLASH2_MOD_DIR),
+        },
+        "eugr_recipe": str(eugr_path),
+        "notes": (
+            f"DFlash2 sidecar scaffold {datetime.now(timezone.utc).date().isoformat()}: "
+            f"target /models/{target_inventory_path}, drafter {dflash_path}. "
+            "vLLM PR 52816 overlay via mods/eugr-dflash2. k=7."
+        ),
+        "context": {
+            "default": min(65536, native_len),
+            "native": native_len,
+            "kv_default": "fp8",
+        },
+    }
+    path = draft_recipe_path(profile_id)
+    save_recipe_file(path, recipe)
+    trigger_inventory_rebuild()
+    return recipe
+
+
 def scaffold_recipe(
     inventory_path: str,
     engine: str,
@@ -911,9 +1365,26 @@ def discover_mtp_gguf_pair(model_root: Path) -> tuple[Path, Path] | None:
     return main, mtp_path
 
 
+def _checkpoint_has_mtp_tensors(model_dir: Path) -> bool:
+    """True when MTP lives inside the main shards (Qwen3.8 NVFP4) or a sidecar file."""
+    idx = model_dir / "model.safetensors.index.json"
+    if not idx.is_file():
+        return False
+    try:
+        data = json.loads(idx.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    wm = data.get("weight_map") or {}
+    return any("mtp" in str(key).lower() for key in wm)
+
+
 def discover_mtp_safetensors(model_dir: Path) -> Path | None:
     path = model_dir / "mtp.safetensors"
-    return path if path.is_file() else None
+    if path.is_file():
+        return path
+    if _checkpoint_has_mtp_tensors(model_dir):
+        return model_dir
+    return None
 
 
 def make_variant_profile_id(inventory_path: str, suffix: str) -> str:
@@ -942,19 +1413,24 @@ def write_eugr_mtp_service(
     model_dir, weight_format = found
     if discover_mtp_safetensors(model_dir) is None:
         raise RuntimeError(f"no mtp.safetensors beside weights in {model_dir}")
-    moe_line = "    --moe-backend marlin \\\n" if weight_format == "nvfp4" else ""
-    attn_line = ""
-    if not is_multimodal_model(model_dir):
-        attn_line = "    --attention-backend flashinfer \\\n"
+    moe_line = (
+        "    --moe-backend marlin \\\n"
+        if weight_format == "nvfp4" and is_moe_model(model_dir)
+        else ""
+    )
+    attn_line = eugr_attn_line(model_dir)
     load_fmt = eugr_load_format(model_dir, weight_format)
     lmo_line = eugr_language_model_only_line(model_dir)
+    parser_lines = eugr_qwen_serve_lines(model_dir)
     env_block = eugr_nvfp4_env_yaml() if weight_format == "nvfp4" else ""
     max_len = infer_max_model_len(model_dir, weight_format)
-    moe_backend = "triton" if is_moe_model(model_dir) else "triton"
-    spec_json = (
-        f'{{{{"method": "mtp", "num_speculative_tokens": 3, '
-        f'"moe_backend": "{moe_backend}"}}}}'
-    )
+    if is_moe_model(model_dir):
+        spec_json = (
+            '{{"method": "mtp", "num_speculative_tokens": 3, '
+            '"moe_backend": "triton"}}'
+        )
+    else:
+        spec_json = '{{"method": "mtp", "num_speculative_tokens": 3}}'
     path = SERVICES_DIR / f"eugr-{profile_id}.yaml"
     content = f"""# Generated by spark-inference MTP scaffold ({profile_id})
 recipe_version: "1"
@@ -980,8 +1456,8 @@ command: |
     --served-model-name {served_name} \\
     --tensor-parallel-size {{tensor_parallel}} \\
     --trust-remote-code \\
-    --kv-cache-dtype auto \\
-{attn_line}{lmo_line}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
+    --kv-cache-dtype fp8 \\
+{attn_line}{lmo_line}{parser_lines}{moe_line}    --gpu-memory-utilization {{gpu_memory_utilization}} \\
     --max-model-len {{max_model_len}} \\
     --max-num-seqs {{max_num_seqs}} \\
     --max-num-batched-tokens {{max_num_batched_tokens}} \\
@@ -1006,6 +1482,10 @@ def scaffold_mtp_eugr_recipe(
     slug = inventory_path.split("/", 1)[1]
     served_name = re.sub(r"[^a-z0-9._-]+", "-", f"{slug}-mtp".lower()).strip("-")[:48]
     eugr_path = write_eugr_mtp_service(profile_id, inventory_path, served_name)
+    found = discover_vllm_weights_dir(MODELS_ROOT / inventory_path)
+    native_len = (
+        infer_max_model_len(found[0], found[1]) if found else 262144
+    )
     recipe: dict[str, Any] = {
         "id": profile_id,
         "name": name or f"{slug} MTP (eugr)",
@@ -1022,6 +1502,11 @@ def scaffold_mtp_eugr_recipe(
             f"MTP scaffold {datetime.now(timezone.utc).date().isoformat()} from "
             f"/models/{inventory_path}. Bench vs non-MTP baseline before promote."
         ),
+        "context": {
+            "default": min(65536, native_len),
+            "native": native_len,
+            "kv_default": "fp8",
+        },
     }
     path = draft_recipe_path(profile_id)
     save_recipe_file(path, recipe)
@@ -1086,7 +1571,7 @@ def resolve_scaffold_kind(
     subpath = str(plan.get("subpath") or "").lower()
     repo = str(plan.get("repo") or "").lower()
     kind = str(plan.get("scaffold_kind") or "").lower()
-    if kind in {"ds4", "dflash", "mtp_eugr", "mtp_llama", "llamacpp", "eugr"}:
+    if kind in {"ds4", "dflash", "dspark", "dflash2", "mtp_eugr", "mtp_llama", "llamacpp", "eugr"}:
         return kind
     if engine == "ds4":
         return "ds4"
@@ -1142,6 +1627,10 @@ def scaffold_auto(
         return scaffold_ds4_recipe(inventory_path, name=name, tier=tier)
     if kind == "dflash":
         return scaffold_dflash_recipe(inventory_path)
+    if kind == "dspark":
+        return scaffold_dspark_recipe(inventory_path)
+    if kind == "dflash2":
+        return scaffold_dflash2_recipe(inventory_path)
     if kind == "mtp_eugr":
         return scaffold_mtp_eugr_recipe(inventory_path, name=name, tier=tier)
     if kind == "mtp_llama":
@@ -1920,6 +2409,21 @@ def recipe_public(
     return out
 
 
+def golden_inventory_for_profile(profile_id: str) -> str | None:
+    """Golden-map key for this profile so sibling recipes do not clobber verify."""
+    if not profile_id or not GOLDEN_FILE.is_file():
+        return None
+    data = load_yaml(GOLDEN_FILE)
+    hits = [
+        str(inv)
+        for inv, prof in (data.get("golden") or {}).items()
+        if str(prof) == profile_id
+    ]
+    if len(hits) == 1:
+        return hits[0]
+    return None
+
+
 def record_benchmark(
     profile_id: str,
     recipe: dict[str, Any],
@@ -1974,7 +2478,11 @@ def record_benchmark(
     profiles[profile_id] = entry
     save_benchmarks(profiles)
 
-    inv_path = recipe.get("inventory_path") or recipe.get("catalog_id")
+    inv_path = (
+        golden_inventory_for_profile(profile_id)
+        or recipe.get("inventory_path")
+        or recipe.get("catalog_id")
+    )
     if inv_path:
         if VERIFY_FILE.is_file():
             store = load_yaml(VERIFY_FILE)
@@ -3236,6 +3744,28 @@ def cmd_recipe(argv: list[str]) -> int:
             f"{draft_recipe_path(recipe['id'])}"
         )
         return 0
+    if sub == "scaffold-dspark":
+        if len(argv) < 4:
+            raise SystemExit(
+                "usage: spark-inference recipe scaffold-dspark <lab/slug>"
+            )
+        recipe = scaffold_dspark_recipe(argv[3])
+        print(
+            f"Scaffolded DSpark draft {recipe['id']} -> "
+            f"{draft_recipe_path(recipe['id'])}"
+        )
+        return 0
+    if sub == "scaffold-dflash2":
+        if len(argv) < 4:
+            raise SystemExit(
+                "usage: spark-inference recipe scaffold-dflash2 <lab/slug>"
+            )
+        recipe = scaffold_dflash2_recipe(argv[3])
+        print(
+            f"Scaffolded DFlash2 draft {recipe['id']} -> "
+            f"{draft_recipe_path(recipe['id'])}"
+        )
+        return 0
     if sub == "testing":
         if len(argv) < 4:
             raise SystemExit("usage: spark-inference recipe testing <profile>")
@@ -3265,6 +3795,8 @@ Recipe-driven inference control (Phase 5). One GPU workload at a time.
 bench — agent benchmark on active profile (default BENCH_STANDARD=v2: ~50k ctx + tools).
 recipe scaffold <lab/slug> [llamacpp|eugr] — Model Lab draft (auto-detect if engine omitted)
 recipe scaffold-dflash <lab/slug> — DFlash sidecar + target eugr draft
+recipe scaffold-dspark <lab/slug> — DSpark sidecar + target eugr draft
+recipe scaffold-dflash2 <lab/slug> — DFlash2 sidecar + PR 52816 overlay
 recipe testing|works|promote|discard <profile> — lifecycle (draft → testing → works)"""
     )
 

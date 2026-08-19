@@ -68,6 +68,9 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "deepreinforce-ai/ornith-1.0-35b": "deepreinforce-ai-ornith-1-0-35b-llama",
     "jackrong/qwopus3.6-27b-coder-compat": "jackrong-qwopus3-6-27b-coder-compat-llama",
     "0xsero/deepseek-v4-flash-spark": "0xsero-deepseek-v4-flash-spark-llama",
+    "radixark/qwen3.8-27b": "radixark-qwen3-8-27b-mtp-eugr",
+    "radixark/qwen3.8-27b-dspark-nvfp4": "radixark-qwen3-8-27b-dspark-eugr",
+    "qwen/qwen3.8-27b": "qwen-qwen3-8-27b-dflash2-eugr",
 }
 
 SKIP_INVENTORY: set[str] = {

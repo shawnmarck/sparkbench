@@ -6,6 +6,19 @@ leaderboard_exclude:
 - microsoft/phi-4
 - nousresearch/hermes-4-14b
 - deepseek-ai/deepseek-r1-distill-qwen-32b
+# Default leaderboard hides these; "N more" reveals them. Search still finds them.
+# Incomplete PBM (4k-only / no ladder), private, or stale headline without a curve.
+leaderboard_more:
+- yuxinlu1/mellum2-12b-opus-thinking
+- nvidia/qwen3-30b-a3b
+- unsloth/qwen3.6-35b-a3b-nvfp4-fast
+- inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb
+- antirez/deepseek-v4-flash
+- yuxinlu1/gemma-4-12b-opus-reasoning
+- yuxinlu1/gemma-4-12b-agentic-v2
+- sakamakismile/thinkingcap-qwen3.6-27b
+- protolabsai/thinkingcap-qwen3.6-27b
+- aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs
 golden:
   nvidia/qwen3.6-35b-a3b: qwen36-35b-a3b-mtp-eugr
   nvidia/qwen3.6-27b: nvidia-qwen3-6-27b-eugr

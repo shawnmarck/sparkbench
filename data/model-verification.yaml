@@ -345,8 +345,8 @@ models:
     tok_s: 22.0
     tok_s_engine: eugr
     tok_s_profile: radixark-qwen3-8-27b-dspark-eugr
-    note: "PBM 4k @ 22.0 / 50k @ 10.1 / 100k @ 6.4 tok/s \u2014 perfbench-metrics \u2014\
-      \ profile=radixark-qwen3-8-27b-dspark-eugr"
+    note: "PBM 4k @ 22.0 / 50k @ 10.1 / 100k @ 6.4 tok/s \u2014 perfbench-metrics\
+      \ \u2014 profile=radixark-qwen3-8-27b-dspark-eugr"
   qwen/qwen3.8-27b:
     spark_status: works
     updated_at: '2026-08-19T04:03:32.202761+00:00'
@@ -356,3 +356,12 @@ models:
     tok_s_profile: qwen-qwen3-8-27b-dflash2-eugr
     note: "PBM 4k @ 19.8 / 50k @ 6.7 / 100k @ 4.1 tok/s \u2014 perfbench-metrics \u2014\
       \ profile=qwen-qwen3-8-27b-dflash2-eugr"
+  ornith-ai/ornith-1.5-35b-a3b:
+    spark_status: works
+    updated_at: '2026-08-20T02:26:39.348367+00:00'
+    engine: eugr
+    tok_s: 66.8
+    tok_s_engine: eugr
+    tok_s_profile: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
+    note: "PBM 4k @ 66.8 / 50k @ 29.1 / 100k @ 24.2 tok/s \u2014 perfbench-metrics\
+      \ \u2014 NVFP4 b12x MTP k=1"

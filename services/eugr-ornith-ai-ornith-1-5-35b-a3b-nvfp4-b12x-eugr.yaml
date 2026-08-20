@@ -1,0 +1,43 @@
+# Ornith-1.5-35B-A3B NVFP4 on eugr/spark-vllm-b12x.
+# Flags match MiaAI-Lab/Ornith-1.5-35B-A3B-DGX-Spark start.sh (2026-08-19):
+#   --moe-backend b12x, in-checkpoint MTP --spec-tokens 1, 256k, 24 seqs.
+# Image is pulled (not built). skip_default_mods avoids the Qwen3.6 chat-template overlay.
+recipe_version: "1"
+name: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
+description: >-
+  Ornith-1.5-35B-A3B NVFP4 + in-checkpoint MTP on eugr/spark-vllm-b12x
+  (Mia b12x W4A16 overlays).
+
+model: ornith-ai/Ornith-1.5-35B-A3B-NVFP4
+container: eugr/spark-vllm-b12x:latest
+skip_default_mods: true
+
+volumes:
+  - /opt/spark/mods/eugr-b12x-w4a16/kernel.py:/usr/local/lib/python3.12/dist-packages/b12x/moe/_shared/kernels/w4a16/kernel.py:ro
+  - /opt/spark/mods/eugr-b12x-w4a16/route_pack.py:/usr/local/lib/python3.12/dist-packages/b12x/moe/_shared/kernels/w4a16/route_pack.py:ro
+
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 262144
+  max_num_seqs: 24
+
+command: |
+  vllm serve /models/ornith-ai/ornith-1.5-35b-a3b/nvfp4 \
+    --host {host} \
+    --port {port} \
+    --served-model-name ornith-1.5-35b-a3b-nvfp4 \
+    --tensor-parallel-size {tensor_parallel} \
+    --trust-remote-code \
+    --enable-prefix-caching \
+    --spec-method mtp \
+    --spec-tokens 1 \
+    --max-num-seqs {max_num_seqs} \
+    --moe-backend b12x \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_xml \
+    --reasoning-parser qwen3

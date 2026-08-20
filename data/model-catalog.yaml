@@ -858,3 +858,26 @@ models:
     subpath: fp8
     engine: vllm
     hf_repo: Qwen/Qwen3.8-27B-FP8
+- id: ornith-ai/ornith-1.5-35b-a3b
+  lab: ornith-ai
+  name: Ornith 1.5 35B-A3B
+  slug: ornith-1.5-35b-a3b
+  hf_repo: ornith-ai/Ornith-1.5-35B-A3B-NVFP4
+  capabilities:
+  - lab
+  - eugr
+  - vllm
+  - nvfp4
+  - moe
+  - mtp
+  - golden
+  why_downloaded: Ornith-1.5-35B-A3B NVFP4 + in-checkpoint MTP on eugr/spark-vllm-b12x.
+    Golden recipe ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr.
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: ornith-ai/Ornith-1.5-35B-A3B-NVFP4
+  param_b: 35
+  param_active_b: 3
+  architecture: moe

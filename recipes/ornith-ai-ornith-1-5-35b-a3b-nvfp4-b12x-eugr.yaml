@@ -1,0 +1,47 @@
+id: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
+name: ornith-1.5-35b-a3b NVFP4 b12x MTP (eugr)
+inventory_path: ornith-ai/ornith-1.5-35b-a3b
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: ornith-1.5-35b-a3b-nvfp4
+port: 8000
+tags:
+- lab
+- eugr
+- ornith
+- nvfp4
+- b12x
+- mtp
+speculative:
+  method: mtp
+  num_speculative_tokens: 1
+  target_weight_format: nvfp4
+eugr_recipe: /opt/spark/services/eugr-ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr.yaml
+context:
+  default: 262144
+  native: 262144
+  kv_default: auto
+  presets:
+    mia:
+      label: Mia b12x 256k / 24 seqs
+      ctx: 262144
+      kv: auto
+  bench_matrix:
+    version: '1.0'
+    updated_at: '2026-08-20T02:26:39.348367+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: auto
+      tok_s: 66.8
+      tool_ok: true
+      method: perfbench-metrics
+      bench_standard: '3.0'
+      fill_target: 4096
+      note: PBM 4k @ 66.8 / 50k @ 29.1 / 100k @ 24.2
+notes: 'Port of MiaAI-Lab/Ornith-1.5-35B-A3B-DGX-Spark (2026-08-19): eugr/spark-vllm-b12x,
+  --moe-backend b12x, in-checkpoint MTP --spec-tokens 1, 256k, max-num-seqs 24, plus
+  host overlays mods/eugr-b12x-w4a16. PBM 4k/50k/100k = 66.8/29.1/24.2, tool_ok.
+  Concurrent 512-out C1 80.6 / C24 501 agg.'
+updated_at: '2026-08-20T01:11:52.651471+00:00'
+promoted_at: '2026-08-20T02:26:23.755767+00:00'

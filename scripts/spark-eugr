@@ -6,10 +6,40 @@ RECIPE="${SPARK_EUGR_RECIPE:-/opt/spark/services/eugr-qwen36-local.yaml}"
 EXTRA="-v /models:/models:ro"
 cmd="${1:-status}"
 
+# Optional recipe keys (services/eugr-*.yaml):
+#   volumes: ["/host:/container:ro", ...]
+#   skip_default_mods: true   — skip mods/fix-qwen3.6-chat-template
+load_recipe_extras() {
+  RECIPE_VOLUMES=()
+  SKIP_DEFAULT_MODS=0
+  [[ -f "$RECIPE" ]] || return 0
+  eval "$(
+    python3 - "$RECIPE" <<'PY'
+import shlex, sys, yaml
+recipe = yaml.safe_load(open(sys.argv[1])) or {}
+vols = [str(v) for v in (recipe.get("volumes") or []) if str(v).strip()]
+print("RECIPE_VOLUMES=(" + " ".join(shlex.quote(v) for v in vols) + ")")
+print("SKIP_DEFAULT_MODS=" + ("1" if recipe.get("skip_default_mods") else "0"))
+PY
+  )"
+}
+
 run_recipe() {
-  export VLLM_SPARK_EXTRA_DOCKER_ARGS="$EXTRA"
+  load_recipe_extras
+  local extra="$EXTRA"
+  local -a extra_args=()
+  local vol
+  for vol in "${RECIPE_VOLUMES[@]+"${RECIPE_VOLUMES[@]}"}"; do
+    extra+=" -v ${vol}"
+    extra_args+=(--volume "$vol")
+  done
+  export VLLM_SPARK_EXTRA_DOCKER_ARGS="$extra"
+  local -a mods=()
+  if [[ "${SKIP_DEFAULT_MODS}" != "1" ]]; then
+    mods+=(--apply-mod mods/fix-qwen3.6-chat-template)
+  fi
   cd "$REPO"
-  ./run-recipe.sh "$RECIPE" --solo --apply-mod mods/fix-qwen3.6-chat-template "$@"
+  ./run-recipe.sh "$RECIPE" --solo "${mods[@]}" "${extra_args[@]}" "$@"
 }
 
 case "$cmd" in

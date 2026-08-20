@@ -42,6 +42,7 @@ golden:
   radixark/qwen3.8-27b: radixark-qwen3-8-27b-mtp-eugr
   radixark/qwen3.8-27b-dspark-nvfp4: radixark-qwen3-8-27b-dspark-eugr
   qwen/qwen3.8-27b: qwen-qwen3-8-27b-dflash2-eugr
+  ornith-ai/ornith-1.5-35b-a3b: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
 deprecated_profiles:
 - qwen36-nvfp4
 - qwen-qwen3-6-27b-dflash-eugr

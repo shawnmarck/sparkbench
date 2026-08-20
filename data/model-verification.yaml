@@ -358,10 +358,9 @@ models:
       \ profile=qwen-qwen3-8-27b-dflash2-eugr"
   ornith-ai/ornith-1.5-35b-a3b:
     spark_status: works
-    updated_at: '2026-08-20T02:26:39.348367+00:00'
+    updated_at: '2026-08-20T04:20:40.527135+00:00'
     engine: eugr
-    tok_s: 66.8
+    tok_s: 70.8
     tok_s_engine: eugr
     tok_s_profile: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
-    note: "PBM 4k @ 66.8 / 50k @ 29.1 / 100k @ 24.2 tok/s \u2014 perfbench-metrics\
-      \ \u2014 NVFP4 b12x MTP k=1"
+    note: "PBM 4k @ 70.8 / 50k @ 36.5 / 100k @ 27.2 tok/s \u2014 perfbench-metrics \u2014 NVFP4 b12x MTP n=1, language-model-only + chunked prefill. MTP n=1/2/3 C1 coding 93.8/83.1/70.8 (keep n=1). C1 @ 24 seqs 93.8 vs 4 seqs 79.7. YaRN 512k and 1M boot (presets yarn_512k / yarn_1m). Concurrent 512-out C24 ~501 agg. tool_ok."

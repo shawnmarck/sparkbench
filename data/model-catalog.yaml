@@ -860,7 +860,7 @@ models:
     hf_repo: Qwen/Qwen3.8-27B-FP8
 - id: ornith-ai/ornith-1.5-35b-a3b
   lab: ornith-ai
-  name: Ornith 1.5 35B-A3B
+  name: Ornith 1.5 35B-A3B · MTP
   slug: ornith-1.5-35b-a3b
   hf_repo: ornith-ai/Ornith-1.5-35B-A3B-NVFP4
   capabilities:
@@ -871,8 +871,15 @@ models:
   - moe
   - mtp
   - golden
-  why_downloaded: Ornith-1.5-35B-A3B NVFP4 + in-checkpoint MTP on eugr/spark-vllm-b12x.
-    Golden recipe ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr.
+  - agentic
+  - coder
+  why_downloaded: >-
+    Agentic-coding MoE (3B active / 35B) on a single Spark: NVFP4, GB10-native
+    b12x, in-checkpoint MTP n=1, language-model-only, chunked prefill. Native
+    256k context; YaRN presets stretch to 512k and 1M. Tools round-trip clean.
+    Short concurrent decode ~94 tok/s at 1 stream and ~500 tok/s aggregate at
+    24 streams. Daily-driver alternative to Qwen3.6-35B when you want coding
+    speed and 1M headroom more than 50k-fill retention.
   variants:
   - format: nvfp4
     subpath: nvfp4

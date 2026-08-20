@@ -40,3 +40,6 @@ models:
   radixark/qwen3.8-27b:                       [Reasoning, Agents, General]
   radixark/qwen3.8-27b-dspark-nvfp4:          [Reasoning, Agents, General]
   qwen/qwen3.8-27b:                           [Reasoning, Agents, General]
+
+  # --- Ornith 1.5 — agentic coding MoE, native 256k, YaRN to 1M ---
+  ornith-ai/ornith-1.5-35b-a3b:               [Agents, Code, Reasoning]

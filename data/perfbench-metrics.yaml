@@ -1564,43 +1564,43 @@ profiles:
     version: '1.0'
     engine: eugr
     inventory_path: ornith-ai/ornith-1.5-35b-a3b
-    measured_at: '2026-08-20T01:36:12.355864+00:00'
+    measured_at: '2026-08-20T04:20:40.527135+00:00'
     loaded_ctx: 262144
     fills:
       '4096':
-        tok_s: 66.8
-        tok_s_min: 66.8
-        tok_s_max: 66.8
+        tok_s: 70.8
+        tok_s_min: 70.8
+        tok_s_max: 70.8
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 811
-        elapsed_s: 12.14
+        completion_tokens: 810
+        elapsed_s: 11.45
         run_tok_s:
-        - 66.8
+        - 70.8
       '50000':
-        tok_s: 29.1
-        tok_s_min: 29.1
-        tok_s_max: 29.1
+        tok_s: 36.5
+        tok_s_min: 36.5
+        tok_s_max: 36.5
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 706
-        elapsed_s: 24.26
+        completion_tokens: 826
+        elapsed_s: 22.6
         run_tok_s:
-        - 29.1
+        - 36.5
       '100000':
-        tok_s: 24.2
-        tok_s_min: 24.2
-        tok_s_max: 24.2
+        tok_s: 27.2
+        tok_s_min: 27.2
+        tok_s_max: 27.2
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 905
-        elapsed_s: 37.35
+        completion_tokens: 925
+        elapsed_s: 34.05
         run_tok_s:
-        - 24.2
+        - 27.2
     skipped: {}
     primary_fill: 50000
-    note: PBM 4096=66.8 / 50000=29.1 / 100000=24.2
-    tok_s_4k: 66.8
-    tok_s_50k: 29.1
-    tok_s_100k: 24.2
-updated_at: '2026-08-20T01:36:12.355864+00:00'
+    note: PBM 4096=70.8 / 50000=36.5 / 100000=27.2
+    tok_s_4k: 70.8
+    tok_s_50k: 36.5
+    tok_s_100k: 27.2
+updated_at: '2026-08-20T04:20:40.527135+00:00'

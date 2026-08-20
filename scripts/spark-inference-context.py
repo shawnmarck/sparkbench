@@ -549,7 +549,12 @@ def materialize_eugr_recipe(
     defaults = dict(data.get("defaults") or {})
     defaults["max_model_len"] = int(ctx)
     preset_cfg = _preset_cfg(recipe, preset)
-    for key in ("gpu_memory_utilization", "max_num_seqs", "max_num_batched_tokens"):
+    for key in (
+        "gpu_memory_utilization",
+        "max_num_seqs",
+        "max_num_batched_tokens",
+        "spec_tokens",
+    ):
         if preset_cfg.get(key) is not None:
             defaults[key] = preset_cfg[key]
     data["defaults"] = defaults
@@ -561,6 +566,17 @@ def materialize_eugr_recipe(
             cmd = cmd.replace("--trust-remote-code \\", f"--trust-remote-code \\\n    --kv-cache-dtype {kv} \\")
     if preset_cfg.get("prefix_caching") is False:
         cmd = re.sub(r"\s*--enable-prefix-caching\s*\\?\n?", "\n", cmd)
+    hf_over = preset_cfg.get("hf_overrides")
+    if isinstance(hf_over, dict) and hf_over:
+        payload = json.dumps(hf_over, separators=(",", ":"))
+        escaped = payload.replace("{", "{{").replace("}", "}}")
+        flag = f"--hf-overrides '{escaped}'"
+        if "--hf-overrides" not in cmd:
+            needle = "--max-model-len {max_model_len} \\"
+            if needle in cmd:
+                cmd = cmd.replace(needle, needle + f"\n    {flag} \\", 1)
+            else:
+                cmd = cmd.rstrip() + f" \\\n    {flag}\n"
     data["command"] = cmd
     EUgr_LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
     path = EUgr_LAUNCH_DIR / f"{recipe.get('id', 'launch')}.yaml"

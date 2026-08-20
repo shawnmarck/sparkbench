@@ -1,5 +1,5 @@
 id: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
-name: ornith-1.5-35b-a3b NVFP4 b12x MTP (eugr)
+name: Ornith 1.5 35B-A3B · MTP
 inventory_path: ornith-ai/ornith-1.5-35b-a3b
 engine: eugr
 tier: heavy
@@ -21,27 +21,74 @@ eugr_recipe: /opt/spark/services/eugr-ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eu
 context:
   default: 262144
   native: 262144
-  kv_default: auto
+  kv_default: fp8
   presets:
     mia:
       label: Mia b12x 256k / 24 seqs
       ctx: 262144
       kv: auto
-  bench_matrix:
-    version: '1.0'
-    updated_at: '2026-08-20T02:26:39.348367+00:00'
-    golden_cell:
+      max_num_seqs: 24
+      spec_tokens: 1
+    coding:
+      label: 4 seqs (more KV; C1 slower than 24)
       ctx: 262144
       kv: auto
-      tok_s: 66.8
+      max_num_seqs: 4
+      spec_tokens: 1
+    yarn_512k:
+      label: YaRN 512k / 4 seqs
+      ctx: 524288
+      kv: auto
+      extended: true
+      max_num_seqs: 4
+      spec_tokens: 1
+      hf_overrides:
+        text_config:
+          max_position_embeddings: 524288
+          rope_parameters:
+            rope_type: yarn
+            factor: 2.0
+            original_max_position_embeddings: 262144
+            mrope_interleaved: true
+            mrope_section: [11, 11, 10]
+            partial_rotary_factor: 0.25
+            rope_theta: 10000000
+    yarn_1m:
+      label: YaRN 1M / 4 seqs
+      ctx: 1048576
+      kv: auto
+      extended: true
+      max_num_seqs: 4
+      spec_tokens: 1
+      hf_overrides:
+        text_config:
+          max_position_embeddings: 1048576
+          rope_parameters:
+            rope_type: yarn
+            factor: 4.0
+            original_max_position_embeddings: 262144
+            mrope_interleaved: true
+            mrope_section: [11, 11, 10]
+            partial_rotary_factor: 0.25
+            rope_theta: 10000000
+  bench_matrix:
+    version: '1.0'
+    updated_at: '2026-08-20T04:20:40.527135+00:00'
+    golden_cell:
+      ctx: 262144
+      kv: fp8
+      tok_s: 70.8
       tool_ok: true
       method: perfbench-metrics
       bench_standard: '3.0'
       fill_target: 4096
-      note: PBM 4k @ 66.8 / 50k @ 29.1 / 100k @ 24.2
-notes: 'Port of MiaAI-Lab/Ornith-1.5-35B-A3B-DGX-Spark (2026-08-19): eugr/spark-vllm-b12x,
-  --moe-backend b12x, in-checkpoint MTP --spec-tokens 1, 256k, max-num-seqs 24, plus
-  host overlays mods/eugr-b12x-w4a16. PBM 4k/50k/100k = 66.8/29.1/24.2, tool_ok.
-  Concurrent 512-out C1 80.6 / C24 501 agg.'
+      note: PBM 4k @ 70.8 / 50k @ 36.5 / 100k @ 27.2
+      pbm:
+        tok_s_4k: 70.8
+        tok_s_50k: 36.5
+        tok_s_100k: 27.2
+notes: 'Mia b12x + language-model-only + chunked prefill. MTP n=1/2/3 C1 coding
+  93.8/83.1/70.8 — keep spec-tokens 1. max-num-seqs 24 beats 4 on C1 (93.8 vs 79.7).
+  YaRN 512k and 1M boot (presets yarn_512k / yarn_1m). PBM 4k/50k/100k = 70.8/36.5/27.2.'
 updated_at: '2026-08-20T01:11:52.651471+00:00'
 promoted_at: '2026-08-20T02:26:23.755767+00:00'

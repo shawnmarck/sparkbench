@@ -1,12 +1,11 @@
 # Ornith-1.5-35B-A3B NVFP4 on eugr/spark-vllm-b12x.
-# Flags match MiaAI-Lab/Ornith-1.5-35B-A3B-DGX-Spark start.sh (2026-08-19):
-#   --moe-backend b12x, in-checkpoint MTP --spec-tokens 1, 256k, 24 seqs.
+# Base: MiaAI-Lab start.sh + language-model-only + chunked prefill.
 # Image is pulled (not built). skip_default_mods avoids the Qwen3.6 chat-template overlay.
 recipe_version: "1"
 name: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
 description: >-
   Ornith-1.5-35B-A3B NVFP4 + in-checkpoint MTP on eugr/spark-vllm-b12x
-  (Mia b12x W4A16 overlays).
+  (Mia b12x W4A16 overlays), text-only.
 
 model: ornith-ai/Ornith-1.5-35B-A3B-NVFP4
 container: eugr/spark-vllm-b12x:latest
@@ -23,6 +22,8 @@ defaults:
   gpu_memory_utilization: 0.85
   max_model_len: 262144
   max_num_seqs: 24
+  max_num_batched_tokens: 8192
+  spec_tokens: 1
 
 command: |
   vllm serve /models/ornith-ai/ornith-1.5-35b-a3b/nvfp4 \
@@ -31,10 +32,13 @@ command: |
     --served-model-name ornith-1.5-35b-a3b-nvfp4 \
     --tensor-parallel-size {tensor_parallel} \
     --trust-remote-code \
+    --language-model-only \
     --enable-prefix-caching \
+    --enable-chunked-prefill \
     --spec-method mtp \
-    --spec-tokens 1 \
+    --spec-tokens {spec_tokens} \
     --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
     --moe-backend b12x \
     --gpu-memory-utilization {gpu_memory_utilization} \
     --max-model-len {max_model_len} \

@@ -1,6 +1,5 @@
 bench_standard: '2.0'
-# Inventory path currently serving / under test on Sparky. Leaderboard
-# "Now testing" highlight on sparkbench.dev — not Editor's pick.
+# Optional: inventory path currently serving on Sparky (not shown on the public site).
 currently_testing: ornith-ai/ornith-1.5-35b-a3b
 leaderboard_exclude:
 - microsoft/phi-4

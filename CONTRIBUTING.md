@@ -26,6 +26,18 @@ Set `SPARK_HOST` (default `sparky`) and `SPARK_LAN_IP` (default from `install/co
 2. Optionally add a standalone file under `recipes/`
 3. Run the benchmark harness locally to fill in `tok_s` and `ctx` fields before opening a PR
 
+## Adding a published SWE / Terminal-Bench score
+
+sparkbench.dev can show **vendor-published** agentic scores next to GB10 tok/s. These are not measured on Sparky.
+
+1. Edit [`data/published-evals.yaml`](data/published-evals.yaml)
+2. Put numbers on the **canonical base** (e.g. `qwen/qwen3.6-35b-a3b`), not a quant pack
+3. Every score needs `source_url` and `as_of`
+4. List same-weight packs under `aliases`; do not alias finetunes
+5. Optional `aa_url` is a link to Artificial Analysis — do not copy AA scores
+
+See [`docs/reference/published-evals.md`](docs/reference/published-evals.md).
+
 ## Pull request checklist
 
 - [ ] No hardcoded LAN IPs or private hostnames in docs or scripts (use `$SPARK_HOST` / `$SPARK_LAN_IP`)

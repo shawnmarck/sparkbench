@@ -105,6 +105,8 @@ spark inference up <profile> --ctx <enough_for_largest_rung> --kv fp8
 - Public site: prefer PBM 4k over “measured at 75% context fill” once `perfbench-metrics.yaml` is published with verification.
 - Optional later: fill selector (`4k` / `50k` / `100k`) for alternate sorts.
 
+Public-site **SWE / Terminal-Bench** columns are vendor-card figures, not this harness. See [published-evals.md](published-evals.md).
+
 ---
 
 ## Golden recipe policy (paired with v2)

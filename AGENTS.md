@@ -36,6 +36,7 @@ Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUD
 | `docs/guides/local-model-testing.md` | Bench queue, golden audit SOP |
 | `docs/reference/inference-stack.md` | Gateway, profiles, recipes, APIs |
 | `docs/reference/benchmark-standard.md` | Bench v2 policy |
+| `docs/reference/published-evals.md` | Vendor SWE/TB overlay on sparkbench.dev (not Spark-measured) |
 | `docs/guides/model-shelf.md` | `/models` + optional NAS |
 
 Smoke runbooks: `docs/runbooks/smoke-vllm-eugr.md`, `smoke-llamacpp.md`, `smoke-ds4.md`.

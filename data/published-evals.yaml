@@ -1,0 +1,324 @@
+# Published agentic / intelligence evals for sparkbench.dev.
+#
+# Display-only. These are vendor-card (or vendor-blog) figures for the
+# canonical BASE model — not measured on Sparky, not PBM tok/s.
+# Artificial Analysis is an outbound link only; do not copy AA scores here.
+#
+# Every numeric cell needs source_url + as_of. Empty / missing = site shows "—".
+# Inherit onto packs listed in `aliases`. Do NOT alias finetunes, merges,
+# uncensored, "opus", "thinkingcap", "agentworld", "qwythos", etc.
+#
+# See docs/reference/published-evals.md
+
+version: "1.0"
+updated_at: "2026-08-20"
+
+models:
+
+  qwen/qwen3.6-27b:
+    aa_url: https://artificialanalysis.ai/models/qwen3-6-27b
+    aliases:
+      - nvidia/qwen3.6-27b
+      - unsloth/qwen3.6-27b
+      - rdtand/qwen3.6-27b
+      - kaitchup/qwen3.6-27b
+    swe_verified:
+      score: 77.2
+      unit: percent
+      source_name: Qwen model card
+      source_url: https://huggingface.co/Qwen/Qwen3.6-27B
+      as_of: "2026-04-22"
+      notes: "Vendor figure on the Qwen3.6-27B card."
+    terminal_bench:
+      score: 59.3
+      unit: percent
+      suite: "2.0"
+      source_name: Qwen launch blog
+      source_url: https://qwen.ai/blog?id=qwen3.6-27b
+      as_of: "2026-04-21"
+      notes: "Harbor/Terminus-2, avg of 5 runs (vendor)."
+    extras:
+      swe_pro:
+        score: 53.5
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.6-27B
+        as_of: "2026-04-22"
+      gpqa_diamond:
+        score: 87.8
+        unit: percent
+        source_name: Qwen launch blog
+        source_url: https://qwen.ai/blog?id=qwen3.6-27b
+        as_of: "2026-04-21"
+
+  qwen/qwen3.6-35b-a3b:
+    aa_url: https://artificialanalysis.ai/models/qwen3-6-35b-a3b
+    aliases:
+      - nvidia/qwen3.6-35b-a3b
+      - unsloth/qwen3.6-35b-a3b
+      - unsloth/qwen3.6-35b-a3b-nvfp4
+      - unsloth/qwen3.6-35b-a3b-nvfp4-fast
+    swe_verified:
+      score: 73.4
+      unit: percent
+      source_name: Qwen model card
+      source_url: https://huggingface.co/Qwen/Qwen3.6-35B-A3B
+      as_of: "2026-04-21"
+      notes: "Vendor figure; internal agent scaffold (bash + file-edit)."
+    terminal_bench:
+      score: 51.5
+      unit: percent
+      suite: "2.0"
+      source_name: Qwen launch blog
+      source_url: https://qwen.ai/blog?id=qwen3.6-35b-a3b
+      as_of: "2026-04-14"
+      notes: "Vendor figure on the 35B-A3B launch post."
+    extras:
+      swe_pro:
+        score: 49.5
+        unit: percent
+        source_name: Qwen launch blog
+        source_url: https://qwen.ai/blog?id=qwen3.6-35b-a3b
+        as_of: "2026-04-14"
+
+  qwen/qwen3.8-27b:
+    aa_url: https://artificialanalysis.ai/models/qwen3-8-27b
+    aliases:
+      - radixark/qwen3.8-27b
+      - radixark/qwen3.8-27b-dspark-nvfp4
+    # Card publishes SWE-bench Pro, not SWE-Verified.
+    terminal_bench:
+      score: 73.0
+      unit: percent
+      suite: "2.1"
+      source_name: Qwen model card
+      source_url: https://huggingface.co/Qwen/Qwen3.8-27B
+      as_of: "2026-08-14"
+      notes: "Terminal-Bench 2.1 with Terminus (vendor)."
+    extras:
+      swe_pro:
+        score: 61.7
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.8-27B
+        as_of: "2026-08-14"
+        notes: "Claude Code harness; refined SWE-bench Pro set (vendor)."
+      livecodebench:
+        score: 90.3
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.8-27B
+        as_of: "2026-08-14"
+        notes: "LiveCodeBench v6 (vendor)."
+      gpqa_diamond:
+        score: 89.2
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.8-27B
+        as_of: "2026-08-14"
+
+  qwen/qwen3-coder-next:
+    aa_url: https://artificialanalysis.ai/models/qwen3-coder-next
+    aliases:
+      - saricles/qwen3-coder-next
+    swe_verified:
+      score: 70.6
+      unit: percent
+      source_name: Qwen3-Coder-Next tech report
+      source_url: https://huggingface.co/Qwen/Qwen3-Coder-Next
+      as_of: "2026-02-03"
+      notes: "SWE-Agent scaffold; HF eval result 70.6."
+    terminal_bench:
+      score: 36.2
+      unit: percent
+      suite: "2.0"
+      source_name: Qwen3-Coder-Next tech report
+      source_url: https://huggingface.co/Qwen/Qwen3-Coder-Next
+      as_of: "2026-02-03"
+      notes: "HF eval result for Terminal-Bench 2.0."
+    extras:
+      swe_pro:
+        score: 44.3
+        unit: percent
+        source_name: Qwen3-Coder-Next tech report
+        source_url: https://huggingface.co/Qwen/Qwen3-Coder-Next
+        as_of: "2026-02-03"
+
+  ornith-ai/ornith-1.5-35b-a3b:
+    swe_verified:
+      score: 79.0
+      unit: percent
+      source_name: Ornith 1.5 model card
+      source_url: https://huggingface.co/ornith-ai/Ornith-1.5-35B-A3B
+      as_of: "2026-08-19"
+      notes: "Vendor figure on the Ornith-1.5-35B-A3B card."
+    terminal_bench:
+      score: 67.8
+      unit: percent
+      suite: "2.1"
+      source_name: Ornith 1.5 model card
+      source_url: https://huggingface.co/ornith-ai/Ornith-1.5-35B-A3B
+      as_of: "2026-08-19"
+      notes: "Terminal-Bench 2.1 with Terminus-2 (vendor)."
+    extras:
+      swe_pro:
+        score: 59.6
+        unit: percent
+        source_name: Ornith 1.5 model card
+        source_url: https://huggingface.co/ornith-ai/Ornith-1.5-35B-A3B
+        as_of: "2026-08-19"
+
+  poolside/laguna-s-2.1:
+    # Card/blog does not publish SWE-Verified; TB 2.1 is the headline.
+    terminal_bench:
+      score: 70.2
+      unit: percent
+      suite: "2.1"
+      source_name: Poolside launch blog
+      source_url: https://poolside.ai/blog/introducing-laguna-s-2-1
+      as_of: "2026-07-21"
+      notes: "Poolside agent harness, thinking enabled."
+    extras:
+      swe_pro:
+        score: 59.4
+        unit: percent
+        source_name: Poolside launch blog
+        source_url: https://poolside.ai/blog/introducing-laguna-s-2-1
+        as_of: "2026-07-21"
+        notes: "SWE-Bench Pro public dataset (vendor)."
+
+  poolside/laguna-xs-2.1:
+    swe_verified:
+      score: 70.9
+      unit: percent
+      source_name: Poolside model card
+      source_url: https://huggingface.co/poolside/Laguna-XS-2.1
+      as_of: "2026-07-02"
+      notes: "Mean pass@1 averaged over 4 attempts (vendor)."
+    terminal_bench:
+      score: 37.5
+      unit: percent
+      suite: "2.0"
+      source_name: Poolside model card
+      source_url: https://huggingface.co/poolside/Laguna-XS-2.1
+      as_of: "2026-07-02"
+    extras:
+      swe_pro:
+        score: 47.6
+        unit: percent
+        source_name: Poolside model card
+        source_url: https://huggingface.co/poolside/Laguna-XS-2.1
+        as_of: "2026-07-02"
+
+  stepfun-ai/step-3.7-flash:
+    swe_verified:
+      score: 76.5
+      unit: percent
+      source_name: StepFun launch post
+      source_url: https://static.stepfun.com/blog/step-3.7-flash/
+      as_of: "2026-05-29"
+      notes: "Vendor figure for Step 3.7 Flash."
+    terminal_bench:
+      score: 59.6
+      unit: percent
+      suite: "2.1"
+      source_name: StepFun launch post
+      source_url: https://static.stepfun.com/blog/step-3.7-flash/
+      as_of: "2026-05-29"
+    extras:
+      swe_pro:
+        score: 56.3
+        unit: percent
+        source_name: StepFun launch post
+        source_url: https://static.stepfun.com/blog/step-3.7-flash/
+        as_of: "2026-05-29"
+
+  antirez/deepseek-v4-flash:
+    swe_verified:
+      score: 79.0
+      unit: percent
+      source_name: DeepSeek V4 Flash model card
+      source_url: https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash
+      as_of: "2026-04-26"
+      notes: "Vendor SWE Verified (Resolved) on the Flash card. Applies to DeepSeek V4 Flash weights, not this GGUF pack specifically."
+    terminal_bench:
+      score: 82.7
+      unit: percent
+      suite: "2.1"
+      source_name: DeepSeek V4 Flash changelog
+      source_url: https://api-docs.deepseek.com/updates/
+      as_of: "2026-07-31"
+      notes: "DeepSeek Harness minimal mode, max tier (vendor). Applies to DeepSeek V4 Flash weights, not this GGUF pack specifically."
+
+  google/gemma-4-26b-a4b-it:
+    aa_url: https://artificialanalysis.ai/models/gemma-4-26b-a4b
+    # Google omits SWE/TB. Figures below are Qwen's evaluation of Gemma 4 26B-A4B.
+    swe_verified:
+      score: 17.4
+      unit: percent
+      source_name: Qwen 3.6-35B-A3B card (Gemma comparison)
+      source_url: https://huggingface.co/Qwen/Qwen3.6-35B-A3B
+      as_of: "2026-04-22"
+      notes: "Qwen-evaluated Gemma 4 26B-A4B — not a Google figure. Google's card omits SWE-bench."
+    terminal_bench:
+      score: 34.2
+      unit: percent
+      suite: "2.0"
+      source_name: Qwen 3.6-35B-A3B card (Gemma comparison)
+      source_url: https://huggingface.co/Qwen/Qwen3.6-35B-A3B
+      as_of: "2026-04-22"
+      notes: "Qwen-evaluated Gemma 4 26B-A4B — not a Google figure."
+    extras:
+      gpqa_diamond:
+        score: 82.3
+        unit: percent
+        source_name: Gemma 4 model card
+        source_url: https://huggingface.co/google/gemma-4-26B-A4B-it
+        as_of: "2026-07-02"
+
+  google/gemma-4-12b-it:
+    extras:
+      gpqa_diamond:
+        score: 78.8
+        unit: percent
+        source_name: Gemma 4 model card
+        source_url: https://huggingface.co/google/gemma-4-26B-A4B-it
+        as_of: "2026-07-02"
+        notes: "Gemma 4 12B Unified column on the Gemma 4 26B-A4B-it card."
+
+  deepreinforce-ai/ornith-1.0-35b:
+    aliases:
+      - s-batman/ornith-1.0-35b-nvfp4
+    swe_verified:
+      score: 75.6
+      unit: percent
+      source_name: Ornith 1.0 model card
+      source_url: https://huggingface.co/ornith-ai/Ornith-1.0-35B
+      as_of: "2026-06-25"
+      notes: "OpenHands harness (vendor). Same figure as @ornith_ launch post."
+    terminal_bench:
+      score: 64.2
+      unit: percent
+      suite: "2.1"
+      source_name: Ornith 1.0 launch
+      source_url: https://x.com/ornith_/status/2070149428095390032
+      as_of: "2026-06-25"
+      notes: "Terminal-Bench 2.1 Terminus-2 (vendor)."
+
+  unsloth/qwen3-coder-30b-a3b-instruct:
+    swe_verified:
+      score: 51.6
+      unit: percent
+      source_name: Qwen3-Coder-30B-A3B-Instruct
+      source_url: https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct
+      as_of: "2025-10-22"
+      notes: "OpenHands, 100 turns. Cited on the HF card discussion as the published 51.6 figure."
+
+  inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb:
+    swe_verified:
+      score: 59.2
+      unit: percent
+      source_name: GLM-4.7-Flash model card
+      source_url: https://huggingface.co/zai-org/GLM-4.7-Flash
+      as_of: "2026-01-19"
+      notes: "Vendor SWE-bench Verified. Applies to GLM-4.7-Flash weights, not this GGUF pack specifically."

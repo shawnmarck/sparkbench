@@ -58,3 +58,7 @@ benchmark-audit.log
 
 # Lock files
 *.lock
+!portal-v2/package-lock.json
+
+# Portal v2 toolchain
+portal-v2/node_modules/

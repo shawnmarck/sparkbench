@@ -32,6 +32,7 @@
       <a href="http://sparky:9119/" class="nav-btn" id="nav-hermes" data-src="http://sparky:9119/" data-title="Hermes" data-popout="http://sparky:9119/">Hermes<span class="svc-dot down" id="nav-hermes-dot" aria-hidden="true"></span></a>
       <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
       <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
+      <a href="/v2/" class="nav-btn" title="New portal UI">New UI</a>
     </nav>
     <div class="nav-meta">
       <div class="nav-metrics" id="nav-metrics">
@@ -3339,6 +3340,7 @@
 
       function handleNavClick(btn, e) {
         if (navModifierClick(e)) return;
+        if (!btn.dataset.view && !btn.dataset.src) return;
         e.preventDefault();
         if (btn.dataset.view === 'system') {
           showSystem(btn);

@@ -4,7 +4,7 @@ import { fmtFull } from '../lib/fmt.js'
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 const STEP = 5
 
-function DigitReel({ digit }) {
+function DigitReel({ digit, live }) {
   const [offset, setOffset] = useState(0)
   const [animate, setAnimate] = useState(false)
   const [ticking, setTicking] = useState(false)
@@ -37,7 +37,7 @@ function DigitReel({ digit }) {
   }
 
   return (
-    <span className={`odo-digit${ticking ? ' tick' : ''}`}>
+    <span className={`odo-digit${live ? ' live' : ''}${ticking ? ' tick' : ''}`}>
       <span
         className={`odo-reel${animate ? '' : ' snap'}`}
         style={{ transform: `translateY(-${offset * STEP}%)` }}
@@ -59,13 +59,15 @@ export function TokenOdometer({ value }) {
   }, [target])
 
   const text = fmtFull(shown)
+  const digits = text.replace(/,/g, '')
 
   return (
     <div className="odometer" aria-label={`${text} lifetime tokens`}>
       {text.split('').map((ch, i) => {
         const fromRight = text.length - 1 - i
         if (ch === ',') return <span key={`c${fromRight}`} className="odo-sep">,</span>
-        return <DigitReel key={`d${fromRight}`} digit={Number(ch)} />
+        const digitFromRight = digits.length - 1 - text.slice(0, i).replace(/,/g, '').length
+        return <DigitReel key={`d${fromRight}`} digit={Number(ch)} live={digitFromRight < 6} />
       })}
     </div>
   )

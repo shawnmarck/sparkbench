@@ -428,6 +428,7 @@ tr.active td { background: var(--row-active); }
   color: var(--muted);
   font-size: .72rem;
 }
+.hero-stat.life { margin-right: .35rem; }
 .hero-stat.life span { font-size: .86rem; }
 .hero-total { margin-bottom: 0; min-width: 0; }
 .hero-num {
@@ -440,7 +441,7 @@ tr.active td { background: var(--row-active); }
 .odometer {
   display: inline-flex;
   align-items: flex-end;
-  font-size: clamp(1.55rem, 4.8vw, 2.75rem);
+  font-size: clamp(2.4rem, 6.4vw, 3.4rem);
   font-weight: 720;
   letter-spacing: -.04em;
   line-height: 1;
@@ -456,7 +457,8 @@ tr.active td { background: var(--row-active); }
   color: var(--text);
   transition: color .35s ease, text-shadow .35s ease;
 }
-.odo-digit.tick { color: var(--accent); text-shadow: 0 0 16px var(--accent-glow); }
+.odo-digit.live { color: var(--accent); }
+.odo-digit.tick { color: var(--accent); text-shadow: 0 0 18px var(--accent-glow); }
 .odo-digit::before,
 .odo-digit::after {
   content: '';

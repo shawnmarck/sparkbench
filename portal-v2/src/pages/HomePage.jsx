@@ -46,6 +46,7 @@ export function HomePage({ live }) {
 
   return (
     <div className="home">
+      <div className="home-scroll">
       <div className="page-head">
         <h1>Home</h1>
         <p>What is serving now, plus :9000 usage. Switch from Inference or Ctrl/K.</p>
@@ -171,6 +172,7 @@ export function HomePage({ live }) {
       </div>
 
       <UsagePanel live={live} />
+      </div>
       <ActivityDock recent={live.activity?.recent} />
     </div>
   )

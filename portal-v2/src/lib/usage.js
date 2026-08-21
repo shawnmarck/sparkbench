@@ -45,8 +45,23 @@ export function weekdaySun(iso) {
 export const HEAT_RANGES = [
   { id: '31d', label: '31 days', days: 31 },
   { id: '90d', label: '3 months', days: 90 },
+  { id: 'ytd', label: 'YTD' },
   { id: '1y', label: 'Year', days: 365 },
 ]
+
+export function ytdDates(end = new Date()) {
+  const year = end.getUTCFullYear()
+  const from = `${year}-01-01`
+  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()))
+  const to = last.toISOString().slice(0, 10)
+  const out = []
+  let cur = from
+  while (cur <= to) {
+    out.push(cur)
+    cur = addDays(cur, 1)
+  }
+  return out
+}
 
 export function calendarWeeks(fromIso, toIso) {
   const start = addDays(fromIso, -weekdaySun(fromIso))

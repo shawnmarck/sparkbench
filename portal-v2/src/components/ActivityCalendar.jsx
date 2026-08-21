@@ -6,6 +6,7 @@ import {
   countsOf,
   lastNDates,
   monthLabel,
+  ytdDates,
 } from '../lib/usage.js'
 
 const DOW = ['', 'M', '', 'W', '', 'F', '']
@@ -20,7 +21,7 @@ export function ActivityCalendar({ days }) {
   const [hover, setHover] = useState(null)
   const [selected, setSelected] = useState(null)
   const range = HEAT_RANGES.find((r) => r.id === rangeId) || HEAT_RANGES[0]
-  const dates = lastNDates(range.days)
+  const dates = range.id === 'ytd' ? ytdDates() : lastNDates(range.days)
   const from = dates[0]
   const to = dates[dates.length - 1]
 
@@ -104,7 +105,7 @@ export function ActivityCalendar({ days }) {
       <p className="heat-tip">
         {tip
           ? `${tip.date} · ${fmtTokens(tip.total)} tokens · ${tip.requests || 0} req${selected === tip.date ? ' · selected' : ''}`
-          : `Last ${range.label.toLowerCase()}. Click a day to pin it. Store keeps a year of daily totals.`}
+          : `${range.id === 'ytd' ? 'Year to date' : `Last ${range.label.toLowerCase()}`}. Click a day to pin it. Store keeps a year of daily totals.`}
       </p>
     </div>
   )

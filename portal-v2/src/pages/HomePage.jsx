@@ -63,6 +63,28 @@ function lastSessionRate(recent) {
   return (recent || []).find((r) => Number(r.tok_s) > 0 && Number(r.completion_tokens) > 0) || null
 }
 
+function AggSpark({ values, p99 }) {
+  const series = Array.isArray(values) ? values.map((v) => Number(v) || 0) : []
+  if (series.length < 2) return null
+  const w = 240
+  const h = 42
+  const peak = Math.max(p99 || 0, ...series, 1)
+  const pts = series.map((v, i) => {
+    const x = (i / (series.length - 1)) * w
+    const y = h - 2 - (v / peak) * (h - 4)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  const p99y = p99 != null ? (h - 2 - (Number(p99) / peak) * (h - 4)) : null
+  return (
+    <svg className="agg-spark" viewBox={`0 0 ${w} ${h}`} width="100%" height={h} aria-hidden="true">
+      {p99y != null ? (
+        <line className="p99" x1="0" y1={p99y} x2={w} y2={p99y} />
+      ) : null}
+      <polyline points={pts} />
+    </svg>
+  )
+}
+
 export function HomePage({ live }) {
   const active = live.inference?.active
   const gpu = live.gpu
@@ -167,6 +189,16 @@ export function HomePage({ live }) {
                     Agg tok/s · 2s
                     {Number(load.running) > 1 ? ` · ${load.running} slots` : ''}
                   </span>
+                </div>
+                <div
+                  className="agg-spark-wrap"
+                  title="Last hour of engine agg tok/s. Dashed line is p99 of 1-second samples."
+                >
+                  <AggSpark values={load.gen_spark} p99={load.gen_tok_s_p99} />
+                  <p className="agg-spark-cap">
+                    1h p99 {fmtTokS(load.gen_tok_s_p99)} tok/s
+                    {load.gen_spark_n ? ` · ${load.gen_spark_n} samples` : ''}
+                  </p>
                 </div>
                 <div className="rate-stack">
                   <div title="Last finished :9000 request: completion tokens / wall clock. Includes prefill. One session, not engine-wide.">

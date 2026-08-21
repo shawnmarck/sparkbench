@@ -237,6 +237,26 @@ button { font: inherit; }
 }
 .rate-one.agg b { font-size: 1.55rem; }
 .rate-one span, .rate-stack span { color: var(--muted); font-size: .7rem; }
+.agg-spark-wrap { margin-top: .45rem; }
+.agg-spark { display: block; overflow: visible; }
+.agg-spark polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.agg-spark .p99 {
+  stroke: #8b93a2;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: .7;
+}
+.agg-spark-cap {
+  margin: .2rem 0 0;
+  color: var(--muted);
+  font-size: .68rem;
+}
 .rate-stack { display: flex; flex-direction: column; gap: .55rem; }
 @media (max-width: 720px) {
   .serve-split { grid-template-columns: 1fr; }

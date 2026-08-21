@@ -21,6 +21,9 @@ ENGINE_METRICS_TIMEOUT_S = 0.4
 ENGINE_LOAD_STALE_S = 5.0
 AGG_WINDOW_S = 2.0
 AGG_SAMPLE_S = 1.0
+AGG_KEEP_S = 3600
+AGG_SPARK_POINTS = 90
+AGG_HISTORY_FILE = SPARK_ROOT / "run" / "engine-agg-tok.json"
 STATE_FILE = SPARK_ROOT / "run" / "inference-active.json"
 
 _HISTORY_LEN = 60
@@ -39,7 +42,9 @@ _HISTORY = {
 _ENGINE_LOAD_LAST: dict | None = None
 _ENGINE_LOAD_LAST_AT = 0.0
 _TOKEN_SAMPLES: deque = deque(maxlen=8)
+_AGG_HISTORY: deque = deque()
 _TOKEN_RATE_LOCK = threading.Lock()
+_AGG_SAVE_AT = 0.0
 _MAX_SEQS_CACHE: dict = {"profile": None, "max": None}
 _PREV_CPU = None
 _PREV_CPU_CORES = None
@@ -724,6 +729,93 @@ def _fetch_metrics_text(url: str) -> str | None:
         return None
 
 
+def _percentile(values: list[float], p: float) -> float | None:
+    if not values:
+        return None
+    xs = sorted(values)
+    if len(xs) == 1:
+        return round(xs[0], 1)
+    idx = (len(xs) - 1) * p
+    lo = int(idx)
+    hi = min(lo + 1, len(xs) - 1)
+    frac = idx - lo
+    return round(xs[lo] * (1 - frac) + xs[hi] * frac, 1)
+
+
+def _record_agg(now: float, gen_s: float | None) -> None:
+    if gen_s is None:
+        return
+    cutoff = now - AGG_KEEP_S
+    with _TOKEN_RATE_LOCK:
+        _AGG_HISTORY.append((now, float(gen_s)))
+        while _AGG_HISTORY and _AGG_HISTORY[0][0] < cutoff:
+            _AGG_HISTORY.popleft()
+
+
+def _agg_spark_view(now: float) -> dict:
+    cutoff = now - AGG_KEEP_S
+    with _TOKEN_RATE_LOCK:
+        samples = [(t, v) for t, v in _AGG_HISTORY if t >= cutoff]
+    values = [v for _t, v in samples]
+    spark: list[float] = []
+    if samples:
+        start = now - AGG_KEEP_S
+        step = AGG_KEEP_S / AGG_SPARK_POINTS
+        si = 0
+        for i in range(AGG_SPARK_POINTS):
+            lo = start + i * step
+            hi = lo + step
+            bucket: list[float] = []
+            while si < len(samples) and samples[si][0] < hi:
+                if samples[si][0] >= lo:
+                    bucket.append(samples[si][1])
+                si += 1
+            spark.append(round(sum(bucket) / len(bucket), 1) if bucket else 0.0)
+    span = int(samples[-1][0] - samples[0][0]) if len(samples) > 1 else 0
+    return {
+        "gen_tok_s_p99": _percentile(values, 0.99),
+        "gen_spark": spark,
+        "gen_spark_n": len(samples),
+        "gen_spark_span_s": span,
+    }
+
+
+def _load_agg_history() -> None:
+    try:
+        raw = json.loads(AGG_HISTORY_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return
+    rows = raw.get("samples") if isinstance(raw, dict) else raw
+    if not isinstance(rows, list):
+        return
+    cutoff = time.time() - AGG_KEEP_S
+    with _TOKEN_RATE_LOCK:
+        _AGG_HISTORY.clear()
+        for row in rows:
+            if not isinstance(row, (list, tuple)) or len(row) < 2:
+                continue
+            try:
+                t = float(row[0])
+                v = float(row[1])
+            except (TypeError, ValueError):
+                continue
+            if t >= cutoff:
+                _AGG_HISTORY.append((t, v))
+
+
+def _save_agg_history() -> None:
+    cutoff = time.time() - AGG_KEEP_S
+    with _TOKEN_RATE_LOCK:
+        samples = [(t, v) for t, v in _AGG_HISTORY if t >= cutoff]
+    try:
+        AGG_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = AGG_HISTORY_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"samples": samples}, separators=(",", ":")), encoding="utf-8")
+        tmp.replace(AGG_HISTORY_FILE)
+    except OSError:
+        return
+
+
 def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
     """Decode/prefill tok/s over a fixed 2s window, independent of /api/gpu poll rate."""
     gen_s = parsed.get("gen_tok_s_gauge")
@@ -768,6 +860,7 @@ def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
                     gen_s = round((gen_total - base[1]) / dt, 1)
                 if prompt_total is not None and base[2] is not None and prompt_total >= base[2]:
                     prompt_s = round((prompt_total - base[2]) / dt, 1)
+    _record_agg(now, gen_s)
     return gen_s, prompt_s
 
 
@@ -786,10 +879,15 @@ def _sample_engine_tokens() -> None:
 
 
 def _agg_sample_loop() -> None:
+    global _AGG_SAVE_AT
     while True:
         time.sleep(AGG_SAMPLE_S)
         try:
             _sample_engine_tokens()
+            now = time.time()
+            if now - _AGG_SAVE_AT >= 30:
+                _save_agg_history()
+                _AGG_SAVE_AT = now
         except Exception:
             continue
 
@@ -845,6 +943,7 @@ def read_engine_load(inference: dict | None) -> dict | None:
         "prompt_tok_s": prompt_s,
         "gen_window_s": AGG_WINDOW_S,
         "stale": False,
+        **_agg_spark_view(now),
     }
     _ENGINE_LOAD_LAST = payload
     _ENGINE_LOAD_LAST_AT = now
@@ -983,6 +1082,7 @@ def main():
             def log_message(self, *_args):
                 return
 
+        _load_agg_history()
         read_cpu_metrics()
         read_network()
         time.sleep(0.2)

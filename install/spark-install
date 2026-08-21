@@ -103,6 +103,7 @@ cmd_core() {
   run_module core/inference-api.sh
   run_module core/benchmaster-api.sh
   run_module core/removal-cron.sh
+  run_module core/logrotate.sh
   finalize_nginx_portal_site
   verify_core_nginx_routes
   unset SPARK_INSTALL_BATCH

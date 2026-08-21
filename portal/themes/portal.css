@@ -24,10 +24,15 @@ body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: 
 .nav-metric-val { color: var(--text); font-weight: 600; font-size: .72rem; }
 .nav-metric.gpu .nav-metric-val { color: var(--accent); }
 .nav-metric.mem .nav-metric-val { color: #c5a3ff; }
+.nav-metric.seq .nav-metric-val { color: #6eb5ff; }
 .nav-metric-bar { width: 28px; height: 4px; background: #12151c; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
 .nav-metric-bar > i { display: block; height: 100%; width: 100%; border-radius: 999px; transform-origin: left center; transform: scaleX(var(--bar-pct, 0)); transition: transform .35s ease; will-change: transform; }
 .nav-metric.gpu .nav-metric-bar > i { background: linear-gradient(90deg, #5a9200, var(--accent)); }
 .nav-metric.mem .nav-metric-bar > i { background: linear-gradient(90deg, #7a5ab0, #c5a3ff); }
+.nav-metric.seq .nav-metric-bar > i { background: linear-gradient(90deg, #3a7ab0, #6eb5ff); }
+.nav-metric.seq.warn { border-color: #4a402a; }
+.nav-metric.seq.warn .nav-metric-val { color: var(--warn); }
+.nav-metric.seq.warn .nav-metric-bar > i { background: linear-gradient(90deg, #c87830, var(--warn)); }
 .nav-metric.inf { min-width: auto; max-width: 12rem; gap: .35rem; }
 .nav-metric.inf .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; opacity: .9; }
 .nav-metric.inf .nav-metric-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 10rem; font-size: .68rem; }
@@ -61,8 +66,9 @@ iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
 .uptime-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: .75; }
 
 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: .5rem; }
+.metric-grid.metric-grid-4 { grid-template-columns: repeat(4, 1fr); }
 .metric-grid + .metric-grid { margin-top: 1.25rem; }
-@media (max-width: 720px) { .metric-grid { grid-template-columns: 1fr 1fr; } .nav-btn { padding: .35rem .5rem; } }
+@media (max-width: 720px) { .metric-grid, .metric-grid.metric-grid-4 { grid-template-columns: 1fr 1fr; } .nav-btn { padding: .35rem .5rem; } }
 @media (max-width: 480px) { .metric-grid { grid-template-columns: 1fr; } .brand small { display: none; } }
 .metric h3 { margin: 0 0 .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
 .metric-head { display: flex; align-items: flex-end; justify-content: space-between; gap: .5rem; margin-bottom: .45rem; }
@@ -90,6 +96,19 @@ iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
 .temp-fill-warn { background: linear-gradient(90deg, #c87830, #f08a5d); }
 .temp-fill-hot { background: linear-gradient(90deg, #c85c5c, #ff6b4a); }
 .section-title { margin: 1rem 0 .5rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.sys-group { margin-top: 1.2rem; }
+.sys-group:first-of-type { margin-top: .25rem; }
+.sys-group > .section-title { margin-top: 0; }
+.sys-group .metric-grid { margin-top: .35rem; }
+.seq-bar > i,
+.seq-metric .metric-bar > i {
+  background: linear-gradient(90deg, #3a7ab0, #6eb5ff);
+}
+.seq-metric.warn .metric-bar > i {
+  background: linear-gradient(90deg, #c87830, var(--warn));
+}
+.act-tile-slot { min-height: 1.4rem; margin-top: .2rem; }
+.pill.muted { color: var(--muted); border-color: var(--border); opacity: .8; }
 .storage-grid { display: grid; gap: .75rem; }
 .storage-card { padding: .65rem .75rem; background: #12151c; border: 1px solid var(--border); border-radius: 10px; }
 .storage-head { display: flex; flex-wrap: wrap; gap: .35rem .75rem; justify-content: space-between; align-items: baseline; margin-bottom: .45rem; font-size: .8rem; }
@@ -517,6 +536,19 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 .exp-msg.err { color: var(--down); }
 
 /* --- Client activity widget --- */
+.act-app-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  min-height: 1.4rem;
+  margin-top: .2rem;
+  align-items: center;
+}
+.act-app-empty {
+  font-size: .72rem;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+}
 .activity-recent-wrap {
   margin-top: .5rem; border: 1px solid var(--border); border-radius: 10px;
   background: #0c0e14; overflow: hidden;
@@ -559,6 +591,13 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
 .activity-empty {
   padding: 1rem !important; text-align: center; color: var(--muted);
   font-family: ui-monospace, monospace; font-size: .72rem;
+}
+.usage-block { margin-top: .75rem; }
+.usage-block > .metric-grid { margin-top: 0; }
+.usage-profiles-wrap { margin-top: .5rem; }
+.usage-profiles-wrap .activity-table-scroll { max-height: 180px; }
+.usage-profile {
+  max-width: 16rem; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* Inference flat grid */

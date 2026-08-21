@@ -6,7 +6,7 @@
   <title>Sparky — Home Lab Portal</title>
   <link rel="stylesheet" href="/themes/theme-ui.css">
   <link rel="stylesheet" href="/themes/theme-b.css" id="theme-b-stylesheet" media="not all">
-  <link rel="stylesheet" href="/themes/portal.css">
+  <link rel="stylesheet" href="/themes/portal.css?v=20260820-usage">
   <script>
     (function () {
       var p = new URLSearchParams(location.search);
@@ -39,12 +39,17 @@
           <span class="pill-dot" aria-hidden="true"></span>
           <span class="nav-metric-val" id="nav-inf-text">offline</span>
         </a>
-        <a href="#system" class="nav-metric gpu" id="nav-gpu" title="GPU utilization">
+        <a href="#system-health" class="nav-metric gpu" id="nav-gpu" title="GPU utilization">
           <span class="nav-metric-label">GPU</span>
           <span class="nav-metric-val"><span id="nav-gpu-util">—</span>%</span>
           <span class="nav-metric-bar" aria-hidden="true"><i id="nav-gpu-bar"></i></span>
         </a>
-        <a href="#system" class="nav-metric mem" id="nav-mem" title="System memory">
+        <a href="#inference-stats" class="nav-metric seq" id="nav-seq" title="Engine sequences in flight">
+          <span class="nav-metric-label">SEQ</span>
+          <span class="nav-metric-val" id="nav-seq-val">—</span>
+          <span class="nav-metric-bar" aria-hidden="true"><i id="nav-seq-bar"></i></span>
+        </a>
+        <a href="#system-health" class="nav-metric mem" id="nav-mem" title="System memory">
           <span class="nav-metric-label">MEM</span>
           <span class="nav-metric-val"><span id="nav-mem-util">—</span>%</span>
           <span class="nav-metric-bar" aria-hidden="true"><i id="nav-mem-bar"></i></span>
@@ -87,92 +92,173 @@
             </div>
           </div>
 
-          <div class="metric-grid">
-            <div class="metric">
-              <h3>CPU</h3>
-              <div class="metric-head">
-                <div class="metric-value"><span id="cpu-util">—</span><span>%</span></div>
-                <div class="metric-hint" id="cpu-sub">peak —%</div>
+          <div class="sys-group" id="system-health">
+            <div class="section-title">Health</div>
+            <div class="metric-grid">
+              <div class="metric">
+                <h3>CPU</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="cpu-util">—</span><span>%</span></div>
+                  <div class="metric-hint" id="cpu-sub">peak —%</div>
+                </div>
+                <div class="metric-bar"><i id="cpu-bar"></i></div>
+                <div class="spark" id="cpu-spark"></div>
               </div>
-              <div class="metric-bar"><i id="cpu-bar"></i></div>
-              <div class="spark" id="cpu-spark"></div>
+              <div class="metric">
+                <h3>GPU</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="gpu-util">—</span><span>%</span></div>
+                  <div class="metric-hint" id="gpu-sub">— W</div>
+                </div>
+                <div class="metric-bar"><i id="gpu-bar"></i></div>
+                <div class="spark" id="gpu-spark"></div>
+              </div>
+              <div class="metric">
+                <h3>Memory</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="mem-util">—</span><span>%</span></div>
+                  <div class="metric-hint" id="mem-sub">— / — GB</div>
+                </div>
+                <div class="metric-bar"><i id="mem-bar"></i></div>
+                <div class="spark" id="mem-spark"></div>
+              </div>
             </div>
-            <div class="metric">
-              <h3>GPU</h3>
-              <div class="metric-head">
-                <div class="metric-value"><span id="gpu-util">—</span><span>%</span></div>
-                <div class="metric-hint" id="gpu-sub">— W</div>
+
+            <div class="metric-grid">
+              <div class="metric">
+                <h3>GPU temp</h3>
+                <div class="metric-value" id="gpu-temp-val"><span id="gpu-temp">—</span><span>°C</span></div>
+                <div class="metric-bar temp-bar"><i id="gpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
+                <div class="spark" id="gpu-temp-spark"></div>
               </div>
-              <div class="metric-bar"><i id="gpu-bar"></i></div>
-              <div class="spark" id="gpu-spark"></div>
-            </div>
-            <div class="metric">
-              <h3>Memory</h3>
-              <div class="metric-head">
-                <div class="metric-value"><span id="mem-util">—</span><span>%</span></div>
-                <div class="metric-hint" id="mem-sub">— / — GB</div>
+              <div class="metric">
+                <h3>CPU temp</h3>
+                <div class="metric-value" id="cpu-temp-val"><span id="cpu-temp">—</span><span>°C</span></div>
+                <div class="metric-bar temp-bar"><i id="cpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
+                <div class="spark" id="cpu-temp-spark"></div>
               </div>
-              <div class="metric-bar"><i id="mem-bar"></i></div>
-              <div class="spark" id="mem-spark"></div>
+              <div class="metric" title="Uplink only. Docker to :9000 is host-local and will not show here.">
+                <h3>Network</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span class="net-dir">↓</span><span id="net-rx">—</span><span>Mbps</span></div>
+                  <div class="metric-hint" id="net-sub">↑ — · —</div>
+                </div>
+                <div class="metric-bar"><i id="net-bar"></i></div>
+                <div class="spark" id="net-spark"></div>
+              </div>
             </div>
           </div>
 
-          <div class="metric-grid">
-            <div class="metric">
-              <h3>GPU temp</h3>
-              <div class="metric-value" id="gpu-temp-val"><span id="gpu-temp">—</span><span>°C</span></div>
-              <div class="metric-bar temp-bar"><i id="gpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
-              <div class="spark" id="gpu-temp-spark"></div>
-            </div>
-            <div class="metric">
-              <h3>CPU temp</h3>
-              <div class="metric-value" id="cpu-temp-val"><span id="cpu-temp">—</span><span>°C</span></div>
-              <div class="metric-bar temp-bar"><i id="cpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
-              <div class="spark" id="cpu-temp-spark"></div>
-            </div>
-            <div class="metric">
-              <h3>Network</h3>
-              <div class="metric-head">
-                <div class="metric-value"><span class="net-dir">↓</span><span id="net-rx">—</span><span>Mbps</span></div>
-                <div class="metric-hint" id="net-sub">↑ — · —</div>
+          <div class="sys-group" id="inference-stats">
+            <div class="section-title">Inference</div>
+            <div class="status-row" id="inference-status"></div>
+            <div class="metric-grid metric-grid-4" id="activity-summary">
+              <div class="metric seq-metric" id="engine-metric">
+                <h3>Engine</h3>
+                <div class="metric-head">
+                  <div class="metric-value" id="engine-load-val"><span id="engine-running">—</span><span id="engine-max-suffix">/—</span></div>
+                  <div class="metric-hint" id="engine-sub">seqs in flight</div>
+                </div>
+                <div class="metric-bar seq-bar"><i id="engine-bar"></i></div>
+                <div class="spark" id="engine-spark"></div>
               </div>
-              <div class="metric-bar"><i id="net-bar"></i></div>
-              <div class="spark" id="net-spark"></div>
+              <div class="metric" id="act-clients">
+                <h3>Clients</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="act-clients-n">—</span></div>
+                  <div class="metric-hint" id="act-clients-sub">last 5 min</div>
+                </div>
+                <div class="act-app-row" id="act-clients-apps"></div>
+              </div>
+              <div class="metric" id="act-sessions" title="Completed /v1 requests">
+                <h3>Sessions</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="act-sessions-n">—</span><span>/1h</span></div>
+                  <div class="metric-hint" id="act-sessions-sub">— / 24h</div>
+                </div>
+                <div class="act-tile-slot"></div>
+              </div>
+              <div class="metric" id="act-toks" title="Finished-session tok/s from the gateway, vs single-stream bench">
+                <h3>Tok/s</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="act-toks-n">—</span></div>
+                  <div class="metric-hint" id="act-toks-sub">1h completed</div>
+                </div>
+                <div class="act-tile-slot"></div>
+              </div>
+            </div>
+            <div class="usage-block" id="usage-block" title="Gateway :9000 only. Direct engine hits are not counted.">
+              <div class="metric-grid" id="usage-summary">
+                <div class="metric" id="use-24h">
+                  <h3>24h</h3>
+                  <div class="metric-head">
+                    <div class="metric-value"><span id="use-24h-n">—</span></div>
+                    <div class="metric-hint" id="use-24h-sub">tokens</div>
+                  </div>
+                </div>
+                <div class="metric" id="use-30d">
+                  <h3>30D</h3>
+                  <div class="metric-head">
+                    <div class="metric-value"><span id="use-30d-n">—</span></div>
+                    <div class="metric-hint" id="use-30d-sub">tokens</div>
+                  </div>
+                </div>
+                <div class="metric" id="use-all">
+                  <h3>All</h3>
+                  <div class="metric-head">
+                    <div class="metric-value"><span id="use-all-n">—</span></div>
+                    <div class="metric-hint" id="use-all-sub">tokens · :9000</div>
+                  </div>
+                </div>
+              </div>
+              <div class="activity-recent-wrap usage-profiles-wrap" id="usage-profiles-wrap">
+                <div class="activity-recent-head">Usage by profile</div>
+                <div class="activity-table-scroll" id="usage-table-scroll">
+                  <table class="activity-table" id="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Profile</th>
+                        <th>24h</th>
+                        <th>30D</th>
+                        <th>All</th>
+                      </tr>
+                    </thead>
+                    <tbody id="usage-tbody">
+                      <tr><td colspan="4" class="activity-empty">No usage yet</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="activity-recent-wrap" id="activity-recent-wrap">
+              <div class="activity-recent-head">Recent requests</div>
+              <div class="activity-table-scroll" id="activity-table-scroll">
+                <table class="activity-table" id="activity-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Who</th>
+                      <th>Tok/s</th>
+                      <th>Tokens</th>
+                      <th>Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-tbody">
+                    <tr><td colspan="5" class="activity-empty">No activity data — API starting up</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          <div class="section-title">Inference &amp; containers</div>
-          <div class="status-row" id="inference-status"></div>
-          <div class="svc-list" id="containers"></div>
+          <div class="sys-group" id="system-services">
+            <div class="section-title">Services</div>
+            <div class="svc-list" id="containers"></div>
+          </div>
 
-          <div class="section-title">Model storage</div>
-          <div class="storage-grid" id="storage"></div>
-
-          <div class="section-title">Client activity</div>
-          <div class="status-row" id="activity-summary"></div>
-          <div class="activity-recent-wrap" id="activity-recent-wrap">
-            <div class="activity-recent-head">Recent sessions</div>
-            <div class="activity-table-scroll" id="activity-table-scroll">
-              <table class="activity-table" id="activity-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>App</th>
-                    <th>IP</th>
-                    <th>Model</th>
-                    <th>Engine</th>
-                    <th>Tok/s</th>
-                    <th>Tokens</th>
-                    <th>Ms</th>
-                    <th>Stream</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="activity-tbody">
-                  <tr><td colspan="10" class="activity-empty">No activity data — API starting up</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="sys-group" id="system-storage">
+            <div class="section-title">Storage</div>
+            <div class="storage-grid" id="storage"></div>
           </div>
         </div>
 
@@ -496,6 +582,7 @@
       let expTickInFlight = false;
       let gpuPollErrors = 0;
       let gpuPollNextDelay = 1000;
+      let lastEngineLoad = null;
       const GPU_POLL_BASE_MS = 1000;
       const GPU_POLL_MAX_MS = 30000;
       const INF_POLL_BASE_MS = 2000;
@@ -892,6 +979,12 @@
         return 'Waiting for engine — ' + name;
       }
 
+      function profileShortName(active) {
+        if (!active) return '';
+        const name = String(active.name || '').trim();
+        return name || active.id || '';
+      }
+
       function renderNavInference(data) {
         const el = $('nav-inf');
         const text = $('nav-inf-text');
@@ -921,9 +1014,10 @@
         const active = data.active;
         if (active && active.ready) {
           el.className = 'nav-metric inf up';
-          text.textContent = active.id + ' · ready';
+          const short = profileShortName(active);
+          text.textContent = short;
           const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
-          el.title = (active.name || active.id) + ' · ready' + tok;
+          el.title = short + ' · ready' + tok;
           return;
         }
         el.className = 'nav-metric inf down';
@@ -954,6 +1048,23 @@
         el.hidden = false;
       }
 
+      function engineLoadParts(load) {
+        if (!load || load.running == null) return null;
+        const running = Math.round(Number(load.running) || 0);
+        const waiting = Math.round(Number(load.waiting) || 0);
+        const max = load.max != null && load.max !== '' ? Math.round(Number(load.max)) : null;
+        const kv = load.kv_cache_pct != null ? Number(load.kv_cache_pct) : null;
+        let label = max != null ? (running + '/' + max) : String(running);
+        if (waiting > 0) label += '+' + waiting + 'q';
+        const bits = [running + (max != null ? '/' + max : '') + ' sequences in flight'];
+        if (waiting > 0) bits.push(waiting + ' waiting');
+        if (kv != null) bits.push('KV ' + kv.toFixed(kv >= 10 ? 0 : 1) + '%');
+        if (load.engine) bits.push(load.engine);
+        if (load.stale) bits.push('stale');
+        const pct = max && max > 0 ? (running / max) * 100 : (running > 0 ? 100 : 0);
+        return { running, waiting, max, kv, label, title: bits.join(' · '), pct, queued: waiting > 0 };
+      }
+
       function renderInferencePills(data) {
         renderNavInference(data);
         const el = $('inference-status');
@@ -967,8 +1078,8 @@
         const eugrUpdate = eugrStackUpdateInfo(data);
 
         if (eugrUpdate) {
-          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference>'
-            + '<span class="pill-dot"></span>vLLM update available</a>');
+          pills.push('<a href="#inference" class="pill muted inf-pill-link" data-goto-inference>'
+            + 'vLLM update · Inference tab</a>');
         }
 
         if (loading) {
@@ -979,7 +1090,7 @@
         } else if (active && active.ready) {
           const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
           pills.push('<a href="#inference" class="pill up inf-pill-link" data-goto-inference>'
-            + '<span class="pill-dot"></span>' + active.id + ' · ready' + tok + '</a>');
+            + '<span class="pill-dot"></span>' + profileShortName(active) + ' · ready' + tok + '</a>');
         } else {
           pills.push('<span class="pill down"><span class="pill-dot"></span>Inference offline</span>');
           pills.push('<a href="#inference" class="pill inf-pill-link" data-goto-inference>'
@@ -1042,61 +1153,218 @@
         return String(v);
       }
 
+      function fmtAgo(iso) {
+        var ts = Date.parse(iso || '');
+        if (!ts) return (iso || '').slice(11, 19) || '—';
+        var sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+        if (sec < 60) return sec + 's ago';
+        if (sec < 3600) return Math.round(sec / 60) + 'm ago';
+        if (sec < 86400) return Math.round(sec / 3600) + 'h ago';
+        return Math.round(sec / 86400) + 'd ago';
+      }
+
+      function fmtDur(ms) {
+        if (ms == null || ms === '') return '—';
+        var n = Number(ms);
+        if (Number.isNaN(n)) return '—';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 's';
+        return Math.round(n) + 'ms';
+      }
+
+      function activityBenchTok() {
+        var inf = lastInfNavStatus || lastInfStatus;
+        var tok = inf && inf.active && inf.active.tok_s;
+        if (tok == null || Number(tok) <= 0) return null;
+        return Number(tok);
+      }
+
+      function activityAppCounts(data) {
+        var apps = data && data.summary && data.summary.apps;
+        if (apps && typeof apps === 'object') return apps;
+        var counts = {};
+        ((data && data.active) || []).forEach(function (c) {
+          var app = (c && c.app) || 'unknown';
+          counts[app] = (counts[app] || 0) + 1;
+        });
+        return counts;
+      }
+
+      function activityDisplayApp(app, ip) {
+        var raw = String(app || '');
+        if (raw && raw !== 'unknown' && raw !== '?') return raw;
+        if (ip) {
+          var parts = String(ip).split('.');
+          if (parts.length === 4) return parts.slice(2).join('.');
+          return String(ip);
+        }
+        return 'local';
+      }
+
+      function activityAppClass(app) {
+        var raw = String(app || 'unknown');
+        if (!raw || raw === '?' || raw === 'unknown') return 'unknown';
+        return raw.replace(/[^a-z0-9_-]+/gi, '') || 'unknown';
+      }
+
+      function renderActivityApps(apps, activeList) {
+        var el = $('act-clients-apps');
+        if (!el) return;
+        var keys = Object.keys(apps || {}).filter(function (k) { return Number(apps[k]) > 0; });
+        if (!keys.length) {
+          el.innerHTML = '<span class="act-app-empty">no recent clients</span>';
+          return;
+        }
+        var ipByApp = {};
+        (activeList || []).forEach(function (c) {
+          var a = (c && c.app) || 'unknown';
+          if (!ipByApp[a] && c && c.ip) ipByApp[a] = c.ip;
+        });
+        keys.sort(function (a, b) { return Number(apps[b]) - Number(apps[a]); });
+        el.innerHTML = keys.map(function (app) {
+          var n = Number(apps[app]) || 0;
+          var label = activityDisplayApp(app, ipByApp[app]);
+          if (n > 1) label = label + ' ' + n;
+          return '<span class="activity-app activity-app-' + escHtml(activityAppClass(app)) + '">' + escHtml(label) + '</span>';
+        }).join('');
+      }
+
+      function usageCounts(block) {
+        var b = block || {};
+        return {
+          requests: Number(b.requests) || 0,
+          prompt: Number(b.prompt_tokens) || 0,
+          completion: Number(b.completion_tokens) || 0,
+          total: (Number(b.prompt_tokens) || 0) + (Number(b.completion_tokens) || 0)
+        };
+      }
+
+      function setUsageTile(prefix, counts, hint) {
+        var nEl = $(prefix + '-n');
+        var sEl = $(prefix + '-sub');
+        if (!nEl || !sEl) return;
+        if (!counts || (counts.total === 0 && counts.requests === 0)) {
+          nEl.textContent = '—';
+          sEl.textContent = hint || 'tokens';
+          return;
+        }
+        nEl.textContent = fmtActivityTokens(counts.total);
+        sEl.textContent = fmtActivityTokens(counts.prompt) + ' in · ' + fmtActivityTokens(counts.completion) + ' out';
+      }
+
+      function setUsageOffline() {
+        setUsageTile('use-24h', null, 'API unavailable');
+        setUsageTile('use-30d', null, 'API unavailable');
+        setUsageTile('use-all', null, 'API unavailable');
+        var body = $('usage-tbody');
+        if (body) body.innerHTML = '<tr><td colspan="4" class="activity-empty">No usage data — API offline</td></tr>';
+      }
+
+      function renderUsage(usage) {
+        var windows = (usage && usage.windows) || {};
+        setUsageTile('use-24h', usageCounts(windows['24h']), 'tokens');
+        setUsageTile('use-30d', usageCounts(windows['30d']), 'tokens');
+        var allHint = usageCounts(windows.all);
+        setUsageTile('use-all', allHint, 'tokens · :9000');
+        var allSub = $('use-all-sub');
+        if (allSub && (allHint.total > 0 || allHint.requests > 0)) {
+          allSub.textContent = fmtActivityTokens(allHint.prompt) + ' in · ' + fmtActivityTokens(allHint.completion) + ' out · :9000';
+        }
+        var body = $('usage-tbody');
+        if (!body) return;
+        var rows = (usage && usage.profiles) || [];
+        if (!rows.length) {
+          body.innerHTML = '<tr><td colspan="4" class="activity-empty">No usage yet — gateway :9000 only</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map(function (r) {
+          var c24 = usageCounts(r['24h']);
+          var c30 = usageCounts(r['30d']);
+          var call = usageCounts(r.all);
+          return '<tr>'
+            + '<td class="usage-profile" title="' + escAttr(r.id || '') + '">' + escHtml(r.id || 'unknown') + '</td>'
+            + '<td>' + escHtml(fmtActivityTokens(c24.total)) + '</td>'
+            + '<td>' + escHtml(fmtActivityTokens(c30.total)) + '</td>'
+            + '<td>' + escHtml(fmtActivityTokens(call.total)) + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      function setActivitySummaryOffline() {
+        $('act-clients-n').textContent = '—';
+        $('act-clients-sub').textContent = 'API unavailable';
+        $('act-clients-apps').innerHTML = '';
+        $('act-sessions-n').textContent = '—';
+        $('act-sessions-sub').textContent = 'API unavailable';
+        $('act-toks-n').textContent = '—';
+        $('act-toks-sub').textContent = 'API unavailable';
+        setUsageOffline();
+      }
+
       function renderClientActivity(data) {
-        var snap = JSON.stringify(data || {});
-        if (snap === lastActivitySnapshot) return;
-        lastActivitySnapshot = snap;
-        var sumEl = $('activity-summary');
         var bodyEl = $('activity-tbody');
         var wrapEl = $('activity-recent-wrap');
 
         if (!data || !data.summary) {
           if (!activityApiOffline) {
-            sumEl.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Activity API unavailable</span>';
-            bodyEl.innerHTML = '<tr><td colspan="10" class="activity-empty">No activity data — API offline</td></tr>';
+            setActivitySummaryOffline();
+            bodyEl.innerHTML = '<tr><td colspan="5" class="activity-empty">No activity data — API offline</td></tr>';
             if (wrapEl) wrapEl.style.display = 'none';
             activityApiOffline = true;
           }
           return;
         }
-        activityApiOffline = false;
 
         var s = data.summary;
-        sumEl.innerHTML =
-          '<span class="pill up"><span class="pill-dot"></span>Active clients: ' + (s.active_clients || 0) + '</span>'
-          + '<span class="pill"><span class="pill-dot"></span>Sessions 1h: ' + (s.sessions_1h || 0)
-          + ' · 24h: ' + (s.sessions_24h || 0) + '</span>'
-          + '<span class="pill"><span class="pill-dot"></span>Avg tok/s: ' + (s.avg_tok_s != null ? s.avg_tok_s : '—') + '</span>';
+        var bench = activityBenchTok();
+        var running = lastEngineLoad && lastEngineLoad.running;
+        var snap = JSON.stringify({ summary: s, recent: data.recent, usage: data.usage, bench: bench, running: running });
+        if (snap === lastActivitySnapshot && !activityApiOffline) return;
+        lastActivitySnapshot = snap;
+        activityApiOffline = false;
+
+        var clients = Number(s.active_clients) || 0;
+        $('act-clients-n').textContent = clients;
+        $('act-clients-sub').textContent = 'last 5 min';
+        renderActivityApps(activityAppCounts(data), data.active);
+
+        var h1 = Number(s.sessions_1h) || 0;
+        var h24 = Number(s.sessions_24h) || 0;
+        $('act-sessions-n').textContent = h1;
+        $('act-sessions-sub').textContent = h24 + ' / 24h';
+
+        var avg = s.avg_tok_s;
+        var avgN = Number(avg);
+        var wide = running != null && Number(running) > 1 ? Math.round(Number(running)) + '-wide' : null;
+        if (avg == null || avg === '' || h1 === 0 || Number.isNaN(avgN)) {
+          $('act-toks-n').textContent = '—';
+          $('act-toks-sub').textContent = wide ? (wide + ' · 1h completed') : '1h completed';
+        } else {
+          $('act-toks-n').textContent = String(Math.round(avgN));
+          var tokHint = [];
+          if (wide) tokHint.push(wide);
+          if (bench != null) tokHint.push('vs ' + Math.round(bench) + ' bench');
+          $('act-toks-sub').textContent = tokHint.length ? tokHint.join(' · ') : '1h completed';
+        }
+
+        renderUsage(data.usage);
 
         var rows = data.recent || [];
         if (wrapEl) wrapEl.style.display = '';
         if (!rows.length) {
-          bodyEl.innerHTML = '<tr><td colspan="10" class="activity-empty">No sessions yet</td></tr>';
+          bodyEl.innerHTML = '<tr><td colspan="5" class="activity-empty">No requests yet</td></tr>';
           return;
         }
         bodyEl.innerHTML = rows.map(function (r) {
-          var t = (r.at || '').slice(11, 19);
-          var app = r.app || '?';
-          var ip = r.client_ip || '?';
-          var model = r.model || '?';
-          var eng = r.engine || '?';
-          var tokS = r.tok_s != null ? Math.round(r.tok_s) + ' tok/s' : '—';
+          var who = activityDisplayApp(r.app, r.client_ip);
+          var cls = activityAppClass(r.app);
+          var tokS = r.tok_s != null ? String(Math.round(r.tok_s)) : '—';
           var totalT = fmtActivityTokens((r.prompt_tokens || 0) + (r.completion_tokens || 0));
-          var dur = r.duration_ms != null ? r.duration_ms + 'ms' : '—';
-          var stream = r.stream ? 'yes' : 'no';
-          var status = r.status || '—';
-          var statusCls = parseInt(status) >= 400 ? ' class="activity-status-err"' : '';
           return '<tr>'
-            + '<td class="activity-time">' + escHtml(t) + '</td>'
-            + '<td><span class="activity-app activity-app-' + escHtml(app) + '">' + escHtml(app) + '</span></td>'
-            + '<td class="activity-ip">' + escHtml(ip) + '</td>'
-            + '<td class="activity-model" title="' + escAttr(r.profile || '') + '">' + escHtml(model) + '</td>'
-            + '<td>' + escHtml(eng) + '</td>'
+            + '<td class="activity-time" title="' + escAttr(r.at || '') + '">' + escHtml(fmtAgo(r.at)) + '</td>'
+            + '<td><span class="activity-app activity-app-' + escHtml(cls) + '" title="' + escAttr(r.client_ip || '') + '">' + escHtml(who) + '</span></td>'
             + '<td>' + escHtml(tokS) + '</td>'
             + '<td>' + escHtml(totalT) + '</td>'
-            + '<td>' + escHtml(dur) + '</td>'
-            + '<td>' + escHtml(stream) + '</td>'
-            + '<td' + statusCls + '>' + escHtml(status) + '</td>'
+            + '<td>' + escHtml(fmtDur(r.duration_ms)) + '</td>'
             + '</tr>';
         }).join('');
       }
@@ -1864,6 +2132,23 @@
         const gpuTitle = (d.gpu_name || 'GPU') + ' · ' + (d.gpu_util_pct != null ? d.gpu_util_pct.toFixed(1) + '%' : '—');
         $('nav-gpu').title = d.gpu_power_w != null ? gpuTitle + ' · ' + d.gpu_power_w + ' W' : gpuTitle;
         $('nav-mem').title = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB system memory';
+        lastEngineLoad = d.engine_load || null;
+        const load = engineLoadParts(lastEngineLoad);
+        const seqEl = $('nav-seq');
+        const seqVal = $('nav-seq-val');
+        if (seqEl && seqVal) {
+          if (load) {
+            seqVal.textContent = load.label;
+            seqEl.className = 'nav-metric seq' + (load.queued ? ' warn' : '');
+            seqEl.title = load.title;
+            setBar($('nav-seq-bar'), load.pct);
+          } else {
+            seqVal.textContent = '—';
+            seqEl.className = 'nav-metric seq';
+            seqEl.title = 'Engine sequences in flight';
+            setBar($('nav-seq-bar'), 0);
+          }
+        }
       }
 
       function modelsFrameUrl(base) {
@@ -1925,13 +2210,43 @@
           setBar($('cpu-bar'), d.cpu_util_pct);
           setBar($('gpu-bar'), d.gpu_util_pct);
           setBar($('mem-bar'), d.memory_used_pct);
-          $('cpu-sub').textContent = 'peak core ' + d.cpu_peak_core_pct.toFixed(1) + '%';
+          const peak = Math.min(100, d.cpu_peak_core_pct || 0);
+          $('cpu-sub').textContent = (peak >= 95 && d.cpu_util_pct < 20)
+            ? '1 core maxed'
+            : ('peak core ' + peak.toFixed(1) + '%');
           $('mem-sub').textContent = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB';
           $('gpu-sub').textContent = d.gpu_power_w != null ? d.gpu_power_w + ' W' : '— W';
 
           sparkline($('cpu-spark'), hist.cpu_util_pct, '#6eb5ff');
           sparkline($('gpu-spark'), hist.gpu_util_pct, '#76b900');
           sparkline($('mem-spark'), hist.memory_used_pct, '#c5a3ff');
+
+          const load = engineLoadParts(d.engine_load);
+          const engTile = $('engine-metric');
+          if (load) {
+            $('engine-running').textContent = load.running;
+            $('engine-max-suffix').textContent = load.max != null ? '/' + load.max : '';
+            const hint = [];
+            if (load.waiting > 0) hint.push(load.waiting + ' queued');
+            else hint.push(load.running === 1 ? '1 seq' : load.running + ' seqs');
+            if (load.kv != null) hint.push('KV ' + load.kv.toFixed(load.kv >= 10 ? 0 : 1) + '%');
+            $('engine-sub').textContent = hint.join(' · ');
+            if (engTile) {
+              engTile.classList.toggle('warn', load.queued);
+              engTile.title = load.title;
+            }
+            setBar($('engine-bar'), load.pct);
+          } else {
+            $('engine-running').textContent = '—';
+            $('engine-max-suffix').textContent = '/—';
+            $('engine-sub').textContent = 'seqs in flight';
+            if (engTile) {
+              engTile.classList.remove('warn');
+              engTile.title = 'Engine sequences in flight';
+            }
+            setBar($('engine-bar'), 0);
+          }
+          sparkline($('engine-spark'), hist.engine_running, '#6eb5ff');
 
           setTempWidget('gpu-temp-val', 'gpu-temp', 'gpu-temp-bar', d.gpu_temp_c);
           setTempWidget('cpu-temp-val', 'cpu-temp', 'cpu-temp-bar', d.cpu_temp_c);
@@ -3099,7 +3414,12 @@
           return;
         }
         showSystem(nav.querySelector('[data-view="system"]'));
-        history.replaceState(null, '', '#system');
+        const targetId = link.id === 'nav-seq' ? 'inference-stats' : 'system-health';
+        history.replaceState(null, '', '#' + targetId);
+        const section = $(targetId);
+        if (section && section.scrollIntoView) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
 
 
@@ -3420,7 +3740,15 @@
           (b.textContent || '').trim().toLowerCase() === hash
         );
         if (match && match.dataset.src) showFrame(match);
-        else showSystem(nav.querySelector('[data-view="system"]'));
+        else {
+          showSystem(nav.querySelector('[data-view="system"]'));
+          if (hash === 'inference-stats' || hash === 'system-health') {
+            requestAnimationFrame(function () {
+              const section = $(hash);
+              if (section) section.scrollIntoView({ block: 'start' });
+            });
+          }
+        }
       } else {
         showSystem(nav.querySelector('[data-view="system"]'));
       }

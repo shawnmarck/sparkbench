@@ -65,10 +65,18 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+_LOG_MAX_BYTES = 5 * 1024 * 1024
+
+
 def log(msg: str) -> None:
     line = f"[{utc_now()}] {msg}"
     print(line, flush=True)
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if LOG_FILE.exists() and LOG_FILE.stat().st_size > _LOG_MAX_BYTES:
+            LOG_FILE.replace(LOG_FILE.with_suffix(".log.1"))
+    except OSError:
+        pass
     with LOG_FILE.open("a", encoding="utf-8") as fh:
         fh.write(line + "\n")
 

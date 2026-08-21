@@ -3,7 +3,7 @@
 set -euo pipefail
 REPO="/opt/spark/vendor/spark-vllm-docker"
 RECIPE="${SPARK_EUGR_RECIPE:-/opt/spark/services/eugr-qwen36-local.yaml}"
-EXTRA="-v /models:/models:ro"
+EXTRA="-v /models:/models:ro --log-opt max-size=50m --log-opt max-file=3"
 cmd="${1:-status}"
 
 # Optional recipe keys (services/eugr-*.yaml):

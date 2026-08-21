@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Rotate oversized files under /opt/spark/logs (no sudo, no service restart).
+# Does not touch journald or Docker json-file logs.
+set -euo pipefail
+ROOT="${SPARK_ROOT:-/opt/spark}"
+LOG_DIR="${ROOT}/logs"
+MAX_BYTES="${SPARK_LOG_MAX_BYTES:-20971520}"
+KEEP="${SPARK_LOG_KEEP:-2}"
+
+[[ -d "${LOG_DIR}" ]] || exit 0
+
+rotate_one() {
+  local f="$1"
+  local sz
+  sz=$(stat -c%s "$f" 2>/dev/null || echo 0)
+  [[ "${sz}" -gt "${MAX_BYTES}" ]] || return 0
+  local i
+  for (( i=KEEP; i>=1; i-- )); do
+    if [[ -f "${f}.${i}" ]]; then
+      if (( i == KEEP )); then
+        rm -f "${f}.${i}"
+      else
+        mv -f "${f}.${i}" "${f}.$((i + 1))"
+      fi
+    fi
+  done
+  cp -f "$f" "${f}.1"
+  : >"$f"
+  echo "rotated ${f} (${sz} bytes)"
+}
+
+shopt -s nullglob
+for f in "${LOG_DIR}"/*.log; do
+  rotate_one "$f"
+done

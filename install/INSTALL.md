@@ -60,6 +60,7 @@ nas (optional, any time after clone)
 | `core/inference-api-watch.sh` | Auto-restart inference API on script changes |
 | `core/inference-api-restart.sh` | Restart inference API only |
 | `core/removal-cron.sh` | Nightly queued local model purge |
+| `core/logrotate.sh` | `/etc/logrotate.d/spark` — cap `/opt/spark/logs/*.log` |
 | `optional/nas-mount.sh` | CIFS mount `/mnt/model-shelf` |
 | `optional/openwebui.sh` | Open WebUI dual-backend compose |
 | `engines/eugr-vllm.sh` | eugr vLLM NVFP4 |

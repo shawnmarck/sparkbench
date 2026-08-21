@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -16,8 +15,8 @@ DEFAULT_PORT = 8002
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
 
-    def log_message(self, fmt: str, *args) -> None:
-        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+    def log_message(self, *_args) -> None:
+        return
 
     def _forward(self, method: str, path: str, body: bytes | None = None) -> tuple[int, bytes, str]:
         url = UPSTREAM + path

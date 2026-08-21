@@ -24,7 +24,7 @@ CLI equivalents: `spark inference status|list|up|down|bench`, `spark recipe …`
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/gpu` | GPU metrics JSON (portal widget) |
+| GET | `/api/gpu` | GPU metrics JSON (portal widget). Includes `engine_load` (`running`, `waiting`, `max`, `kv_cache_pct`) from the live vLLM `/metrics` scrape when eugr/ds4 is up. |
 | GET | `/api/shelf/status` | NAS mount + model sync state |
 | POST | `/api/shelf/pull` | Pull model from shelf |
 | POST | `/api/shelf/push` | Push model to shelf |
@@ -51,7 +51,7 @@ CLI: `spark hf …` · Portal: **Explore** tab
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| Activity API | GET `/api/activity` | Client session rollups (:8769) |
+| Activity API | GET `/api/activity` | Client session rollups (:8769). `summary` includes `active_clients`, `sessions_1h`, `sessions_24h`, `avg_tok_s`, and `apps` (counts by client app, 5‑min TTL). `usage` has `windows` (`24h` / `30d` / `all`) and per-profile token totals, folded from the gateway JSONL into `run/inference-usage.json`. Unknown UAs on Docker bridge IPs are mapped to `open-webui` / `hermes` via container inspect. |
 | OpenAI gateway | `http://$SPARK_HOST:9000/v1` | Chat completions, model aliases |
 
 ## Engine upstream (direct)

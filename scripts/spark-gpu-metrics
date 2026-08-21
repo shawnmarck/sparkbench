@@ -2,6 +2,7 @@
 """Emit live system metrics (JSON) for the Spark portal."""
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -12,8 +13,12 @@ from collections import deque
 from pathlib import Path
 
 SPARK_HOST = os.environ.get("SPARK_HOST", "sparky")
+SPARK_ROOT = Path(os.environ.get("SPARK_ROOT", "/opt/spark"))
 GATEWAY_PORT = int(os.environ.get("SPARK_GATEWAY_PORT", "9000"))
 INFERENCE_CONTAINERS = frozenset({"vllm_node", "spark-vllm-qwen36", "vllm-node"})
+ENGINE_METRICS_TIMEOUT_S = 0.4
+ENGINE_LOAD_STALE_S = 5.0
+STATE_FILE = SPARK_ROOT / "run" / "inference-active.json"
 
 _HISTORY_LEN = 60
 _HISTORY = {
@@ -25,7 +30,12 @@ _HISTORY = {
     "gpu_power_w": deque(maxlen=_HISTORY_LEN),
     "net_rx_mbps": deque(maxlen=_HISTORY_LEN),
     "net_tx_mbps": deque(maxlen=_HISTORY_LEN),
+    "engine_running": deque(maxlen=_HISTORY_LEN),
 }
+
+_ENGINE_LOAD_LAST: dict | None = None
+_ENGINE_LOAD_LAST_AT = 0.0
+_MAX_SEQS_CACHE: dict = {"profile": None, "max": None}
 _PREV_CPU = None
 _PREV_CPU_CORES = None
 _PREV_NET = None
@@ -89,8 +99,8 @@ def read_cpu_metrics():
         core_count = len(_PREV_CPU_CORES)
 
     return {
-        "cpu_util_pct": overall,
-        "cpu_peak_core_pct": peak_core,
+        "cpu_util_pct": min(100.0, overall),
+        "cpu_peak_core_pct": min(100.0, peak_core),
         "cpu_cores": core_count,
     }
 
@@ -589,6 +599,169 @@ def read_hermes_status(containers):
     }
 
 
+def _gauge_values(text: str, name: str) -> list[float]:
+    """Prometheus gauges, labeled (`name{...} 1.0`) or plain (`name 1.0`)."""
+    values: list[float] = []
+    labeled = re.compile(
+        r"^" + re.escape(name) + r"\{[^}]*\}\s+([0-9.eE+-]+)\s*$", re.M
+    )
+    plain = re.compile(r"^" + re.escape(name) + r"\s+([0-9.eE+-]+)\s*$", re.M)
+    for pat in (labeled, plain):
+        for match in pat.finditer(text):
+            try:
+                values.append(float(match.group(1)))
+            except ValueError:
+                continue
+        if values:
+            return values
+    return values
+
+
+def parse_vllm_metrics(text: str) -> dict | None:
+    running = _gauge_values(text, "vllm:num_requests_running")
+    waiting = _gauge_values(text, "vllm:num_requests_waiting")
+    kv = _gauge_values(text, "vllm:kv_cache_usage_perc")
+    if not running and not waiting:
+        return None
+    kv_max = None
+    match = re.search(r'kv_cache_max_concurrency="([^"]+)"', text)
+    if match:
+        try:
+            kv_max = float(match.group(1))
+        except ValueError:
+            kv_max = None
+    kv_pct = None
+    if kv:
+        # vLLM reports 0–1; also accept already-percent values.
+        raw = sum(kv) / len(kv)
+        kv_pct = round(raw * 100 if raw <= 1.5 else raw, 2)
+    return {
+        "source": "vllm_metrics",
+        "running": int(round(sum(running))) if running else 0,
+        "waiting": int(round(sum(waiting))) if waiting else 0,
+        "kv_cache_pct": kv_pct,
+        "kv_max_concurrency": kv_max,
+    }
+
+
+def parse_llamacpp_metrics(text: str) -> dict | None:
+    processing = _gauge_values(text, "llamacpp:requests_processing")
+    deferred = _gauge_values(text, "llamacpp:requests_deferred")
+    slots_idle = _gauge_values(text, "llamacpp:n_slots_idle")
+    if not processing and not deferred:
+        return None
+    running = int(round(sum(processing))) if processing else 0
+    waiting = int(round(sum(deferred))) if deferred else 0
+    idle = int(round(sum(slots_idle))) if slots_idle else None
+    max_slots = (running + idle) if idle is not None else None
+    return {
+        "source": "llamacpp_metrics",
+        "running": running,
+        "waiting": waiting,
+        "max": max_slots,
+        "kv_cache_pct": None,
+        "kv_max_concurrency": None,
+    }
+
+
+def _max_num_seqs_from_recipe() -> int | None:
+    """Scheduler cap from the active eugr recipe, cached per profile id."""
+    try:
+        profile = json.loads(STATE_FILE.read_text(encoding="utf-8")).get("profile")
+    except (OSError, json.JSONDecodeError, TypeError, AttributeError):
+        return _MAX_SEQS_CACHE.get("max")
+    if not profile:
+        return None
+    if _MAX_SEQS_CACHE.get("profile") == profile:
+        return _MAX_SEQS_CACHE.get("max")
+    max_seqs = None
+    recipe_path = SPARK_ROOT / "recipes" / f"{profile}.yaml"
+    try:
+        recipe_text = recipe_path.read_text(encoding="utf-8")
+    except OSError:
+        recipe_text = ""
+    match = re.search(r"^eugr_recipe:\s*(\S+)", recipe_text, re.M)
+    if match:
+        eugr_path = Path(match.group(1).strip().strip("\"'"))
+        try:
+            eugr_text = eugr_path.read_text(encoding="utf-8")
+        except OSError:
+            eugr_text = ""
+        seq = re.search(r"^\s*max_num_seqs:\s*(\d+)\s*$", eugr_text, re.M)
+        if seq:
+            max_seqs = int(seq.group(1))
+    if max_seqs is None:
+        seq = re.search(r"^\s*max_num_seqs:\s*(\d+)\s*$", recipe_text, re.M)
+        if seq:
+            max_seqs = int(seq.group(1))
+    _MAX_SEQS_CACHE["profile"] = profile
+    _MAX_SEQS_CACHE["max"] = max_seqs
+    return max_seqs
+
+
+def _fetch_metrics_text(url: str) -> str | None:
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "text/plain", "User-Agent": "spark-gpu-metrics/engine-load"},
+        )
+        with urllib.request.urlopen(req, timeout=ENGINE_METRICS_TIMEOUT_S) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        return None
+
+
+def read_engine_load(inference: dict | None) -> dict | None:
+    """Live scheduler occupancy from the engine /metrics scrape (vLLM first)."""
+    global _ENGINE_LOAD_LAST, _ENGINE_LOAD_LAST_AT
+    now = time.time()
+    inference = inference or {}
+    if not inference.get("up"):
+        _ENGINE_LOAD_LAST = None
+        return None
+
+    engine_id = inference.get("engine")
+    engines = inference.get("engines") or []
+    primary = next((e for e in engines if e.get("up")), None)
+    port = int((primary or {}).get("port") or (8000 if engine_id == "vllm" else 0))
+    if port <= 0:
+        return _ENGINE_LOAD_LAST
+
+    text = _fetch_metrics_text(f"http://127.0.0.1:{port}/metrics")
+    parsed = None
+    if text:
+        if engine_id == "llamacpp":
+            parsed = parse_llamacpp_metrics(text)
+        else:
+            parsed = parse_vllm_metrics(text)
+            if parsed is None:
+                parsed = parse_llamacpp_metrics(text)
+
+    if parsed is None:
+        if _ENGINE_LOAD_LAST and (now - _ENGINE_LOAD_LAST_AT) < ENGINE_LOAD_STALE_S:
+            return {**_ENGINE_LOAD_LAST, "stale": True}
+        return None
+
+    max_seqs = parsed.get("max")
+    if max_seqs is None:
+        max_seqs = _max_num_seqs_from_recipe()
+    if max_seqs is None and parsed.get("kv_max_concurrency") is not None:
+        max_seqs = int(parsed["kv_max_concurrency"])
+    payload = {
+        "engine": engine_id,
+        "source": parsed["source"],
+        "running": parsed["running"],
+        "waiting": parsed["waiting"],
+        "max": max_seqs,
+        "kv_cache_pct": parsed.get("kv_cache_pct"),
+        "kv_max_concurrency": parsed.get("kv_max_concurrency"),
+        "stale": False,
+    }
+    _ENGINE_LOAD_LAST = payload
+    _ENGINE_LOAD_LAST_AT = now
+    return payload
+
+
 def probe_openai_models(url, timeout=1.5):
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -693,6 +866,10 @@ def read_metrics():
     containers = read_docker()
     metrics["hermes"] = read_hermes_status(containers)
     metrics["inference"] = read_inference()
+    engine_load = read_engine_load(metrics["inference"])
+    metrics["engine_load"] = engine_load
+    metrics["engine_running"] = int((engine_load or {}).get("running") or 0)
+    metrics["engine_waiting"] = int((engine_load or {}).get("waiting") or 0)
     metrics["containers"] = enrich_containers(containers, metrics["inference"])
     metrics["history"] = append_history(metrics)
     return metrics

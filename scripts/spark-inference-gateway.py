@@ -412,6 +412,15 @@ def _normalize_chat_payload(payload: dict[str, Any], engine: str | None) -> dict
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
 
+    def log_request(self, code: Any = "-", size: Any = "-") -> None:
+        try:
+            status = int(code)
+        except (TypeError, ValueError):
+            status = 0
+        if 200 <= status < 400:
+            return
+        super().log_request(code, size)
+
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 

@@ -59,6 +59,12 @@ case "${cmd}" in
       echo "WARNING: vllm_node is running — stop with: spark-eugr down"
     fi
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
+    if [[ -f "${LOG_FILE}" ]]; then
+      sz=$(stat -c%s "${LOG_FILE}" 2>/dev/null || echo 0)
+      if [[ "${sz}" -gt 20971520 ]]; then
+        mv -f "${LOG_FILE}" "${LOG_FILE}.1"
+      fi
+    fi
     # Stop any stray server (KV sweeps can orphan without pid file).
     while read -r opid; do
       [[ -z "${opid}" ]] && continue

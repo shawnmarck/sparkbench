@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { fmtTokens, fmtTokS } from '../lib/fmt.js'
 
-const LAST_N = 8
+const LAST_N = 6
 
 function rowId(row, i) {
   return row.id || `${row.at || ''}-${i}`
@@ -41,7 +41,7 @@ export function ActivityDock({ recent }) {
           const completion = Number(row.completion_tokens) || 0
           return (
             <div key={id} className={`activity-row${fresh.has(id) ? ' in' : ''}`}>
-              <span className="t">{row.at ? new Date(row.at).toLocaleTimeString() : '—'}</span>
+              <span className="t">{row.at ? new Date(row.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—'}</span>
               <span className="app">{row.app || row.client_ip || '—'}</span>
               <span className="tok">↑{fmtTokens(prompt)} ↓{fmtTokens(completion)}</span>
               <span className="rate">{fmtTokS(row.tok_s)}</span>

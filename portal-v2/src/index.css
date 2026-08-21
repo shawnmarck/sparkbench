@@ -432,17 +432,18 @@ tr.active td { background: #141a10; }
   position: sticky;
   bottom: 0;
   margin-top: auto;
+  flex: 0 0 auto;
   z-index: 8;
   background: rgba(11, 13, 18, .92);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
-  padding: .55rem 0 .7rem;
+  padding: .35rem 0 .4rem;
 }
 .activity-dock-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: .35rem;
+  margin-bottom: .15rem;
 }
 .activity-dock-head h2 {
   margin: 0;
@@ -453,15 +454,17 @@ tr.active td { background: #141a10; }
   font-weight: 650;
 }
 .activity-dock-head span { color: var(--muted); font-size: .68rem; }
-.activity-stream { display: flex; flex-direction: column; gap: 1px; }
+.activity-stream { display: flex; flex-direction: column; gap: 0; }
 .activity-row {
   display: grid;
-  grid-template-columns: 6.2rem 5.5rem 1fr 4.2rem;
-  gap: .6rem;
-  padding: .28rem .15rem;
+  grid-template-columns: 4.6rem 4.4rem 1fr 3.4rem;
+  gap: .55rem;
+  padding: 0;
+  line-height: 1.25;
   font-family: ui-monospace, monospace;
-  font-size: .74rem;
+  font-size: .7rem;
   color: #c5cdd8;
+  white-space: nowrap;
 }
 .activity-row .t, .activity-row .app { color: var(--muted); }
 .activity-row .rate { text-align: right; font-variant-numeric: tabular-nums; }

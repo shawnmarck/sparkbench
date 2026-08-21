@@ -33,3 +33,28 @@ export function engineLabel(engine) {
   if (engine === 'llamacpp') return 'llama'
   return engine || '—'
 }
+
+export function stackLabel(engine) {
+  if (engine === 'eugr') return 'eugr / vLLM'
+  if (engine === 'ds4') return 'ds4 / vLLM'
+  if (engine === 'llamacpp') return 'llama.cpp'
+  return engine || '—'
+}
+
+export function benchMethodLabel(method) {
+  if (method === 'perfbench-metrics') return 'PBM 4k'
+  if (method === 'bench-v2') return 'bench v2'
+  return method || 'catalog'
+}
+
+export function sinceLabel(iso) {
+  if (!iso) return null
+  const ms = Date.now() - new Date(iso).getTime()
+  if (!Number.isFinite(ms) || ms < 0) return null
+  const mins = Math.floor(ms / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 48) return `${hours}h ${mins % 60}m`
+  return `${Math.floor(hours / 24)}d`
+}

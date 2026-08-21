@@ -224,7 +224,7 @@ button { font: inherit; }
   margin: 0;
   font-size: .84rem;
   font-weight: 600;
-  text-align: right;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -383,6 +383,7 @@ tr.active td { background: #141a10; }
 .inf-grid { align-items: start; }
 tr.picked td { box-shadow: inset 2px 0 0 var(--accent); }
 .pick-table tbody tr { cursor: pointer; }
+.preset-list { display: flex; flex-wrap: wrap; gap: .35rem; margin: .55rem 0 .2rem; }
 
 .log {
   margin: 0;

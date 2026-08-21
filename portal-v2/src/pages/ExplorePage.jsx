@@ -23,6 +23,7 @@ export function ExplorePage() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   const [detail, setDetail] = useState(null)
+  const [chip, setChip] = useState('all')
 
   async function loadBrowse(nextQ = q, nextMode = mode) {
     setBusy(true)
@@ -146,27 +147,39 @@ export function ExplorePage() {
       <div className="grid inf-grid">
         <section className="card">
           <h2>{busy ? 'Loading…' : `${models.length} models`}</h2>
+          <div className="toolbar tight" style={{ marginBottom: '.7rem' }}>
+            {['all', 'gguf', 'nvfp4', 'vision'].map((c) => (
+              <button key={c} type="button" className={`btn ${chip === c ? 'on' : ''}`} onClick={() => setChip(c)}>{c}</button>
+            ))}
+          </div>
           <div className="stack-list">
-            {models.length ? models.map((m) => {
-              const repo = m.id || m.repo || m.modelId
-              return (
-                <div key={repo} className="stack-row">
-                  <div>
-                    <div className="pid">{repo}</div>
-                    <div className="pname">
-                      {(m.downloads != null ? `${m.downloads} dl` : '')}
-                      {m.likes != null ? ` · ${m.likes} likes` : ''}
+            {(() => {
+              const shown = chip === 'all' ? models : models.filter((m) => {
+                if (chip === 'gguf') return m.has_gguf
+                if (chip === 'nvfp4') return m.has_nvfp4
+                if (chip === 'vision') return m.has_vision
+                return true
+              })
+              if (!shown.length) return <p className="muted">{busy ? 'Searching…' : 'No results.'}</p>
+              return shown.map((m) => {
+                const repo = m.id || m.repo || m.modelId
+                return (
+                  <div key={repo} className="stack-row">
+                    <div>
+                      <div className="pid">{repo}</div>
+                      <div className="pname">
+                        {(m.downloads != null ? `${m.downloads} dl` : '')}
+                        {m.likes != null ? ` · ${m.likes} likes` : ''}
+                      </div>
+                    </div>
+                    <div className="row-actions">
+                      <button type="button" className="btn" onClick={() => openDetail(repo)}>Detail</button>
+                      <button type="button" className="btn" onClick={() => shortlist(repo)}>Shortlist</button>
                     </div>
                   </div>
-                  <div className="row-actions">
-                    <button type="button" className="btn" onClick={() => openDetail(repo)}>Detail</button>
-                    <button type="button" className="btn" onClick={() => shortlist(repo)}>Shortlist</button>
-                  </div>
-                </div>
-              )
-            }) : (
-              <p className="muted">{busy ? 'Searching…' : 'No results.'}</p>
-            )}
+                )
+              })
+            })()}
           </div>
         </section>
 

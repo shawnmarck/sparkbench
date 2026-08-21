@@ -175,6 +175,16 @@ export function InferencePage({ live, actions }) {
                 {selected.tier ? ` · ${selected.tier}` : ''}
               </p>
               <p className="hero-meta tall">{ctxHint(selected)}</p>
+              {selected.context?.kv_effective ? (
+                <p className="muted">KV {selected.context.kv_effective}{selected.context.mem_avail_gb != null ? ` · ${Number(selected.context.mem_avail_gb).toFixed(1)} GB free` : ''}</p>
+              ) : null}
+              {Array.isArray(selected.context?.presets) && selected.context.presets.length ? (
+                <div className="preset-list">
+                  {selected.context.presets.map((p) => (
+                    <span key={p.id || p.label} className="pill">{p.label || p.id} · {fmtCtx(p.ctx)} · {p.kv}</span>
+                  ))}
+                </div>
+              ) : null}
               {selected.notes ? <p className="muted">{selected.notes}</p> : null}
               <div className="toolbar tight" style={{ marginTop: '.8rem' }}>
                 <button type="button" className="btn" disabled={lifeBusy} onClick={() => cycleLife('testing')}>Mark testing</button>

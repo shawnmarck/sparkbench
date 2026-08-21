@@ -1,3 +1,4 @@
+import { ActivityDock } from '../components/ActivityDock.jsx'
 import { UsagePanel } from '../components/UsagePanel.jsx'
 import { benchMethodLabel, fmtCtx, fmtPct, fmtTokS, sinceLabel, stackLabel } from '../lib/fmt.js'
 
@@ -44,7 +45,7 @@ export function HomePage({ live }) {
   const up = sinceLabel(active?.started_at)
 
   return (
-    <div>
+    <div className="home">
       <div className="page-head">
         <h1>Home</h1>
         <p>What is serving now, plus :9000 usage. Switch from Inference or Ctrl/K.</p>
@@ -137,6 +138,7 @@ export function HomePage({ live }) {
       </div>
 
       <UsagePanel live={live} />
+      <ActivityDock recent={live.activity?.recent} />
     </div>
   )
 }

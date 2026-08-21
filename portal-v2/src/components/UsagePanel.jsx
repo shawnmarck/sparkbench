@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ActivityCalendar } from './ActivityCalendar.jsx'
 import { TokenOdometer } from './TokenOdometer.jsx'
 import { fmtTokens } from '../lib/fmt.js'
@@ -27,14 +27,12 @@ function requestLabel(requests, total) {
 }
 
 export function UsagePanel({ live }) {
-  const [tab, setTab] = useState('models')
   const usage = live.activity?.usage
   const summary = live.activity?.summary || {}
   const all = countsOf(usage?.windows?.all)
   const h24 = countsOf(usage?.windows?.['24h'])
   const d30 = countsOf(usage?.windows?.['30d'])
   const profiles = usage?.profiles || []
-  const recent = live.activity?.recent || []
   const names = useMemo(() => {
     const m = new Map()
     for (const r of live.recipes || []) m.set(r.id, r.name || r.id)
@@ -55,78 +53,45 @@ export function UsagePanel({ live }) {
         <div><b>{summary.avg_tok_s ? Number(summary.avg_tok_s).toFixed(1) : '—'}</b><span>Tok/s / 1h</span></div>
       </div>
       <ActivityCalendar days={usage?.days} />
-      <div className="usage-tabs">
-        <button type="button" className={tab === 'models' ? 'on' : ''} onClick={() => setTab('models')}>Models</button>
-        <button type="button" className={tab === 'activity' ? 'on' : ''} onClick={() => setTab('activity')}>Activity</button>
+      <p className="mix-line">
+        <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
+        <span className="sep">·</span>
+        :9000 only
+      </p>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Profile</th>
+              <th>Req</th>
+              <th>Tokens</th>
+              <th>24h</th>
+              <th>All</th>
+            </tr>
+          </thead>
+          <tbody>
+            {profiles.length ? profiles.map((p) => {
+              const a = countsOf(p.all)
+              const c24 = countsOf(p['24h'])
+              const req = requestLabel(a.requests, a.total)
+              const label = names.get(p.id) || p.id
+              return (
+                <tr key={p.id}>
+                  <td title={p.id}>
+                    <div className="pid">{label}</div>
+                  </td>
+                  <td title={req.title}>{req.text}</td>
+                  <td><TokenMix prompt={a.prompt} completion={a.completion} /></td>
+                  <td>{c24.total ? fmtTokens(c24.total) : '—'}</td>
+                  <td>{fmtTokens(a.total)}</td>
+                </tr>
+              )
+            }) : (
+              <tr><td className="muted" colSpan={5}>No usage yet</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
-      {tab === 'models' ? (
-        <>
-          <p className="mix-line">
-            <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
-            <span className="sep">·</span>
-            :9000 only
-          </p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Profile</th>
-                  <th>Req</th>
-                  <th>Tokens</th>
-                  <th>24h</th>
-                  <th>All</th>
-                </tr>
-              </thead>
-              <tbody>
-                {profiles.length ? profiles.map((p) => {
-                  const a = countsOf(p.all)
-                  const c24 = countsOf(p['24h'])
-                  const req = requestLabel(a.requests, a.total)
-                  const label = names.get(p.id) || p.id
-                  return (
-                    <tr key={p.id}>
-                      <td title={p.id}>
-                        <div className="pid">{label}</div>
-                      </td>
-                      <td title={req.title}>{req.text}</td>
-                      <td><TokenMix prompt={a.prompt} completion={a.completion} /></td>
-                      <td>{c24.total ? fmtTokens(c24.total) : '—'}</td>
-                      <td>{fmtTokens(a.total)}</td>
-                    </tr>
-                  )
-                }) : (
-                  <tr><td className="muted" colSpan={5}>No usage yet</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>App</th>
-                <th>Tokens</th>
-                <th>Tok/s</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.length ? recent.map((r, i) => (
-                <tr key={r.id || r.at || i}>
-                  <td>{r.at ? new Date(r.at).toLocaleTimeString() : '—'}</td>
-                  <td>{r.app || r.client || '—'}</td>
-                  <td>{fmtTokens((r.prompt_tokens || 0) + (r.completion_tokens || 0))}</td>
-                  <td>{r.tok_s != null ? Number(r.tok_s).toFixed(1) : '—'}</td>
-                </tr>
-              )) : (
-                <tr><td className="muted" colSpan={4}>No recent :9000 sessions</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
     </section>
   )
 }

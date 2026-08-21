@@ -27,7 +27,3 @@ export function lastNDates(n, end = new Date()) {
   }
   return out
 }
-
-export function weekdayOf(iso) {
-  return new Date(`${iso}T00:00:00Z`).getUTCDay()
-}

@@ -112,6 +112,8 @@ button { font: inherit; }
 .nav-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: .45rem;
   padding: .48rem .6rem;
   border-radius: 10px;
   color: #c5cdd8;
@@ -122,6 +124,9 @@ button { font: inherit; }
   background: var(--accent-dim);
   color: var(--accent);
 }
+.nav-item.ext { color: #a8b0c0; }
+.nav-item .popout { flex-shrink: 0; opacity: .45; }
+.nav-item.ext:hover .popout { opacity: .85; }
 
 .main {
   min-width: 0;
@@ -171,6 +176,7 @@ button { font: inherit; }
   margin: 0 0 .35rem;
 }
 .hero-meta { color: var(--muted); font-size: .86rem; font-family: ui-monospace, monospace; }
+.hero-meta.tall { margin: .15rem 0 0; font-size: .95rem; line-height: 1.45; color: var(--text); }
 
 .meters { display: flex; flex-direction: column; gap: .7rem; }
 .meter-row { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
@@ -269,23 +275,14 @@ tr.active td { background: #141a10; }
   color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
   margin-bottom: .45rem;
 }
-.heat-legend { display: inline-flex; align-items: center; gap: 3px; text-transform: none; letter-spacing: 0; }
-.heat-legend i {
-  width: 9px; height: 9px; border-radius: 2px; background: #161b22;
-}
-.heat-legend i:nth-of-type(2) { background: #1e3a22; }
-.heat-legend i:nth-of-type(3) { background: #2f6a28; }
-.heat-legend i:nth-of-type(4) { background: #4aa03a; }
-.heat-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 12px);
-  gap: 3px;
+.heat-range { text-transform: none; letter-spacing: 0; font-family: ui-monospace, monospace; }
+.heat-row {
+  display: flex; gap: 3px; align-items: center;
 }
 .heat-cell {
-  width: 12px; height: 12px; padding: 0; border: 0; border-radius: 2px;
-  background: #161b22;
+  flex: 1; height: 14px; padding: 0; border: 0; border-radius: 3px;
+  background: #161b22; min-width: 0; cursor: default;
 }
-.heat-cell.empty { background: transparent; }
 .heat-cell.l0 { background: #161b22; }
 .heat-cell.l1 { background: #1e3a22; }
 .heat-cell.l2 { background: #2f6a28; }

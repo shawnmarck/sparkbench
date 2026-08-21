@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { fmtTokens } from '../lib/fmt.js'
-import { countsOf, lastNDates, shortProfileId, weekdayOf } from '../lib/usage.js'
+import { countsOf, lastNDates } from '../lib/usage.js'
 
 function TokenMix({ prompt, completion }) {
   const total = prompt + completion
@@ -19,16 +19,19 @@ function TokenMix({ prompt, completion }) {
   )
 }
 
+function requestLabel(requests, total) {
+  if (requests <= 2 && total > 1e6) return { text: '—', title: 'Lifetime backfill; request count unknown' }
+  return { text: fmtTokens(requests), title: '' }
+}
+
 function Heatmap({ days }) {
   const byDate = useMemo(() => {
     const m = new Map()
     for (const row of days || []) m.set(row.date, countsOf(row))
     return m
   }, [days])
-  const dates = lastNDates(35)
+  const dates = lastNDates(31)
   const max = Math.max(1, ...dates.map((d) => byDate.get(d)?.total || 0))
-  const pad = weekdayOf(dates[0])
-  const cells = [...Array(pad).fill(null), ...dates]
   const [hover, setHover] = useState(null)
   const tip = hover && {
     date: hover,
@@ -39,11 +42,10 @@ function Heatmap({ days }) {
     <div className="heat">
       <div className="heat-head">
         <span>Past 31 days</span>
-        <span className="heat-legend">Less <i /><i /><i /><i /> More</span>
+        <span className="heat-range">{dates[0]?.slice(5)} → {dates[dates.length - 1]?.slice(5)}</span>
       </div>
-      <div className="heat-grid">
-        {cells.map((date, i) => {
-          if (!date) return <span key={`p${i}`} className="heat-cell empty" />
+      <div className="heat-row">
+        {dates.map((date) => {
           const tot = byDate.get(date)?.total || 0
           const level = tot === 0 ? 0 : Math.min(4, 1 + Math.floor((tot / max) * 3))
           return (
@@ -60,8 +62,8 @@ function Heatmap({ days }) {
       </div>
       <p className="heat-tip">
         {tip
-          ? `${tip.date} · ${fmtTokens(tip.total)} tokens · ${tip.requests || 0} requests`
-          : 'Gateway :9000 only. Direct engine hits are not counted.'}
+          ? `${tip.date} · ${fmtTokens(tip.total)} tokens · ${tip.requests || 0} req`
+          : 'Hover a day. Empty cells are days with no :9000 traffic in the store.'}
       </p>
     </div>
   )
@@ -86,14 +88,14 @@ export function UsagePanel({ live }) {
     <section className="usage-hero">
       <div className="hero-total">
         <div className="hero-num">{fmtTokens(all.total)}</div>
-        <div className="hero-label">Lifetime tokens · :9000</div>
+        <div className="hero-label">Lifetime tokens</div>
       </div>
       <div className="stat-strip">
-        <div><b>{fmtTokens(all.requests)}</b><span>Requests</span></div>
-        <div><b>{summary.sessions_24h ?? '—'}</b><span>Sessions / 24h</span></div>
-        <div><b>{summary.active_clients ?? '—'}</b><span>Clients now</span></div>
-        <div><b>{fmtTokens(h24.total)}</b><span>24h tokens</span></div>
-        <div><b>{fmtTokens(d30.total)}</b><span>30D tokens</span></div>
+        <div><b>{fmtTokens(h24.total)}</b><span>24h</span></div>
+        <div><b>{fmtTokens(d30.total)}</b><span>30D</span></div>
+        <div><b>{summary.sessions_1h ?? '—'}</b><span>Sessions / 1h</span></div>
+        <div><b>{summary.active_clients ?? '—'}</b><span>Clients</span></div>
+        <div><b>{summary.avg_tok_s ? Number(summary.avg_tok_s).toFixed(1) : '—'}</b><span>Tok/s / 1h</span></div>
       </div>
       <Heatmap days={usage?.days} />
       <div className="usage-tabs">
@@ -103,16 +105,16 @@ export function UsagePanel({ live }) {
       {tab === 'models' ? (
         <>
           <p className="mix-line">
-            Token mix <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
+            <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
             <span className="sep">·</span>
-            {fmtTokens(all.total)} total
+            :9000 only
           </p>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Profile</th>
-                  <th>Requests</th>
+                  <th>Req</th>
                   <th>Tokens</th>
                   <th>24h</th>
                   <th>All</th>
@@ -122,15 +124,16 @@ export function UsagePanel({ live }) {
                 {profiles.length ? profiles.map((p) => {
                   const a = countsOf(p.all)
                   const c24 = countsOf(p['24h'])
+                  const req = requestLabel(a.requests, a.total)
+                  const label = names.get(p.id) || p.id
                   return (
                     <tr key={p.id}>
                       <td title={p.id}>
-                        <div className="pid">{shortProfileId(p.id)}</div>
-                        <div className="pname">{names.get(p.id) || ''}</div>
+                        <div className="pid">{label}</div>
                       </td>
-                      <td>{fmtTokens(a.requests)}</td>
+                      <td title={req.title}>{req.text}</td>
                       <td><TokenMix prompt={a.prompt} completion={a.completion} /></td>
-                      <td>{fmtTokens(c24.total)}</td>
+                      <td>{c24.total ? fmtTokens(c24.total) : '—'}</td>
                       <td>{fmtTokens(a.total)}</td>
                     </tr>
                   )

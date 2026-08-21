@@ -9,24 +9,21 @@ export function HomePage({ live }) {
   return (
     <div>
       <div className="page-head">
-        <h1>Command center</h1>
-        <p>Live box. Usage is gateway :9000 only.</p>
+        <h1>Home</h1>
+        <p>Engine load and :9000 usage. Switch still lives on Inference / legacy.</p>
       </div>
 
       <div className="grid">
         <section className="card">
-          <h2>Serving</h2>
+          <h2>Engine</h2>
           {active ? (
-            <>
-              <p className="hero-name">{active.name || active.id}</p>
-              <p className="hero-meta">
-                {active.engine} · {fmtCtx(active.context?.effective || active.context?.default)} ctx
-                {active.tok_s ? ` · ${fmtTokS(active.tok_s)} tok/s` : ''}
-                {load.max ? ` · ${load.running ?? 0}/${load.max} seqs` : ''}
-              </p>
-            </>
+            <p className="hero-meta tall">
+              {active.engine} · {fmtCtx(active.context?.effective || active.context?.default)} ctx
+              {active.tok_s ? ` · ${fmtTokS(active.tok_s)} tok/s` : ''}
+              {load.max ? ` · ${load.running ?? 0}/${load.max} seqs` : ''}
+            </p>
           ) : (
-            <p className="hero-name muted">GPU idle</p>
+            <p className="hero-name muted">Idle</p>
           )}
         </section>
         <section className="card">

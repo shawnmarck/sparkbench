@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { fmtPct, shortName } from '../lib/fmt.js'
+import { PopOut } from './PopOut.jsx'
 
 const operate = [
   { to: '/', label: 'Home', end: true },
@@ -8,6 +9,11 @@ const operate = [
 ]
 const browse = [
   { to: '/explore', label: 'Explore' },
+]
+const external = [
+  { href: '/hermes/', label: 'Hermes' },
+  { href: 'http://sparky:3000/', label: 'Chat' },
+  { href: 'http://sparky:19999/v3/', label: 'Netdata' },
 ]
 
 function servingTone(active, ready) {
@@ -64,9 +70,18 @@ export function AppShell({ live, children }) {
         </div>
         <div className="nav-group">
           <div className="nav-label">External</div>
-          <a className="nav-item" href="/hermes/">Hermes</a>
-          <a className="nav-item" href="http://sparky:3000/">Chat</a>
-          <a className="nav-item" href="http://sparky:19999/v3/">Netdata</a>
+          {external.map((item) => (
+            <a
+              key={item.href}
+              className="nav-item ext"
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {item.label}
+              <PopOut />
+            </a>
+          ))}
         </div>
       </nav>
       <main className="main">{children}</main>

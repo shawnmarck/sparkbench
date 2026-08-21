@@ -266,13 +266,14 @@ button { font: inherit; }
 .seq-cubes { margin: .45rem 0 .2rem; }
 .seq-grid {
   display: grid;
-  grid-template-columns: repeat(var(--cols, 8), 1fr);
-  gap: 3px;
-  margin-top: .35rem;
+  grid-template-columns: repeat(var(--cols, 8), 8px);
+  gap: 2px;
+  margin-top: .3rem;
 }
 .seq-grid i {
-  aspect-ratio: 1;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   background: #141820;
   border: 1px solid #2a3140;
 }

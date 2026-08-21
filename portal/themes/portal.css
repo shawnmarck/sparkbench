@@ -593,9 +593,20 @@ body.exp-view .exp-card-body { flex: 1; min-height: 0; }
   font-family: ui-monospace, monospace; font-size: .72rem;
 }
 .usage-block { margin-top: .75rem; }
-.usage-block > .metric-grid { margin-top: 0; }
-.usage-profiles-wrap { margin-top: .5rem; }
+.usage-profiles-wrap { margin-top: 0; }
 .usage-profiles-wrap .activity-table-scroll { max-height: 180px; }
+.usage-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: .3rem .75rem;
+}
+.usage-line {
+  font-family: ui-monospace, monospace; font-weight: 500;
+  text-transform: none; letter-spacing: 0; font-size: .68rem; color: var(--muted);
+}
+.usage-line b { color: var(--text); font-weight: 650; }
+.usage-line-all b { color: var(--text); }
+.usage-line-sep { opacity: .4; margin: 0 .12rem; }
+.usage-line-note { opacity: .5; margin-left: .4rem; }
 .usage-profile {
   max-width: 16rem; overflow: hidden; text-overflow: ellipsis;
 }

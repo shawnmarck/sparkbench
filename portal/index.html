@@ -6,7 +6,7 @@
   <title>Sparky — Home Lab Portal</title>
   <link rel="stylesheet" href="/themes/theme-ui.css">
   <link rel="stylesheet" href="/themes/theme-b.css" id="theme-b-stylesheet" media="not all">
-  <link rel="stylesheet" href="/themes/portal.css?v=20260820-usage">
+  <link rel="stylesheet" href="/themes/portal.css?v=20260821-usage-line">
   <script>
     (function () {
       var p = new URLSearchParams(location.search);
@@ -188,31 +188,18 @@
               </div>
             </div>
             <div class="usage-block" id="usage-block" title="Gateway :9000 only. Direct engine hits are not counted.">
-              <div class="metric-grid" id="usage-summary">
-                <div class="metric" id="use-24h">
-                  <h3>24h</h3>
-                  <div class="metric-head">
-                    <div class="metric-value"><span id="use-24h-n">—</span></div>
-                    <div class="metric-hint" id="use-24h-sub">tokens</div>
-                  </div>
-                </div>
-                <div class="metric" id="use-30d">
-                  <h3>30D</h3>
-                  <div class="metric-head">
-                    <div class="metric-value"><span id="use-30d-n">—</span></div>
-                    <div class="metric-hint" id="use-30d-sub">tokens</div>
-                  </div>
-                </div>
-                <div class="metric" id="use-all">
-                  <h3>All</h3>
-                  <div class="metric-head">
-                    <div class="metric-value"><span id="use-all-n">—</span></div>
-                    <div class="metric-hint" id="use-all-sub">tokens · :9000</div>
-                  </div>
-                </div>
-              </div>
               <div class="activity-recent-wrap usage-profiles-wrap" id="usage-profiles-wrap">
-                <div class="activity-recent-head">Usage by profile</div>
+                <div class="activity-recent-head usage-head">
+                  <span>Usage by profile</span>
+                  <span class="usage-line" id="usage-summary">
+                    <span>24h <b id="use-24h-n">—</b></span>
+                    <span class="usage-line-sep">·</span>
+                    <span>30D <b id="use-30d-n">—</b></span>
+                    <span class="usage-line-sep">·</span>
+                    <span class="usage-line-all">All <b id="use-all-n">—</b></span>
+                    <span class="usage-line-note">:9000</span>
+                  </span>
+                </div>
                 <div class="activity-table-scroll" id="usage-table-scroll">
                   <table class="activity-table" id="usage-table">
                     <thead>
@@ -1238,37 +1225,33 @@
         };
       }
 
-      function setUsageTile(prefix, counts, hint) {
-        var nEl = $(prefix + '-n');
-        var sEl = $(prefix + '-sub');
-        if (!nEl || !sEl) return;
+      function setUsageLine(id, counts) {
+        var el = $(id);
+        if (!el) return;
         if (!counts || (counts.total === 0 && counts.requests === 0)) {
-          nEl.textContent = '—';
-          sEl.textContent = hint || 'tokens';
+          el.textContent = '—';
           return;
         }
-        nEl.textContent = fmtActivityTokens(counts.total);
-        sEl.textContent = fmtActivityTokens(counts.prompt) + ' in · ' + fmtActivityTokens(counts.completion) + ' out';
+        el.textContent = fmtActivityTokens(counts.total);
       }
 
       function setUsageOffline() {
-        setUsageTile('use-24h', null, 'API unavailable');
-        setUsageTile('use-30d', null, 'API unavailable');
-        setUsageTile('use-all', null, 'API unavailable');
+        setUsageLine('use-24h-n', null);
+        setUsageLine('use-30d-n', null);
+        setUsageLine('use-all-n', null);
+        var line = $('usage-summary');
+        if (line) line.title = 'API unavailable';
         var body = $('usage-tbody');
         if (body) body.innerHTML = '<tr><td colspan="4" class="activity-empty">No usage data — API offline</td></tr>';
       }
 
       function renderUsage(usage) {
         var windows = (usage && usage.windows) || {};
-        setUsageTile('use-24h', usageCounts(windows['24h']), 'tokens');
-        setUsageTile('use-30d', usageCounts(windows['30d']), 'tokens');
-        var allHint = usageCounts(windows.all);
-        setUsageTile('use-all', allHint, 'tokens · :9000');
-        var allSub = $('use-all-sub');
-        if (allSub && (allHint.total > 0 || allHint.requests > 0)) {
-          allSub.textContent = fmtActivityTokens(allHint.prompt) + ' in · ' + fmtActivityTokens(allHint.completion) + ' out · :9000';
-        }
+        setUsageLine('use-24h-n', usageCounts(windows['24h']));
+        setUsageLine('use-30d-n', usageCounts(windows['30d']));
+        setUsageLine('use-all-n', usageCounts(windows.all));
+        var line = $('usage-summary');
+        if (line) line.removeAttribute('title');
         var body = $('usage-tbody');
         if (!body) return;
         var rows = (usage && usage.profiles) || [];

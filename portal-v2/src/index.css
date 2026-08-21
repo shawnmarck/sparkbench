@@ -404,21 +404,26 @@ tr.active td { background: var(--row-active); }
 }
 .hero-row {
   display: flex;
-  align-items: stretch;
-  justify-content: flex-start;
+  align-items: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: .45rem 1.75rem;
+  gap: .7rem 2.5rem;
   margin-bottom: 1rem;
+}
+.hero-stats {
+  display: flex;
+  align-items: flex-end;
+  gap: .85rem 1.15rem;
 }
 .hero-stat {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: .3rem;
+  gap: .22rem;
   min-width: 0;
 }
 .hero-stat b {
-  font-size: 1.05rem;
+  font-size: .95rem;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -426,9 +431,12 @@ tr.active td { background: var(--row-active); }
 }
 .hero-stat span {
   color: var(--muted);
-  font-size: .72rem;
+  font-size: .64rem;
 }
-.hero-stat.life { margin-right: .35rem; }
+.hero-stat.life {
+  flex: 1 1 auto;
+  min-width: min(100%, 18rem);
+}
 .hero-stat.life span { font-size: .86rem; }
 .hero-total { margin-bottom: 0; min-width: 0; }
 .hero-num {
@@ -441,7 +449,7 @@ tr.active td { background: var(--row-active); }
 .odometer {
   display: inline-flex;
   align-items: flex-end;
-  font-size: clamp(2.4rem, 6.4vw, 3.4rem);
+  font-size: clamp(2.85rem, 5.2vw, 4rem);
   font-weight: 720;
   letter-spacing: -.04em;
   line-height: 1;

@@ -115,7 +115,6 @@ export function HomePage({ live }) {
       <div className="home-scroll">
       <div className="page-head">
         <h1>Home</h1>
-        <p>What is serving now, plus :9000 usage. Switch from Inference or Ctrl/K.</p>
       </div>
 
       <div className="home-stack">

@@ -1,23 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getInferenceLogs, setRecipeLifecycle } from '../lib/api.js'
-import { engineLabel, fmtCtx, fmtTokS } from '../lib/fmt.js'
+import {
+  benchMethodLabel,
+  engineLabel,
+  fmtCtx,
+  fmtTokS,
+  shortName,
+  stackLabel,
+} from '../lib/fmt.js'
 
-function ctxHint(recipe) {
-  const ctx = recipe?.context || {}
-  const ladder = ctx.ctx_ladder
-  const keys = ladder && typeof ladder === 'object' ? Object.keys(ladder) : []
-  const def = fmtCtx(ctx.default)
-  if (!keys.length) return def
-  return `${def} · ladder ${keys.join('/')}`
+const LOG_NOISE = /\/v1\/models|\/metrics|healthz|GET \/health/i
+
+function usefulLog(line) {
+  const s = typeof line === 'string' ? line : JSON.stringify(line)
+  return !LOG_NOISE.test(s)
 }
 
 export function InferencePage({ live, actions }) {
-  const activeId = live.inference?.active?.id
+  const active = live.inference?.active
+  const activeId = active?.id
   const [q, setQ] = useState('')
   const [life, setLife] = useState('all')
   const [picked, setPicked] = useState(null)
   const [logs, setLogs] = useState(null)
   const [logErr, setLogErr] = useState(null)
+  const [logOpen, setLogOpen] = useState(false)
   const [lifeMsg, setLifeMsg] = useState(null)
   const [lifeBusy, setLifeBusy] = useState(false)
 
@@ -48,11 +55,11 @@ export function InferencePage({ live, actions }) {
     let cancelled = false
     async function tick() {
       try {
-        const data = await getInferenceLogs(60)
-        if (!cancelled) {
-          setLogs(data)
-          setLogErr(null)
-        }
+        const data = await getInferenceLogs(80)
+        if (cancelled) return
+        setLogs(data)
+        setLogErr(null)
+        if (data?.switch?.running) setLogOpen(true)
       } catch (err) {
         if (!cancelled) setLogErr(err.message || 'logs unavailable')
       }
@@ -66,19 +73,14 @@ export function InferencePage({ live, actions }) {
   }, [])
 
   const selected = picked || rows[0]
+  const inspectingOther = selected && activeId && selected.id !== activeId
   const switching = Boolean(logs?.switch?.running)
   const logLines = (() => {
     const fmt = (line) => (typeof line === 'string' ? line : JSON.stringify(line))
-    const fromSections = (logs?.sections || []).flatMap((s) =>
-      (s.lines || []).map((line) => `[${s.kind}] ${fmt(line)}`)
-    )
-    if (fromSections.length) return fromSections.join('\n')
-    return (logs?.lines || []).map(fmt).join('\n')
+    const raw = (logs?.sections || []).flatMap((s) => (s.lines || []).map(fmt))
+    const all = raw.length ? raw : (logs?.lines || []).map(fmt)
+    return all.filter(usefulLog)
   })()
-
-  function askServe(recipe) {
-    actions?.askSwitch(recipe)
-  }
 
   async function cycleLife(kind) {
     if (!selected?.id) return
@@ -97,49 +99,75 @@ export function InferencePage({ live, actions }) {
     }
   }
 
+  const lc = selected?.lifecycle || 'works'
+  const showDiscard = lc === 'draft'
+  const showTesting = lc === 'draft' || lc === 'works'
+  const showPromote = lc === 'testing' || lc === 'draft'
+
   return (
     <div>
       <div className="page-head">
         <h1>Inference</h1>
-        <p>Pick a recipe, confirm the switch, watch the engine log. Mutations evict whatever is serving now.</p>
+        <p>What is on the GPU, then pick another recipe. Switch evicts the current one.</p>
       </div>
 
-      <div className="toolbar">
-        <input
-          className="field"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Filter recipes…"
-        />
-        <select className="field" value={life} onChange={(e) => setLife(e.target.value)}>
-          <option value="all">All lifecycle</option>
-          <option value="production">production</option>
-          <option value="works">works</option>
-          <option value="testing">testing</option>
-          <option value="draft">draft</option>
-        </select>
-        <button type="button" className="btn primary" disabled={!selected || selected.id === activeId || switching} onClick={() => askServe(selected)}>
-          Serve selected
-        </button>
-        <button type="button" className="btn danger" disabled={!activeId || switching} onClick={() => actions?.askStop()}>
+      <section className={`card serve-now${active ? '' : ' idle'}`}>
+        <div className="serve-now-main">
+          <h2>Now serving</h2>
+          {active ? (
+            <>
+              <p className="hero-name">{active.name || active.id}</p>
+              <p className="hero-meta">
+                {stackLabel(active.engine)}
+                {active.ready ? ' · ready' : active.starting ? ' · starting' : ' · not ready'}
+                {` · ${fmtCtx(active.context?.effective || active.context?.default)} context`}
+                {active.tok_s != null ? ` · bench ${fmtTokS(active.tok_s)} tok/s` : ''}
+              </p>
+            </>
+          ) : (
+            <p className="hero-name muted">Idle</p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="btn danger"
+          disabled={!activeId || switching}
+          onClick={() => actions?.askStop()}
+        >
           Stop
         </button>
-      </div>
+      </section>
       {actions?.flash ? <p className={actions.flash.ok ? 'flash ok' : 'flash err'}>{actions.flash.text}</p> : null}
-      {switching ? <p className="flash warn">Switch in progress…</p> : null}
+      {switching ? <p className="flash warn">Switch in progress… engine log is open below.</p> : null}
 
       <div className="grid inf-grid">
         <section className="card">
-          <h2>{rows.length} recipes</h2>
-          <div className="table-wrap" style={{ maxHeight: '58vh' }}>
+          <h2>Pick a recipe · {rows.length}</h2>
+          <div className="toolbar tight">
+            <input
+              className="field grow"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Filter by name, id, engine…"
+            />
+            <select className="field" value={life} onChange={(e) => setLife(e.target.value)}>
+              <option value="all">All lifecycle</option>
+              <option value="production">production</option>
+              <option value="works">works</option>
+              <option value="testing">testing</option>
+              <option value="draft">draft</option>
+              <option value="failed">failed</option>
+            </select>
+          </div>
+          <div className="table-wrap" style={{ maxHeight: '52vh' }}>
             <table className="pick-table">
               <thead>
                 <tr>
                   <th>Recipe</th>
                   <th>Engine</th>
                   <th>Life</th>
-                  <th>Tok/s</th>
-                  <th>Ctx</th>
+                  <th>Bench</th>
+                  <th>Context</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,11 +176,13 @@ export function InferencePage({ live, actions }) {
                     key={r.id}
                     className={`${r.id === activeId ? 'active' : ''} ${selected?.id === r.id ? 'picked' : ''}`}
                     onClick={() => setPicked(r)}
-                    onDoubleClick={() => askServe(r)}
+                    onDoubleClick={() => r.id !== activeId && actions?.askSwitch(r)}
                   >
                     <td title={r.id}>
-                      <div className="pid">{r.name || r.id}</div>
-                      <div className="pname">{r.id}</div>
+                      <div className="pid">
+                        {r.name || r.id}
+                        {r.id === activeId ? <span className="live-tag">live</span> : null}
+                      </div>
                     </td>
                     <td>{engineLabel(r.engine)}</td>
                     <td>{r.lifecycle || 'works'}</td>
@@ -166,42 +196,108 @@ export function InferencePage({ live, actions }) {
         </section>
 
         <section className="card">
-          <h2>Selected</h2>
+          <h2>{inspectingOther ? 'Inspecting' : 'This recipe'}</h2>
           {selected ? (
             <>
+              {inspectingOther ? (
+                <p className="flash warn">
+                  Not on the GPU. {shortName(active?.name, activeId)} is still serving.
+                </p>
+              ) : activeId ? (
+                <p className="flash ok">This is what is serving now.</p>
+              ) : null}
               <p className="hero-name">{selected.name || selected.id}</p>
-              <p className="hero-meta">
-                {engineLabel(selected.engine)} · {selected.lifecycle || 'works'}
-                {selected.tier ? ` · ${selected.tier}` : ''}
-              </p>
-              <p className="hero-meta tall">{ctxHint(selected)}</p>
-              {selected.context?.kv_effective ? (
-                <p className="muted">KV {selected.context.kv_effective}{selected.context.mem_avail_gb != null ? ` · ${Number(selected.context.mem_avail_gb).toFixed(1)} GB free` : ''}</p>
-              ) : null}
-              {Array.isArray(selected.context?.presets) && selected.context.presets.length ? (
-                <div className="preset-list">
-                  {selected.context.presets.map((p) => (
-                    <span key={p.id || p.label} className="pill">{p.label || p.id} · {fmtCtx(p.ctx)} · {p.kv}</span>
-                  ))}
+              <dl className="serve-facts">
+                <div>
+                  <dt>Engine</dt>
+                  <dd>{stackLabel(selected.engine)}</dd>
                 </div>
-              ) : null}
-              {selected.notes ? <p className="muted">{selected.notes}</p> : null}
-              <div className="toolbar tight" style={{ marginTop: '.8rem' }}>
-                <button type="button" className="btn" disabled={lifeBusy} onClick={() => cycleLife('testing')}>Mark testing</button>
-                <button type="button" className="btn" disabled={lifeBusy} onClick={() => cycleLife('promote')}>Promote</button>
-                <button type="button" className="btn danger" disabled={lifeBusy} onClick={() => cycleLife('discard')}>Discard draft</button>
+                <div>
+                  <dt>Lifecycle</dt>
+                  <dd>{selected.lifecycle || 'works'}</dd>
+                </div>
+                {selected.tier ? (
+                  <div>
+                    <dt>Tier</dt>
+                    <dd>{selected.tier}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Context</dt>
+                  <dd>{fmtCtx(selected.context?.effective || selected.context?.default)} tokens</dd>
+                </div>
+                {selected.context?.kv_effective ? (
+                  <div>
+                    <dt>KV type</dt>
+                    <dd>{selected.context.kv_effective}</dd>
+                  </div>
+                ) : null}
+                {selected.context?.mem_avail_gb != null ? (
+                  <div>
+                    <dt>KV headroom</dt>
+                    <dd>{Number(selected.context.mem_avail_gb).toFixed(1)} GB</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Bench speed</dt>
+                  <dd>{fmtTokS(selected.tok_s)} tok/s</dd>
+                </div>
+                <div>
+                  <dt>Bench method</dt>
+                  <dd>{benchMethodLabel(selected.tok_s_method)}</dd>
+                </div>
+              </dl>
+              {selected.notes ? <p className="notes">{selected.notes}</p> : null}
+              <div className="toolbar tight" style={{ marginTop: '.85rem' }}>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={!inspectingOther || switching}
+                  onClick={() => actions?.askSwitch(selected)}
+                >
+                  Serve this recipe
+                </button>
               </div>
+              {(showTesting || showPromote || showDiscard) ? (
+                <details className="life-box">
+                  <summary>Lifecycle</summary>
+                  <div className="toolbar tight">
+                    {showTesting ? (
+                      <button type="button" className="btn" disabled={lifeBusy} onClick={() => cycleLife('testing')}>
+                        Mark testing
+                      </button>
+                    ) : null}
+                    {showPromote ? (
+                      <button type="button" className="btn" disabled={lifeBusy} onClick={() => cycleLife('promote')}>
+                        Promote
+                      </button>
+                    ) : null}
+                    {showDiscard ? (
+                      <button type="button" className="btn danger" disabled={lifeBusy} onClick={() => cycleLife('discard')}>
+                        Discard draft
+                      </button>
+                    ) : null}
+                  </div>
+                </details>
+              ) : null}
               {lifeMsg ? <p className={lifeMsg.ok ? 'flash ok' : 'flash err'}>{lifeMsg.text}</p> : null}
             </>
           ) : (
             <p className="muted">No recipe selected.</p>
           )}
-          <h2 style={{ marginTop: '1.1rem' }}>Engine log</h2>
-          {logErr ? <p className="err">{logErr}</p> : null}
-          <pre className="log">{logLines || '—'}</pre>
+
+          <button type="button" className="log-toggle" onClick={() => setLogOpen((v) => !v)}>
+            Engine log {logOpen ? '· hide' : '· show'}
+            {logLines.length ? ` · ${logLines.length} lines` : ''}
+          </button>
+          {logOpen ? (
+            <>
+              {logErr ? <p className="err">{logErr}</p> : null}
+              <pre className="log">{logLines.length ? logLines.join('\n') : 'No non-health-check lines right now.'}</pre>
+            </>
+          ) : null}
         </section>
       </div>
-
     </div>
   )
 }

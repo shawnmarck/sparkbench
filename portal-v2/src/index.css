@@ -626,6 +626,46 @@ tr.active td { background: #141a10; }
 .flash.err { color: var(--down); }
 
 .inf-grid { align-items: start; }
+.serve-now {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.serve-now.idle { opacity: .85; }
+.serve-now-main { min-width: 0; }
+.serve-now .hero-name { margin-bottom: .2rem; }
+.live-tag {
+  margin-left: .4rem;
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--accent);
+  vertical-align: middle;
+}
+.notes {
+  margin: .7rem 0 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.4;
+}
+.life-box { margin-top: .85rem; color: var(--muted); font-size: .8rem; }
+.life-box summary { cursor: pointer; }
+.life-box .toolbar { margin-top: .45rem; }
+.log-toggle {
+  display: block;
+  margin: 1.1rem 0 .45rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  cursor: pointer;
+}
+.log-toggle:hover { color: var(--text); }
 tr.picked td { box-shadow: inset 2px 0 0 var(--accent); }
 .pick-table tbody tr { cursor: pointer; }
 .preset-list { display: flex; flex-wrap: wrap; gap: .35rem; margin: .55rem 0 .2rem; }

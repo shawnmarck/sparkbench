@@ -56,24 +56,44 @@ function lastSessionRate(recent) {
   return (recent || []).find((r) => Number(r.tok_s) > 0 && Number(r.completion_tokens) > 0) || null
 }
 
+function sparkPoint(i, v, n, peak, w, h) {
+  const x = n <= 1 ? 0 : (i / (n - 1)) * w
+  const y = h - 2 - (v / peak) * (h - 4)
+  return `${x.toFixed(1)},${y.toFixed(1)}`
+}
+
 function AggSpark({ values, p99 }) {
-  const series = Array.isArray(values) ? values.map((v) => Number(v) || 0) : []
-  if (series.length < 2) return null
+  const series = Array.isArray(values) ? values : []
+  const nums = series.map((v) => (v == null || v === '' ? null : Number(v)))
+  const known = nums.filter((v) => v != null && Number.isFinite(v))
+  if (known.length < 2) return null
   const w = 240
   const h = 42
-  const peak = Math.max(p99 || 0, ...series, 1)
-  const pts = series.map((v, i) => {
-    const x = (i / (series.length - 1)) * w
-    const y = h - 2 - (v / peak) * (h - 4)
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
-  const p99y = p99 != null ? (h - 2 - (Number(p99) / peak) * (h - 4)) : null
+  const peak = Math.max(Number(p99) || 0, ...known, 1)
+  const segs = []
+  let cur = []
+  nums.forEach((v, i) => {
+    if (v == null || !Number.isFinite(v)) {
+      if (cur.length) segs.push(cur)
+      cur = []
+      return
+    }
+    cur.push(sparkPoint(i, v, nums.length, peak, w, h))
+  })
+  if (cur.length) segs.push(cur)
+  const p99y = p99 != null && Number.isFinite(Number(p99))
+    ? (h - 2 - (Number(p99) / peak) * (h - 4))
+    : null
   return (
     <svg className="agg-spark" viewBox={`0 0 ${w} ${h}`} width="100%" height={h} aria-hidden="true">
       {p99y != null ? (
         <line className="p99" x1="0" y1={p99y} x2={w} y2={p99y} />
       ) : null}
-      <polyline points={pts} />
+      {segs.map((pts, i) => (
+        pts.length === 1
+          ? <circle key={i} className="dot" cx={pts[0].split(',')[0]} cy={pts[0].split(',')[1]} r="1.4" />
+          : <polyline key={i} points={pts.join(' ')} />
+      ))}
     </svg>
   )
 }
@@ -85,7 +105,9 @@ export function HomePage({ live }) {
   const preset = inferPreset(active, load)
   const spec = specLabel(active)
   const lastSess = lastSessionRate(live.activity?.recent)
-  const avg1h = live.activity?.summary?.avg_tok_s
+  const avg1h = live.activity?.summary?.avg_tok_s_weighted ?? live.activity?.summary?.avg_tok_s
+  const sparkSpan = Number(load.gen_spark_span_s) || 0
+  const p99Ready = sparkSpan >= 3300
   const up = sinceLabel(active?.started_at)
 
   return (
@@ -147,13 +169,12 @@ export function HomePage({ live }) {
                     <dt>Served as</dt>
                     <dd>{active.served_name || active.id}</dd>
                   </div>
-                  <div title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
-                    <dt>Bench speed</dt>
-                    <dd>{fmtTokS(active.tok_s)} tok/s</dd>
-                  </div>
-                  <div>
-                    <dt>Bench method</dt>
-                    <dd>{benchMethodLabel(active.tok_s_method)}</dd>
+                  <div className="catalog" title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
+                    <dt>Catalog bench</dt>
+                    <dd>
+                      {fmtTokS(active.tok_s)}
+                      <small> {benchMethodLabel(active.tok_s_method)}, not live</small>
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -185,12 +206,11 @@ export function HomePage({ live }) {
                 </div>
                 <div
                   className="agg-spark-wrap"
-                  title="Last hour of engine agg tok/s. Dashed line is p99 of 1-second samples."
+                  title="Last hour of engine agg tok/s. Gaps are missing history, floor is idle. Dashed line is p99 of busy seconds."
                 >
                   <AggSpark values={load.gen_spark} p99={load.gen_tok_s_p99} />
                   <p className="agg-spark-cap">
-                    1h p99 {fmtTokS(load.gen_tok_s_p99)} tok/s
-                    {load.gen_spark_n ? ` · ${load.gen_spark_n} samples` : ''}
+                    {p99Ready ? '1h p99' : 'p99 so far'} {fmtTokS(load.gen_tok_s_p99)} tok/s
                   </p>
                 </div>
                 <div className="rate-stack">
@@ -198,9 +218,9 @@ export function HomePage({ live }) {
                     <b>{fmtTokS(lastSess?.tok_s)}</b>
                     <span>Last sess. tok/s{lastSess ? ` · ${sinceLabel(lastSess.at) || ''}` : ''}</span>
                   </div>
-                  <div title="Mean of finished :9000 session rates over the last hour. Per request, not concurrent aggregate.">
+                  <div title="Token-weighted: sum of completion tokens / sum of wall clock over finished :9000 sessions in the last hour.">
                     <b>{fmtTokS(avg1h)}</b>
-                    <span>1h avg sess. tok/s</span>
+                    <span>1h sess. tok/s</span>
                   </div>
                 </div>
               </div>

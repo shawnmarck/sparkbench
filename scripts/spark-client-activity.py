@@ -488,6 +488,8 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
     tok_s_values: list[float] = []
     recent: list[dict[str, Any]] = []
     resolved_rows: list[dict[str, Any]] = []
+    weighted_tokens = 0.0
+    weighted_wall_s = 0.0
 
     for row in rows:
         ts = _parse_ts(row.get("at", ""))
@@ -502,6 +504,14 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
             tok = resolved.get("tok_s")
             if tok and tok > 0:
                 tok_s_values.append(tok)
+            try:
+                ct = float(resolved.get("completion_tokens") or 0)
+                dur_ms = float(resolved.get("duration_ms") or 0)
+            except (TypeError, ValueError):
+                ct, dur_ms = 0.0, 0.0
+            if ct > 0 and dur_ms > 0:
+                weighted_tokens += ct
+                weighted_wall_s += dur_ms / 1000.0
             _touch_active(resolved.get("client_ip", ""), resolved.get("app", "unknown"), ts)
 
     recent_list = [r for r in resolved_rows if _parse_ts(r.get("at", "")) > cutoff]
@@ -511,6 +521,7 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
     avg_tok_s = 0.0
     if tok_s_values:
         avg_tok_s = round(sum(tok_s_values) / len(tok_s_values), 1)
+    avg_tok_s_weighted = round(weighted_tokens / weighted_wall_s, 1) if weighted_wall_s > 0 else 0.0
 
     active = _active_clients()
     apps: dict[str, int] = {}
@@ -524,6 +535,7 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
             "sessions_1h": sessions_1h,
             "sessions_24h": sessions_24h,
             "avg_tok_s": avg_tok_s,
+            "avg_tok_s_weighted": avg_tok_s_weighted,
             "apps": apps,
         },
         "active": active[:50],

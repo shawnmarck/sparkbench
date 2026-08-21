@@ -60,7 +60,7 @@ Targets:
   openwebui            Open WebUI dual-backend compose
   bootstrap            host.env + passwordless sudo for install + portal base
   agent                Full passwordless sudo for automation (optional)
-  restart inference-api|gpu-api   Restart one API only (ops shortcut)
+  restart inference-api|gpu-api|activity-api   Restart one API only (ops shortcut)
   module <modules/path>   Run one install/modules/*.sh (surgical fix)
   extras terminal|shell|lazydocker|agent-skill   Maintainer convenience (not core product)
   status               Show systemd + HTTP health for installed services
@@ -172,7 +172,8 @@ cmd_restart() {
   case "$what" in
     inference-api) run_module core/inference-api-restart.sh ;;
     gpu-api) run_module core/gpu-api-restart.sh ;;
-    *) die "usage: spark-install restart inference-api|gpu-api" ;;
+    activity-api) run_module gateway/client-activity-restart.sh ;;
+    *) die "usage: spark-install restart inference-api|gpu-api|activity-api" ;;
   esac
 }
 

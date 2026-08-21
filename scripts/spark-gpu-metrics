@@ -757,7 +757,8 @@ def _agg_spark_view(now: float) -> dict:
     with _TOKEN_RATE_LOCK:
         samples = [(t, v) for t, v in _AGG_HISTORY if t >= cutoff]
     values = [v for _t, v in samples]
-    spark: list[float] = []
+    busy = [v for v in values if v > 0]
+    spark: list[float | None] = []
     if samples:
         start = now - AGG_KEEP_S
         step = AGG_KEEP_S / AGG_SPARK_POINTS
@@ -770,12 +771,13 @@ def _agg_spark_view(now: float) -> dict:
                 if samples[si][0] >= lo:
                     bucket.append(samples[si][1])
                 si += 1
-            spark.append(round(sum(bucket) / len(bucket), 1) if bucket else 0.0)
+            spark.append(round(max(bucket), 1) if bucket else None)
     span = int(samples[-1][0] - samples[0][0]) if len(samples) > 1 else 0
     return {
-        "gen_tok_s_p99": _percentile(values, 0.99),
+        "gen_tok_s_p99": _percentile(busy, 0.99),
         "gen_spark": spark,
         "gen_spark_n": len(samples),
+        "gen_spark_busy_n": len(busy),
         "gen_spark_span_s": span,
     }
 

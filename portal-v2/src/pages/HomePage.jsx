@@ -171,15 +171,15 @@ export function HomePage({ live }) {
                 <div className="rate-stack">
                   <div title="Last :9000 request: completion tokens / wall clock. Includes prefill.">
                     <b>{fmtTokS(liveTok.last?.tok_s)}</b>
-                    <span>Last request{liveTok.last ? ` · ${sinceLabel(liveTok.last.at) || ''}` : ''}</span>
+                    <span>Last tok/s{liveTok.last ? ` · ${sinceLabel(liveTok.last.at) || ''}` : ''}</span>
                   </div>
                   <div title="Mean of :9000 request rates in the last 5 minutes.">
                     <b>{fmtTokS(liveTok.avg5)}</b>
-                    <span>5m{liveTok.n5 ? ` · ${liveTok.n5} req` : ''}</span>
+                    <span>5m avg tok/s{liveTok.n5 ? ` · ${liveTok.n5} req` : ''}</span>
                   </div>
                   <div title="Mean of :9000 request rates over the last hour.">
                     <b>{fmtTokS(avg1h)}</b>
-                    <span>1h avg :9000</span>
+                    <span>1h avg tok/s</span>
                   </div>
                 </div>
               </div>

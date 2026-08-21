@@ -113,10 +113,6 @@ export function HomePage({ live }) {
   return (
     <div className="home">
       <div className="home-scroll">
-      <div className="page-head">
-        <h1>Home</h1>
-      </div>
-
       <div className="home-stack">
         <section className="card">
           <h2>Serving</h2>

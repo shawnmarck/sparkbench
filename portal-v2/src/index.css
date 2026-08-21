@@ -282,13 +282,15 @@ tr.active td { background: #141a10; }
   color: var(--text);
   transition: color .35s ease, text-shadow .35s ease;
 }
-.odometer.tick { color: var(--accent); text-shadow: 0 0 18px rgba(134, 196, 0, .28); }
 .odo-digit {
   position: relative;
   width: .62em;
   height: 1em;
   overflow: hidden;
+  color: var(--text);
+  transition: color .35s ease, text-shadow .35s ease;
 }
+.odo-digit.tick { color: var(--accent); text-shadow: 0 0 16px rgba(134, 196, 0, .3); }
 .odo-digit::before,
 .odo-digit::after {
   content: '';

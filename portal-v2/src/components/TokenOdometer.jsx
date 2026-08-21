@@ -7,7 +7,10 @@ const STEP = 5
 function DigitReel({ digit }) {
   const [offset, setOffset] = useState(0)
   const [animate, setAnimate] = useState(false)
+  const [ticking, setTicking] = useState(false)
   const last = useRef(0)
+  const primed = useRef(false)
+  const tickTimer = useRef(0)
 
   useEffect(() => {
     const prev = last.current
@@ -15,8 +18,17 @@ function DigitReel({ digit }) {
     last.current = digit
     if (delta === 0) return
     setAnimate(true)
+    if (primed.current) {
+      setTicking(true)
+      window.clearTimeout(tickTimer.current)
+      tickTimer.current = window.setTimeout(() => setTicking(false), 900)
+    } else {
+      primed.current = true
+    }
     setOffset((current) => (current % 10) + delta)
   }, [digit])
+
+  useEffect(() => () => window.clearTimeout(tickTimer.current), [])
 
   function onTransitionEnd(e) {
     if (e.propertyName !== 'transform') return
@@ -25,7 +37,7 @@ function DigitReel({ digit }) {
   }
 
   return (
-    <span className="odo-digit">
+    <span className={`odo-digit${ticking ? ' tick' : ''}`}>
       <span
         className={`odo-reel${animate ? '' : ' snap'}`}
         style={{ transform: `translateY(-${offset * STEP}%)` }}
@@ -40,31 +52,16 @@ function DigitReel({ digit }) {
 export function TokenOdometer({ value }) {
   const target = Math.max(0, Math.round(Number(value) || 0))
   const [shown, setShown] = useState(0)
-  const [ticking, setTicking] = useState(false)
-  const prev = useRef(0)
-  const tickTimer = useRef(0)
 
   useEffect(() => {
-    const grew = target > prev.current && prev.current > 0
-    prev.current = target
     const start = requestAnimationFrame(() => setShown(target))
-    if (grew) {
-      setTicking(true)
-      window.clearTimeout(tickTimer.current)
-      tickTimer.current = window.setTimeout(() => setTicking(false), 900)
-    }
     return () => cancelAnimationFrame(start)
   }, [target])
-
-  useEffect(() => () => window.clearTimeout(tickTimer.current), [])
 
   const text = fmtFull(shown)
 
   return (
-    <div
-      className={`odometer${ticking ? ' tick' : ''}`}
-      aria-label={`${text} lifetime tokens`}
-    >
+    <div className="odometer" aria-label={`${text} lifetime tokens`}>
       {text.split('').map((ch, i) => {
         const fromRight = text.length - 1 - i
         if (ch === ',') return <span key={`c${fromRight}`} className="odo-sep">,</span>

@@ -263,6 +263,28 @@ button { font: inherit; }
 .bar.mem > i { background: linear-gradient(90deg, #7a5ab0, var(--mem)); }
 .bar.kv > i { background: linear-gradient(90deg, #3a7ab8, var(--seq)); }
 .kv-meter { margin: .55rem 0 .15rem; }
+.seq-cubes { margin: .45rem 0 .2rem; }
+.seq-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 8), 1fr);
+  gap: 3px;
+  margin-top: .35rem;
+}
+.seq-grid i {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: #141820;
+  border: 1px solid #2a3140;
+}
+.seq-grid i.run {
+  background: var(--accent);
+  border-color: #6aa000;
+  box-shadow: 0 0 7px rgba(134, 196, 0, .35);
+}
+.seq-grid i.wait {
+  background: var(--warn);
+  border-color: #b89430;
+}
 
 .usage-line {
   font-family: ui-monospace, monospace;

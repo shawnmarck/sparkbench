@@ -20,6 +20,45 @@ function specLabel(active) {
   return spec.method
 }
 
+function seqCols(cap) {
+  if (cap <= 8) return cap
+  if (cap % 8 === 0) return 8
+  if (cap % 6 === 0) return 6
+  return 8
+}
+
+function SeqCubes({ running, waiting, max }) {
+  const cap = Math.max(0, Number(max) || 0)
+  if (!cap) return <p className="hero-meta tall">Sequences —</p>
+  const run = Math.min(cap, Math.max(0, Number(running) || 0))
+  const wait = Math.min(Math.max(0, cap - run), Math.max(0, Number(waiting) || 0))
+  if (cap > 48) {
+    return (
+      <div className="meters">
+        <div className="meter-row">
+          <span>Sequences</span>
+          <b>{run}/{cap}{wait ? ` · ${wait} wait` : ''}</b>
+        </div>
+        <div className="bar kv" style={{ '--pct': Math.min(1, run / cap) }}><i /></div>
+      </div>
+    )
+  }
+  return (
+    <div className="seq-cubes" title={`${run} running, ${wait} waiting, ${cap} max concurrent sequences`}>
+      <div className="meter-row">
+        <span>Sequences</span>
+        <b>{run}/{cap}{wait ? ` · ${wait} wait` : ''}</b>
+      </div>
+      <div className="seq-grid" style={{ '--cols': seqCols(cap) }}>
+        {Array.from({ length: cap }, (_, i) => {
+          const kind = i < run ? 'run' : i < run + wait ? 'wait' : 'idle'
+          return <i key={i} className={kind} />
+        })}
+      </div>
+    </div>
+  )
+}
+
 function liveRates(recent) {
   const rows = (recent || []).filter((r) => Number(r.tok_s) > 0 && Number(r.completion_tokens) > 0)
   const last = rows[0] || null
@@ -119,10 +158,7 @@ export function HomePage({ live }) {
                   {active.ready ? 'ready' : active.starting ? 'starting' : 'not ready'}
                   {up ? ` · up ${up}` : ''}
                 </p>
-                <p className="hero-meta tall">
-                  {load.max != null ? `${load.running ?? 0}/${load.max} seqs` : 'seqs —'}
-                  {load.waiting ? ` · ${load.waiting} waiting` : ''}
-                </p>
+                <SeqCubes running={load.running} waiting={load.waiting} max={load.max} />
                 {load.kv_cache_pct != null ? (
                   <div className="meters kv-meter">
                     <div className="meter-row">

@@ -51,7 +51,7 @@ CLI: `spark hf …` · Portal: **Explore** tab
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| Activity API | GET `/api/activity` | Client session rollups (:8769). `summary` includes `active_clients`, `sessions_1h`, `sessions_24h`, `avg_tok_s`, and `apps` (counts by client app, 5‑min TTL). `usage` has `windows` (`24h` / `30d` / `all`), per-profile totals, and `days` (lean daily `date` / requests / prompt / completion; host keeps 366 days). Folded from the gateway JSONL into `run/inference-usage.json`. Unknown UAs on Docker bridge IPs are mapped to `open-webui` / `hermes` via container inspect. |
+| Activity API | GET `/api/activity` | Client session rollups (:8769). `summary` includes `active_clients`, `sessions_1h`, `sessions_24h`, `avg_tok_s`, and `apps` (counts by client app, 5‑min TTL). `usage` has `windows` (`24h` / `30d` / `all`), per-profile totals, and `days` (lean daily `date` / requests / prompt / completion plus optional `profiles` map; host keeps 366 days). Folded from the gateway JSONL into `run/inference-usage.json`. Unknown UAs on Docker bridge IPs are mapped to `open-webui` / `hermes` via container inspect. |
 | OpenAI gateway | `http://$SPARK_HOST:9000/v1` | Chat completions, model aliases |
 
 ## Engine upstream (direct)

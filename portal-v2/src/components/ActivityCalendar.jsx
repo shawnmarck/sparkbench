@@ -3,7 +3,7 @@ import { fmtTokens } from '../lib/fmt.js'
 import {
   HEAT_RANGES,
   calendarWeeks,
-  countsOf,
+  countsForDay,
   lastNDates,
   monthLabel,
   ytdDates,
@@ -16,7 +16,11 @@ function levelFor(total, max) {
   return Math.min(4, 1 + Math.floor((total / max) * 3))
 }
 
-export function ActivityCalendar({ days }) {
+function dayLabel(iso) {
+  return `${monthLabel(iso)} ${Number(iso.slice(8, 10))}`
+}
+
+export function ActivityCalendar({ days, filterId, filterLabel }) {
   const [rangeId, setRangeId] = useState('ytd')
   const [hover, setHover] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -27,9 +31,9 @@ export function ActivityCalendar({ days }) {
 
   const byDate = useMemo(() => {
     const m = new Map()
-    for (const row of days || []) m.set(row.date, countsOf(row))
+    for (const row of days || []) m.set(row.date, countsForDay(row, filterId))
     return m
-  }, [days])
+  }, [days, filterId])
 
   const weeks = useMemo(() => calendarWeeks(from, to), [from, to])
   const max = Math.max(1, ...dates.map((d) => byDate.get(d)?.total || 0))
@@ -104,8 +108,10 @@ export function ActivityCalendar({ days }) {
       </div>
       <p className="heat-tip">
         {tip
-          ? `${tip.date} · ${fmtTokens(tip.total)} tokens · ${tip.requests || 0} req${selected === tip.date ? ' · selected' : ''}`
-          : `${range.id === 'ytd' ? 'Year to date' : `Last ${range.label.toLowerCase()}`}. Click a day to pin it. Store keeps a year of daily totals.`}
+          ? `${filterLabel ? `${filterLabel} · ` : ''}${dayLabel(tip.date)} · ${fmtTokens(tip.total)} tokens · ${tip.requests || 0} req${selected === tip.date ? ' · selected' : ''}${filterId ? ' · click profile again to show all' : ''}`
+          : filterId
+            ? `${filterLabel || 'This profile'}. Click a day to pin it. Click the profile again to show all.`
+            : `${range.id === 'ytd' ? 'Year to date' : `Last ${range.label.toLowerCase()}`}. Click a day to pin it. Store keeps a year of daily totals.`}
       </p>
     </div>
   )

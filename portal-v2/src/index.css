@@ -1008,6 +1008,8 @@ tr.active td { background: var(--row-active); }
 .log-toggle:hover { color: var(--text); }
 tr.picked td { box-shadow: inset 2px 0 0 var(--accent); }
 .pick-table tbody tr { cursor: pointer; }
+.usage-hero .pick-table tbody tr:hover td { background: var(--card); }
+.usage-hero .pick-table tbody tr.picked td { background: var(--row-active); }
 .preset-list { display: flex; flex-wrap: wrap; gap: .35rem; margin: .55rem 0 .2rem; }
 
 .log {

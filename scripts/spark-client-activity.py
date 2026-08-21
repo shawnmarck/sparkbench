@@ -413,13 +413,22 @@ def _usage_view(store: dict[str, Any], now: float) -> dict[str, Any]:
     )
     days_out = []
     for dk in sorted(store.get("days") or {}):
-        allc = _copy_counts(((store.get("days") or {}).get(dk) or {}).get("all"))
-        days_out.append({
+        bucket = (store.get("days") or {}).get(dk) or {}
+        allc = _copy_counts(bucket.get("all"))
+        day_profiles: dict[str, dict[str, int]] = {}
+        for pid, pv in (bucket.get("profiles") or {}).items():
+            copied = _copy_counts(pv)
+            if copied["requests"] or copied["prompt_tokens"] or copied["completion_tokens"]:
+                day_profiles[str(pid)] = copied
+        row = {
             "date": dk,
             "requests": allc["requests"],
             "prompt_tokens": allc["prompt_tokens"],
             "completion_tokens": allc["completion_tokens"],
-        })
+        }
+        if day_profiles:
+            row["profiles"] = day_profiles
+        days_out.append(row)
     return {
         "windows": {"24h": w24, "30d": w30, "all": wall},
         "profiles": profiles,

@@ -9,6 +9,12 @@ export function countsOf(block) {
   }
 }
 
+export function countsForDay(row, filterId) {
+  if (!row) return countsOf(null)
+  if (filterId) return countsOf(row.profiles?.[filterId])
+  return countsOf(row)
+}
+
 export function shortProfileId(id) {
   const s = String(id || '')
   return s

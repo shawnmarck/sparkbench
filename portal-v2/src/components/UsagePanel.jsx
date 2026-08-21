@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { ActivityCalendar } from './ActivityCalendar.jsx'
 import { TokenOdometer } from './TokenOdometer.jsx'
 import { fmtTokens } from '../lib/fmt.js'
@@ -33,11 +33,17 @@ export function UsagePanel({ live }) {
   const h24 = countsOf(usage?.windows?.['24h'])
   const d30 = countsOf(usage?.windows?.['30d'])
   const profiles = usage?.profiles || []
+  const [filterId, setFilterId] = useState(null)
   const names = useMemo(() => {
     const m = new Map()
     for (const r of live.recipes || []) m.set(r.id, r.name || r.id)
     return m
   }, [live.recipes])
+  const filterLabel = filterId ? (names.get(filterId) || filterId) : ''
+
+  function toggleFilter(id) {
+    setFilterId((cur) => (cur === id ? null : id))
+  }
 
   return (
     <section className="usage-hero">
@@ -65,12 +71,12 @@ export function UsagePanel({ live }) {
           </div>
         </div>
       </div>
-      <ActivityCalendar days={usage?.days} />
+      <ActivityCalendar days={usage?.days} filterId={filterId} filterLabel={filterLabel} />
       <p className="mix-line">
         <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
       </p>
       <div className="table-wrap">
-        <table>
+        <table className="pick-table">
           <thead>
             <tr>
               <th>Profile</th>
@@ -86,8 +92,15 @@ export function UsagePanel({ live }) {
               const c24 = countsOf(p['24h'])
               const req = requestLabel(a.requests, a.total)
               const label = names.get(p.id) || p.id
+              const on = filterId === p.id
               return (
-                <tr key={p.id}>
+                <tr
+                  key={p.id}
+                  className={on ? 'picked' : ''}
+                  aria-pressed={on}
+                  title={on ? 'Show all models on the calendar' : `Show ${label} on the calendar`}
+                  onClick={() => toggleFilter(p.id)}
+                >
                   <td title={p.id}>
                     <div className="pid">{label}</div>
                   </td>

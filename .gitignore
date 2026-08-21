@@ -51,6 +51,9 @@ local/*
 # Internal QA evidence — never ship with releases
 .no-mistakes/
 
+# Local roadmap / inspiration notes — not for GitHub
+docs/roadmap/
+
 # Stray audit/bench logs at repo root
 benchmark-audit.log
 *.bak.*

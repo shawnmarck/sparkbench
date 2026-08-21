@@ -3,6 +3,7 @@ import { getInferenceLogs } from '../lib/api.js'
 
 const LOG_NOISE = /\/v1\/models|\/metrics|healthz|GET \/health/i
 const STORE = 'spark-v2-engine-log'
+const FOLLOW_STORE = 'spark-v2-log-follow'
 
 function usefulLog(line) {
   const s = typeof line === 'string' ? line : JSON.stringify(line)
@@ -49,13 +50,64 @@ export function useEngineLog(lineCount = 80) {
   }
 }
 
+function pinBottom(el) {
+  if (el) el.scrollTop = el.scrollHeight
+}
+
 function useStickBottom(dep) {
   const ref = useRef(null)
   useEffect(() => {
-    const el = ref.current
-    if (el) el.scrollTop = el.scrollHeight
+    const id = requestAnimationFrame(() => pinBottom(ref.current))
+    return () => cancelAnimationFrame(id)
   }, [dep])
   return ref
+}
+
+function useFollowLatest(dep) {
+  const ref = useRef(null)
+  const [follow, setFollow] = useState(() => {
+    try {
+      return window.localStorage.getItem(FOLLOW_STORE) !== '0'
+    } catch {
+      return true
+    }
+  })
+  const followRef = useRef(follow)
+  followRef.current = follow
+
+  useEffect(() => {
+    if (!follow) return undefined
+    const id = requestAnimationFrame(() => pinBottom(ref.current))
+    return () => cancelAnimationFrame(id)
+  }, [dep, follow])
+
+  function onScroll() {
+    const el = ref.current
+    if (!el) return
+    const gap = el.scrollHeight - el.scrollTop - el.clientHeight
+    const atBottom = gap < 48
+    if (atBottom === followRef.current) return
+    followRef.current = atBottom
+    setFollow(atBottom)
+    try {
+      window.localStorage.setItem(FOLLOW_STORE, atBottom ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function setLocked(next) {
+    followRef.current = next
+    setFollow(next)
+    try {
+      window.localStorage.setItem(FOLLOW_STORE, next ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+    if (next) pinBottom(ref.current)
+  }
+
+  return { ref, follow, onScroll, setLocked }
 }
 
 export function EngineLogDock() {
@@ -118,7 +170,7 @@ export function LogPage() {
   const { rawLines, lines, logErr, switching, logs } = useEngineLog(200)
   const [noise, setNoise] = useState(false)
   const shown = noise ? rawLines : lines
-  const preRef = useStickBottom(shown.join('\n'))
+  const { ref: preRef, follow, onScroll, setLocked } = useFollowLatest(shown.join('\n'))
   const title = logs?.file || logs?.engine || 'engine'
 
   return (
@@ -131,12 +183,16 @@ export function LogPage() {
           {shown.length ? ` · ${shown.length} lines` : ''}
         </span>
         <label>
+          <input type="checkbox" checked={follow} onChange={(e) => setLocked(e.target.checked)} />
+          Lock to latest
+        </label>
+        <label>
           <input type="checkbox" checked={noise} onChange={(e) => setNoise(e.target.checked)} />
           Show health checks
         </label>
       </header>
       {logErr ? <p className="err">{logErr}</p> : null}
-      <pre ref={preRef} className="log page">
+      <pre ref={preRef} className="log page" onScroll={onScroll}>
         {shown.length ? shown.join('\n') : 'No log lines yet.'}
       </pre>
     </div>

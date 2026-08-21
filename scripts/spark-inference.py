@@ -47,6 +47,8 @@ SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
 SWITCH_META_FILE = ROOT / "run" / "inference-switch.meta.json"
 SWITCH_LOG_FILE = ROOT / "logs" / "inference-switch-latest.log"
 SWITCH_LOG_PROFILE_RE = re.compile(r"^==>\s+switch\s+to\s+(\S+)")
+EUGR_LOG_CONTAINERS = ("vllm_node", "spark-vllm-qwen36")
+SWITCH_LOG_CAPTURE_ENV = "SPARK_INFERENCE_SWITCH_LOG"
 BENCH_PID_FILE = ROOT / "run" / "inference-bench.pid"
 BENCH_RESULT_FILE = ROOT / "run" / "inference-bench-result.json"
 LOG_DIR = ROOT / "logs"
@@ -1969,30 +1971,41 @@ def cmd_up(
         print(f"Already active: {profile_id}")
         return cmd_status()
 
-    print("Stopping current engines (if any)...")
-    cmd_down()
-    write_state(profile_id)
+    logf = _begin_cli_switch_log(profile_id)
+    old_out, old_err = sys.stdout, sys.stderr
+    if logf is not None:
+        sys.stdout = _TeeIO(old_out, logf)
+        sys.stderr = _TeeIO(old_err, logf)
+    try:
+        print("Stopping current engines (if any)...")
+        cmd_down()
+        write_state(profile_id)
 
-    path = str(recipe_path(profile_id))
-    engine = recipe.get("engine")
-    launch_env = ctxmod.prepare_launch(recipe, profile_id, ctx=ctx, kv=kv, preset=preset)
-    print(f"Starting {profile_id} ({engine}) ctx={ctx_i} kv={kv_s}...")
+        path = str(recipe_path(profile_id))
+        engine = recipe.get("engine")
+        launch_env = ctxmod.prepare_launch(recipe, profile_id, ctx=ctx, kv=kv, preset=preset)
+        print(f"Starting {profile_id} ({engine}) ctx={ctx_i} kv={kv_s}...")
 
-    if engine == "eugr":
-        env = {"SPARK_EUGR_RECIPE": launch_env.get("SPARK_EUGR_RECIPE", recipe.get("eugr_recipe", ""))}
-        run_script(SPARK_EUGR, "up", env=env)
-    elif engine == "llamacpp":
-        env = {"SPARK_LLAMA_RECIPE": launch_env.get("SPARK_LLAMA_RECIPE", path)}
-        run_script(SPARK_LLAMA, "up", env=env)
-    elif engine == "ds4":
-        env = {"SPARK_DS4_RECIPE": launch_env.get("SPARK_DS4_RECIPE", path)}
-        run_script(SPARK_DS4, "up", env=env)
-    else:
-        raise SystemExit(f"unsupported engine: {engine!r}")
+        if engine == "eugr":
+            env = {"SPARK_EUGR_RECIPE": launch_env.get("SPARK_EUGR_RECIPE", recipe.get("eugr_recipe", ""))}
+            run_script(SPARK_EUGR, "up", env=env)
+        elif engine == "llamacpp":
+            env = {"SPARK_LLAMA_RECIPE": launch_env.get("SPARK_LLAMA_RECIPE", path)}
+            run_script(SPARK_LLAMA, "up", env=env)
+        elif engine == "ds4":
+            env = {"SPARK_DS4_RECIPE": launch_env.get("SPARK_DS4_RECIPE", path)}
+            run_script(SPARK_DS4, "up", env=env)
+        else:
+            raise SystemExit(f"unsupported engine: {engine!r}")
 
-    write_state(profile_id)
-    print(f"Profile {profile_id} started — run: spark-inference status")
-    return 0
+        write_state(profile_id)
+        print(f"Profile {profile_id} started — run: spark-inference status")
+        return 0
+    finally:
+        if logf is not None:
+            sys.stdout = old_out
+            sys.stderr = old_err
+            logf.close()
 
 
 def validate_profile_id(profile_id: str) -> str | None:
@@ -2747,6 +2760,74 @@ def tail_log(path: Path, lines: int = 12) -> list[str]:
     return content[-lines:]
 
 
+class _TeeIO:
+    def __init__(self, *streams: Any) -> None:
+        self.streams = streams
+
+    def write(self, data: str) -> int:
+        for stream in self.streams:
+            try:
+                stream.write(data)
+                stream.flush()
+            except OSError:
+                pass
+        return len(data)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            try:
+                stream.flush()
+            except OSError:
+                pass
+
+
+def _begin_cli_switch_log(profile_id: str) -> Any:
+    """Truncate the shared switch log for a CLI `up` (portal jobs already capture stdout)."""
+    if os.environ.get(SWITCH_LOG_CAPTURE_ENV) == "1":
+        return None
+    SWITCH_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _write_switch_meta(profile_id)
+    logf = SWITCH_LOG_FILE.open("w", encoding="utf-8")
+    logf.write(f"==> switch to {profile_id} {datetime.now(timezone.utc).isoformat()}\n")
+    logf.flush()
+    return logf
+
+
+def tail_docker_logs(container: str, lines: int) -> list[str]:
+    try:
+        out = subprocess.check_output(
+            ["docker", "logs", "--tail", str(max(1, int(lines))), container],
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=2.0,
+        )
+    except FileNotFoundError:
+        return []
+    except subprocess.TimeoutExpired:
+        return ["(docker logs timed out)"]
+    except subprocess.CalledProcessError as exc:
+        text = (exc.output or "").strip()
+        if "No such container" in text:
+            return []
+        return [text] if text else []
+    return out.splitlines()[-lines:]
+
+
+def tail_eugr_engine_log(lines: int) -> tuple[str, list[str]]:
+    try:
+        names = subprocess.check_output(
+            ["docker", "ps", "-a", "--format", "{{.Names}}"],
+            text=True,
+            timeout=1.5,
+        ).splitlines()
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        names = []
+    for name in EUGR_LOG_CONTAINERS:
+        if name in names:
+            return name, tail_docker_logs(name, lines)
+    return "vllm_node", []
+
+
 def _read_switch_meta() -> dict[str, Any]:
     if not SWITCH_META_FILE.is_file():
         return {}
@@ -2902,7 +2983,7 @@ def resolve_log_recipe() -> dict[str, Any] | None:
 def api_inference_logs(lines: int = 30) -> dict[str, Any]:
     switch_job = active_switch_job()
     recipe = resolve_log_recipe()
-    engine_path = engine_log_file(recipe)
+    engine = (recipe or {}).get("engine")
     sections: list[dict[str, Any]] = []
     if switch_job.get("running"):
         sections.append(
@@ -2912,18 +2993,37 @@ def api_inference_logs(lines: int = 30) -> dict[str, Any]:
                 "kind": "switch",
             }
         )
+    if engine == "eugr":
+        label, eng_lines = tail_eugr_engine_log(lines)
+        sections.append(
+            {
+                "file": label,
+                "lines": eng_lines,
+                "kind": "engine",
+                "engine": "eugr",
+            }
+        )
+        return {
+            "ok": True,
+            "file": label,
+            "engine": "eugr",
+            "lines": eng_lines,
+            "sections": sections,
+            "switch": switch_job,
+        }
+    engine_path = engine_log_file(recipe)
     sections.append(
         {
             "file": engine_path.name,
             "lines": tail_log(engine_path, lines),
             "kind": "engine",
-            "engine": (recipe or {}).get("engine"),
+            "engine": engine,
         }
     )
     return {
         "ok": True,
         "file": engine_path.name,
-        "engine": (recipe or {}).get("engine"),
+        "engine": engine,
         "lines": tail_log(engine_path, lines),
         "sections": sections,
         "switch": switch_job,
@@ -2936,7 +3036,7 @@ def engine_log_file(recipe: dict[str, Any] | None) -> Path:
         return LOG_DIR / "llama-server.log"
     engine = recipe.get("engine")
     if engine == "eugr":
-        return SWITCH_LOG_FILE
+        return Path("vllm_node")
     if engine == "ds4":
         return LOG_DIR / "ds4-server.log"
     return LOG_DIR / "llama-server.log"
@@ -3294,11 +3394,14 @@ def start_switch_job(profile_id: str, *, ctx: int | None = None, kv: str | None 
             up_cmd.extend(["--kv", str(kv)])
         if preset:
             up_cmd.extend(["--preset", str(preset)])
+        child_env = os.environ.copy()
+        child_env[SWITCH_LOG_CAPTURE_ENV] = "1"
         proc = subprocess.Popen(
             up_cmd,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=True,
+            env=child_env,
         )
     SWITCH_PID_FILE.write_text(str(proc.pid))
     _invalidate_status_cache()

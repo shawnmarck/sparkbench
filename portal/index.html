@@ -1834,7 +1834,8 @@
           return d.sections.map((s) => {
             const head = s.kind === 'switch'
               ? '[switch] ' + s.file
-              : '# ' + s.file + (s.engine ? ' (' + engineDisplayMeta(s.engine) + ')' : '');
+              : '# ' + (s.engine === 'eugr' ? 'docker logs ' : '') + s.file
+                + (s.engine ? ' (' + engineDisplayMeta(s.engine) + ')' : '');
             const body = (s.lines || []).join('\n');
             return head + '\n' + (body || '—');
           }).join('\n\n').trim() || '—';

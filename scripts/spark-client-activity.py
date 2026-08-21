@@ -286,6 +286,7 @@ def _load_usage() -> dict[str, Any]:
         "hours": {},
         "days": {},
         "seen": {},
+        "backfills": [],
     }
     if not USAGE_PATH.exists():
         return store
@@ -328,6 +329,9 @@ def _load_usage() -> dict[str, Any]:
             if sid:
                 seen_map[str(sid)] = 0.0
     store["seen"] = seen_map
+    raw_bf = raw.get("backfills") or []
+    if isinstance(raw_bf, list):
+        store["backfills"] = [x for x in raw_bf if isinstance(x, dict)]
     return store
 
 
@@ -341,6 +345,7 @@ def _save_usage(store: dict[str, Any]) -> None:
         "hours": store.get("hours") or {},
         "days": store.get("days") or {},
         "seen": {str(k): float(v) for k, v in (store.get("seen") or {}).items()},
+        "backfills": [x for x in (store.get("backfills") or []) if isinstance(x, dict)],
     }
     try:
         USAGE_PATH.parent.mkdir(parents=True, exist_ok=True)

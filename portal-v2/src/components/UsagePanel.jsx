@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { ActivityCalendar } from './ActivityCalendar.jsx'
 import { fmtTokens } from '../lib/fmt.js'
-import { countsOf, lastNDates } from '../lib/usage.js'
+import { countsOf } from '../lib/usage.js'
 
 function TokenMix({ prompt, completion }) {
   const total = prompt + completion
@@ -22,51 +23,6 @@ function TokenMix({ prompt, completion }) {
 function requestLabel(requests, total) {
   if (requests <= 2 && total > 1e6) return { text: '—', title: 'Lifetime backfill; request count unknown' }
   return { text: fmtTokens(requests), title: '' }
-}
-
-function Heatmap({ days }) {
-  const byDate = useMemo(() => {
-    const m = new Map()
-    for (const row of days || []) m.set(row.date, countsOf(row))
-    return m
-  }, [days])
-  const dates = lastNDates(31)
-  const max = Math.max(1, ...dates.map((d) => byDate.get(d)?.total || 0))
-  const [hover, setHover] = useState(null)
-  const tip = hover && {
-    date: hover,
-    ...(byDate.get(hover) || { total: 0, requests: 0 }),
-  }
-
-  return (
-    <div className="heat">
-      <div className="heat-head">
-        <span>Past 31 days</span>
-        <span className="heat-range">{dates[0]?.slice(5)} → {dates[dates.length - 1]?.slice(5)}</span>
-      </div>
-      <div className="heat-row">
-        {dates.map((date) => {
-          const tot = byDate.get(date)?.total || 0
-          const level = tot === 0 ? 0 : Math.min(4, 1 + Math.floor((tot / max) * 3))
-          return (
-            <button
-              key={date}
-              type="button"
-              className={`heat-cell l${level}`}
-              title={`${date} · ${fmtTokens(tot)} tokens`}
-              onMouseEnter={() => setHover(date)}
-              onMouseLeave={() => setHover(null)}
-            />
-          )
-        })}
-      </div>
-      <p className="heat-tip">
-        {tip
-          ? `${tip.date} · ${fmtTokens(tip.total)} tokens · ${tip.requests || 0} req`
-          : 'Hover a day. Empty cells are days with no :9000 traffic in the store.'}
-      </p>
-    </div>
-  )
 }
 
 export function UsagePanel({ live }) {
@@ -97,7 +53,7 @@ export function UsagePanel({ live }) {
         <div><b>{summary.active_clients ?? '—'}</b><span>Clients</span></div>
         <div><b>{summary.avg_tok_s ? Number(summary.avg_tok_s).toFixed(1) : '—'}</b><span>Tok/s / 1h</span></div>
       </div>
-      <Heatmap days={usage?.days} />
+      <ActivityCalendar days={usage?.days} />
       <div className="usage-tabs">
         <button type="button" className={tab === 'models' ? 'on' : ''} onClick={() => setTab('models')}>Models</button>
         <button type="button" className={tab === 'activity' ? 'on' : ''} onClick={() => setTab('activity')}>Activity</button>

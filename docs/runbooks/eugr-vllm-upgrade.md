@@ -62,23 +62,25 @@ Plain `./build-and-copy.sh` may rebuild the runner from stale `wheels/` copies. 
 
 ### 4. Canary smoke (recommended)
 
-Run a **non-production** profile or the usual Qwen smoke on a spare port if you have a canary recipe; otherwise use the standard smoke profile:
+Prefer the everyday profile ([smoke-vllm-eugr.md](./smoke-vllm-eugr.md)):
+
+```bash
+spark inference up opencode-qwen36-250k
+spark inference status
+curl -sf http://127.0.0.1:8000/v1/models | head -c 400
+```
+
+Or engine-only if you just need `/v1/models`:
 
 ```bash
 spark engine eugr up
-spark engine eugr logs          # wait for /v1/models
-curl -sf http://127.0.0.1:8000/v1/models | head -c 400
-curl -sf http://127.0.0.1:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"<served_name>","messages":[{"role":"user","content":"ping"}],"max_tokens":16}'
+spark engine eugr logs
 ```
-
-See also [smoke-vllm-eugr.md](./smoke-vllm-eugr.md).
 
 ### 5. Benchmark (optional but recommended for production profiles)
 
 ```bash
-spark inference up <profile-id>   # e.g. qwen36-nvfp4
+spark inference up <profile-id>   # e.g. opencode-qwen36-250k
 spark inference bench
 spark bench latest <profile-id>
 ```

@@ -1,17 +1,17 @@
 # First Spark setup (solo GB10)
 
-One DGX Spark (`sparky`), one operator. This guide gets you from clone to browsing golden recipes and downloading models.
+One DGX Spark, one operator. Clone, install, browse the golden map, download a model, serve it.
 
 ## What you get from git
 
 | In the repo | On your disk |
 |-------------|----------------|
 | `recipes/*.yaml` — launch config + GB10 bench matrix | `/models/<lab>/<slug>/` — weights (you download) |
-| `data/golden-recipes.yaml` — which model → golden profile | `portal/models.json` — built locally |
+| `data/golden-recipes.yaml` — model → golden profile | `portal/models.json` — built locally |
 | `data/model-catalog.yaml` — HF repos, variants | |
 | `data/model-verification.yaml` — headline tok/s / `works` | |
 
-**Git = cookbook. Disk = ingredients.**
+Git is the cookbook. Disk is the ingredients.
 
 ## Checklist
 
@@ -34,13 +34,13 @@ Optional NAS shelf: `sudo bash install/spark-install nas`.
 spark hf login
 ```
 
-### 3. Host-local git protection (on sparky)
+### 3. Host-local git protection
 
 ```bash
 bash scripts/sparky-protect-runtime.sh
 ```
 
-Keeps `data/inference-profiles.yaml` local; **recipes and shared data pull from git**.
+Keeps `data/inference-profiles.yaml` and `data/inference-benchmarks.yaml` local. Recipes and shared catalog data pull from git.
 
 ### 4. Build inventory
 
@@ -48,31 +48,33 @@ Keeps `data/inference-profiles.yaml` local; **recipes and shared data pull from 
 spark models inventory
 ```
 
-Open **http://sparky/models.html** — all catalog models appear (status `missing` until downloaded).
+Open **http://sparky/** → **Models**, or **http://sparky/models.html**. Catalog rows show `missing` until weights land.
 
 ### 5. Browse golden recipes (no weights required)
 
 Golden models have a committed profile in `data/golden-recipes.yaml`. In the portal:
 
-- Filter **Golden** (chip)
-- Open detail → **Model Lab** shows recipe id, ctx ladder, KV sweep from git
+- Filter **Golden**
+- Open a row → Model Lab shows recipe id, ctx ladder, KV sweep from git
+
+Editor's pick on [sparkbench.dev](https://sparkbench.dev) is Ornith 1.5 (`ornith-ai/ornith-1.5-35b-a3b`). Everyday long-context Qwen is `opencode-qwen36-250k` (Qwen3.6-35B-A3B).
 
 ### 6. Download a golden model
 
-**With NAS shelf** (another Spark pushed backups):
+**With NAS shelf** (another box already pushed backups):
 
 ```bash
 spark shelf pull yuxinlu1/mellum2-12b-opus-thinking
 ```
 
-**Without shelf** (HF — recommended for solo):
+**Without shelf** (Hugging Face):
 
 ```bash
 spark models fetch yuxinlu1/mellum2-12b-opus-thinking
-spark models fetch --dry-run qwen/qwen-agentworld-35b-a3b   # preview
+spark models fetch --dry-run nvidia/qwen3.6-35b-a3b   # preview
 ```
 
-Or use **Download from HF** in the model detail pane.
+Or use **Download from HF** in the model detail pane. Mellum2 is a smaller first pull. Qwen3.6-35B-A3B NVFP4 is the everyday coding profile.
 
 ### 7. Run inference
 
@@ -83,14 +85,18 @@ spark inference status
 curl -s http://127.0.0.1:9000/v1/models | head
 ```
 
+Clients should use model `sparky` on `http://sparky:9000/v1` so they follow the active profile.
+
 ### 8. Verify on your box (optional)
 
-Upstream git may already include GB10 perf. To verify on **your** Spark:
+Upstream git may already include GB10 perf. To measure on **your** Spark:
 
 ```bash
 spark models golden yuxinlu1/mellum2-12b-opus-thinking
-# hours for long-ctx models — use nohup + --resume; see golden workflow runbook
+# hours for long-ctx models — use nohup + --resume
 ```
+
+See [new-model-golden-benchmark.md](../runbooks/new-model-golden-benchmark.md). Overnight sweeps: [benchmaster-agent.md](../runbooks/benchmaster-agent.md).
 
 ## Pull updates
 
@@ -100,13 +106,16 @@ git pull origin main
 spark models inventory
 ```
 
-Deploy from a dev machine: `./scripts/deploy-sparky.sh` (see [sparky-live-sync runbook](../runbooks/sparky-live-sync.md)).
+Deploy from a dev machine: `./scripts/deploy-sparky.sh` (see [sparky-live-sync](../runbooks/sparky-live-sync.md)).
+
+**Do not** run `spark-install core` on a box that is serving.
 
 ## Further reading
 
 | Doc | Topic |
 |-----|--------|
-| [new-model-golden-benchmark.md](../runbooks/new-model-golden-benchmark.md) | Golden workflow layers |
+| [installation-instructions.md](installation-instructions.md) | Full install + HTTP routes |
+| [new-model-golden-benchmark.md](../runbooks/new-model-golden-benchmark.md) | Golden workflow |
 | [spark-cli.md](../reference/spark-cli.md) | Full CLI |
-| [model-shelf.md](../guides/model-shelf.md) | NAS layout (optional) |
-| [solo-user-backlog.md](../roadmap/solo-user-backlog.md) | Roadmap tasks |
+| [model-shelf.md](model-shelf.md) | NAS layout (optional) |
+| [model-picks.md](model-picks.md) | Why these models |

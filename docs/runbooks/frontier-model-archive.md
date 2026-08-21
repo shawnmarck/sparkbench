@@ -120,7 +120,7 @@ That copies shelf → `/models`. Skip unless you have a machine that can load it
 
 ## Kimi K3 checklist (reuse this runbook)
 
-1. Wait for Moonshot’s public HF repo (weights targeted ~2026-07-27).
+1. Wait for Moonshot’s public HF repo.
 2. Prefer first-party MXFP4 / NVFP4-class if Blackwell-native; else official FP8.
 3. Set `LAB` / `SLUG` / `REPO` / `FMT` and run the download block above.
 4. Confirm `du` matches Hub size; keep `manifest.yaml`.

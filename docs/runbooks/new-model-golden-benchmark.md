@@ -1,10 +1,14 @@
 # Golden workflow runbook
 
-**"Golden workflow"** = full layered bench per model: golden cell → ctx ladder → KV sweep → (optional) shelf push.
+Full layered bench per model: golden cell → ctx ladder → KV sweep → (optional) shelf push.
+
+`works` is set only after the golden-phase **bench v2** succeeds. PBM 4k/50k/100k is a separate display ladder (Benchmaster `perf_sweep` or `spark-inference-perfbench-metrics.py`).
 
 Orchestrator: `scripts/spark-golden-workflow.py`  
 Report: `/opt/spark/run/golden-workflow-report.json`  
 Log: `/opt/spark/logs/golden-workflow.log`
+
+Overnight / unattended: enqueue `golden_workflow` or `perf_sweep` on Benchmaster instead of sitting on `nohup`. See [benchmaster-agent.md](benchmaster-agent.md).
 
 ## 1. Register golden profile
 

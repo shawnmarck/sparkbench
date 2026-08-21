@@ -87,9 +87,9 @@ Do not point OpenCode at the same profile you're benchmarking unless intentional
 
 ---
 
-## Overnight `/loop` babysit (manual pattern)
+## Overnight `/loop` babysit
 
-Until Phase 3b automation ships, poll from a second tmux pane or cron on sparky:
+Poll from a second tmux pane or cron on sparky:
 
 ```bash
 while sleep 900; do

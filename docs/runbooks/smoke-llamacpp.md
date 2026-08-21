@@ -1,91 +1,87 @@
-# llama.cpp smoke test (Phase 3b)
+# llama.cpp smoke
 
-Goal: run the same Qwen3.6 family via **GGUF** on GB10 for comparison with NVFP4 vLLM.
+Same Qwen3.6 family via GGUF, for a bake-off against NVFP4 vLLM.
 
-**Status: PASSING** (2026-06-21 — Qwen3.6 Q4 + Gemma 4 12B Coder)
+**Profile:** `qwen36-q4-llama`  
+**Weights:** `/models/unsloth/qwen3.6-35b-a3b/gguf/`  
+Start with `Qwen3.6-35B-A3B-UD-Q4_K_M.gguf`.
 
-
-## Prerequisites
-
-- Phase 3a done (proves the box runs LLMs)
-- GGUF on disk: `/models/unsloth/qwen3.6-35b-a3b/gguf/`
-  - Start with: `Qwen3.6-35B-A3B-UD-Q4_K_M.gguf` (~21 GB)
-  - Later: `Qwen3.6-35B-A3B-MXFP4_MOE.gguf` (needs `121a` build + newer llama.cpp)
-- **Stop vLLM first:** `spark-eugr down` (single GPU workload)
-
-## Install
+## Prereqs
 
 ```bash
 sudo bash /opt/spark/install/spark-install engine llama
+spark inference down            # free eugr / ds4
 ```
 
-Builds from source into `/opt/spark/vendor/llama.cpp` with `CMAKE_CUDA_ARCHITECTURES=121` (GB10). Installs `spark-llama` CLI.
+Build is `CMAKE_CUDA_ARCHITECTURES=121` (GB10) into `/opt/spark/vendor/llama.cpp`.
 
-## Smoke test
+## Smoke via Model Lab (preferred)
 
 ```bash
-spark-eugr down                    # free GPU
-spark-llama up                     # Q4_K_M on :8081
-spark-llama status
-curl http://sparky:8081/v1/models
-
-curl http://sparky:8081/v1/chat/completions \
+spark inference up qwen36-q4-llama
+spark inference status
+curl -sf http://sparky:8081/v1/models
+curl -sf http://sparky:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"qwen3.6-35b-a3b-q4","messages":[{"role":"user","content":"Hello!"}],"max_tokens":64}'
 ```
 
-Point Open WebUI at `http://host.docker.internal:8081/v1` temporarily, or use curl only for smoke.
+Gateway (after `spark-install gateway`):
+
+```bash
+curl -sf http://sparky:9000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"sparky","messages":[{"role":"user","content":"Hello!"}],"max_tokens":64}'
+```
+
+```bash
+spark inference down
+```
+
+## Engine-only
+
+```bash
+spark engine eugr down
+spark engine llama up
+spark engine llama status
+spark engine llama logs
+spark engine llama down
+```
 
 ## Runtime flags (GB10)
 
-From community DGX Spark guides:
-
 - `-ngl 999` — full GPU offload
-- `-fa 1` — flash attention (if build supports it)
-- `--no-mmap` — avoids unified-memory mmap quirks on Spark
-- `GGML_CUDA_ENABLE_UNIFIED_MEMORY=1` — optional tuning for load speed
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `spark-llama up` | Start server (default Q4_K_M) |
-| `spark-llama down` | Stop server |
-| `spark-llama status` | PID + health |
-| `spark-llama logs` | Tail server log |
+- `-fa 1` — flash attention when the build supports it
+- `--no-mmap` — avoids unified-memory mmap quirks
+- `GGML_CUDA_ENABLE_UNIFIED_MEMORY=1` — optional load-speed tweak
 
 ## Compare with vLLM
 
 | | vLLM NVFP4 | llama.cpp Q4_K_M |
 |--|------------|------------------|
+| Profile | `opencode-qwen36-250k` | `qwen36-q4-llama` |
 | Path | `nvidia/.../nvfp4` | `unsloth/.../gguf` |
 | Port | 8000 | 8081 |
-| CLI | `spark-eugr` | `spark-llama` |
+| CLI | `spark engine eugr` | `spark engine llama` |
 
-Subjective feel + tok/s (manual or `llama-bench`) — no portal TPS widget yet.
-
-## Troubleshooting
-
-- **Build fails on mxfp4 templates** — use `121` not `121a`, or update llama.cpp; Q4_K_M doesn't need FP4 kernels
-- **"no kernel image"** — wrong CUDA arch; must be `121` for GB10
-- **Slow load** — try `GGML_CUDA_ENABLE_UNIFIED_MEMORY=1` and `--no-mmap`
-- **OOM with vLLM still up** — only one engine at a time
-
-## Related
-
-- `docs/INFERENCE-SMOKE.md` — vLLM path (3a)
+Fair tok/s: `spark inference bench` (v2) or a Benchmaster `perf_sweep`.
 
 ## Open WebUI
 
-Open WebUI is wired for **both** backends (`sudo bash install/spark-install openwebui`):
+Prefer the gateway (`http://sparky:9000/v1`, model `sparky`). Direct engine URLs if you skip the gateway:
 
-| Backend | URL | When |
-|---------|-----|------|
-| vLLM | `http://host.docker.internal:8000/v1` | `spark-eugr up` |
-| llama.cpp | `http://host.docker.internal:8081/v1` | `spark-llama up` |
+| Backend | URL |
+|---------|-----|
+| vLLM | `http://host.docker.internal:8000/v1` |
+| llama.cpp | `http://host.docker.internal:8081/v1` |
 
-1. Open http://sparky:3000 (same account as before — volume preserved)
-2. New chat → model picker → **`qwen3.6-35b-a3b-q4`** (llama) or **`qwen3.6-35b-a3b-nvfp4`** (vLLM)
-3. Only one GPU engine at a time — if a model is missing, start the matching backend
+Only one GPU engine at a time. If a model is missing from the picker, that backend is down.
 
-Admin → Connections → OpenAI shows both URLs if you need to verify.
+## Troubleshooting
+
+- **Build fails on mxfp4 templates** — use arch `121` not `121a`. Q4_K_M does not need FP4 kernels.
+- **"no kernel image"** — CUDA arch must be `121` for GB10.
+- **Slow load** — try `GGML_CUDA_ENABLE_UNIFIED_MEMORY=1` and `--no-mmap`.
+- **OOM with vLLM still up** — `spark inference down` first.
+
+Related: [smoke-vllm-eugr.md](smoke-vllm-eugr.md).

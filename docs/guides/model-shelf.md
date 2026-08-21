@@ -1,6 +1,6 @@
 # Model shelf layout
 
-Canonical organization for models on **Spark** and **QNAP shelf**. Same tree on both sides.
+Same tree on the Spark box and the optional QNAP shelf.
 
 ## Paths
 
@@ -9,27 +9,29 @@ Canonical organization for models on **Spark** and **QNAP shelf**. Same tree on 
 | Spark workspace (download + run) | `/models` |
 | NAS backup (mirror) | `/mnt/model-shelf/models` |
 | Partial downloads (Spark) | `/models/_incoming` |
-| Drops for later (NAS / Hermes) | `/mnt/model-shelf/models/_incoming` |
+| Drops for later (NAS) | `/mnt/model-shelf/models/_incoming` |
+
+Install the mount with `sudo bash install/spark-install nas`. Creds: `/etc/spark/smb-credentials-models`. Local `/models` works without a shelf.
 
 ## Directory layout
 
 ```
 {lab}/{model-version}/
   manifest.yaml
-  gguf/           # llama.cpp — quant files or gguf/{Q4_K_M}/ bundles
-  hf/             # HuggingFace safetensors layout for vLLM
+  gguf/           # llama.cpp — loose files or gguf/{Q4_K_M}/ bundles
+  hf/             # Hugging Face safetensors for vLLM
   nvfp4/          # GB10-optimized exports
+  fp8/            # official FP8 checkpoints
   awq/  gptq/     # optional
 ```
 
-### Example
+Example:
 
 ```
-/models/google/gemma-4-26b-a4b/
+/models/google/gemma-4-26b-a4b-it/
   manifest.yaml
   gguf/
     gemma-4-26b-a4b-Q4_K_M.gguf
-    gemma-4-26b-a4b-Q6_K.gguf
   hf/
     config.json
     model.safetensors.index.json
@@ -37,26 +39,29 @@ Canonical organization for models on **Spark** and **QNAP shelf**. Same tree on 
 
 ## Workflow
 
-1. **Download to Spark** → `/models/_incoming/` or directly into the model tree
-2. **Smoke test** on GB10 (CLI / inference UI)
+1. **Download to Spark** → `/models/_incoming/` or straight into the model tree
+2. **Smoke test** (`spark inference up <profile>`)
 3. **Back up to shelf** (Spark → NAS):
+
    ```bash
-   spark-shelf-push google/gemma-4-26b-a4b
-   ```
-4. **Restore from shelf** when needed:
-   ```bash
-   spark-shelf-pull google/gemma-4-26b-a4b
+   spark shelf push google/gemma-4-26b-a4b-it
    ```
 
-Default sync direction: **Spark → shelf**. Pull from shelf only when restoring or fetching a model not on local disk.
+4. **Restore from shelf**:
+
+   ```bash
+   spark shelf pull google/gemma-4-26b-a4b-it
+   ```
+
+Default direction is Spark → shelf. Pull only to restore or to fetch a model that is not on local disk.
+
+Recipes point at `/models/...`. If a stack wants another path, symlink. Do not fork a second tree.
 
 ## manifest.yaml (per model)
 
-Place at `{lab}/{model-version}/manifest.yaml`:
-
 ```yaml
-id: google/gemma-4-26b-a4b
-hf_repo: google/gemma-4-26b-a4b   # optional
+id: google/gemma-4-26b-a4b-it
+hf_repo: google/gemma-4-26b-a4b-it
 license: gemma
 variants:
   - format: gguf
@@ -69,26 +74,14 @@ variants:
 default_variant: gguf/Q4_K_M
 ```
 
-## Inference stacks
-
-Recipes should point at `/models/...` directly. If a stack expects a different path, use a symlink:
-
-```bash
-ln -s /models ~/models              # example shim
-```
-
-Avoid reorganizing for stack defaults; keep one canonical tree.
-
-
 ## Background push (rate-limited)
 
-Large backups can run in the background without saturating the LAN:
+Large backups can run without saturating the LAN:
 
 ```bash
-# ~200 Mbps cap, low CPU/IO priority, logs to /opt/spark/logs/shelf-push-latest.log
-spark-shelf-push --all --background --bwlimit 200
-
-spark-shelf-push --status    # running? tail of log
+# ~200 Mbps cap, low CPU/IO priority, log: /opt/spark/logs/shelf-push-latest.log
+spark shelf push --all --background --bwlimit 200
+spark shelf push --status
 ```
 
 `--bwlimit` is megabits/sec (rsync KiB/s under the hood). Omit for unlimited.
@@ -97,12 +90,16 @@ spark-shelf-push --status    # running? tail of log
 
 | Command | Purpose |
 |---------|---------|
-| `spark-shelf-push MODEL` | Backup one model to NAS |
-| `spark-shelf-push --all` | Push all models (excludes `_incoming`) |
-| `spark-shelf-pull MODEL` | Restore one model from NAS |
-| `--dry-run` | Preview rsync on either command |
+| `spark shelf push MODEL` | Backup one model to NAS |
+| `spark shelf push --all` | Push all models (skips `_incoming`) |
+| `spark shelf pull MODEL` | Restore one model from NAS |
+| `spark shelf status` | Mount + last job |
+| `--dry-run` | Preview rsync |
+
+Legacy wrappers `spark-shelf-push` / `spark-shelf-pull` are not on PATH. Use `spark shelf`.
 
 ## Related
 
 - Layout: `sudo bash /opt/spark/install/spark-install core` (or `module core/models-layout.sh`)
 - NAS mount: `sudo bash /opt/spark/install/spark-install nas`
+- Cold archive (NAS only, do not land on Sparky): [frontier-model-archive.md](../runbooks/frontier-model-archive.md)

@@ -33,11 +33,13 @@ Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUD
 | `install/INSTALL.md` | Install targets + module index |
 | `docs/runbooks/sparky-live-sync.md` | Pulling code on a live box; skip-worktree |
 | `docs/runbooks/new-model-golden-benchmark.md` | Onboard new models |
-| `docs/guides/local-model-testing.md` | Bench queue, golden audit SOP |
+| `docs/guides/local-model-testing.md` | Single-model bench + Benchmaster |
 | `docs/reference/inference-stack.md` | Gateway, profiles, recipes, APIs |
 | `docs/reference/benchmark-standard.md` | Bench v2 policy |
 | `docs/reference/published-evals.md` | Vendor SWE/TB overlay on sparkbench.dev (not Spark-measured) |
 | `docs/guides/model-shelf.md` | `/models` + optional NAS |
+| `docs/runbooks/benchmaster-agent.md` | Overnight perf / intel queue |
+| `docs/guides/model-picks.md` | Why these models are in the catalog |
 
 Smoke runbooks: `docs/runbooks/smoke-vllm-eugr.md`, `smoke-llamacpp.md`, `smoke-ds4.md`.
 

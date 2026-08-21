@@ -4,7 +4,7 @@ SparkBench ships one portal GIF in the repo. CLI and install recordings convert 
 
 ## Portal (done)
 
-`docs/assets/sparkbench-demo.gif` — Inference, Models, and Explore tabs. Re-record when the UI changes materially.
+`docs/assets/sparkbench-demo.gif` — System, Models, Explore, Inference. Re-record when the UI changes materially (Benchmaster is a later tab).
 
 ## CLI session (recommended)
 
@@ -14,7 +14,7 @@ Record switching a profile and running bench v2:
 asciinema rec -t sparkbench-cli.cast
 spark status
 spark inference list
-spark inference up qwen36-nvfp4    # or any enabled profile
+spark inference up opencode-qwen36-250k    # or any enabled profile
 spark inference status
 spark inference bench
 spark inference status

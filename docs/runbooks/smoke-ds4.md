@@ -1,17 +1,15 @@
-# Smoke — DwarfStar (ds4) on GB10
+# ds4 (DwarfStar) smoke
 
-Pin: `data/ds4-dwarfstar.yaml` (Entrpi **v0.5.0**) · Model: `antirez/deepseek-v4-flash`
+Pin: `data/ds4-dwarfstar.yaml` (Entrpi **v0.5.0**). Model: `antirez/deepseek-v4-flash`.
 
-**Production recipe:** `antirez-deepseek-v4-flash-ds4` (0731 GGUF + DSpark).
+**Production profile:** `antirez-deepseek-v4-flash-ds4` (0731 GGUF + DSpark).
 
 ## Prereqs
 
 - Base: `…/DeepSeek-V4-Flash-…-imatrix-0731.gguf` (~81 GiB)
 - Drafter: `…/DSpark-drafter-Q2K-Q8-0731.gguf` (~6.5 GiB)
-- eugr and llama.cpp down (one GPU engine at a time)
+- eugr and llama.cpp down (one GPU engine)
 - ≥ ~24 GiB MemAvailable before `up` (OOM preflight)
-
-## Install / build
 
 ```bash
 sudo bash /opt/spark/install/spark-install engine ds4
@@ -28,27 +26,30 @@ curl -sf http://127.0.0.1:8000/v1/models | head
 spark engine ds4 down
 ```
 
-## Model Lab path (production profile)
+## Model Lab path
 
 ```bash
 spark inference up antirez-deepseek-v4-flash-ds4
 spark inference status
-spark inference bench      # bench-v2 @ recipe default fill (~14k at ctx 32k)
+spark inference bench      # bench v2 at recipe default fill
 # Portal: Inference → filter chip "ds4"
+spark inference down
 ```
 
-Logs: `/opt/spark/logs/ds4-server.log` · OOM guard: `/opt/spark/logs/ds4-oom-guard.log`
+Logs: `/opt/spark/logs/ds4-server.log`. OOM guard: `/opt/spark/logs/ds4-oom-guard.log`.
 
-## Open WebUI
+## Open WebUI / chat
 
-ds4 defaults to **thinking mode** — visible replies look like internal reasoning in Chinese unless disabled.
+ds4 defaults to **thinking mode**. Casual replies look like internal reasoning unless you turn it off.
 
-- **Recommended:** connect Open WebUI to **`http://host.docker.internal:8002/v1`** (DwarfStar chat proxy — thinking off).
-- **Or** pick model id **`deepseek-chat`** on the raw `:8000` backend.
-- **Avoid** `deepseek-v4-flash` on `:8000` for casual chat unless you want thinking output.
-
-Quick test via proxy:
+- **Recommended:** `http://host.docker.internal:8002/v1` (chat proxy, thinking off)
+- **Or** model id `deepseek-chat` on raw `:8000`
+- **Avoid** `deepseek-v4-flash` on `:8000` for casual chat unless you want thinking output
 
 ```bash
-curl -s http://127.0.0.1:8002/v1/chat/completions   -H 'Content-Type: application/json'   -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":32}'
+curl -s http://127.0.0.1:8002/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":32}'
 ```
+
+Gateway `sparky` still works once the profile is up; thinking behavior follows the engine.

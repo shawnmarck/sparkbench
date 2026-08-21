@@ -18,57 +18,58 @@ One CLI, one box, no cloud.
   <img src="docs/assets/sparkbench-demo.gif" width="820" alt="SparkBench portal: Inference, Models, and Explore tabs in action">
 </p>
 
-<p align="center"><sub>Portal — switch profiles, browse models, explore HuggingFace. <a href="docs/assets/RECORDING.md">Record CLI / install demos</a></sub></p>
+<p align="center"><sub>Portal: switch profiles, browse models, explore Hugging Face. <a href="docs/assets/RECORDING.md">Record CLI / install demos</a></sub></p>
 
 ---
 
 ## What it is
 
-SparkBench is a self-hosted dashboard and inference control plane for a single DGX Spark. It bundles everything you need to evaluate models on GB10 hardware without leaving a single CLI:
+SparkBench is a self-hosted dashboard and inference control plane for a single DGX Spark. One CLI covers the loop from Hugging Face to a serving profile:
 
-- **Portal**: System metrics, model browser, inference panel, HuggingFace explorer
-- **Three engines**: vLLM (eugr), llama.cpp, ds4 (DeepSeek V4 Flash). One CLI to switch.
-- **Model Lab**: Auto-scaffold recipes from weights, mark testing, bench, promote to production
-- **Versioned benchmarks**: Reproducible tok/s, multi-turn agent loops, context ladder
-- **HuggingFace integration**: Search, queue, download, dedupe; weights land in a canonical tree
-- **NAS shelf sync** (optional): Mirror models to/from a CIFS share when you have one; works fine with local `/models` only
+- **Portal**: System, Models, Explore, Inference, and Benchmaster
+- **Three engines**: vLLM (eugr), llama.cpp, ds4 (DeepSeek V4 Flash). One GPU at a time.
+- **Model Lab**: Auto-scaffold recipes from weights, mark testing, bench, promote
+- **Benchmarks**: Bench v2 (verify gate), PBM 4k/50k/100k ladder (site display)
+- **Hugging Face**: Search, queue, download, dedupe into `/models`
+- **NAS shelf** (optional): Mirror weights to a CIFS share. Local `/models` works alone.
+- **Gateway**: OpenAI-compatible `:9000/v1` for OpenCode, Grok, Hermes, Open WebUI
 
-The benchmarks generated here populate **[sparkbench.dev](https://sparkbench.dev)** — the public GB10 leaderboard.
+Numbers measured here feed **[sparkbench.dev](https://sparkbench.dev)**. Speed is GB10 tok/s. SWE and Terminal-Bench on that site are vendor citations, not Spark runs.
 
 ## Why
 
-DGX Spark is excellent hardware but ships without an opinionated way to run models on it. SparkBench is that opinion: a closed loop from *I saw a new model on HuggingFace* to *it's promoted, benched, and serving on my box at this many tok/s*.
+DGX Spark is strong hardware with no opinionated loop. SparkBench is that loop: see a model on Hugging Face, download it, scaffold a recipe, bench it, serve it.
 
-If you own a Spark, run this. If you're considering one, check the [leaderboard](https://sparkbench.dev) to see what it can actually do.
+If you own a Spark, run this. If you are shopping for one, the [leaderboard](https://sparkbench.dev) shows what a GB10 actually does.
 
 ## Why not just vLLM or llama.cpp?
 
-Raw engines are great. SparkBench wraps them for **one GB10 box, one loop**:
+Raw engines are fine. SparkBench wraps them for one box and one loop:
 
 | You want… | Raw vLLM / llama.cpp | SparkBench |
 |-----------|----------------------|------------|
 | Run one model | Write compose YAML, pick ports, remember flags | `spark inference up <profile>` |
-| Switch models | Stop container, edit config, restart (minutes) | Same CLI — recipes hold engine-specific flags |
-| Compare tok/s fairly | Roll your own scripts | `spark inference bench` (bench v2: long ctx + tools + agent turns) |
-| Try a new HF model | Download + hand-write serve config | Explore queue → auto-scaffold recipe → bench → promote |
-| Share results | Paste numbers in a gist | Verification YAML → [sparkbench.dev](https://sparkbench.dev) leaderboard |
-| Agent / UI access | Wire OpenAI URL yourself | Gateway `:9000/v1` + portal + HTTP APIs |
+| Switch models | Stop container, edit config, restart | Same CLI. Recipes hold the flags. |
+| Compare tok/s fairly | Roll your own scripts | `spark inference bench` (v2) and PBM fills |
+| Try a new HF model | Download + hand-write serve config | Explore queue → scaffold → bench → promote |
+| Share results | Paste numbers in a gist | Verification YAML → [sparkbench.dev](https://sparkbench.dev) |
+| Agent / UI access | Wire an OpenAI URL yourself | Gateway `:9000/v1` + portal + HTTP APIs |
 
-SparkBench **uses** eugr vLLM, llama.cpp, and ds4 — it does not replace them. It adds the control plane, inventory, and reproducible benchmark layer on top.
+SparkBench uses eugr vLLM, llama.cpp, and ds4. It does not replace them. It adds the control plane, inventory, and benchmark layer.
 
 ## Quickstart
 
-### For LLM Agents
+### For LLM agents
 
-Fetch the full guide and follow it step by step:
+Fetch the guide and follow it in order:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/v0.1.0/docs/guides/installation-instructions.md
 ```
 
-### For Humans
+### For humans
 
-**One command** — clone to `/opt/spark`, bootstrap host env, portal, APIs, and CLI (no GPU engine yet):
+One command clones to `/opt/spark` and installs portal, APIs, and CLI (no GPU engine yet):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/shawnmarck/sparkbench/main/scripts/bootstrap-sparkbench.sh | sudo bash
@@ -97,99 +98,101 @@ sudo bash install/spark-install gateway
 
 </details>
 
-Open **http://&lt;host&gt;/** · Full module index: [install/INSTALL.md](install/INSTALL.md)
+Open **http://&lt;host&gt;/**. Module index: [install/INSTALL.md](install/INSTALL.md).
 
 ### CLI in action
 
-Example session after `engine` + `gateway` are up (record a GIF: [docs/assets/RECORDING.md](docs/assets/RECORDING.md)):
+After `engine` + `gateway` (record a GIF: [docs/assets/RECORDING.md](docs/assets/RECORDING.md)):
 
 ```text
 $ spark inference list
-  qwen36-nvfp4          eugr     heavy   enabled
-  qwen36-q4-llama       llamacpp heavy   enabled
+  opencode-qwen36-250k   eugr     heavy   enabled
+  qwen36-q4-llama        llamacpp heavy   enabled
 
-$ spark inference up qwen36-nvfp4
-  switching… (evicts current engine; may take minutes on NVFP4)
+$ spark inference up opencode-qwen36-250k
+  switching… (evicts the current engine; NVFP4 can take minutes)
 
 $ spark inference status
-  profile: qwen36-nvfp4   engine: eugr   ready: true
+  profile: opencode-qwen36-250k   engine: eugr   ready: true
 
 $ spark inference bench
-  bench v2 … decode 142.3 tok/s   ctx 32768   written to run/
+  bench v2 … decode tok/s   written to run/
 
 $ curl -s http://sparky:9000/v1/models | head
-  … aliases + active profile …
+  … sparky alias + active served name …
 ```
 
-**Before:** docker compose edits, manual restarts, ad-hoc timing. **After:** four commands from discover → serve → measure → gateway.
+Four commands: list → up → bench → talk to `:9000`.
 
 ## Use it
 
-One CLI on PATH: `spark`. Designed for humans and coding agents alike.
+One CLI on PATH: `spark`. Humans and agents use the same command.
 
 ```bash
-spark status                          # everything in one glance
-spark inference list                  # available profiles
-spark inference up qwen36-q4-llama    # switch profile (evicts current)
-spark inference bench                 # measure tok/s on the active profile
-spark inference logs                  # tail engine logs
+spark status                          # GPU + inference in one glance
+spark inference list                  # enabled profiles
+spark inference up opencode-qwen36-250k
+spark inference bench                 # bench v2 on the active profile
+spark inference logs
 
-spark recipe list                     # draft / testing / production recipes
-spark models inventory                # rebuild portal data
-spark models verify set <lab/slug> works
+spark recipe list                     # draft / testing / production
+spark models inventory                # rebuild portal/models.json
+spark models verify set <lab/slug> works   # only after bench v2
 
-spark hf search "deepseek v3"         # explore HuggingFace
-spark hf queue add <repo>             # background download
-spark shelf push <lab/slug>           # mirror to NAS (when shelf is mounted)
+spark hf search "qwen3.6"
+spark hf queue add <repo>
+spark shelf push <lab/slug>           # when a NAS shelf is mounted
+
+spark benchmaster status              # overnight perf / intel queue
 ```
 
 Full reference: [docs/reference/spark-cli.md](docs/reference/spark-cli.md).
 
-Or hit the HTTP API directly:
+HTTP:
 
 ```bash
 curl http://sparky/api/inference/status
 curl http://sparky/api/gpu
 curl http://sparky/api/shelf/status
+curl http://sparky/api/benchmaster/status
 ```
 
-OpenAI-compatible gateway on `:9000` for hooking up Open WebUI, Hermes, Grok, etc.
+OpenAI-compatible gateway: `http://sparky:9000/v1`. Prefer model `sparky` (or `sparky-think`) so clients follow whatever is active.
 
 ## The Model Lab loop
 
-The product is a closed loop. Every new model goes through the same stages, each one scannable in the portal:
-
 ```
-  Explore  ─▶  Download  ─▶  Draft recipe  ─▶  Test  ─▶  Bench  ─▶  Promote
- (HF browse)  (queue)      (auto-scaffold)              (tok/s)    (production)
+  Explore  →  Download  →  Draft recipe  →  Test  →  Bench  →  Promote
+ (HF)        (queue)      (auto-scaffold)           (v2/PBM)   (production)
 ```
 
-| Step      | Portal tab        | Backend                                  |
-| --------- | ----------------- | ---------------------------------------- |
-| Discover  | Explore           | `/api/hf/*`, explore queue               |
-| Acquire   | Download queue    | `spark hf`, `/models/{lab}/`             |
-| Define    | Models → scaffold | `scaffold_auto`, `recipes/drafts/`       |
-| Validate  | Inference         | `spark inference`, async bench           |
-| Promote   | Models → promote  | `recipes/` + `inference-profiles.yaml`   |
-| Operate   | System            | Gateway `:9000`, client activity widget  |
+| Step     | Portal            | Backend                                |
+|----------|-------------------|----------------------------------------|
+| Discover | Explore           | `/api/hf/*`, explore queue             |
+| Acquire  | Download queue    | `spark hf`, `/models/{lab}/`           |
+| Define   | Models → scaffold | `scaffold_auto`, `recipes/drafts/`     |
+| Validate | Inference         | `spark inference`, bench v2 / PBM      |
+| Promote  | Models → promote  | `recipes/` + `inference-profiles.yaml` |
+| Operate  | System            | Gateway `:9000`, activity widget       |
+| Sweep    | Benchmaster       | perf_sweep, ctx ladder, intel eval     |
 
-Recipes are auto-scaffolded from weights + HuggingFace metadata. Hand-written YAML is reserved for engine quirks the router can't pick (MoE, multimodal, DFlash, ds4, MTP).
+Recipes are auto-scaffolded from weights and Hugging Face metadata. Hand-write YAML only when the router cannot (MoE, multimodal, DFlash, ds4, MTP).
 
 ## Engines
 
-| Engine     | What it serves           | When to use                                   |
-| ---------- | ------------------------ | --------------------------------------------- |
-| **eugr**   | vLLM (NVFP4, FP8)        | High-throughput dense + MoE, long context     |
-| **llama.cpp** | GGUF (Q4, Q5, MTP)     | Lower memory, broad model support, fast switch |
-| **ds4**    | DeepSeek V4 Flash (native) | Specialized sparse attention path             |
+| Engine        | What it serves            | When to use                          |
+|---------------|---------------------------|--------------------------------------|
+| **eugr**      | vLLM (NVFP4, FP8)         | High-throughput dense + MoE, long ctx |
+| **llama.cpp** | GGUF (Q4, Q5, MTP)        | Lower memory, fast switch            |
+| **ds4**       | DeepSeek V4 Flash         | Native sparse-attention path         |
 
-One GPU at a time. `spark inference up <profile>` evicts the current engine and loads the next one. Production recipes are pinned in [`data/golden-recipes.yaml`](data/golden-recipes.yaml).
+One GPU at a time. `spark inference up <profile>` evicts the current engine. Golden map: [`data/golden-recipes.yaml`](data/golden-recipes.yaml). `qwen36-nvfp4` is deprecated; everyday Qwen3.6-35B-A3B is `opencode-qwen36-250k`.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  HF[HuggingFace] --> hf[spark hf / Explore API]
+  HF[Hugging Face] --> hf[spark hf / Explore API]
   hf --> models["/models/{lab}/{slug}"]
   NAS[(NAS shelf optional)] --> models
   models --> inf[spark inference]
@@ -202,16 +205,16 @@ flowchart TB
   ds4 --> gw
   gw --> clients[Open WebUI · agents · curl]
   inf --> portal[Portal :80]
-  portal --> apis[/api/gpu · inference · hf · activity/]
+  portal --> apis["/api/gpu · inference · hf · activity · benchmaster"]
 ```
 
-One GPU engine at a time. Static portal on nginx :80. Mutation APIs are LAN-trusted — don't expose port 80 to the WAN.
+One GPU engine at a time. Static portal on nginx :80. Mutation APIs are LAN-trusted. Do not expose port 80 to the WAN.
 
 <details>
 <summary>ASCII version</summary>
 
 ```
-HuggingFace → spark hf → /models/ ← NAS (optional)
+Hugging Face → spark hf → /models/ ← NAS (optional)
                 ↓
          spark inference (recipes)
                 ↓
@@ -227,30 +230,34 @@ HuggingFace → spark hf → /models/ ← NAS (optional)
 | Path | Topic |
 |------|--------|
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
-| [AGENTS.md](AGENTS.md)                                                                | Agent manual: layout, rules, code touchpoints    |
-| [docs/guides/installation-instructions.md](docs/guides/installation-instructions.md)  | Full install + ops guide (LLM agents fetch via README) |
-| [docs/reference/spark-cli.md](docs/reference/spark-cli.md)                            | Full `spark` CLI reference                       |
-| [docs/reference/inference-stack.md](docs/reference/inference-stack.md)                | Inference control plane spec                     |
-| [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md)          | Bench v2: long-ctx + tool-use methodology          |
-| [docs/guides/first-spark-setup.md](docs/guides/first-spark-setup.md)                  | First Spark setup: clone → recipes → fetch         |
-| [docs/guides/model-shelf.md](docs/guides/model-shelf.md)                              | `/models` + NAS shelf layout                     |
-| [docs/guides/model-picks.md](docs/guides/model-picks.md)                              | Why each model is in the catalog                 |
-| [docs/guides/local-model-testing.md](docs/guides/local-model-testing.md)              | Bench queue + stack fixes SOP                    |
-| [docs/runbooks/smoke-vllm-eugr.md](docs/runbooks/smoke-vllm-eugr.md)                  | vLLM smoke test                                  |
-| [docs/runbooks/smoke-llamacpp.md](docs/runbooks/smoke-llamacpp.md)                    | llama.cpp smoke test                             |
-| [docs/runbooks/smoke-ds4.md](docs/runbooks/smoke-ds4.md)                              | ds4 smoke test                                   |
-| [docs/runbooks/new-model-golden-benchmark.md](docs/runbooks/new-model-golden-benchmark.md) | Golden audit for a new model                 |
+| [AGENTS.md](AGENTS.md) | Agent manual: layout, rules, code touchpoints |
+| [docs/guides/installation-instructions.md](docs/guides/installation-instructions.md) | Install + ops (agents fetch this) |
+| [docs/guides/first-spark-setup.md](docs/guides/first-spark-setup.md) | Clone → inventory → first profile |
+| [docs/reference/spark-cli.md](docs/reference/spark-cli.md) | Full `spark` CLI |
+| [docs/reference/inference-stack.md](docs/reference/inference-stack.md) | Control plane, recipes, gateway |
+| [docs/reference/benchmark-standard.md](docs/reference/benchmark-standard.md) | Bench v2 and PBM |
+| [docs/reference/published-evals.md](docs/reference/published-evals.md) | Vendor SWE / TB on sparkbench.dev |
+| [docs/reference/ui-improvements.md](docs/reference/ui-improvements.md) | Portal tabs and pages |
+| [docs/guides/model-shelf.md](docs/guides/model-shelf.md) | `/models` + NAS shelf |
+| [docs/guides/model-picks.md](docs/guides/model-picks.md) | How the catalog is chosen |
+| [docs/guides/local-model-testing.md](docs/guides/local-model-testing.md) | Bench a model; Benchmaster queue |
+| [docs/runbooks/smoke-vllm-eugr.md](docs/runbooks/smoke-vllm-eugr.md) | vLLM smoke |
+| [docs/runbooks/smoke-llamacpp.md](docs/runbooks/smoke-llamacpp.md) | llama.cpp smoke |
+| [docs/runbooks/smoke-ds4.md](docs/runbooks/smoke-ds4.md) | ds4 smoke |
+| [docs/runbooks/new-model-golden-benchmark.md](docs/runbooks/new-model-golden-benchmark.md) | Golden audit for a new model |
+| [docs/runbooks/benchmaster-agent.md](docs/runbooks/benchmaster-agent.md) | Supervise the overnight queue |
+| [docs/runbooks/sparky-live-sync.md](docs/runbooks/sparky-live-sync.md) | Pull code on a live box |
 | [install/INSTALL.md](install/INSTALL.md) | Install targets + modules |
 | [docs/assets/RECORDING.md](docs/assets/RECORDING.md) | How to capture CLI / install demos |
 
 ## Contributing
 
-PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md): one PR per task, deploy smoke after merge.
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md): one PR per task, smoke after merge.
 
-Two great ways to help:
+Two useful contributions:
 
-1. **Bench a new model** on your Spark and open a PR with the recipe + verification YAML. It shows up on [sparkbench.dev](https://sparkbench.dev) automatically.
-2. **Fix a sharp edge**: runbooks, install scripts, portal UX. Small, focused PRs preferred.
+1. **Bench a new model** on your Spark and open a PR with the recipe + verification YAML. It lands on [sparkbench.dev](https://sparkbench.dev) after the site rebuild.
+2. **Fix a sharp edge**: runbooks, install scripts, portal UX. Small PRs.
 
 ## License
 

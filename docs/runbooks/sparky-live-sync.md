@@ -13,7 +13,7 @@ Two ways to sync code with GitHub. **Recipes and GB10 perf data travel in git** 
 
 | Layer | Git? | What | On `git pull` |
 |-------|------|------|----------------|
-| **Shared cookbook** | Yes — commit & push | `recipes/*.yaml`, `data/golden-recipes.yaml`, `data/model-catalog.yaml`, `data/model-verification.yaml`, `data/spark-explore-warnings.yaml` | **Update from origin** |
+| **Shared cookbook** | Yes — commit & push | `recipes/*.yaml`, `data/golden-recipes.yaml`, `data/model-catalog.yaml`, `data/model-verification.yaml`, `data/perfbench-metrics.yaml`, `data/published-evals.yaml`, `data/spark-explore-warnings.yaml` | **Update from origin** |
 | **Code** | Yes | `scripts/`, `install/`, `services/`, `portal/`, `docs/` | Update |
 | **Host-local** | skip-worktree on sparky | `data/inference-profiles.yaml`, `data/inference-benchmarks.yaml` | Keep sparky copy |
 | **Host runtime** | gitignored | `run/*`, `logs/`, `portal/models.json`, `data/hf-*-queue.yaml`, legacy `data/inference-benchmark-history.yaml` | Never in git |

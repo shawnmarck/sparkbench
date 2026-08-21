@@ -287,39 +287,6 @@ button { font: inherit; }
   .serve-split { grid-template-columns: 1fr; }
 }
 
-.hw-strip {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 1.1rem 1.4rem;
-  align-items: center;
-  padding: .55rem 1rem .6rem;
-}
-.hw-cell {
-  display: grid;
-  grid-template-columns: 2.1rem 1fr 2.5rem;
-  gap: .45rem;
-  align-items: center;
-  color: var(--muted);
-  font-size: .78rem;
-}
-.hw-cell b, .hw-temps b {
-  text-align: right;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-.hw-cell .bar { margin: 0; height: 5px; }
-.hw-temps {
-  display: flex;
-  align-items: baseline;
-  gap: .55rem;
-  color: var(--muted);
-  font-size: .78rem;
-  white-space: nowrap;
-}
-@media (max-width: 720px) {
-  .hw-strip { grid-template-columns: 1fr; }
-}
 .meters { display: flex; flex-direction: column; gap: .7rem; }
 .meter-row { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
 .meter-row b { color: var(--text); font-variant-numeric: tabular-nums; }

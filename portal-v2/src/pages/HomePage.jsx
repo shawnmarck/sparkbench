@@ -118,22 +118,6 @@ export function HomePage({ live }) {
       </div>
 
       <div className="home-stack">
-        <section className="card hw-strip" aria-label="Hardware">
-          <div className="hw-cell">
-            <span>GPU</span>
-            <div className="bar gpu" style={{ '--pct': Math.min(1, (Number(gpu?.gpu_util_pct) || 0) / 100) }}><i /></div>
-            <b>{fmtPct(gpu?.gpu_util_pct)}%</b>
-          </div>
-          <div className="hw-cell">
-            <span>Mem</span>
-            <div className="bar mem" style={{ '--pct': Math.min(1, (Number(gpu?.memory_used_pct) || 0) / 100) }}><i /></div>
-            <b>{fmtPct(gpu?.memory_used_pct)}%</b>
-          </div>
-          <div className="hw-temps">
-            <span>Temps</span>
-            <b>GPU {gpu?.gpu_temp_c ?? '—'}° · CPU {gpu?.cpu_temp_c ?? '—'}°</b>
-          </div>
-        </section>
         <section className="card">
           <h2>Serving</h2>
           {active ? (

@@ -49,6 +49,9 @@ export function AppShell({ live, children }) {
           <span className="pill">
             MEM <b>{fmtPct(gpu?.memory_used_pct)}</b>%
           </span>
+          <span className="pill" title="GPU and CPU package temps">
+            <b>{gpu?.gpu_temp_c ?? '—'}</b>° · <b>{gpu?.cpu_temp_c ?? '—'}</b>°
+          </span>
           {live.error ? <span className="pill down">API {live.error}</span> : null}
         </div>
         <button type="button" className="kbd-hint" title="Command palette" onClick={() => window.dispatchEvent(new Event('spark-palette'))}>

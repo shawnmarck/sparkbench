@@ -63,6 +63,15 @@ ALIASES: dict[str, str] = {
 # Stable model id that always maps to the *currently active* served model (no switch).
 # Clients (e.g. Grok ~/.grok/config.toml) can use a fixed [model.sparky] entry pointing at this.
 SPARKY_MODEL_ID = "sparky"
+SPARKY_ALIAS_IDS = frozenset({
+    SPARKY_MODEL_ID,
+    f"{SPARKY_MODEL_ID}-think",
+    f"{SPARKY_MODEL_ID}-fast",
+})
+
+
+def _is_sparky_alias(model: str | None) -> bool:
+    return str(model or "").strip().lower() in SPARKY_ALIAS_IDS
 
 THINKING_DISABLED_ENGINES = {"ds4"}
 THINKING_VARIANT_SUFFIX = "-think"
@@ -446,6 +455,36 @@ class Handler(BaseHTTPRequestHandler):
             sys.stderr.write(f"gateway active lookup error: {exc}\n")
             return None, None, None, None
 
+    def _intended_identity(
+        self,
+        port: int | None,
+        served: str | None,
+        prof: str | None,
+        active: dict[str, Any] | None,
+    ) -> tuple[int | None, str | None, str | None, str | None]:
+        """Fill profile/served/engine from the switch target when nothing is active yet."""
+        recipe = ((active or {}).get("recipe") or {}) if active else {}
+        engine = recipe.get("engine")
+        if prof:
+            return port, served or recipe.get("served_name"), prof, engine
+        try:
+            job = core.active_switch_job()
+            pid = job.get("profile") if isinstance(job, dict) else None
+        except Exception:
+            pid = None
+        if not isinstance(pid, str) or not pid.strip():
+            return port, served, prof, engine
+        try:
+            target = core.load_recipe(pid.strip())
+        except (SystemExit, Exception):
+            return port, served, pid.strip(), engine
+        return (
+            port,
+            served or target.get("served_name"),
+            pid.strip(),
+            engine or target.get("engine"),
+        )
+
     def _is_switching(self) -> bool:
         try:
             job = core.active_switch_job()
@@ -483,11 +522,11 @@ class Handler(BaseHTTPRequestHandler):
         path: str,
         body: bytes | None = None,
         extra_headers: dict[str, str] | None = None,
+        requested_model: str | None = None,
     ) -> None:
         t0 = time.time()
         port, served, prof, active = self._get_active()
-        recipe = (active or {}).get("recipe", {}) or {}
-        engine = recipe.get("engine")
+        port, served, prof, engine = self._intended_identity(port, served, prof, active)
         model = ""
         is_stream = False
         try:
@@ -497,6 +536,12 @@ class Handler(BaseHTTPRequestHandler):
                 is_stream = bool(payload.get("stream", False))
         except (json.JSONDecodeError, TypeError):
             pass
+        requested = (requested_model or model or "").strip()
+        shown = (served or "").strip()
+        if _is_sparky_alias(requested) or _is_sparky_alias(model):
+            shown = shown or (prof or "")
+        if not shown:
+            shown = model or requested
 
         client_ip = self.client_address[0] if hasattr(self, "client_address") else "unknown"
         ua = self.headers.get("User-Agent", "")
@@ -508,7 +553,8 @@ class Handler(BaseHTTPRequestHandler):
             "client_ip": client_ip,
             "app": app,
             "user_agent": ua,
-            "model": model,
+            "requested_model": requested,
+            "model": shown,
             "profile": prof or "",
             "engine": engine or "",
             "stream": is_stream,
@@ -930,13 +976,16 @@ class Handler(BaseHTTPRequestHandler):
         is_completion = "chat/completions" in self.path or "completions" in self.path
 
         if is_completion:
+            orig_model = ""
             try:
                 payload = json.loads(body) if body else {}
                 if isinstance(payload, dict):
                     orig_model = str(payload.get("model", "")).strip()
                     profile = self._resolve_alias(orig_model)
                     port, served, prof, active = self._get_active()
-                    engine = (active or {}).get("recipe", {}).get("engine") if active else None
+                    port, served, prof, engine = self._intended_identity(port, served, prof, active)
+                    if engine is None:
+                        engine = (active or {}).get("recipe", {}).get("engine") if active else None
 
                     if profile and prof and profile != prof:
                         try:
@@ -962,7 +1011,12 @@ class Handler(BaseHTTPRequestHandler):
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
-            self._forward_with_activity("POST", self.path, body=body)
+            self._forward_with_activity(
+                "POST",
+                self.path,
+                body=body,
+                requested_model=orig_model or None,
+            )
         else:
             self._forward("POST", self.path, body=body)
 

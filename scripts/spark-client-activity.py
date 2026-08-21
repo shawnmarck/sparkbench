@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path("/opt/spark")
+SPARKY_ALIAS_IDS = frozenset({"sparky", "sparky-think", "sparky-fast"})
 JSONL_PATH: Path = ROOT / "run" / "inference-activity.jsonl"
 USAGE_PATH: Path = ROOT / "run" / "inference-usage.json"
 ACTIVE_TTL = 300  # 5 min
@@ -220,6 +221,19 @@ def _row_tokens(row: dict[str, Any]) -> tuple[int, int]:
 def _row_profile(row: dict[str, Any]) -> str:
     prof = str(row.get("profile") or "").strip()
     return prof or "unknown"
+
+
+def _decorate_session(row: dict[str, Any]) -> dict[str, Any]:
+    """Prefer the served profile when the client asked for the sparky alias."""
+    out = dict(row)
+    model = str(out.get("model") or "").strip()
+    prof = str(out.get("profile") or "").strip()
+    req = str(out.get("requested_model") or "").strip()
+    if model.lower() in SPARKY_ALIAS_IDS and prof:
+        if not req:
+            out["requested_model"] = model
+        out["model"] = prof
+    return out
 
 
 def _ensure_slot(bucket: dict[str, Any]) -> dict[str, Any]:
@@ -516,7 +530,7 @@ def compute_stats(window: str = "24h") -> dict[str, Any]:
 
     recent_list = [r for r in resolved_rows if _parse_ts(r.get("at", "")) > cutoff]
     recent_list.sort(key=lambda r: r.get("at", ""), reverse=True)
-    recent = recent_list[:20]
+    recent = [_decorate_session(r) for r in recent_list[:20]]
 
     avg_tok_s = 0.0
     if tok_s_values:

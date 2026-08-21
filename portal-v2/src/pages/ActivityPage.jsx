@@ -1,4 +1,4 @@
-import { fmtTokens, fmtTokS } from '../lib/fmt.js'
+import { fmtTokens, fmtTokS, sessionModelLabel } from '../lib/fmt.js'
 
 function when(ts) {
   if (!ts) return '—'
@@ -15,6 +15,7 @@ export function ActivityPage({ live }) {
   const recent = activity.recent || activity.events || []
   const apps = summary.apps || {}
   const appRows = Object.entries(apps)
+  const names = new Map((live.recipes || []).map((r) => [r.id, r.name || r.id]))
 
   return (
     <div>
@@ -64,7 +65,9 @@ export function ActivityPage({ live }) {
                 <tr key={row.id || row.ts || i}>
                   <td>{when(row.at || row.ts)}</td>
                   <td>{row.app || row.client_ip || '—'}</td>
-                  <td title={row.profile}>{row.model || row.profile || '—'}</td>
+                  <td title={row.requested_model ? `${row.profile || ''} · asked ${row.requested_model}` : row.profile}>
+                    {sessionModelLabel(row, names)}
+                  </td>
                   <td>{fmtTokens(row.prompt_tokens || row.prompt || 0)}</td>
                   <td>{fmtTokens(row.completion_tokens || row.completion || 0)}</td>
                   <td>{fmtTokS(row.tok_s || row.avg_tok_s)}</td>

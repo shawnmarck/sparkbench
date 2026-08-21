@@ -33,6 +33,18 @@ export function shortName(name, id) {
   return s.length > 42 ? `${s.slice(0, 40)}…` : s
 }
 
+export function sessionModelLabel(row, names) {
+  const prof = row?.profile || ''
+  const named = names instanceof Map ? names.get(prof) : ''
+  if (named) return shortName(named, prof)
+  const model = String(row?.model || '')
+  const req = String(row?.requested_model || model).toLowerCase()
+  if (prof && (req.startsWith('sparky') || model.toLowerCase().startsWith('sparky'))) {
+    return shortName(null, prof)
+  }
+  return shortName(null, model || prof)
+}
+
 export function engineLabel(engine) {
   if (engine === 'llamacpp') return 'llama'
   return engine || '—'

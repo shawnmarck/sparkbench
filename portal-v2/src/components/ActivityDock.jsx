@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fmtDur, fmtTokens, fmtTokS, shortName } from '../lib/fmt.js'
+import { fmtDur, fmtTokens, fmtTokS, sessionModelLabel } from '../lib/fmt.js'
 
 const LAST_N = 5
 const STORE = 'spark-v2-activity-dock'
@@ -52,7 +52,7 @@ export function ActivityDock({ recent, recipes }) {
   }
 
   function modelLabel(row) {
-    return shortName(names.get(row.profile), row.model || row.profile)
+    return sessionModelLabel(row, names)
   }
 
   return (

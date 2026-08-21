@@ -286,25 +286,25 @@ button { font: inherit; }
 .bar.kv > i { background: linear-gradient(90deg, #3a7ab8, var(--seq)); }
 .kv-meter { margin: .55rem 0 .15rem; }
 .seq-cubes { margin: .45rem 0 .2rem; }
-.seq-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 8), 8px);
+.seq-strip {
+  display: flex;
   gap: 2px;
+  height: 14px;
   margin-top: .3rem;
 }
-.seq-grid i {
-  width: 8px;
-  height: 8px;
+.seq-strip i {
+  flex: 1 1 0;
+  min-width: 3px;
   border-radius: 2px;
   background: #141820;
   border: 1px solid #2a3140;
 }
-.seq-grid i.run {
+.seq-strip i.run {
   background: var(--accent);
   border-color: #6aa000;
   box-shadow: 0 0 7px rgba(134, 196, 0, .35);
 }
-.seq-grid i.wait {
+.seq-strip i.wait {
   background: var(--warn);
   border-color: #b89430;
 }

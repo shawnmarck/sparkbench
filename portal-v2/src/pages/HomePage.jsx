@@ -20,13 +20,6 @@ function specLabel(active) {
   return spec.method
 }
 
-function seqCols(cap) {
-  if (cap <= 8) return cap
-  if (cap % 8 === 0) return 8
-  if (cap % 6 === 0) return 6
-  return 8
-}
-
 function SeqCubes({ running, waiting, max }) {
   const cap = Math.max(0, Number(max) || 0)
   if (!cap) return <p className="hero-meta tall">Concurrency —</p>
@@ -49,7 +42,7 @@ function SeqCubes({ running, waiting, max }) {
         <span>Concurrency</span>
         <b>{run}/{cap}{wait ? ` · ${wait} wait` : ''}</b>
       </div>
-      <div className="seq-grid" style={{ '--cols': seqCols(cap) }}>
+      <div className="seq-strip">
         {Array.from({ length: cap }, (_, i) => {
           const kind = i < run ? 'run' : i < run + wait ? 'wait' : 'idle'
           return <i key={i} className={kind} />

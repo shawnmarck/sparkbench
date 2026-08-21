@@ -93,8 +93,7 @@ function AggSpark({ values, p99 }) {
 
 export function HomePage({ live }) {
   const active = live.inference?.active
-  const gpu = live.gpu
-  const load = gpu?.engine_load || {}
+  const load = live.gpu?.engine_load || {}
   const preset = inferPreset(active, load)
   const lastSess = lastSessionRate(live.activity?.recent)
   const avg1h = live.activity?.summary?.avg_tok_s_weighted ?? live.activity?.summary?.avg_tok_s
@@ -106,12 +105,11 @@ export function HomePage({ live }) {
     <div className="home">
       <div className="home-scroll">
       <div className="home-stack">
-        <section className="card">
-          <h2>Serving</h2>
-          {active ? (
-            <div className="serve-split">
-              <div className="serve-block">
-                <h3>Recipe</h3>
+        <div className="home-duo">
+          <section className="card">
+            <h2>Recipe</h2>
+            {active ? (
+              <>
                 <p className="hero-name">{active.name || active.id}</p>
                 <dl className="serve-facts">
                   <div>
@@ -142,9 +140,15 @@ export function HomePage({ live }) {
                     </dd>
                   </div>
                 </dl>
-              </div>
-              <div className="serve-block live">
-                <h3>Live</h3>
+              </>
+            ) : (
+              <p className="hero-name muted">Idle</p>
+            )}
+          </section>
+          <section className="card live">
+            <h2>Live</h2>
+            {active ? (
+              <>
                 <p className="hero-meta tall">
                   {active.ready ? (up ? `up ${up}` : 'ready') : active.starting ? 'starting' : 'not ready'}
                 </p>
@@ -186,12 +190,12 @@ export function HomePage({ live }) {
                     <p className="agg-spark-cap">1h p99 {fmtTokS(load.gen_tok_s_p99)} tok/s</p>
                   ) : null}
                 </div>
-              </div>
-            </div>
-          ) : (
-            <p className="hero-name muted">Idle</p>
-          )}
-        </section>
+              </>
+            ) : (
+              <p className="hero-meta tall muted">offline</p>
+            )}
+          </section>
+        </div>
       </div>
 
       <UsagePanel live={live} />

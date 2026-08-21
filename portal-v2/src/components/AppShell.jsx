@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { fmtPct, shortName } from '../lib/fmt.js'
 import { PopOut } from './PopOut.jsx'
+import { ThemePicker } from './ThemePicker.jsx'
 
 const operate = [
   { to: '/', label: 'Home', end: true },
@@ -54,6 +55,7 @@ export function AppShell({ live, children }) {
           </span>
           {live.error ? <span className="pill down">API {live.error}</span> : null}
         </div>
+        <ThemePicker />
         <button type="button" className="kbd-hint" title="Command palette" onClick={() => window.dispatchEvent(new Event('spark-palette'))}>
           Ctrl K
         </button>

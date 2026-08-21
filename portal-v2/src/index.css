@@ -142,7 +142,8 @@ button { font: inherit; }
   overflow: auto;
 }
 .main:has(.home),
-.main:has(.inf-page) {
+.main:has(.inf-page),
+.main:has(.log-page) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -930,17 +931,17 @@ tr.active td { background: var(--row-active); }
   background: transparent;
 }
 .log-page {
-  min-height: 100dvh;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--well);
 }
 .log-page-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: .7rem 1rem;
-  padding: .7rem 1rem;
+  padding: 0 0 .7rem;
   border-bottom: 1px solid var(--line);
 }
 .log-page-head h1 {
@@ -954,6 +955,7 @@ tr.active td { background: var(--row-active); }
 .log-page-head label { display: inline-flex; align-items: center; gap: .35rem; }
 .log-page .log.page {
   flex: 1;
+  min-height: 0;
   max-height: none;
   border: 0;
   border-radius: 0;

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell.jsx'
 import { CommandPalette } from './components/CommandPalette.jsx'
 import { ConfirmDialog } from './components/ConfirmDialog.jsx'
@@ -25,7 +25,6 @@ function launchNote(launch) {
 
 export default function App() {
   const live = useLive()
-  const loc = useLocation()
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState(null)
@@ -88,15 +87,12 @@ export default function App() {
 
   const actions = { askSwitch, askStop, flash }
 
-  if (loc.pathname === '/inference/log') {
-    return <LogPage />
-  }
-
   return (
     <AppShell live={live}>
       <Routes>
         <Route index element={<HomePage live={live} />} />
         <Route path="inference" element={<InferencePage live={live} actions={actions} />} />
+        <Route path="inference/log" element={<LogPage />} />
         <Route path="explore" element={<ExplorePage />} />
         <Route path="benchmaster" element={<BenchmasterPage live={live} />} />
         <Route path="models" element={<ModelsPage />} />

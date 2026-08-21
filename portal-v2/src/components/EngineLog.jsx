@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { getInferenceLogs } from '../lib/api.js'
-import { PopOut } from './PopOut.jsx'
 
 const LOG_NOISE = /\/v1\/models|\/metrics|healthz|GET \/health/i
 const STORE = 'spark-v2-engine-log'
@@ -98,12 +97,9 @@ export function EngineLogDock() {
         <a
           className="log-pop"
           href="/v2/inference/log"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Open log in a new tab"
+          title="Open the full engine log"
         >
-          Open tab
-          <PopOut />
+          Open full
         </a>
       </div>
       {open ? (
@@ -128,7 +124,6 @@ export function LogPage() {
   return (
     <div className="log-page">
       <header className="log-page-head">
-        <a className="brand" href="/v2/inference">SparkBench</a>
         <h1>Engine log</h1>
         <span>
           {title}
@@ -139,7 +134,6 @@ export function LogPage() {
           <input type="checkbox" checked={noise} onChange={(e) => setNoise(e.target.checked)} />
           Show health checks
         </label>
-        <a href="/v2/inference">Back to inference</a>
       </header>
       {logErr ? <p className="err">{logErr}</p> : null}
       <pre ref={preRef} className="log page">

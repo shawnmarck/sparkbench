@@ -6,7 +6,7 @@ import { ThemePicker } from './ThemePicker.jsx'
 
 const operate = [
   { to: '/', label: 'Home', end: true },
-  { to: '/inference', label: 'Inference' },
+  { to: '/inference', label: 'Inference', end: true },
   { to: '/inference/log', label: 'Engine log' },
   { to: '/benchmaster', label: 'Benchmaster' },
   { to: '/activity', label: 'Activity' },

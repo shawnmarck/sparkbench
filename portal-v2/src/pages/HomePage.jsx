@@ -54,46 +54,59 @@ export function HomePage({ live }) {
         <section className="card">
           <h2>Serving</h2>
           {active ? (
-            <>
-              <p className="hero-name">{active.name || active.id}</p>
-              <p className="hero-meta">
-                {stackLabel(active.engine)}
-                {active.port ? ` :${active.port}` : ''}
-                {spec ? ` · ${spec}` : ''}
-                {active.ready ? ' · ready' : active.starting ? ' · starting' : ' · not ready'}
-                {up ? ` · up ${up}` : ''}
-              </p>
-              <p className="hero-meta tall">
-                {fmtCtx(active.context?.effective || active.context?.default)} ctx
-                {active.context?.kv_effective ? ` · KV ${active.context.kv_effective}` : ''}
-                {preset ? ` · ${preset.label}` : ''}
-              </p>
-              <p className="hero-meta">
-                {load.max != null ? `${load.running ?? 0}/${load.max} seqs` : 'seqs —'}
-                {load.waiting ? ` · ${load.waiting} waiting` : ''}
-                {load.kv_cache_pct != null ? ` · KV cache ${fmtPct(load.kv_cache_pct)}%` : ''}
-              </p>
-              <p className="pname" title={active.id}>{active.served_name || active.id}</p>
-
-              <div className="rate-grid">
-                <div title="Catalog bench, not live. PBM 4k is decode at a 4k fill.">
+            <div className="serve-split">
+              <div className="serve-block">
+                <h3>Recipe</h3>
+                <p className="hero-name">{active.name || active.id}</p>
+                <p className="hero-meta">
+                  {stackLabel(active.engine)}
+                  {active.port ? ` :${active.port}` : ''}
+                  {spec ? ` · ${spec}` : ''}
+                </p>
+                <p className="hero-meta">
+                  {fmtCtx(active.context?.effective || active.context?.default)} ctx
+                  {active.context?.kv_effective ? ` · KV ${active.context.kv_effective}` : ''}
+                  {load.max != null ? ` · ${load.max} seq cap` : ''}
+                </p>
+                {preset ? <p className="hero-meta">{preset.label}</p> : null}
+                <p className="pname" title={active.id}>{active.served_name || active.id}</p>
+                <div
+                  className="rate-one"
+                  title="Catalog bench, not live. PBM 4k is decode at a 4k fill."
+                >
                   <b>{fmtTokS(active.tok_s)}</b>
                   <span>Bench · {benchMethodLabel(active.tok_s_method)}</span>
                 </div>
-                <div title="Last :9000 request: completion tokens / wall clock. Includes prefill.">
-                  <b>{fmtTokS(liveTok.last?.tok_s)}</b>
-                  <span>Last request{liveTok.last ? ` · ${sinceLabel(liveTok.last.at) || ''}` : ''}</span>
-                </div>
-                <div title="Mean of :9000 request rates in the last 5 minutes.">
-                  <b>{fmtTokS(liveTok.avg5)}</b>
-                  <span>Live 5m{liveTok.n5 ? ` · ${liveTok.n5} req` : ''}</span>
-                </div>
-                <div title="Mean of :9000 request rates over the last hour.">
-                  <b>{fmtTokS(avg1h)}</b>
-                  <span>1h avg :9000</span>
+              </div>
+              <div className="serve-block live">
+                <h3>Live</h3>
+                <p className="hero-meta tall">
+                  {active.ready ? 'ready' : active.starting ? 'starting' : 'not ready'}
+                  {up ? ` · up ${up}` : ''}
+                </p>
+                <p className="hero-meta tall">
+                  {load.max != null ? `${load.running ?? 0}/${load.max} seqs` : 'seqs —'}
+                  {load.waiting ? ` · ${load.waiting} waiting` : ''}
+                </p>
+                {load.kv_cache_pct != null ? (
+                  <p className="hero-meta tall">KV cache {fmtPct(load.kv_cache_pct)}%</p>
+                ) : null}
+                <div className="rate-stack">
+                  <div title="Last :9000 request: completion tokens / wall clock. Includes prefill.">
+                    <b>{fmtTokS(liveTok.last?.tok_s)}</b>
+                    <span>Last request{liveTok.last ? ` · ${sinceLabel(liveTok.last.at) || ''}` : ''}</span>
+                  </div>
+                  <div title="Mean of :9000 request rates in the last 5 minutes.">
+                    <b>{fmtTokS(liveTok.avg5)}</b>
+                    <span>5m{liveTok.n5 ? ` · ${liveTok.n5} req` : ''}</span>
+                  </div>
+                  <div title="Mean of :9000 request rates over the last hour.">
+                    <b>{fmtTokS(avg1h)}</b>
+                    <span>1h avg :9000</span>
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
             <p className="hero-name muted">Idle</p>
           )}

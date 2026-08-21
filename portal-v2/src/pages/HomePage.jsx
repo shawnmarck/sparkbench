@@ -13,13 +13,6 @@ function inferPreset(active, load) {
   })
 }
 
-function specLabel(active) {
-  const spec = active?.speculative
-  if (!spec || typeof spec !== 'object') return null
-  if (spec.method === 'mtp') return `MTP ×${spec.num_speculative_tokens ?? 1}`
-  return spec.method
-}
-
 function SeqCubes({ running, waiting, max }) {
   const cap = Math.max(0, Number(max) || 0)
   if (!cap) return <p className="hero-meta tall">Concurrency —</p>
@@ -103,7 +96,6 @@ export function HomePage({ live }) {
   const gpu = live.gpu
   const load = gpu?.engine_load || {}
   const preset = inferPreset(active, load)
-  const spec = specLabel(active)
   const lastSess = lastSessionRate(live.activity?.recent)
   const avg1h = live.activity?.summary?.avg_tok_s_weighted ?? live.activity?.summary?.avg_tok_s
   const sparkSpan = Number(load.gen_spark_span_s) || 0
@@ -126,18 +118,6 @@ export function HomePage({ live }) {
                     <dt>Engine</dt>
                     <dd>{stackLabel(active.engine)}</dd>
                   </div>
-                  {active.port ? (
-                    <div>
-                      <dt>API port</dt>
-                      <dd>{active.port}</dd>
-                    </div>
-                  ) : null}
-                  {spec ? (
-                    <div title="Speculative decoding helper on this recipe">
-                      <dt>Speculative</dt>
-                      <dd>{spec}</dd>
-                    </div>
-                  ) : null}
                   <div title="Configured context window for this recipe">
                     <dt>Context</dt>
                     <dd>{fmtCtx(active.context?.effective || active.context?.default)} tokens</dd>
@@ -148,22 +128,12 @@ export function HomePage({ live }) {
                       <dd>{active.context.kv_effective}</dd>
                     </div>
                   ) : null}
-                  {load.max != null ? (
-                    <div title="Max concurrent request slots this recipe allows">
-                      <dt>Slot cap</dt>
-                      <dd>{load.max}</dd>
-                    </div>
-                  ) : null}
                   {preset ? (
                     <div>
                       <dt>Preset</dt>
                       <dd>{preset.label}</dd>
                     </div>
                   ) : null}
-                  <div title={active.id}>
-                    <dt>Served as</dt>
-                    <dd>{active.served_name || active.id}</dd>
-                  </div>
                   <div className="catalog" title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
                     <dt>Catalog bench</dt>
                     <dd>
@@ -176,8 +146,7 @@ export function HomePage({ live }) {
               <div className="serve-block live">
                 <h3>Live</h3>
                 <p className="hero-meta tall">
-                  {active.ready ? 'ready' : active.starting ? 'starting' : 'not ready'}
-                  {up ? ` · up ${up}` : ''}
+                  {active.ready ? (up ? `up ${up}` : 'ready') : active.starting ? 'starting' : 'not ready'}
                 </p>
                 <SeqCubes running={load.running} waiting={load.waiting} max={load.max} />
                 {load.kv_cache_pct != null ? (
@@ -213,9 +182,9 @@ export function HomePage({ live }) {
                   title="Last hour of engine agg tok/s. Gaps are missing history, floor is idle. Dashed line is p99 of busy seconds."
                 >
                   <AggSpark values={load.gen_spark} p99={load.gen_tok_s_p99} />
-                  <p className="agg-spark-cap">
-                    {p99Ready ? '1h p99' : 'p99 so far'} {fmtTokS(load.gen_tok_s_p99)} tok/s
-                  </p>
+                  {p99Ready ? (
+                    <p className="agg-spark-cap">1h p99 {fmtTokS(load.gen_tok_s_p99)} tok/s</p>
+                  ) : null}
                 </div>
               </div>
             </div>

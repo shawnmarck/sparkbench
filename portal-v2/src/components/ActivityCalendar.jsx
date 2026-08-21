@@ -17,7 +17,7 @@ function levelFor(total, max) {
 }
 
 export function ActivityCalendar({ days }) {
-  const [rangeId, setRangeId] = useState('31d')
+  const [rangeId, setRangeId] = useState('ytd')
   const [hover, setHover] = useState(null)
   const [selected, setSelected] = useState(null)
   const range = HEAT_RANGES.find((r) => r.id === rangeId) || HEAT_RANGES[0]

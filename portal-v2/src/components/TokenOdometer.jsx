@@ -2,6 +2,40 @@ import { useEffect, useRef, useState } from 'react'
 import { fmtFull } from '../lib/fmt.js'
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+const STEP = 5
+
+function DigitReel({ digit }) {
+  const [offset, setOffset] = useState(0)
+  const [animate, setAnimate] = useState(false)
+  const last = useRef(0)
+
+  useEffect(() => {
+    const prev = last.current
+    const delta = (digit - prev + 10) % 10
+    last.current = digit
+    if (delta === 0) return
+    setAnimate(true)
+    setOffset((current) => (current % 10) + delta)
+  }, [digit])
+
+  function onTransitionEnd(e) {
+    if (e.propertyName !== 'transform') return
+    setAnimate(false)
+    setOffset((current) => current % 10)
+  }
+
+  return (
+    <span className="odo-digit">
+      <span
+        className={`odo-reel${animate ? '' : ' snap'}`}
+        style={{ transform: `translateY(-${offset * STEP}%)` }}
+        onTransitionEnd={onTransitionEnd}
+      >
+        {[...DIGITS, ...DIGITS].map((d, i) => <i key={i}>{d}</i>)}
+      </span>
+    </span>
+  )
+}
 
 export function TokenOdometer({ value }) {
   const target = Math.max(0, Math.round(Number(value) || 0))
@@ -33,17 +67,8 @@ export function TokenOdometer({ value }) {
     >
       {text.split('').map((ch, i) => {
         const fromRight = text.length - 1 - i
-        if (ch === ',') {
-          return <span key={`c${fromRight}`} className="odo-sep">,</span>
-        }
-        const digit = Number(ch)
-        return (
-          <span key={`d${fromRight}`} className="odo-digit">
-            <span className="odo-reel" style={{ transform: `translateY(-${digit * 10}%)` }}>
-              {DIGITS.map((d) => <i key={d}>{d}</i>)}
-            </span>
-          </span>
-        )
+        if (ch === ',') return <span key={`c${fromRight}`} className="odo-sep">,</span>
+        return <DigitReel key={`d${fromRight}`} digit={Number(ch)} />
       })}
     </div>
   )

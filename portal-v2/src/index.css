@@ -286,6 +286,7 @@ tr.active td { background: #141a10; }
   will-change: transform;
   transition: transform .85s cubic-bezier(.22, 1, .36, 1);
 }
+.odo-reel.snap { transition: none; }
 .odo-reel i {
   display: block;
   height: 1em;

@@ -397,7 +397,20 @@ def _usage_view(store: dict[str, Any], now: float) -> dict[str, Any]:
             p["id"],
         )
     )
-    return {"windows": {"24h": w24, "30d": w30, "all": wall}, "profiles": profiles}
+    days_out = []
+    for dk in sorted(store.get("days") or {}):
+        allc = _copy_counts(((store.get("days") or {}).get(dk) or {}).get("all"))
+        days_out.append({
+            "date": dk,
+            "requests": allc["requests"],
+            "prompt_tokens": allc["prompt_tokens"],
+            "completion_tokens": allc["completion_tokens"],
+        })
+    return {
+        "windows": {"24h": w24, "30d": w30, "all": wall},
+        "profiles": profiles,
+        "days": days_out,
+    }
 
 
 def fold_usage(rows: list[dict[str, Any]], *, jsonl_read_ok: bool = True) -> dict[str, Any]:

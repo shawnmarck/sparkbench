@@ -150,6 +150,7 @@ button { font: inherit; }
   gap: 1rem;
   grid-template-columns: 1.4fr .9fr;
 }
+.home-grid { align-items: start; }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 980px) {
   .app { grid-template-columns: 1fr; }
@@ -235,15 +236,31 @@ button { font: inherit; }
   font-size: .64rem;
   letter-spacing: 0;
 }
-.rate-one, .rate-stack { margin-top: .75rem; }
-.rate-one b, .rate-stack b {
+.rate-one, .rate-stack, .rate-pair { margin-top: .65rem; }
+.rate-one b, .rate-stack b, .rate-sess b {
   display: block;
   font-size: 1.15rem;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
+.rate-one.agg { margin-top: 0; }
 .rate-one.agg b { font-size: 1.55rem; }
-.rate-one span, .rate-stack span { color: var(--muted); font-size: .7rem; }
+.rate-one span, .rate-stack span, .rate-sess span { color: var(--muted); font-size: .7rem; }
+.rate-pair {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .5rem 1rem;
+  align-items: end;
+}
+.rate-sess {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  text-align: right;
+  min-width: 5.8rem;
+}
+.rate-sess b { font-size: 1.05rem; }
+.rate-sess span { font-size: .64rem; }
 .agg-spark-wrap { margin-top: .45rem; }
 .agg-spark { display: block; overflow: visible; }
 .agg-spark polyline, .agg-spark .dot {
@@ -270,6 +287,30 @@ button { font: inherit; }
   .serve-split { grid-template-columns: 1fr; }
 }
 
+.hw-card { padding-bottom: .85rem; }
+.hw-rows { display: flex; flex-direction: column; gap: .42rem; }
+.hw-row {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr 2.5rem;
+  gap: .45rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.hw-row b {
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.hw-row .bar { margin: 0; height: 5px; }
+.hw-temps {
+  display: flex;
+  justify-content: space-between;
+  gap: .55rem;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.hw-temps b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .meters { display: flex; flex-direction: column; gap: .7rem; }
 .meter-row { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
 .meter-row b { color: var(--text); font-variant-numeric: tabular-nums; }

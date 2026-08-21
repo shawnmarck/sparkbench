@@ -118,7 +118,7 @@ export function HomePage({ live }) {
         <p>What is serving now, plus :9000 usage. Switch from Inference or Ctrl/K.</p>
       </div>
 
-      <div className="grid">
+      <div className="grid home-grid">
         <section className="card">
           <h2>Serving</h2>
           {active ? (
@@ -194,15 +194,27 @@ export function HomePage({ live }) {
                     <div className="bar kv" style={{ '--pct': Math.min(1, (Number(load.kv_cache_pct) || 0) / 100) }}><i /></div>
                   </div>
                 ) : null}
-                <div
-                  className="rate-one agg"
-                  title="Engine decode over a fixed 2s window. Adds up across concurrent slots."
-                >
-                  <b>{fmtTokS(load.gen_tok_s)}</b>
-                  <span>
-                    Agg tok/s · 2s
-                    {Number(load.running) > 1 ? ` · ${load.running} slots` : ''}
-                  </span>
+                <div className="rate-pair">
+                  <div
+                    className="rate-one agg"
+                    title="Engine decode over a fixed 2s window. Adds up across concurrent slots."
+                  >
+                    <b>{fmtTokS(load.gen_tok_s)}</b>
+                    <span>
+                      Agg tok/s · 2s
+                      {Number(load.running) > 1 ? ` · ${load.running} slots` : ''}
+                    </span>
+                  </div>
+                  <div className="rate-sess">
+                    <div title="Last finished :9000 request: completion tokens / wall clock. Includes prefill. One session, not engine-wide.">
+                      <b>{fmtTokS(lastSess?.tok_s)}</b>
+                      <span>Last sess.{lastSess ? ` · ${sinceLabel(lastSess.at) || ''}` : ''}</span>
+                    </div>
+                    <div title="Token-weighted: sum of completion tokens / sum of wall clock over finished :9000 sessions in the last hour.">
+                      <b>{fmtTokS(avg1h)}</b>
+                      <span>1h sess.</span>
+                    </div>
+                  </div>
                 </div>
                 <div
                   className="agg-spark-wrap"
@@ -213,34 +225,26 @@ export function HomePage({ live }) {
                     {p99Ready ? '1h p99' : 'p99 so far'} {fmtTokS(load.gen_tok_s_p99)} tok/s
                   </p>
                 </div>
-                <div className="rate-stack">
-                  <div title="Last finished :9000 request: completion tokens / wall clock. Includes prefill. One session, not engine-wide.">
-                    <b>{fmtTokS(lastSess?.tok_s)}</b>
-                    <span>Last sess. tok/s{lastSess ? ` · ${sinceLabel(lastSess.at) || ''}` : ''}</span>
-                  </div>
-                  <div title="Token-weighted: sum of completion tokens / sum of wall clock over finished :9000 sessions in the last hour.">
-                    <b>{fmtTokS(avg1h)}</b>
-                    <span>1h sess. tok/s</span>
-                  </div>
-                </div>
               </div>
             </div>
           ) : (
             <p className="hero-name muted">Idle</p>
           )}
         </section>
-        <section className="card">
+        <section className="card hw-card">
           <h2>Hardware</h2>
-          <div className="meters">
-            <div>
-              <div className="meter-row"><span>GPU</span><b>{fmtPct(gpu?.gpu_util_pct)}%</b></div>
+          <div className="hw-rows">
+            <div className="hw-row">
+              <span>GPU</span>
               <div className="bar gpu" style={{ '--pct': Math.min(1, (Number(gpu?.gpu_util_pct) || 0) / 100) }}><i /></div>
+              <b>{fmtPct(gpu?.gpu_util_pct)}%</b>
             </div>
-            <div>
-              <div className="meter-row"><span>Memory</span><b>{fmtPct(gpu?.memory_used_pct)}%</b></div>
+            <div className="hw-row">
+              <span>Mem</span>
               <div className="bar mem" style={{ '--pct': Math.min(1, (Number(gpu?.memory_used_pct) || 0) / 100) }}><i /></div>
+              <b>{fmtPct(gpu?.memory_used_pct)}%</b>
             </div>
-            <div className="meter-row">
+            <div className="hw-temps">
               <span>Temps</span>
               <b>GPU {gpu?.gpu_temp_c ?? '—'}° · CPU {gpu?.cpu_temp_c ?? '—'}°</b>
             </div>

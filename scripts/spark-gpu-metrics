@@ -35,6 +35,7 @@ _HISTORY = {
 
 _ENGINE_LOAD_LAST: dict | None = None
 _ENGINE_LOAD_LAST_AT = 0.0
+_TOKEN_RATE_PREV: dict | None = None
 _MAX_SEQS_CACHE: dict = {"profile": None, "max": None}
 _PREV_CPU = None
 _PREV_CPU_CORES = None
@@ -635,12 +636,20 @@ def parse_vllm_metrics(text: str) -> dict | None:
         # vLLM reports 0–1; also accept already-percent values.
         raw = sum(kv) / len(kv)
         kv_pct = round(raw * 100 if raw <= 1.5 else raw, 2)
+    gen_total = _gauge_values(text, "vllm:generation_tokens_total")
+    prompt_total = _gauge_values(text, "vllm:prompt_tokens_total")
+    gen_gauge = _gauge_values(text, "vllm:avg_generation_throughput_toks_per_s")
+    prompt_gauge = _gauge_values(text, "vllm:avg_prompt_throughput_toks_per_s")
     return {
         "source": "vllm_metrics",
         "running": int(round(sum(running))) if running else 0,
         "waiting": int(round(sum(waiting))) if waiting else 0,
         "kv_cache_pct": kv_pct,
         "kv_max_concurrency": kv_max,
+        "generation_tokens_total": sum(gen_total) if gen_total else None,
+        "prompt_tokens_total": sum(prompt_total) if prompt_total else None,
+        "gen_tok_s_gauge": sum(gen_gauge) if gen_gauge else None,
+        "prompt_tok_s_gauge": sum(prompt_gauge) if prompt_gauge else None,
     }
 
 
@@ -711,13 +720,45 @@ def _fetch_metrics_text(url: str) -> str | None:
         return None
 
 
+def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
+    """Decode/prefill tok/s from counter deltas, falling back to vLLM EWMA gauges."""
+    global _TOKEN_RATE_PREV
+    gen_s = parsed.get("gen_tok_s_gauge")
+    prompt_s = parsed.get("prompt_tok_s_gauge")
+    if gen_s is not None:
+        gen_s = round(float(gen_s), 1)
+    if prompt_s is not None:
+        prompt_s = round(float(prompt_s), 1)
+
+    gen_total = parsed.get("generation_tokens_total")
+    prompt_total = parsed.get("prompt_tokens_total")
+    prev = _TOKEN_RATE_PREV
+    if gen_total is None and prompt_total is None:
+        return gen_s, prompt_s
+    if prev and now - float(prev.get("at") or 0) < 0.4:
+        last = _ENGINE_LOAD_LAST or {}
+        return (
+            last.get("gen_tok_s") if last.get("gen_tok_s") is not None else gen_s,
+            last.get("prompt_tok_s") if last.get("prompt_tok_s") is not None else prompt_s,
+        )
+    if prev and now > float(prev.get("at") or 0):
+        dt = now - float(prev["at"])
+        if prev.get("gen") is not None and gen_total is not None and gen_total >= prev["gen"]:
+            gen_s = round((gen_total - prev["gen"]) / dt, 1)
+        if prev.get("prompt") is not None and prompt_total is not None and prompt_total >= prev["prompt"]:
+            prompt_s = round((prompt_total - prev["prompt"]) / dt, 1)
+    _TOKEN_RATE_PREV = {"gen": gen_total, "prompt": prompt_total, "at": now}
+    return gen_s, prompt_s
+
+
 def read_engine_load(inference: dict | None) -> dict | None:
     """Live scheduler occupancy from the engine /metrics scrape (vLLM first)."""
-    global _ENGINE_LOAD_LAST, _ENGINE_LOAD_LAST_AT
+    global _ENGINE_LOAD_LAST, _ENGINE_LOAD_LAST_AT, _TOKEN_RATE_PREV
     now = time.time()
     inference = inference or {}
     if not inference.get("up"):
         _ENGINE_LOAD_LAST = None
+        _TOKEN_RATE_PREV = None
         return None
 
     engine_id = inference.get("engine")
@@ -747,6 +788,7 @@ def read_engine_load(inference: dict | None) -> dict | None:
         max_seqs = _max_num_seqs_from_recipe()
     if max_seqs is None and parsed.get("kv_max_concurrency") is not None:
         max_seqs = int(parsed["kv_max_concurrency"])
+    gen_s, prompt_s = _token_rates(parsed, now)
     payload = {
         "engine": engine_id,
         "source": parsed["source"],
@@ -755,6 +797,8 @@ def read_engine_load(inference: dict | None) -> dict | None:
         "max": max_seqs,
         "kv_cache_pct": parsed.get("kv_cache_pct"),
         "kv_max_concurrency": parsed.get("kv_max_concurrency"),
+        "gen_tok_s": gen_s,
+        "prompt_tok_s": prompt_s,
         "stale": False,
     }
     _ENGINE_LOAD_LAST = payload

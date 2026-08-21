@@ -27,7 +27,7 @@ Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer
 | `openwebui` | Open WebUI dual-backend compose |
 | `bootstrap` | `host.env` + passwordless sudo for install + Netdata/portal base |
 | `agent` | Full passwordless sudo for automation (optional) |
-| `restart inference-api` | Restart inference API only (ops shortcut) |
+| `restart inference-api\|gpu-api` | Restart one API only (ops shortcut) |
 | `module <path>` | Run one module under `install/modules/` (surgical fix) |
 | `extras terminal\|shell\|lazydocker\|agent-skill` | Maintainer convenience — `agent-skill` copies harness skill to `~/.claude/skills` and `~/.cursor/skills` |
 
@@ -53,6 +53,7 @@ nas (optional, any time after clone)
 | `core/models-inventory.sh` | Catalog sync, inventory builder, portal pages |
 | `core/inventory-refresh.sh` | Timer + inotify inventory refresh |
 | `core/gpu-api.sh` | GPU metrics API + nginx |
+| `core/gpu-api-restart.sh` | Restart GPU metrics API only |
 | `core/shelf-api.sh` | Shelf/model HTTP APIs |
 | `core/hf-api.sh` | HF Explorer API (portal Explore tab) |
 | `core/inference-api.sh` | Inference control API |

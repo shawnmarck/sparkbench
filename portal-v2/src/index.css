@@ -235,6 +235,7 @@ button { font: inherit; }
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
+.rate-one.agg b { font-size: 1.55rem; }
 .rate-one span, .rate-stack span { color: var(--muted); font-size: .7rem; }
 .rate-stack { display: flex; flex-direction: column; gap: .55rem; }
 @media (max-width: 720px) {

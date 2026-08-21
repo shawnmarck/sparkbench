@@ -168,6 +168,16 @@ export function HomePage({ live }) {
                     <div className="bar kv" style={{ '--pct': Math.min(1, (Number(load.kv_cache_pct) || 0) / 100) }}><i /></div>
                   </div>
                 ) : null}
+                <div
+                  className="rate-one agg"
+                  title="Live engine decode: generation tokens this poll / wall time. Adds up across concurrent slots."
+                >
+                  <b>{fmtTokS(load.gen_tok_s)}</b>
+                  <span>
+                    Agg tok/s
+                    {Number(load.running) > 1 ? ` · ${load.running} slots` : ''}
+                  </span>
+                </div>
                 <div className="rate-stack">
                   <div title="Last :9000 request: completion tokens / wall clock. Includes prefill.">
                     <b>{fmtTokS(liveTok.last?.tok_s)}</b>

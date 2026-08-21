@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 const jumps = [
   { id: 'home', label: 'Go to Home', hint: 'operate', run: (nav) => nav('/') },
   { id: 'inf', label: 'Go to Inference', hint: 'operate', run: (nav) => nav('/inference') },
+  { id: 'log', label: 'Go to Engine log', hint: 'operate', run: (nav) => nav('/inference/log') },
   { id: 'bm', label: 'Go to Benchmaster', hint: 'operate', run: (nav) => nav('/benchmaster') },
   { id: 'ex', label: 'Go to Explore', hint: 'browse', run: (nav) => nav('/explore') },
   { id: 'lib', label: 'Go to Models', hint: 'browse', run: (nav) => nav('/models') },

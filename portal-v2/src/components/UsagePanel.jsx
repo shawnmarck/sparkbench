@@ -42,17 +42,16 @@ export function UsagePanel({ live }) {
   return (
     <section className="usage-hero">
       <div className="hero-row">
-        <div className="hero-total">
-          <TokenOdometer value={all.total} />
-          <div className="hero-label">Lifetime tokens</div>
-        </div>
-        <div className="stat-strip">
-          <div><b>{fmtTokens(h24.total)}</b><span>24h</span></div>
-          <div><b>{fmtTokens(d30.total)}</b><span>30D</span></div>
-          <div><b>{summary.sessions_1h ?? '—'}</b><span>Sessions</span></div>
-          <div><b>{summary.active_clients ?? '—'}</b><span>Clients</span></div>
-          <div><b>{summary.avg_tok_s ? Number(summary.avg_tok_s).toFixed(1) : '—'}</b><span>Tok/s</span></div>
-        </div>
+        <TokenOdometer value={all.total} />
+        <b>{fmtTokens(h24.total)}</b>
+        <b>{fmtTokens(d30.total)}</b>
+        <b>{summary.sessions_1h ?? '—'}</b>
+        <b>{summary.active_clients ?? '—'}</b>
+        <div className="hero-label">Lifetime tokens</div>
+        <span>24h</span>
+        <span>30D</span>
+        <span>Sessions</span>
+        <span>Clients</span>
       </div>
       <ActivityCalendar days={usage?.days} />
       <p className="mix-line">

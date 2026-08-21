@@ -106,45 +106,6 @@ export function HomePage({ live }) {
       <div className="home-scroll">
       <div className="home-stack">
         <div className="home-duo">
-          <section className="card">
-            <h2>Recipe</h2>
-            {active ? (
-              <>
-                <p className="hero-name">{active.name || active.id}</p>
-                <dl className="serve-facts">
-                  <div>
-                    <dt>Engine</dt>
-                    <dd>{stackLabel(active.engine)}</dd>
-                  </div>
-                  <div title="Configured context window for this recipe">
-                    <dt>Context</dt>
-                    <dd>{fmtCtx(active.context?.effective || active.context?.default)} tokens</dd>
-                  </div>
-                  {active.context?.kv_effective ? (
-                    <div title="Key-value cache precision the recipe launched with">
-                      <dt>KV type</dt>
-                      <dd>{active.context.kv_effective}</dd>
-                    </div>
-                  ) : null}
-                  {preset ? (
-                    <div>
-                      <dt>Preset</dt>
-                      <dd>{preset.label}</dd>
-                    </div>
-                  ) : null}
-                  <div className="catalog" title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
-                    <dt>Catalog bench</dt>
-                    <dd>
-                      {fmtTokS(active.tok_s)}
-                      <small> {benchMethodLabel(active.tok_s_method)}, not live</small>
-                    </dd>
-                  </div>
-                </dl>
-              </>
-            ) : (
-              <p className="hero-name muted">Idle</p>
-            )}
-          </section>
           <section className="card live">
             <h2>Live</h2>
             {active ? (
@@ -193,6 +154,45 @@ export function HomePage({ live }) {
               </>
             ) : (
               <p className="hero-meta tall muted">offline</p>
+            )}
+          </section>
+          <section className="card">
+            <h2>Recipe</h2>
+            {active ? (
+              <>
+                <p className="hero-name">{active.name || active.id}</p>
+                <dl className="serve-facts">
+                  <div>
+                    <dt>Engine</dt>
+                    <dd>{stackLabel(active.engine)}</dd>
+                  </div>
+                  <div title="Configured context window for this recipe">
+                    <dt>Context</dt>
+                    <dd>{fmtCtx(active.context?.effective || active.context?.default)} tokens</dd>
+                  </div>
+                  {active.context?.kv_effective ? (
+                    <div title="Key-value cache precision the recipe launched with">
+                      <dt>KV type</dt>
+                      <dd>{active.context.kv_effective}</dd>
+                    </div>
+                  ) : null}
+                  {preset ? (
+                    <div>
+                      <dt>Preset</dt>
+                      <dd>{preset.label}</dd>
+                    </div>
+                  ) : null}
+                  <div className="catalog" title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
+                    <dt>Catalog bench</dt>
+                    <dd>
+                      {fmtTokS(active.tok_s)}
+                      <small> {benchMethodLabel(active.tok_s_method)}, not live</small>
+                    </dd>
+                  </div>
+                </dl>
+              </>
+            ) : (
+              <p className="hero-name muted">Idle</p>
             )}
           </section>
         </div>

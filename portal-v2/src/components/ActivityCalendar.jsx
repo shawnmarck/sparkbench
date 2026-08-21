@@ -44,23 +44,23 @@ export function ActivityCalendar({ days }) {
 
   return (
     <div className="heat">
-      <div className="heat-head">
-        <span>Activity</span>
-        <div className="heat-ranges">
-          {HEAT_RANGES.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              className={r.id === rangeId ? 'on' : ''}
-              onClick={() => { setRangeId(r.id); setSelected(null) }}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
       <div className="heat-cal-wrap">
         <div className="heat-cal">
+          <div className="heat-head">
+            <span>Activity</span>
+            <div className="heat-ranges">
+              {HEAT_RANGES.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={r.id === rangeId ? 'on' : ''}
+                  onClick={() => { setRangeId(r.id); setSelected(null) }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="heat-months" style={{ gridTemplateColumns: `22px repeat(${weeks.length}, 14px)` }}>
             <span />
             {weeks.map((week, i) => (

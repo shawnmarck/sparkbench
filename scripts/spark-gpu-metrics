@@ -20,6 +20,7 @@ INFERENCE_CONTAINERS = frozenset({"vllm_node", "spark-vllm-qwen36", "vllm-node"}
 ENGINE_METRICS_TIMEOUT_S = 0.4
 ENGINE_LOAD_STALE_S = 5.0
 AGG_WINDOW_S = 2.0
+AGG_PEAK_S = 10.0
 AGG_SAMPLE_S = 1.0
 AGG_KEEP_S = 3600
 AGG_SPARK_POINTS = 90
@@ -752,6 +753,15 @@ def _record_agg(now: float, gen_s: float | None) -> None:
             _AGG_HISTORY.popleft()
 
 
+def _agg_peak(now: float) -> float | None:
+    cutoff = now - AGG_PEAK_S
+    with _TOKEN_RATE_LOCK:
+        vals = [v for t, v in _AGG_HISTORY if t >= cutoff]
+    if not vals:
+        return None
+    return round(max(vals), 1)
+
+
 def _agg_spark_view(now: float) -> dict:
     cutoff = now - AGG_KEEP_S
     with _TOKEN_RATE_LOCK:
@@ -932,7 +942,8 @@ def read_engine_load(inference: dict | None) -> dict | None:
         max_seqs = _max_num_seqs_from_recipe()
     if max_seqs is None and parsed.get("kv_max_concurrency") is not None:
         max_seqs = int(parsed["kv_max_concurrency"])
-    gen_s, prompt_s = _token_rates(parsed, now)
+    instant_s, prompt_s = _token_rates(parsed, now)
+    peak_s = _agg_peak(now)
     payload = {
         "engine": engine_id,
         "source": parsed["source"],
@@ -941,9 +952,10 @@ def read_engine_load(inference: dict | None) -> dict | None:
         "max": max_seqs,
         "kv_cache_pct": parsed.get("kv_cache_pct"),
         "kv_max_concurrency": parsed.get("kv_max_concurrency"),
-        "gen_tok_s": gen_s,
+        "gen_tok_s": peak_s if peak_s is not None else instant_s,
+        "gen_tok_s_2s": instant_s,
         "prompt_tok_s": prompt_s,
-        "gen_window_s": AGG_WINDOW_S,
+        "gen_window_s": AGG_PEAK_S,
         "stale": False,
         **_agg_spark_view(now),
     }

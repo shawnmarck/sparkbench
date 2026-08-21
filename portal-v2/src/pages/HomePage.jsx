@@ -197,13 +197,10 @@ export function HomePage({ live }) {
                 <div className="rate-pair">
                   <div
                     className="rate-one agg"
-                    title="Engine decode over a fixed 2s window. Adds up across concurrent slots."
+                    title="Peak engine decode over the last 10 seconds. Adds up across concurrent slots."
                   >
                     <b>{fmtTokS(load.gen_tok_s)}</b>
-                    <span>
-                      Agg tok/s · 2s
-                      {Number(load.running) > 1 ? ` · ${load.running} slots` : ''}
-                    </span>
+                    <span>Agg peak · 10s</span>
                   </div>
                   <div className="rate-sess">
                     <div title="Last finished :9000 request: completion tokens / wall clock. Includes prefill. One session, not engine-wide.">

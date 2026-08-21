@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -18,6 +19,8 @@ GATEWAY_PORT = int(os.environ.get("SPARK_GATEWAY_PORT", "9000"))
 INFERENCE_CONTAINERS = frozenset({"vllm_node", "spark-vllm-qwen36", "vllm-node"})
 ENGINE_METRICS_TIMEOUT_S = 0.4
 ENGINE_LOAD_STALE_S = 5.0
+AGG_WINDOW_S = 2.0
+AGG_SAMPLE_S = 1.0
 STATE_FILE = SPARK_ROOT / "run" / "inference-active.json"
 
 _HISTORY_LEN = 60
@@ -35,7 +38,8 @@ _HISTORY = {
 
 _ENGINE_LOAD_LAST: dict | None = None
 _ENGINE_LOAD_LAST_AT = 0.0
-_TOKEN_RATE_PREV: dict | None = None
+_TOKEN_SAMPLES: deque = deque(maxlen=8)
+_TOKEN_RATE_LOCK = threading.Lock()
 _MAX_SEQS_CACHE: dict = {"profile": None, "max": None}
 _PREV_CPU = None
 _PREV_CPU_CORES = None
@@ -721,8 +725,7 @@ def _fetch_metrics_text(url: str) -> str | None:
 
 
 def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
-    """Decode/prefill tok/s from counter deltas, falling back to vLLM EWMA gauges."""
-    global _TOKEN_RATE_PREV
+    """Decode/prefill tok/s over a fixed 2s window, independent of /api/gpu poll rate."""
     gen_s = parsed.get("gen_tok_s_gauge")
     prompt_s = parsed.get("prompt_tok_s_gauge")
     if gen_s is not None:
@@ -732,33 +735,74 @@ def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
 
     gen_total = parsed.get("generation_tokens_total")
     prompt_total = parsed.get("prompt_tokens_total")
-    prev = _TOKEN_RATE_PREV
     if gen_total is None and prompt_total is None:
         return gen_s, prompt_s
-    if prev and now - float(prev.get("at") or 0) < 0.4:
-        last = _ENGINE_LOAD_LAST or {}
-        return (
-            last.get("gen_tok_s") if last.get("gen_tok_s") is not None else gen_s,
-            last.get("prompt_tok_s") if last.get("prompt_tok_s") is not None else prompt_s,
-        )
-    if prev and now > float(prev.get("at") or 0):
-        dt = now - float(prev["at"])
-        if prev.get("gen") is not None and gen_total is not None and gen_total >= prev["gen"]:
-            gen_s = round((gen_total - prev["gen"]) / dt, 1)
-        if prev.get("prompt") is not None and prompt_total is not None and prompt_total >= prev["prompt"]:
-            prompt_s = round((prompt_total - prev["prompt"]) / dt, 1)
-    _TOKEN_RATE_PREV = {"gen": gen_total, "prompt": prompt_total, "at": now}
+
+    with _TOKEN_RATE_LOCK:
+        if _TOKEN_SAMPLES:
+            last_t, last_gen, _last_prompt = _TOKEN_SAMPLES[-1]
+            if now - last_t < 0.35:
+                last = _ENGINE_LOAD_LAST or {}
+                return (
+                    last.get("gen_tok_s") if last.get("gen_tok_s") is not None else gen_s,
+                    last.get("prompt_tok_s") if last.get("prompt_tok_s") is not None else prompt_s,
+                )
+            if last_gen is not None and gen_total is not None and gen_total < last_gen:
+                _TOKEN_SAMPLES.clear()
+        _TOKEN_SAMPLES.append((now, gen_total, prompt_total))
+        cutoff = now - AGG_WINDOW_S - AGG_SAMPLE_S
+        while len(_TOKEN_SAMPLES) > 2 and _TOKEN_SAMPLES[0][0] < cutoff:
+            _TOKEN_SAMPLES.popleft()
+
+        base = None
+        target = now - AGG_WINDOW_S
+        for sample in _TOKEN_SAMPLES:
+            if sample[0] <= target + 0.05:
+                base = sample
+        if base is None and _TOKEN_SAMPLES and now - _TOKEN_SAMPLES[0][0] >= 0.8:
+            base = _TOKEN_SAMPLES[0]
+        if base:
+            dt = now - base[0]
+            if dt >= 0.8:
+                if gen_total is not None and base[1] is not None and gen_total >= base[1]:
+                    gen_s = round((gen_total - base[1]) / dt, 1)
+                if prompt_total is not None and base[2] is not None and prompt_total >= base[2]:
+                    prompt_s = round((prompt_total - base[2]) / dt, 1)
     return gen_s, prompt_s
+
+
+def _sample_engine_tokens() -> None:
+    last = _ENGINE_LOAD_LAST or {}
+    engine_id = last.get("engine") or "vllm"
+    port = 8000 if engine_id != "llamacpp" else int(os.environ.get("SPARK_LLAMA_PORT", "8081"))
+    text = _fetch_metrics_text(f"http://127.0.0.1:{port}/metrics")
+    if not text:
+        return
+    parsed = parse_vllm_metrics(text) if engine_id != "llamacpp" else parse_llamacpp_metrics(text)
+    if parsed is None and engine_id != "llamacpp":
+        parsed = parse_llamacpp_metrics(text)
+    if parsed:
+        _token_rates(parsed, time.time())
+
+
+def _agg_sample_loop() -> None:
+    while True:
+        time.sleep(AGG_SAMPLE_S)
+        try:
+            _sample_engine_tokens()
+        except Exception:
+            continue
 
 
 def read_engine_load(inference: dict | None) -> dict | None:
     """Live scheduler occupancy from the engine /metrics scrape (vLLM first)."""
-    global _ENGINE_LOAD_LAST, _ENGINE_LOAD_LAST_AT, _TOKEN_RATE_PREV
+    global _ENGINE_LOAD_LAST, _ENGINE_LOAD_LAST_AT
     now = time.time()
     inference = inference or {}
     if not inference.get("up"):
         _ENGINE_LOAD_LAST = None
-        _TOKEN_RATE_PREV = None
+        with _TOKEN_RATE_LOCK:
+            _TOKEN_SAMPLES.clear()
         return None
 
     engine_id = inference.get("engine")
@@ -799,6 +843,7 @@ def read_engine_load(inference: dict | None) -> dict | None:
         "kv_max_concurrency": parsed.get("kv_max_concurrency"),
         "gen_tok_s": gen_s,
         "prompt_tok_s": prompt_s,
+        "gen_window_s": AGG_WINDOW_S,
         "stale": False,
     }
     _ENGINE_LOAD_LAST = payload
@@ -941,6 +986,7 @@ def main():
         read_cpu_metrics()
         read_network()
         time.sleep(0.2)
+        threading.Thread(target=_agg_sample_loop, name="spark-agg-tok", daemon=True).start()
         HTTPServer(("127.0.0.1", 8765), Handler).serve_forever()
         return
 

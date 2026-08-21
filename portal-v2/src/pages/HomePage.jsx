@@ -59,18 +59,8 @@ function SeqCubes({ running, waiting, max }) {
   )
 }
 
-function liveRates(recent) {
-  const rows = (recent || []).filter((r) => Number(r.tok_s) > 0 && Number(r.completion_tokens) > 0)
-  const last = rows[0] || null
-  const cutoff = Date.now() - 5 * 60 * 1000
-  const windowed = rows.filter((r) => {
-    const t = new Date(r.at || 0).getTime()
-    return Number.isFinite(t) && t >= cutoff
-  })
-  const avg5 = windowed.length
-    ? windowed.reduce((sum, r) => sum + Number(r.tok_s), 0) / windowed.length
-    : null
-  return { last, avg5, n5: windowed.length }
+function lastSessionRate(recent) {
+  return (recent || []).find((r) => Number(r.tok_s) > 0 && Number(r.completion_tokens) > 0) || null
 }
 
 export function HomePage({ live }) {
@@ -79,7 +69,7 @@ export function HomePage({ live }) {
   const load = gpu?.engine_load || {}
   const preset = inferPreset(active, load)
   const spec = specLabel(active)
-  const liveTok = liveRates(live.activity?.recent)
+  const lastSess = lastSessionRate(live.activity?.recent)
   const avg1h = live.activity?.summary?.avg_tok_s
   const up = sinceLabel(active?.started_at)
 
@@ -170,26 +160,22 @@ export function HomePage({ live }) {
                 ) : null}
                 <div
                   className="rate-one agg"
-                  title="Live engine decode: generation tokens this poll / wall time. Adds up across concurrent slots."
+                  title="Engine decode over a fixed 2s window. Adds up across concurrent slots."
                 >
                   <b>{fmtTokS(load.gen_tok_s)}</b>
                   <span>
-                    Agg tok/s
+                    Agg tok/s · 2s
                     {Number(load.running) > 1 ? ` · ${load.running} slots` : ''}
                   </span>
                 </div>
                 <div className="rate-stack">
-                  <div title="Last :9000 request: completion tokens / wall clock. Includes prefill.">
-                    <b>{fmtTokS(liveTok.last?.tok_s)}</b>
-                    <span>Last tok/s{liveTok.last ? ` · ${sinceLabel(liveTok.last.at) || ''}` : ''}</span>
+                  <div title="Last finished :9000 request: completion tokens / wall clock. Includes prefill. One session, not engine-wide.">
+                    <b>{fmtTokS(lastSess?.tok_s)}</b>
+                    <span>Last sess. tok/s{lastSess ? ` · ${sinceLabel(lastSess.at) || ''}` : ''}</span>
                   </div>
-                  <div title="Mean of :9000 request rates in the last 5 minutes.">
-                    <b>{fmtTokS(liveTok.avg5)}</b>
-                    <span>5m avg tok/s{liveTok.n5 ? ` · ${liveTok.n5} req` : ''}</span>
-                  </div>
-                  <div title="Mean of :9000 request rates over the last hour.">
+                  <div title="Mean of finished :9000 session rates over the last hour. Per request, not concurrent aggregate.">
                     <b>{fmtTokS(avg1h)}</b>
-                    <span>1h avg tok/s</span>
+                    <span>1h avg sess. tok/s</span>
                   </div>
                 </div>
               </div>

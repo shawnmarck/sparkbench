@@ -7,6 +7,8 @@ const operate = [
   { to: '/', label: 'Home', end: true },
   { to: '/inference', label: 'Inference' },
   { to: '/benchmaster', label: 'Benchmaster' },
+  { to: '/activity', label: 'Activity' },
+  { to: '/hardware', label: 'Hardware' },
 ]
 const browse = [
   { to: '/explore', label: 'Explore' },

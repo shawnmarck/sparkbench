@@ -11,6 +11,8 @@ import { InferencePage } from './pages/InferencePage.jsx'
 import { ExplorePage } from './pages/ExplorePage.jsx'
 import { BenchmasterPage } from './pages/BenchmasterPage.jsx'
 import { ModelsPage } from './pages/ModelsPage.jsx'
+import { HardwarePage } from './pages/HardwarePage.jsx'
+import { ActivityPage } from './pages/ActivityPage.jsx'
 
 export default function App() {
   const live = useLive()
@@ -73,6 +75,8 @@ export default function App() {
         <Route path="explore" element={<ExplorePage />} />
         <Route path="benchmaster" element={<BenchmasterPage live={live} />} />
         <Route path="models" element={<ModelsPage />} />
+        <Route path="hardware" element={<HardwarePage live={live} />} />
+        <Route path="activity" element={<ActivityPage live={live} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <CommandPalette live={live} onSwitch={askSwitch} onStop={askStop} />

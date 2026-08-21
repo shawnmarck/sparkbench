@@ -7,6 +7,8 @@ const jumps = [
   { id: 'bm', label: 'Go to Benchmaster', hint: 'operate', run: (nav) => nav('/benchmaster') },
   { id: 'ex', label: 'Go to Explore', hint: 'browse', run: (nav) => nav('/explore') },
   { id: 'lib', label: 'Go to Models', hint: 'browse', run: (nav) => nav('/models') },
+  { id: 'act', label: 'Go to Activity', hint: 'operate', run: (nav) => nav('/activity') },
+  { id: 'hw', label: 'Go to Hardware', hint: 'operate', run: (nav) => nav('/hardware') },
   { id: 'hermes', label: 'Open Hermes', hint: 'external', href: '/hermes/' },
   { id: 'chat', label: 'Open Chat', hint: 'external', href: 'http://sparky:3000/' },
   { id: 'netdata', label: 'Open Netdata', hint: 'external', href: 'http://sparky:19999/v3/' },

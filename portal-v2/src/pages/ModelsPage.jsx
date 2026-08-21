@@ -5,8 +5,20 @@ import { engineLabel, fmtTokS } from '../lib/fmt.js'
 function sizeLabel(m) {
   if (m.size_human) return m.size_human
   if (m.size_gb) return `${Number(m.size_gb).toFixed(1)} GB`
-  if (m.bytes) return `${(Number(m.bytes) / 1e9).toFixed(1)} GB`
+  if (m.size_bytes) return `${(Number(m.size_bytes) / 1e9).toFixed(1)} GB`
   return '—'
+}
+
+function verifyLabel(m) {
+  const v = m.spark_verify
+  if (v && typeof v === 'object') return v.spark_status || '—'
+  return m.verify || m.status || '—'
+}
+
+function engineOf(m) {
+  if (m.engine) return m.engine
+  if (Array.isArray(m.engines) && m.engines.length) return m.engines.join(', ')
+  return ''
 }
 
 export function ModelsPage() {
@@ -27,14 +39,14 @@ export function ModelsPage() {
 
   const models = data?.models || []
   const engines = useMemo(() => {
-    const set = new Set(models.map((m) => m.engine).filter(Boolean))
+    const set = new Set(models.flatMap((m) => m.engines || (m.engine ? [m.engine] : [])).filter(Boolean))
     return [...set].sort()
   }, [models])
 
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase()
     return models.filter((m) => {
-      if (engine !== 'all' && m.engine !== engine) return false
+      if (engine !== 'all' && !(m.engines || []).includes(engine) && m.engine !== engine) return false
       if (!query) return true
       const hay = `${m.name || ''} ${m.id || ''} ${m.rel_path || ''} ${m.family || ''}`.toLowerCase()
       return hay.includes(query)
@@ -87,10 +99,10 @@ export function ModelsPage() {
                     <div className="pid">{m.name || m.id}</div>
                     <div className="pname">{m.rel_path || m.id}</div>
                   </td>
-                  <td>{engineLabel(m.engine)}</td>
+                  <td>{engineLabel(engineOf(m))}</td>
                   <td>{sizeLabel(m)}</td>
-                  <td>{fmtTokS(m.tok_s || m.pbm_tok_s_4k)}</td>
-                  <td>{m.verify || m.verification || m.status || '—'}</td>
+                  <td>{fmtTokS(m.best_bench_tok_s || m.tok_s)}</td>
+                  <td>{verifyLabel(m)}</td>
                 </tr>
               ))}
             </tbody>

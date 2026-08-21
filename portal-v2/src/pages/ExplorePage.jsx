@@ -44,8 +44,8 @@ export function ExplorePage() {
       const [st, qdata] = await Promise.all([getHfStatus(), getHfQueue()])
       setStatus(st)
       setQueue({
-        explore: qdata?.queue?.explore || [],
-        download: qdata?.queue?.download || [],
+        explore: qdata?.explore || qdata?.queue?.explore || [],
+        download: qdata?.download || qdata?.queue?.download || [],
       })
     } catch (_err) {
       /* keep last good queue */
@@ -63,7 +63,11 @@ export function ExplorePage() {
     setMsg(null)
     try {
       const data = await getHfModel(repo)
-      setDetail(data)
+      setDetail({
+        repo,
+        model: data.model || data,
+        variants: data.variants || [],
+      })
     } catch (err) {
       setMsg({ ok: false, text: err.message || 'model lookup failed' })
     }
@@ -170,19 +174,21 @@ export function ExplorePage() {
           {detail ? (
             <section className="card">
               <h2>Detail</h2>
-              <p className="pid">{detail.id || detail.repo || detail.model_id}</p>
-              <p className="muted">{detail.pipeline_tag || detail.library_name || 'model'}</p>
-              {Array.isArray(detail.variants) && detail.variants.length ? (
+              <p className="pid">{detail.repo}</p>
+              <p className="muted">{detail.model?.pipeline_tag || detail.model?.library_name || 'model'}</p>
+              {detail.variants.length ? (
                 <div className="stack-list">
                   {detail.variants.slice(0, 8).map((v) => (
-                    <div key={v.label || v.inventory_path || v.files} className="stack-row">
+                    <div key={v.id || v.label || v.inventory_path} className="stack-row">
                       <div>
                         <div className="pid">{v.label || 'variant'}</div>
                         <div className="pname">
                           {v.size_human || ''}
+                          {v.engine ? ` · ${v.engine}` : ''}
                           {v.spark_fit_label ? ` · ${v.spark_fit_label}` : ''}
                         </div>
                       </div>
+                      <button type="button" className="btn" onClick={() => shortlist(detail.repo)}>Shortlist</button>
                     </div>
                   ))}
                 </div>
@@ -198,7 +204,7 @@ export function ExplorePage() {
                   <div key={id} className="stack-row">
                     <div>
                       <div className="pid">{item.repo || id}</div>
-                      <div className="pname">{item.state || 'queued'}{item.variant_label ? ` · ${item.variant_label}` : ''}</div>
+                      <div className="pname">{item.state || item.status || 'queued'}{item.variant_label ? ` · ${item.variant_label}` : ''}</div>
                     </div>
                     <div className="row-actions">
                       <button type="button" className="btn" onClick={() => download(id)}>Download</button>
@@ -219,8 +225,8 @@ export function ExplorePage() {
                     <div>
                       <div className="pid">{item.repo || id}</div>
                       <div className="pname">
-                        {item.state || 'queued'}
-                        {item.plan?.size_human ? ` · ${item.plan.size_human}` : ''}
+                        {item.state || item.status || 'queued'}
+                        {item.plan?.size_human || item.snapshot?.size_human ? ` · ${item.plan?.size_human || item.snapshot.size_human}` : ''}
                       </div>
                     </div>
                     <button type="button" className="btn" onClick={() => remove(id, 'download')}>Remove</button>

@@ -132,7 +132,7 @@ export function InferencePage({ live, actions }) {
         <section className="card">
           <h2>{rows.length} recipes</h2>
           <div className="table-wrap" style={{ maxHeight: '58vh' }}>
-            <table>
+            <table className="pick-table">
               <thead>
                 <tr>
                   <th>Recipe</th>

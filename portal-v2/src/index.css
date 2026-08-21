@@ -382,7 +382,7 @@ tr.active td { background: #141a10; }
 
 .inf-grid { align-items: start; }
 tr.picked td { box-shadow: inset 2px 0 0 var(--accent); }
-tr { cursor: pointer; }
+.pick-table tbody tr { cursor: pointer; }
 
 .log {
   margin: 0;

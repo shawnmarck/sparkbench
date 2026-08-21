@@ -89,7 +89,13 @@ export function HomePage({ live }) {
                   {load.waiting ? ` · ${load.waiting} waiting` : ''}
                 </p>
                 {load.kv_cache_pct != null ? (
-                  <p className="hero-meta tall">KV cache {fmtPct(load.kv_cache_pct)}%</p>
+                  <div className="meters kv-meter">
+                    <div className="meter-row">
+                      <span>KV cache</span>
+                      <b>({fmtPct(load.kv_cache_pct)}%)</b>
+                    </div>
+                    <div className="bar kv" style={{ '--pct': Math.min(1, (Number(load.kv_cache_pct) || 0) / 100) }}><i /></div>
+                  </div>
                 ) : null}
                 <div className="rate-stack">
                   <div title="Last :9000 request: completion tokens / wall clock. Includes prefill.">

@@ -217,6 +217,8 @@ button { font: inherit; }
 }
 .bar.gpu > i { background: linear-gradient(90deg, #5a9200, var(--gpu)); }
 .bar.mem > i { background: linear-gradient(90deg, #7a5ab0, var(--mem)); }
+.bar.kv > i { background: linear-gradient(90deg, #3a7ab8, var(--seq)); }
+.kv-meter { margin: .55rem 0 .15rem; }
 
 .usage-line {
   font-family: ui-monospace, monospace;

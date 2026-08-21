@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { fmtPct, shortName } from '../lib/fmt.js'
 import { PopOut } from './PopOut.jsx'
@@ -9,6 +10,7 @@ const operate = [
 ]
 const browse = [
   { to: '/explore', label: 'Explore' },
+  { to: '/models', label: 'Models' },
 ]
 const external = [
   { href: '/hermes/', label: 'Hermes' },
@@ -23,6 +25,7 @@ function servingTone(active, ready) {
 }
 
 export function AppShell({ live, children }) {
+  const [navOpen, setNavOpen] = useState(false)
   const active = live.inference?.active
   const ready = Boolean(active?.ready ?? live.inference?.ready)
   const gpu = live.gpu
@@ -31,6 +34,7 @@ export function AppShell({ live, children }) {
   return (
     <div className="app">
       <header className="topbar">
+        <button type="button" className="btn nav-toggle" onClick={() => setNavOpen((v) => !v)}>Menu</button>
         <a className="brand" href="/v2/">SparkBench</a>
         <div className="pills">
           <span className={`pill ${tone}`} title={active?.id || 'No profile'}>
@@ -45,9 +49,12 @@ export function AppShell({ live, children }) {
           </span>
           {live.error ? <span className="pill down">API {live.error}</span> : null}
         </div>
+        <button type="button" className="kbd-hint" title="Command palette" onClick={() => window.dispatchEvent(new Event('spark-palette'))}>
+          Ctrl K
+        </button>
         <a className="legacy-link" href="/">Legacy UI</a>
       </header>
-      <nav className="sidenav" aria-label="Primary">
+      <nav className={`sidenav${navOpen ? ' open' : ''}`} aria-label="Primary" onClick={() => setNavOpen(false)}>
         <div className="nav-group">
           <div className="nav-label">Operate</div>
           {operate.map((item) => (

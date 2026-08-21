@@ -10,7 +10,7 @@ export function HomePage({ live }) {
     <div>
       <div className="page-head">
         <h1>Home</h1>
-        <p>Engine load and :9000 usage. Switch still lives on Inference / legacy.</p>
+        <p>Engine load and :9000 usage. Switch from Inference or Ctrl/K.</p>
       </div>
 
       <div className="grid">

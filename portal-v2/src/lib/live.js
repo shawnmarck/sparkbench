@@ -5,15 +5,16 @@ const empty = { gpu: null, inference: null, activity: null, recipes: [], error: 
 
 export function useLive(intervalMs = 4000) {
   const [state, setState] = useState(empty)
+  const [bump, setBump] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     let timer = null
     let recipeAt = 0
 
-    async function tick() {
+    async function tick(forceRecipes = false) {
       try {
-        const needRecipes = Date.now() - recipeAt > 30_000
+        const needRecipes = forceRecipes || Date.now() - recipeAt > 30_000
         const [gpu, inference, activity, recipePayload] = await Promise.all([
           getGpu(),
           getInferenceStatus(),
@@ -34,15 +35,15 @@ export function useLive(intervalMs = 4000) {
       } catch (err) {
         if (!cancelled) setState((prev) => ({ ...prev, error: err.message || 'offline' }))
       }
-      timer = setTimeout(tick, intervalMs)
+      timer = setTimeout(() => tick(false), intervalMs)
     }
 
-    tick()
+    tick(bump > 0)
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [intervalMs])
+  }, [intervalMs, bump])
 
-  return state
+  return { ...state, refresh: () => setBump((n) => n + 1) }
 }

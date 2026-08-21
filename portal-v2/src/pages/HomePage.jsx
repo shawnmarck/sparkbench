@@ -118,7 +118,7 @@ export function HomePage({ live }) {
         <p>What is serving now, plus :9000 usage. Switch from Inference or Ctrl/K.</p>
       </div>
 
-      <div className="grid home-grid">
+      <div className="home-stack">
         <section className="card">
           <h2>Serving</h2>
           {active ? (
@@ -228,23 +228,20 @@ export function HomePage({ live }) {
             <p className="hero-name muted">Idle</p>
           )}
         </section>
-        <section className="card hw-card">
-          <h2>Hardware</h2>
-          <div className="hw-rows">
-            <div className="hw-row">
-              <span>GPU</span>
-              <div className="bar gpu" style={{ '--pct': Math.min(1, (Number(gpu?.gpu_util_pct) || 0) / 100) }}><i /></div>
-              <b>{fmtPct(gpu?.gpu_util_pct)}%</b>
-            </div>
-            <div className="hw-row">
-              <span>Mem</span>
-              <div className="bar mem" style={{ '--pct': Math.min(1, (Number(gpu?.memory_used_pct) || 0) / 100) }}><i /></div>
-              <b>{fmtPct(gpu?.memory_used_pct)}%</b>
-            </div>
-            <div className="hw-temps">
-              <span>Temps</span>
-              <b>GPU {gpu?.gpu_temp_c ?? '—'}° · CPU {gpu?.cpu_temp_c ?? '—'}°</b>
-            </div>
+        <section className="card hw-strip" aria-label="Hardware">
+          <div className="hw-cell">
+            <span>GPU</span>
+            <div className="bar gpu" style={{ '--pct': Math.min(1, (Number(gpu?.gpu_util_pct) || 0) / 100) }}><i /></div>
+            <b>{fmtPct(gpu?.gpu_util_pct)}%</b>
+          </div>
+          <div className="hw-cell">
+            <span>Mem</span>
+            <div className="bar mem" style={{ '--pct': Math.min(1, (Number(gpu?.memory_used_pct) || 0) / 100) }}><i /></div>
+            <b>{fmtPct(gpu?.memory_used_pct)}%</b>
+          </div>
+          <div className="hw-temps">
+            <span>Temps</span>
+            <b>GPU {gpu?.gpu_temp_c ?? '—'}° · CPU {gpu?.cpu_temp_c ?? '—'}°</b>
           </div>
         </section>
       </div>

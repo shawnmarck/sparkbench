@@ -46,7 +46,7 @@ function SeqCubes({ running, waiting, max }) {
   return (
     <div className="seq-cubes" title={`${run} running, ${wait} waiting, ${cap} concurrency slots`}>
       <div className="meter-row">
-        <span>Sequences</span>
+        <span>Concurrency</span>
         <b>{run}/{cap}{wait ? ` · ${wait} wait` : ''}</b>
       </div>
       <div className="seq-grid" style={{ '--cols': seqCols(cap) }}>

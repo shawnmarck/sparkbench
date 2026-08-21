@@ -29,14 +29,14 @@ function seqCols(cap) {
 
 function SeqCubes({ running, waiting, max }) {
   const cap = Math.max(0, Number(max) || 0)
-  if (!cap) return <p className="hero-meta tall">Sequences —</p>
+  if (!cap) return <p className="hero-meta tall">Concurrency —</p>
   const run = Math.min(cap, Math.max(0, Number(running) || 0))
   const wait = Math.min(Math.max(0, cap - run), Math.max(0, Number(waiting) || 0))
   if (cap > 48) {
     return (
       <div className="meters">
         <div className="meter-row">
-          <span>Sequences</span>
+          <span>Concurrency</span>
           <b>{run}/{cap}{wait ? ` · ${wait} wait` : ''}</b>
         </div>
         <div className="bar kv" style={{ '--pct': Math.min(1, run / cap) }}><i /></div>
@@ -44,7 +44,7 @@ function SeqCubes({ running, waiting, max }) {
     )
   }
   return (
-    <div className="seq-cubes" title={`${run} running, ${wait} waiting, ${cap} max concurrent sequences`}>
+    <div className="seq-cubes" title={`${run} running, ${wait} waiting, ${cap} concurrency slots`}>
       <div className="meter-row">
         <span>Sequences</span>
         <b>{run}/{cap}{wait ? ` · ${wait} wait` : ''}</b>
@@ -127,8 +127,8 @@ export function HomePage({ live }) {
                     </div>
                   ) : null}
                   {load.max != null ? (
-                    <div title="Max concurrent sequences this recipe allows">
-                      <dt>Seq cap</dt>
+                    <div title="Max concurrent request slots this recipe allows">
+                      <dt>Slot cap</dt>
                       <dd>{load.max}</dd>
                     </div>
                   ) : null}

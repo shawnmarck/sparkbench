@@ -52,12 +52,20 @@ export function getInferenceLogs(lines = 50) {
   return getJson(`/api/inference/logs?lines=${lines}`)
 }
 
-export function switchProfile(profile, { confirmHeavy = false } = {}) {
-  return postJson('/api/inference/switch', {
+export function switchProfile(profile, { confirmHeavy = false, ctx, kv, preset } = {}) {
+  const body = {
     profile,
     confirm: true,
     confirm_heavy: confirmHeavy,
-  }, 30_000)
+  }
+  if (ctx != null && ctx !== '') body.ctx = Number(ctx)
+  if (kv && kv !== 'auto') body.kv = kv
+  if (preset) body.preset = preset
+  return postJson('/api/inference/switch', body, 30_000)
+}
+
+export function getInferenceContext(profile) {
+  return getJson(`/api/inference/context?profile=${encodeURIComponent(profile)}`)
 }
 
 export function stopInference() {

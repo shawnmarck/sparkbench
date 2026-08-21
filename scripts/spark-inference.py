@@ -3379,7 +3379,13 @@ def start_switch_job(profile_id: str, *, ctx: int | None = None, kv: str | None 
         return False, "benchmark running", active_bench_job()
 
     active = detect_active_profile()
-    if active and active["profile"] == profile_id and engine_ready(active["recipe"]):
+    explicit_launch = ctx is not None or kv is not None or preset is not None
+    if (
+        active
+        and active["profile"] == profile_id
+        and engine_ready(active["recipe"])
+        and not explicit_launch
+    ):
         return False, "profile already active", api_status()
 
     SWITCH_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -3569,7 +3575,14 @@ def api_dispatch(
                 "profile": profile,
                 "notes": (recipe.get("notes") or "").strip(),
             }
-        ok, message, job = start_switch_job(profile)
+        ctx = body.get("ctx")
+        try:
+            ctx_i = int(ctx) if ctx is not None and str(ctx).strip() != "" else None
+        except (TypeError, ValueError):
+            return 400, {"ok": False, "error": "invalid ctx"}
+        kv = str(body.get("kv") or "").strip() or None
+        preset = str(body.get("preset") or "").strip() or None
+        ok, message, job = start_switch_job(profile, ctx=ctx_i, kv=kv, preset=preset)
         if not ok:
             code = 409 if "already" in message else 400
             return code, {"ok": False, "error": message, "job": job}

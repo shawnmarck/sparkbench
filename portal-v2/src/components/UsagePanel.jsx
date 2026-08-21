@@ -55,8 +55,6 @@ export function UsagePanel({ live }) {
       <ActivityCalendar days={usage?.days} />
       <p className="mix-line">
         <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
-        <span className="sep">·</span>
-        :9000 only
       </p>
       <div className="table-wrap">
         <table>

@@ -15,6 +15,16 @@ export function fmtFull(n) {
   return Math.round(Number(n) || 0).toLocaleString('en-US')
 }
 
+export function fmtUsd(n) {
+  if (n == null || Number.isNaN(Number(n))) return '—'
+  const x = Number(n)
+  if (x === 0) return '$0'
+  if (Math.abs(x) < 10) {
+    return `$${x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+  return `$${Math.round(x).toLocaleString('en-US')}`
+}
+
 export function fmtTokS(n) {
   if (n == null || Number.isNaN(Number(n))) return '—'
   return Number(n).toFixed(1)

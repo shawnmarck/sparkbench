@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { ActivityCalendar } from './ActivityCalendar.jsx'
 import { TokenOdometer } from './TokenOdometer.jsx'
-import { fmtTokens } from '../lib/fmt.js'
+import { fmtTokens, fmtUsd } from '../lib/fmt.js'
 import { countsOf } from '../lib/usage.js'
+import { compTitle, estCloudUsd, matchComp } from '../lib/cloudComps.js'
 
 function TokenMix({ prompt, completion }) {
   const total = prompt + completion
@@ -84,6 +85,7 @@ export function UsagePanel({ live }) {
               <th>Tokens</th>
               <th>24h</th>
               <th>All</th>
+              <th title="Lifetime tokens × cheapest OpenRouter in/out, hand-updated">Est. $</th>
             </tr>
           </thead>
           <tbody>
@@ -93,6 +95,8 @@ export function UsagePanel({ live }) {
               const req = requestLabel(a.requests, a.total)
               const label = names.get(p.id) || p.id
               const on = filterId === p.id
+              const comp = matchComp(p.id)
+              const est = estCloudUsd(a.prompt, a.completion, comp)
               return (
                 <tr
                   key={p.id}
@@ -108,10 +112,11 @@ export function UsagePanel({ live }) {
                   <td><TokenMix prompt={a.prompt} completion={a.completion} /></td>
                   <td>{c24.total ? fmtTokens(c24.total) : '—'}</td>
                   <td>{fmtTokens(a.total)}</td>
+                  <td title={compTitle(comp)}>{fmtUsd(est)}</td>
                 </tr>
               )
             }) : (
-              <tr><td className="muted" colSpan={5}>No usage yet</td></tr>
+              <tr><td className="muted" colSpan={6}>No usage yet</td></tr>
             )}
           </tbody>
         </table>

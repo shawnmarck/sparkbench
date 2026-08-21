@@ -173,7 +173,7 @@ export function HomePage({ live }) {
 
       <UsagePanel live={live} />
       </div>
-      <ActivityDock recent={live.activity?.recent} />
+      <ActivityDock recent={live.activity?.recent} recipes={live.recipes} />
     </div>
   )
 }

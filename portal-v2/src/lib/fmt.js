@@ -51,6 +51,13 @@ export function benchMethodLabel(method) {
   return method || 'catalog'
 }
 
+export function fmtDur(ms) {
+  const n = Number(ms)
+  if (!Number.isFinite(n) || n < 0) return '—'
+  if (n < 1000) return `${Math.round(n)}ms`
+  return `${(n / 1000).toFixed(1)}s`
+}
+
 export function sinceLabel(iso) {
   if (!iso) return null
   const ms = Date.now() - new Date(iso).getTime()

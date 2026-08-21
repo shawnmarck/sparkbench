@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { fmtTokens, fmtTokS } from '../lib/fmt.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { fmtDur, fmtTokens, fmtTokS, shortName } from '../lib/fmt.js'
 
 const LAST_N = 5
 const STORE = 'spark-v2-activity-dock'
@@ -8,8 +8,13 @@ function rowId(row, i) {
   return row.id || `${row.at || ''}-${i}`
 }
 
-export function ActivityDock({ recent }) {
+export function ActivityDock({ recent, recipes }) {
   const rows = (recent || []).slice(0, LAST_N).slice().reverse()
+  const names = useMemo(() => {
+    const m = new Map()
+    for (const r of recipes || []) m.set(r.id, r.name || r.id)
+    return m
+  }, [recipes])
   const seen = useRef(new Set())
   const primed = useRef(false)
   const [fresh, setFresh] = useState(() => new Set())
@@ -46,6 +51,10 @@ export function ActivityDock({ recent }) {
     })
   }
 
+  function modelLabel(row) {
+    return shortName(names.get(row.profile), row.model || row.profile)
+  }
+
   return (
     <aside className={`activity-dock${open ? '' : ' closed'}`} aria-label="Recent :9000 activity">
       <button type="button" className="activity-dock-head" onClick={toggle} aria-expanded={open}>
@@ -55,16 +64,31 @@ export function ActivityDock({ recent }) {
       </button>
       {open ? (
         <div className="activity-stream">
+          <div className="activity-row head">
+            <span>Time</span>
+            <span>App</span>
+            <span>Model</span>
+            <span>In</span>
+            <span>Out</span>
+            <span>Tok/s</span>
+            <span>Dur</span>
+          </div>
           {rows.length ? rows.map((row, i) => {
             const id = rowId(row, i)
-            const prompt = Number(row.prompt_tokens) || 0
-            const completion = Number(row.completion_tokens) || 0
+            const bad = row.status && String(row.status) !== '200'
             return (
-              <div key={id} className={`activity-row${fresh.has(id) ? ' in' : ''}`}>
+              <div
+                key={id}
+                className={`activity-row${fresh.has(id) ? ' in' : ''}${bad ? ' bad' : ''}`}
+                title={[row.profile, row.engine, row.stream ? 'stream' : 'sync', row.status].filter(Boolean).join(' · ')}
+              >
                 <span className="t">{row.at ? new Date(row.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—'}</span>
                 <span className="app">{row.app || row.client_ip || '—'}</span>
-                <span className="tok">↑{fmtTokens(prompt)} ↓{fmtTokens(completion)}</span>
+                <span className="model">{modelLabel(row)}</span>
+                <span className="tok">{fmtTokens(row.prompt_tokens)}</span>
+                <span className="tok">{fmtTokens(row.completion_tokens)}</span>
                 <span className="rate">{fmtTokS(row.tok_s)}</span>
+                <span className="dur">{fmtDur(row.duration_ms)}</span>
               </div>
             )
           }) : (

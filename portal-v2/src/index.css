@@ -188,6 +188,33 @@ button { font: inherit; }
   padding: .7rem .8rem .8rem;
 }
 .serve-block.live h3 { color: var(--accent); }
+.serve-facts {
+  display: grid;
+  gap: .32rem;
+  margin: .55rem 0 0;
+}
+.serve-facts div {
+  display: grid;
+  grid-template-columns: 7.2rem 1fr;
+  gap: .55rem;
+  align-items: baseline;
+}
+.serve-facts dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.serve-facts dd {
+  margin: 0;
+  font-size: .84rem;
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .rate-one, .rate-stack { margin-top: .75rem; }
 .rate-one b, .rate-stack b {
   display: block;

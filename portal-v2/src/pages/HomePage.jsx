@@ -59,25 +59,58 @@ export function HomePage({ live }) {
               <div className="serve-block">
                 <h3>Recipe</h3>
                 <p className="hero-name">{active.name || active.id}</p>
-                <p className="hero-meta">
-                  {stackLabel(active.engine)}
-                  {active.port ? ` :${active.port}` : ''}
-                  {spec ? ` · ${spec}` : ''}
-                </p>
-                <p className="hero-meta">
-                  {fmtCtx(active.context?.effective || active.context?.default)} ctx
-                  {active.context?.kv_effective ? ` · KV ${active.context.kv_effective}` : ''}
-                  {load.max != null ? ` · ${load.max} seq cap` : ''}
-                </p>
-                {preset ? <p className="hero-meta">{preset.label}</p> : null}
-                <p className="pname" title={active.id}>{active.served_name || active.id}</p>
-                <div
-                  className="rate-one"
-                  title="Catalog bench, not live. PBM 4k is decode at a 4k fill."
-                >
-                  <b>{fmtTokS(active.tok_s)}</b>
-                  <span>Bench · {benchMethodLabel(active.tok_s_method)}</span>
-                </div>
+                <dl className="serve-facts">
+                  <div>
+                    <dt>Engine</dt>
+                    <dd>{stackLabel(active.engine)}</dd>
+                  </div>
+                  {active.port ? (
+                    <div>
+                      <dt>API port</dt>
+                      <dd>{active.port}</dd>
+                    </div>
+                  ) : null}
+                  {spec ? (
+                    <div title="Speculative decoding helper on this recipe">
+                      <dt>Speculative</dt>
+                      <dd>{spec}</dd>
+                    </div>
+                  ) : null}
+                  <div title="Configured context window for this recipe">
+                    <dt>Context</dt>
+                    <dd>{fmtCtx(active.context?.effective || active.context?.default)} tokens</dd>
+                  </div>
+                  {active.context?.kv_effective ? (
+                    <div title="Key-value cache precision the recipe launched with">
+                      <dt>KV type</dt>
+                      <dd>{active.context.kv_effective}</dd>
+                    </div>
+                  ) : null}
+                  {load.max != null ? (
+                    <div title="Max concurrent sequences this recipe allows">
+                      <dt>Seq cap</dt>
+                      <dd>{load.max}</dd>
+                    </div>
+                  ) : null}
+                  {preset ? (
+                    <div>
+                      <dt>Preset</dt>
+                      <dd>{preset.label}</dd>
+                    </div>
+                  ) : null}
+                  <div title={active.id}>
+                    <dt>Served as</dt>
+                    <dd>{active.served_name || active.id}</dd>
+                  </div>
+                  <div title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
+                    <dt>Bench speed</dt>
+                    <dd>{fmtTokS(active.tok_s)} tok/s</dd>
+                  </div>
+                  <div>
+                    <dt>Bench method</dt>
+                    <dd>{benchMethodLabel(active.tok_s_method)}</dd>
+                  </div>
+                </dl>
               </div>
               <div className="serve-block live">
                 <h3>Live</h3>

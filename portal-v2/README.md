@@ -3,6 +3,8 @@
 Vite + React client of the existing SparkBench `/api/*` control plane.
 Does not add operator or install services. Legacy UI stays at `/`.
 
+Models / usage layout inspiration: [docs/assets/inspiration/xsero-models-view.md](../docs/assets/inspiration/xsero-models-view.md).
+
 ```bash
 cd portal-v2
 npm install

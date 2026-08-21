@@ -47,23 +47,8 @@ button { font: inherit; }
 }
 
 .brand {
-  display: flex;
-  align-items: baseline;
-  gap: .45rem;
   font-weight: 700;
   letter-spacing: -.02em;
-}
-.brand small {
-  color: var(--muted);
-  font-weight: 500;
-  font-size: .72rem;
-}
-.brand .v2 {
-  color: var(--accent);
-  font-size: .68rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
 }
 
 .pills { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }

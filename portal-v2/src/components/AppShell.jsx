@@ -31,11 +31,7 @@ export function AppShell({ live, children }) {
   return (
     <div className="app">
       <header className="topbar">
-        <a className="brand" href="/v2/">
-          Sparky
-          <small>home lab</small>
-          <span className="v2">new</span>
-        </a>
+        <a className="brand" href="/v2/">SparkBench</a>
         <div className="pills">
           <span className={`pill ${tone}`} title={active?.id || 'No profile'}>
             <i className="dot" />

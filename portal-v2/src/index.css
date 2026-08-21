@@ -449,7 +449,7 @@ tr.active td { background: var(--row-active); }
 .odometer {
   display: inline-flex;
   align-items: flex-end;
-  font-size: clamp(3.06rem, 7.2vw, 4.73rem);
+  font-size: clamp(2.75rem, 6.48vw, 4.26rem);
   font-weight: 720;
   letter-spacing: -.05em;
   line-height: 1;

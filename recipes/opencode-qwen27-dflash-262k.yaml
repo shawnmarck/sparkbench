@@ -1,5 +1,5 @@
 id: opencode-qwen27-dflash-262k
-name: "OpenCode \xB7 Qwen3.6 27B DFlash 262k"
+name: "Qwen3.6-27B DFlash 262k"
 catalog_id: qwen/qwen3.6-27b
 inventory_path: qwen/qwen3.6-27b
 engine: eugr
@@ -28,7 +28,7 @@ context:
   native: 262144
   presets:
     agent:
-      label: OpenCode agent (262k)
+      label: Agent (262k)
       ctx: 262144
       kv: fp8
     balanced:

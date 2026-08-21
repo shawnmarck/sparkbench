@@ -1,5 +1,5 @@
 id: opencode-qwen36-250k
-name: "OpenCode \xB7 Qwen3.6 250k NVFP4"
+name: "Qwen3.6-35B-A3B 250k NVFP4"
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
 engine: eugr
@@ -21,7 +21,7 @@ context:
   native: 262144
   presets:
     agent:
-      label: OpenCode agent (250k)
+      label: Agent (250k)
       ctx: 256000
       kv: fp8
     balanced:

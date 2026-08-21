@@ -615,7 +615,7 @@ models:
     hf_repo: yuxinlu1/Mellum2-12B-A2.5B-Claude-4.6-4.8-Opus-Thinking-GGUF
 - id: nvidia/qwen3.6-35b-a3b
   lab: nvidia
-  name: "OpenCode \xB7 Qwen3.6 250k NVFP4"
+  name: "Qwen3.6-35B-A3B"
   slug: qwen3.6-35b-a3b
   hf_repo: nvidia/qwen3.6-35b-a3b-nvfp4
   capabilities:

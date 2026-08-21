@@ -11,6 +11,10 @@ export function fmtTokens(n) {
   return String(Math.round(x))
 }
 
+export function fmtFull(n) {
+  return Math.round(Number(n) || 0).toLocaleString('en-US')
+}
+
 export function fmtTokS(n) {
   if (n == null || Number.isNaN(Number(n))) return '—'
   return Number(n).toFixed(1)

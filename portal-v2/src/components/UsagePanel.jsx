@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ActivityCalendar } from './ActivityCalendar.jsx'
+import { TokenOdometer } from './TokenOdometer.jsx'
 import { fmtTokens } from '../lib/fmt.js'
 import { countsOf } from '../lib/usage.js'
 
@@ -43,7 +44,7 @@ export function UsagePanel({ live }) {
   return (
     <section className="usage-hero">
       <div className="hero-total">
-        <div className="hero-num">{fmtTokens(all.total)}</div>
+        <TokenOdometer value={all.total} />
         <div className="hero-label">Lifetime tokens</div>
       </div>
       <div className="stat-strip">

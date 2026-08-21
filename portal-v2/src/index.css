@@ -251,6 +251,58 @@ tr.active td { background: #141a10; }
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+.odometer {
+  display: inline-flex;
+  align-items: flex-end;
+  font-size: clamp(1.55rem, 4.8vw, 2.75rem);
+  font-weight: 720;
+  letter-spacing: -.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  transition: color .35s ease, text-shadow .35s ease;
+}
+.odometer.tick { color: var(--accent); text-shadow: 0 0 18px rgba(134, 196, 0, .28); }
+.odo-digit {
+  position: relative;
+  width: .62em;
+  height: 1em;
+  overflow: hidden;
+}
+.odo-digit::before,
+.odo-digit::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: .22em;
+  z-index: 1;
+  pointer-events: none;
+}
+.odo-digit::before { top: 0; background: linear-gradient(var(--bg), transparent); }
+.odo-digit::after { bottom: 0; background: linear-gradient(transparent, var(--bg)); }
+.odo-reel {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  transition: transform .85s cubic-bezier(.22, 1, .36, 1);
+}
+.odo-reel i {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+  font-style: normal;
+}
+.odo-sep {
+  width: .34em;
+  text-align: center;
+  color: var(--muted);
+  transform: translateY(-.04em);
+}
+@media (prefers-reduced-motion: reduce) {
+  .odo-reel { transition: none; }
+  .odometer { transition: none; }
+}
 .hero-label { margin-top: .35rem; color: var(--muted); font-size: .86rem; }
 .stat-strip {
   display: grid;

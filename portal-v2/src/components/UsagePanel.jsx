@@ -46,6 +46,39 @@ export function UsagePanel({ live }) {
     setFilterId((cur) => (cur === id ? null : id))
   }
 
+  const totals = useMemo(() => {
+    let prompt = 0
+    let completion = 0
+    let day24 = 0
+    let requests = 0
+    let reqKnown = true
+    let usd = 0
+    let usdKnown = false
+    for (const p of profiles) {
+      const a = countsOf(p.all)
+      const c24 = countsOf(p['24h'])
+      prompt += a.prompt
+      completion += a.completion
+      day24 += c24.total
+      if (a.requests <= 2 && a.total > 1e6) reqKnown = false
+      else requests += a.requests
+      const est = estCloudUsd(a.prompt, a.completion, matchComp(p.id))
+      if (est != null) {
+        usd += est
+        usdKnown = true
+      }
+    }
+    return {
+      prompt,
+      completion,
+      total: prompt + completion,
+      day24,
+      requests,
+      reqKnown,
+      usd: usdKnown ? usd : null,
+    }
+  }, [profiles])
+
   return (
     <section className="usage-hero">
       <div className="hero-row">
@@ -119,6 +152,22 @@ export function UsagePanel({ live }) {
               <tr><td className="muted" colSpan={6}>No usage yet</td></tr>
             )}
           </tbody>
+          {profiles.length ? (
+            <tfoot>
+              <tr>
+                <td><div className="pid">Total</div></td>
+                <td title={totals.reqKnown ? '' : 'Excludes lifetime backfill; request count unknown'}>
+                  {totals.requests ? fmtTokens(totals.requests) : '—'}
+                </td>
+                <td><TokenMix prompt={totals.prompt} completion={totals.completion} /></td>
+                <td>{totals.day24 ? fmtTokens(totals.day24) : '—'}</td>
+                <td>{fmtTokens(totals.total)}</td>
+                <td title="Sum of per-profile estimates at that row's OpenRouter rates">
+                  {fmtUsd(totals.usd)}
+                </td>
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
     </section>

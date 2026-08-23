@@ -1010,6 +1010,13 @@ tr.picked td { box-shadow: inset 2px 0 0 var(--accent); }
 .pick-table tbody tr { cursor: pointer; }
 .usage-hero .pick-table tbody tr:hover td { background: var(--card); }
 .usage-hero .pick-table tbody tr.picked td { background: var(--row-active); }
+.usage-hero .pick-table tfoot td {
+  border-top: 1px solid var(--accent-line);
+  background: var(--bg-raise);
+  color: var(--text);
+  font-weight: 650;
+}
+.usage-hero .pick-table tfoot .pid { color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-size: .66rem; }
 .preset-list { display: flex; flex-wrap: wrap; gap: .35rem; margin: .55rem 0 .2rem; }
 
 .log {

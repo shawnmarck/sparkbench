@@ -101,6 +101,8 @@ def _chat_completion(
         req_body["tool_choice"] = tool_choice
     if (engine or "").strip().lower() == "ds4":
         req_body["thinking"] = {"type": "disabled"}
+    if (engine or "").strip().lower() == "sparkinfer":
+        req_body["chat_template_kwargs"] = {"thinking": False, "reasoning_effort": "low"}
     body = json.dumps(req_body).encode()
     req = Request(
         f"http://127.0.0.1:{port}/v1/chat/completions",

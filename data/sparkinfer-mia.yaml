@@ -1,0 +1,37 @@
+# SparkInfer (Mia / 0xSero) — DeepSeek V4 Flash 0731 EXL3 on one DGX Spark.
+# Fourth engine. Do not confuse with antirez-deepseek-v4-flash-ds4 (Entrpi GGUF).
+
+engine: sparkinfer
+display_name: SparkInfer
+status: ready
+
+source:
+  launcher: https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-One-DGX-Spark
+  image: ghcr.io/0xsero/deepseek-v4-flash-0731-spark-sparkinfer
+  image_digest: sha256:2e077489a83a0360952828051fe7f7a32c1801e5ce8436d85f7267583d614ff4
+  model_repo: 0xSero/deepseek-v4-flash-0731-spark
+  model_revision: 22f28d32b9b29b4352eaa380ff8c2c170b2847ab
+  note: >
+    Patched vLLM (SparkInfer / b12x) + EXL3 3.0 bpw REAP-K216 + DSpark K5.
+    Official FP4 still needs two Sparks. This pin is the one-Spark path.
+
+model:
+  hf_repo: 0xSero/deepseek-v4-flash-0731-spark
+  inventory_path: 0xsero/deepseek-v4-flash-0731-spark
+  served_name: deepseek-v4-flash-0731
+  dest: /models/0xsero/deepseek-v4-flash-0731-spark
+  hf_cache: /models/0xsero/deepseek-v4-flash-0731-spark/hf-hub
+  tp1: /models/0xsero/deepseek-v4-flash-0731-spark/data/tp1
+  manifest: /models/0xsero/deepseek-v4-flash-0731-spark/data/tp1/rank-sliced-tp1-manifest.json
+
+runtime:
+  port: 8000
+  default_ctx: 384000
+  max_num_seqs: 1
+  max_num_batched_tokens: 8224
+  gpu_memory_utilization: 0.94
+  kv_record: stock432
+  mode: dspark
+  min_avail_gib_before_up: 114
+  api: openai_v1
+  auto_download: 0

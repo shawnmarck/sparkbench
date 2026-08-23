@@ -110,6 +110,30 @@ models:
     engine: ds4
     hf_repo: antirez/deepseek-v4-gguf
     note: 0731 IQ2XXS imatrix + DSpark drafter (~81+6.5 GB)
+- id: 0xsero/deepseek-v4-flash-0731-spark
+  lab: 0xsero
+  name: DeepSeek V4 Flash 0731 (SparkInfer)
+  slug: deepseek-v4-flash-0731-spark
+  hf_repo: 0xSero/deepseek-v4-flash-0731-spark
+  param_b: 180
+  capabilities:
+  - reasoning
+  - coding
+  - agentic
+  - moe
+  - tool-calling
+  - long-context
+  - experimental
+  summary: "DeepSeek V4 Flash 0731 EXL3 3.0 bpw (REAP-K216) via SparkInfer (patched\
+    \ vLLM) + DSpark K5 on one DGX Spark. 384k default ctx. Different artifact from\
+    \ the Entrpi ds4 GGUF golden.\n"
+  why_downloaded: "Mia/0xSero one-Spark EXL3 path — official FP4 still needs two Sparks.\n"
+  variants:
+  - format: exl3
+    subpath: data/tp1
+    engine: sparkinfer
+    hf_repo: 0xSero/deepseek-v4-flash-0731-spark
+    note: Coalesced TP1 EXL3 + K64 DSpark draft (~99 GiB)
 - id: stepfun-ai/step-3.7-flash
   lab: stepfun-ai
   name: Step-3.7-Flash

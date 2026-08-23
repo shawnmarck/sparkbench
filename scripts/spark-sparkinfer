@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+# SparkInfer (Mia / 0xSero) — DeepSeek V4 Flash 0731 on one DGX Spark.
+set -euo pipefail
+
+ROOT="${SPARK_ROOT:-/opt/spark}"
+PIN="${SPARK_SPARKINFER_PIN:-${ROOT}/data/sparkinfer-mia.yaml}"
+LAUNCHER="${SPARK_SPARKINFER_LAUNCHER:-${ROOT}/services/sparkinfer-mia}"
+RUN_DIR="${ROOT}/run"
+LOG_DIR="${ROOT}/logs"
+LOG_FILE="${LOG_DIR}/sparkinfer.log"
+PID_FILE="${RUN_DIR}/sparkinfer.pid"
+PORT="${SPARK_SPARKINFER_PORT:-8000}"
+CONTAINER_MATCH="deepseek-v4-flash-spark"
+WEIGHTS="${SPARK_SPARKINFER_WEIGHTS:-/models/0xsero/deepseek-v4-flash-0731-spark}"
+HF_CACHE_DEFAULT="${WEIGHTS}/hf-hub"
+TP1_DEFAULT="${WEIGHTS}/data/tp1"
+MANIFEST="${TP1_DEFAULT}/rank-sliced-tp1-manifest.json"
+MIN_AVAIL_GIB="${SPARK_SPARKINFER_MIN_AVAIL_GIB:-114}"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+load_pin() {
+  [[ -f "${PIN}" ]] || return 0
+  eval "$(
+    python3 - "${PIN}" <<'PY'
+import shlex, sys, yaml
+pin = yaml.safe_load(open(sys.argv[1])) or {}
+rt = pin.get("runtime") or {}
+model = pin.get("model") or {}
+print(f"PORT={int(rt.get('port') or 8000)}")
+print(f"DEFAULT_CTX={int(rt.get('default_ctx') or 384000)}")
+print(f"DEFAULT_SEQS={int(rt.get('max_num_seqs') or 1)}")
+print(f"BATCHED={int(rt.get('max_num_batched_tokens') or 8224)}")
+print(f"UTIL={rt.get('gpu_memory_utilization') or 0.94}")
+print(f"KV_RECORD={shlex.quote(str(rt.get('kv_record') or 'stock432'))}")
+print(f"MODE={shlex.quote(str(rt.get('mode') or 'dspark'))}")
+print(f"HF_CACHE_DEFAULT={shlex.quote(model.get('hf_cache') or '')}")
+print(f"TP1_DEFAULT={shlex.quote(model.get('tp1') or '')}")
+print(f"MANIFEST={shlex.quote(model.get('manifest') or '')}")
+print(f"MIN_AVAIL_GIB={int(rt.get('min_avail_gib_before_up') or 114)}")
+print(f"SERVED_NAME={shlex.quote(model.get('served_name') or 'deepseek-v4-flash-0731')}")
+PY
+  )"
+}
+
+load_recipe() {
+  local recipe="${SPARK_SPARKINFER_RECIPE:-}"
+  CTX="${DEFAULT_CTX:-384000}"
+  SEQS="${DEFAULT_SEQS:-1}"
+  [[ -n "${recipe}" && -f "${recipe}" ]] || return 0
+  eval "$(
+    python3 - "${recipe}" <<'PY'
+import sys, yaml
+recipe = yaml.safe_load(open(sys.argv[1])) or {}
+ctx = (recipe.get("context") or {}).get("default") or 384000
+print(f"PORT={int(recipe.get('port') or 8000)}")
+print(f"CTX={int(ctx)}")
+print(f"SERVED_NAME={recipe.get('served_name') or 'deepseek-v4-flash-0731'}")
+print(f"SEQS=1")
+PY
+  )"
+}
+
+load_launch_overrides() {
+  local ov="${ROOT}/run/inference-launch-overrides.json"
+  [[ -f "${ov}" ]] || return 0
+  eval "$(
+    python3 - "${ov}" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+if d.get("ctx"):
+    print(f"CTX={int(d['ctx'])}")
+preset = d.get("preset")
+print(f"PRESET={preset or ''}")
+PY
+  )"
+  if [[ -n "${SPARK_SPARKINFER_RECIPE:-}" && -f "${SPARK_SPARKINFER_RECIPE}" && -n "${PRESET:-}" ]]; then
+    eval "$(
+      python3 - "${SPARK_SPARKINFER_RECIPE}" "${PRESET}" <<'PY'
+import sys, yaml
+recipe = yaml.safe_load(open(sys.argv[1])) or {}
+presets = ((recipe.get("context") or {}).get("presets") or {})
+cfg = presets.get(sys.argv[2]) or {}
+if cfg.get("max_num_seqs") is not None:
+    print(f"SEQS={int(cfg['max_num_seqs'])}")
+if cfg.get("ctx") is not None:
+    print(f"CTX={int(cfg['ctx'])}")
+PY
+    )"
+  fi
+}
+
+container_name() {
+  docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E "${CONTAINER_MATCH}" | head -1 || true
+}
+
+sparkinfer_running() {
+  local name
+  name="$(container_name)"
+  [[ -n "${name}" ]] && docker inspect -f '{{.State.Running}}' "${name}" 2>/dev/null | grep -qx true
+}
+
+mem_avail_gib() {
+  python3 - <<'PY'
+print(round(int(open("/proc/meminfo").read().split("MemAvailable:")[1].split()[0]) / 1024 / 1024, 1))
+PY
+}
+
+ensure_layout() {
+  [[ -x "${LAUNCHER}/start.sh" ]] || die "Missing launcher ${LAUNCHER}/start.sh"
+  mkdir -p "${WEIGHTS}/data" "${HF_CACHE_DEFAULT}" "${LAUNCHER}/cache" "${RUN_DIR}" "${LOG_DIR}"
+  if [[ ! -L "${LAUNCHER}/data" ]]; then
+    rm -rf "${LAUNCHER}/data" 2>/dev/null || true
+    ln -sfn "${WEIGHTS}/data" "${LAUNCHER}/data"
+  fi
+  [[ -f "${MANIFEST}" ]] || die "TP1 manifest missing at ${MANIFEST} — run ${LAUNCHER}/download.sh first"
+}
+
+stop_others() {
+  "${ROOT}/scripts/spark-eugr" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-llama" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-ds4" down 2>/dev/null || true
+}
+
+cmd_down() {
+  if [[ -x "${LAUNCHER}/start.sh" ]]; then
+    (cd "${LAUNCHER}" && ./start.sh down) >/dev/null 2>&1 || true
+  fi
+  local name
+  name="$(container_name)"
+  if [[ -n "${name}" ]]; then
+    docker rm -f "${name}" >/dev/null 2>&1 || true
+  fi
+  rm -f "${PID_FILE}"
+  echo "Stopped SparkInfer"
+}
+
+cmd_up() {
+  load_pin
+  load_recipe
+  load_launch_overrides
+  ensure_layout
+  stop_others
+  cmd_down >/dev/null || true
+
+  local avail
+  avail="$(mem_avail_gib)"
+  python3 -c "import sys; sys.exit(0 if float('${avail}') >= float('${MIN_AVAIL_GIB}') else 1)" \
+    || die "OOM preflight: MemAvailable ${avail} GiB < ${MIN_AVAIL_GIB} GiB — stop other GPU work first"
+
+  export AUTO_DOWNLOAD=0
+  export HF_CACHE="${HF_CACHE:-${HF_CACHE_DEFAULT}}"
+  export SERVING_PORT="${PORT}"
+  export MAX_MODEL_LEN="${CTX}"
+  export MAX_NUM_SEQS="${SEQS}"
+  export MAX_NUM_BATCHED_TOKENS="${BATCHED:-8224}"
+  export GPU_MEMORY_UTILIZATION="${UTIL:-0.94}"
+  export KV_RECORD="${KV_RECORD:-stock432}"
+  export MODE="${MODE:-dspark}"
+
+  : >"${LOG_FILE}"
+  (
+    cd "${LAUNCHER}"
+    ./start.sh --no-wait
+  ) >>"${LOG_FILE}" 2>&1
+  echo "started $(date -u +%FT%TZ) port=${PORT} ctx=${CTX} seqs=${SEQS}" >>"${LOG_FILE}"
+  echo "Started SparkInfer — ${SERVED_NAME:-deepseek-v4-flash-0731} on :${PORT} ctx=${CTX} seqs=${SEQS}"
+  echo "Log: ${LOG_FILE}"
+  echo "API: http://sparky:${PORT}/v1"
+}
+
+cmd_status() {
+  if sparkinfer_running; then
+    echo "Running $(container_name) — http://127.0.0.1:${PORT}/v1/models"
+    curl -sf --max-time 5 "http://127.0.0.1:${PORT}/v1/models" | head -c 800 || echo "(API not ready yet)"
+    echo
+  else
+    echo "Not running"
+  fi
+}
+
+cmd_logs() {
+  local name
+  name="$(container_name)"
+  if [[ -n "${name}" ]]; then
+    docker logs -f "${name}"
+  else
+    tail -f "${LOG_FILE}"
+  fi
+}
+
+usage() {
+  cat <<USAGE
+Usage: spark engine sparkinfer {up|down|status|logs}
+
+SparkInfer — Mia/0xSero DeepSeek V4 Flash 0731 (:${PORT}/v1)
+Launcher: ${LAUNCHER}
+Pin: ${PIN}
+USAGE
+}
+
+cmd="${1:-}"
+[[ -n "${cmd}" ]] || { usage; exit 1; }
+load_pin
+case "${cmd}" in
+  up) cmd_up ;;
+  down) cmd_down ;;
+  status) cmd_status ;;
+  logs) cmd_logs ;;
+  *) usage >&2; exit 1 ;;
+esac

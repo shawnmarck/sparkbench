@@ -444,7 +444,7 @@
         <div class="card" id="inference-card" hidden>
           <div class="card-head">
             <h2>Inference</h2>
-            <div class="card-head-meta" id="inf-head-meta">vLLM · llama.cpp · ds4 — one GPU at a time</div>
+            <div class="card-head-meta" id="inf-head-meta">vLLM · llama.cpp · ds4 · SparkInfer — one GPU at a time</div>
           </div>
 
           <div class="inf-card-body">
@@ -490,6 +490,7 @@
                   <button type="button" class="inf-chip" data-inf-chip="eugr" title="eugr / vLLM">vLLM</button>
                   <button type="button" class="inf-chip" data-inf-chip="llamacpp" title="llama.cpp GGUF">llama.cpp</button>
                   <button type="button" class="inf-chip" data-inf-chip="ds4" title="DwarfStar 4 (DeepSeek V4 Flash)">ds4</button>
+                  <button type="button" class="inf-chip" data-inf-chip="sparkinfer" title="SparkInfer (Mia / 0xSero DSv4 Flash)">SparkInfer</button>
                   <button type="button" class="inf-chip" data-inf-chip="fast">fast</button>
                   <button type="button" class="inf-chip" data-inf-chip="heavy">heavy</button>
                   <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
@@ -607,17 +608,19 @@
       let benchMsgUntil = 0;
       let infLogOverlayOpen = false;
       const INF_PREFS_KEY = 'spark-inference-filters';
-      const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'ds4', 'fast', 'heavy', 'bench', 'drafts'];
+      const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'ds4', 'sparkinfer', 'fast', 'heavy', 'bench', 'drafts'];
       const engineDisplay = (engine) => {
         if (engine === 'eugr' || engine === 'vllm') return 'vLLM';
         if (engine === 'llamacpp') return 'llama.cpp';
         if (engine === 'ds4') return 'ds4';
+        if (engine === 'sparkinfer') return 'SparkInfer';
         return engine || '?';
       };
       const engineDisplayMeta = (engine) => {
         if (engine === 'eugr' || engine === 'vllm') return 'vLLM · eugr';
         if (engine === 'llamacpp') return 'llama.cpp';
         if (engine === 'ds4') return 'ds4 · DwarfStar';
+        if (engine === 'sparkinfer') return 'SparkInfer · Mia/0xSero';
         return engineDisplay(engine);
       };
       let infFilterChips = new Set(['switchable']);
@@ -804,12 +807,13 @@
         const q = infFilterQ.trim().toLowerCase();
         if ((p.lifecycle || 'works') === 'draft' && !chips.has('drafts')) return false;
         if (chips.has('switchable') && p.switchable === false) return false;
-        const engineOn = chips.has('eugr') || chips.has('llamacpp') || chips.has('ds4');
+        const engineOn = chips.has('eugr') || chips.has('llamacpp') || chips.has('ds4') || chips.has('sparkinfer');
         if (engineOn) {
           const eng = p.engine || '';
           const engineMatch = (chips.has('eugr') && eng === 'eugr')
             || (chips.has('llamacpp') && eng === 'llamacpp')
-            || (chips.has('ds4') && eng === 'ds4');
+            || (chips.has('ds4') && eng === 'ds4')
+            || (chips.has('sparkinfer') && eng === 'sparkinfer');
           if (!engineMatch) return false;
         }
         const tierOn = chips.has('fast') || chips.has('heavy');
@@ -1444,6 +1448,7 @@
         if (engine === 'llamacpp') return ['auto', 'q8_0', 'q4_0', 'f16'];
         // ds4 manages packed FP8/FP4 KV internally; recipe presets only change -c.
         if (engine === 'ds4') return ['auto'];
+        if (engine === 'sparkinfer') return ['auto'];
         return ['auto', 'fp8', 'q8_0', 'q4_0'];
       }
 

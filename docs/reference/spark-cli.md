@@ -188,6 +188,19 @@ spark engine ds4 logs
 
 Pin: `data/ds4-dwarfstar.yaml`. Production profile: `antirez-deepseek-v4-flash-ds4`.
 
+## `spark engine sparkinfer`
+
+Mia/0xSero SparkInfer (DeepSeek V4 Flash 0731 EXL3). Same port as eugr/ds4 (**8000**). Mutually exclusive. Needs ≥114 GiB free.
+
+```bash
+spark engine sparkinfer up
+spark engine sparkinfer status
+spark engine sparkinfer down
+spark engine sparkinfer logs
+```
+
+Pin: `data/sparkinfer-mia.yaml`. Profile: `0xsero-deepseek-v4-flash-0731-sparkinfer`.
+
 ## Migration (old → new)
 
 | Old | New |

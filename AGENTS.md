@@ -41,7 +41,7 @@ Set `SPARK_HOST`, `SPARK_LAN_IP`, and optionally `SPARK_USER` (defaults to `$SUD
 | `docs/runbooks/benchmaster-agent.md` | Overnight perf / intel queue |
 | `docs/guides/model-picks.md` | Why these models are in the catalog |
 
-Smoke runbooks: `docs/runbooks/smoke-vllm-eugr.md`, `smoke-llamacpp.md`, `smoke-ds4.md`.
+Smoke runbooks: `docs/runbooks/smoke-vllm-eugr.md`, `smoke-llamacpp.md`, `smoke-ds4.md`, `smoke-sparkinfer.md`.
 
 ## Key URLs
 
@@ -58,7 +58,7 @@ Replace `sparky` with `$SPARK_HOST` or your hostname.
 
 ## Rules
 
-1. **One GPU engine at a time** — `spark engine eugr down` before `spark engine llama up` (and vice versa; ds4 same port as eugr).
+1. **One GPU engine at a time** — `spark engine eugr down` before `spark engine llama up` (and vice versa; ds4 and sparkinfer share :8000 with eugr).
 2. **Shelf/mutation APIs are unauthenticated on LAN** — trusted homelab only; don't expose :80 WAN-side.
 3. **Inventory build needs venv** — `/opt/spark/venv/bin/python scripts/spark-inventory-build.py`.
 4. **Model paths** — local `/models`; optional NAS at `/mnt/model-shelf/models` when mounted.
@@ -78,7 +78,7 @@ Full command list: `docs/reference/spark-cli.md`. No shell: use HTTP URLs above.
 ```bash
 sudo bash install/spark-install bootstrap   # optional: host.env + passwordless install
 sudo bash install/spark-install core
-sudo bash install/spark-install engine eugr   # or llama / ds4
+sudo bash install/spark-install engine eugr   # or llama / ds4 / sparkinfer
 sudo bash install/spark-install gateway
 ```
 

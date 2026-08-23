@@ -58,6 +58,9 @@ case "${cmd}" in
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx vllm_node; then
       echo "WARNING: vllm_node is running — stop with: spark-eugr down"
     fi
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'deepseek-v4-flash-spark'; then
+      echo "WARNING: SparkInfer is running — stop with: spark engine sparkinfer down"
+    fi
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
     if [[ -f "${LOG_FILE}" ]]; then
       sz=$(stat -c%s "${LOG_FILE}" 2>/dev/null || echo 0)

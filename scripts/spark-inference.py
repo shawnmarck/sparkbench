@@ -73,6 +73,7 @@ SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_EUGR_CHECK = ROOT / "scripts" / "spark-eugr-check.py"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 SPARK_DS4 = ROOT / "scripts" / "spark-ds4"
+SPARK_SPARKINFER = ROOT / "scripts" / "spark-sparkinfer"
 DS4_PIN_FILE = ROOT / "data" / "ds4-dwarfstar.yaml"
 DFLASH2_MOD_DIR = ROOT / "mods" / "eugr-dflash2"
 VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
@@ -1760,6 +1761,18 @@ def ds4_running() -> bool:
     return True
 
 
+def sparkinfer_running() -> bool:
+    try:
+        out = subprocess.check_output(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+    return any("deepseek-v4-flash-spark" in name for name in out.splitlines())
+
+
 def llama_running() -> bool:
     pid_file = ROOT / "run" / "llama-server.pid"
     if not pid_file.is_file():
@@ -1800,11 +1813,15 @@ def detect_active_profile() -> dict[str, Any] | None:
                     return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "ds4" and ds4_running():
                     return {"profile": profile_id, "recipe": recipe, "state": state}
+                if engine == "sparkinfer" and sparkinfer_running():
+                    return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "eugr" and not eugr_running() and not llama_running():
                     clear_state()
                 elif engine == "llamacpp" and not llama_running() and not eugr_running():
                     clear_state()
                 elif engine == "ds4" and not ds4_running():
+                    clear_state()
+                elif engine == "sparkinfer" and not sparkinfer_running():
                     clear_state()
         except (json.JSONDecodeError, OSError, SystemExit):
             pass
@@ -1812,7 +1829,8 @@ def detect_active_profile() -> dict[str, Any] | None:
     eugr_up = eugr_running()
     llama_up = llama_running()
     ds4_up = ds4_running()
-    if not (eugr_up or llama_up or ds4_up):
+    sparkinfer_up = sparkinfer_running()
+    if not (eugr_up or llama_up or ds4_up or sparkinfer_up):
         return None
 
     for profile_id in switchable_profile_ids():
@@ -1831,6 +1849,10 @@ def detect_active_profile() -> dict[str, Any] | None:
             served = served_name_from_port(port) if port else None
             if served and served == recipe.get("served_name"):
                 return {"profile": profile_id, "recipe": recipe, "state": None}
+        if engine == "sparkinfer" and sparkinfer_up:
+            served = served_name_from_port(port) if port else None
+            if served and served == recipe.get("served_name"):
+                return {"profile": profile_id, "recipe": recipe, "state": None}
 
     pending = ctxmod.read_launch_overrides().get("profile")
     if isinstance(pending, str) and pending.strip():
@@ -1841,6 +1863,7 @@ def detect_active_profile() -> dict[str, Any] | None:
                 (engine == "eugr" and eugr_up)
                 or (engine == "llamacpp" and llama_up)
                 or (engine == "ds4" and ds4_up)
+                or (engine == "sparkinfer" and sparkinfer_up)
             ):
                 return {"profile": pending.strip(), "recipe": recipe, "state": None}
         except SystemExit:
@@ -1907,7 +1930,8 @@ def cmd_status() -> int:
         eu = "up" if eugr_running() else "down"
         la = "up" if llama_running() else "down"
         d4 = "up" if ds4_running() else "down"
-        print(f"Engines: eugr {eu}, llama.cpp {la}, ds4 {d4}")
+        si = "up" if sparkinfer_running() else "down"
+        print(f"Engines: eugr {eu}, llama.cpp {la}, ds4 {d4}, sparkinfer {si}")
         return 0
 
     recipe = active["recipe"]
@@ -1930,6 +1954,8 @@ def cmd_status() -> int:
         run_script(SPARK_EUGR, "status")
     elif engine == "ds4":
         run_script(SPARK_DS4, "status")
+    elif engine == "sparkinfer":
+        run_script(SPARK_SPARKINFER, "status")
     else:
         run_script(SPARK_LLAMA, "status")
     return 0
@@ -1937,7 +1963,12 @@ def cmd_status() -> int:
 
 def cmd_down() -> int:
     errors = 0
-    for script, args in ((SPARK_EUGR, ("down",)), (SPARK_LLAMA, ("down",)), (SPARK_DS4, ("down",))):
+    for script, args in (
+        (SPARK_EUGR, ("down",)),
+        (SPARK_LLAMA, ("down",)),
+        (SPARK_DS4, ("down",)),
+        (SPARK_SPARKINFER, ("down",)),
+    ):
         try:
             run_script(script, *args)
         except subprocess.CalledProcessError:
@@ -1995,6 +2026,9 @@ def cmd_up(
         elif engine == "ds4":
             env = {"SPARK_DS4_RECIPE": launch_env.get("SPARK_DS4_RECIPE", path)}
             run_script(SPARK_DS4, "up", env=env)
+        elif engine == "sparkinfer":
+            env = {"SPARK_SPARKINFER_RECIPE": launch_env.get("SPARK_SPARKINFER_RECIPE", path)}
+            run_script(SPARK_SPARKINFER, "up", env=env)
         else:
             raise SystemExit(f"unsupported engine: {engine!r}")
 
@@ -2563,6 +2597,8 @@ def _chat_completion(
     }
     if (engine or "").strip().lower() == "ds4":
         req_body["thinking"] = {"type": "disabled"}
+    if (engine or "").strip().lower() == "sparkinfer":
+        req_body["chat_template_kwargs"] = {"thinking": False, "reasoning_effort": "low"}
     body = json.dumps(req_body).encode()
     req = Request(
         f"http://127.0.0.1:{port}/v1/chat/completions",
@@ -3039,6 +3075,8 @@ def engine_log_file(recipe: dict[str, Any] | None) -> Path:
         return Path("vllm_node")
     if engine == "ds4":
         return LOG_DIR / "ds4-server.log"
+    if engine == "sparkinfer":
+        return LOG_DIR / "sparkinfer.log"
     return LOG_DIR / "llama-server.log"
 
 
@@ -3050,6 +3088,7 @@ def api_profiles(
     eugr_up: bool | None = None,
     llama_up: bool | None = None,
     ds4_up: bool | None = None,
+    sparkinfer_up: bool | None = None,
 ) -> list[dict[str, Any]]:
     if benchmarks is None:
         benchmarks = load_benchmarks()
@@ -3061,6 +3100,8 @@ def api_profiles(
         llama_up = llama_running()
     if ds4_up is None:
         ds4_up = ds4_running()
+    if sparkinfer_up is None:
+        sparkinfer_up = sparkinfer_running()
     profiles = []
     production = set(enabled_profiles())
     switchable = switchable_profile_ids()
@@ -3276,6 +3317,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
     eugr_up = eugr_running()
     llama_up = llama_running()
     ds4_up = ds4_running()
+    sparkinfer_up = sparkinfer_running()
     active = detect_active_profile()
     active_id = active["profile"] if active else None
     recipe = active["recipe"] if active else None
@@ -3296,9 +3338,15 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
                 eugr_up=eugr_up,
                 llama_up=llama_up,
                 ds4_up=ds4_up,
+                sparkinfer_up=sparkinfer_up,
             )
         ),
-        "engines": {"eugr": eugr_up, "llamacpp": llama_up, "ds4": ds4_up},
+        "engines": {
+            "eugr": eugr_up,
+            "llamacpp": llama_up,
+            "ds4": ds4_up,
+            "sparkinfer": sparkinfer_up,
+        },
         "switch": switch_job,
         "bench": active_bench_job(),
         "urls": {
@@ -3312,6 +3360,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
             (recipe.get("engine") == "llamacpp" and llama_up)
             or (recipe.get("engine") == "eugr" and eugr_up)
             or (recipe.get("engine") == "ds4" and ds4_up)
+            or (recipe.get("engine") == "sparkinfer" and sparkinfer_up)
         )
         active_pub = recipe_public(
                 recipe,
@@ -3673,6 +3722,8 @@ def cmd_logs(profile_id: str | None) -> int:
         run_script(SPARK_EUGR, "logs")
     elif engine == "ds4":
         run_script(SPARK_DS4, "logs")
+    elif engine == "sparkinfer":
+        run_script(SPARK_SPARKINFER, "logs")
     else:
         run_script(SPARK_LLAMA, "logs")
     return 0

@@ -363,4 +363,15 @@ models:
     tok_s: 70.8
     tok_s_engine: eugr
     tok_s_profile: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
-    note: "PBM 4k @ 70.8 / 50k @ 36.5 / 100k @ 27.2 tok/s \u2014 perfbench-metrics \u2014 NVFP4 b12x MTP n=1, language-model-only + chunked prefill. MTP n=1/2/3 C1 coding 93.8/83.1/70.8 (keep n=1). C1 @ 24 seqs 93.8 vs 4 seqs 79.7. YaRN 512k and 1M boot (presets yarn_512k / yarn_1m). Concurrent 512-out C24 ~501 agg. tool_ok."
+    note: "PBM 4k @ 70.8 / 50k @ 36.5 / 100k @ 27.2 tok/s \u2014 perfbench-metrics\
+      \ \u2014 NVFP4 b12x MTP n=1, language-model-only + chunked prefill. MTP n=1/2/3\
+      \ C1 coding 93.8/83.1/70.8 (keep n=1). C1 @ 24 seqs 93.8 vs 4 seqs 79.7. YaRN\
+      \ 512k and 1M boot (presets yarn_512k / yarn_1m). Concurrent 512-out C24 ~501\
+      \ agg. tool_ok."
+  0xsero/deepseek-v4-flash-0731-spark:
+    tok_s: 25.7
+    tok_s_engine: sparkinfer
+    tok_s_profile: 0xsero-deepseek-v4-flash-0731-sparkinfer
+    updated_at: '2026-08-23T20:01:30.927638+00:00'
+    spark_status: works
+    note: bench-v2 avg 25.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)

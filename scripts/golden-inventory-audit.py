@@ -47,6 +47,7 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "nvidia/qwen3.6-27b": "nvidia-qwen3-6-27b-eugr",
     "qwen/qwen3.6-27b": "qwen-qwen3-6-27b-dflash-n10-32k",
     "antirez/deepseek-v4-flash": "antirez-deepseek-v4-flash-ds4",
+    "0xsero/deepseek-v4-flash-0731-spark": "0xsero-deepseek-v4-flash-0731-sparkinfer",
     "google/diffusiongemma-26b-a4b-it": "google-diffusiongemma-26b-a4b-it-eugr",
     "google/gemma-4-12b-it": "google-gemma-4-12b-it-llama",
     "google/gemma-4-26b-a4b-it": "google-gemma-4-26b-a4b-it-eugr",
@@ -189,6 +190,8 @@ def ready_timeout_secs(recipe: dict[str, Any]) -> int:
         return EUGR_READY_SECS
     if engine == "ds4":
         return max(DEFAULT_READY_SECS, 600)
+    if engine == "sparkinfer":
+        return max(DEFAULT_READY_SECS, 900)
     if engine == "llamacpp":
         model_path = Path(str(recipe.get("model") or ""))
         if model_path.is_file():

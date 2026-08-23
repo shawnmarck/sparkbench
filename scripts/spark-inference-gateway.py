@@ -58,6 +58,8 @@ ALIASES: dict[str, str] = {
     "qwen3-6-27b": "opencode-qwen27-dflash-262k",
     "qwen3.6-27b-dflash": "opencode-qwen27-dflash-262k",
     "step-3-7-flash": "stepfun-ai-step-3-7-flash-llama",
+    "deepseek-v4-flash-0731": "0xsero-deepseek-v4-flash-0731-sparkinfer",
+    "deepseek-v4-flash-0731-think": "0xsero-deepseek-v4-flash-0731-sparkinfer",
 }
 
 # Stable model id that always maps to the *currently active* served model (no switch).
@@ -75,6 +77,7 @@ def _is_sparky_alias(model: str | None) -> bool:
 
 THINKING_DISABLED_ENGINES = {"ds4"}
 THINKING_VARIANT_SUFFIX = "-think"
+THINKING_VARIANT_ENGINES = ("eugr", "vllm", "ds4", "sparkinfer")
 
 
 QWEN_ENGINE_MARKERS = ("eugr", "vllm", "ds4")
@@ -267,18 +270,24 @@ def _is_qwen_active(engine: str | None, served: str | None) -> bool:
     return "qwen" in served.lower()
 
 
+def _supports_thinking_variants(engine: str | None, served: str | None) -> bool:
+    if (engine or "").lower() in THINKING_VARIANT_ENGINES:
+        return True
+    return _is_qwen_active(engine, served)
+
+
 def _thinking_variant_ids(served: str) -> tuple[str, str]:
     return served, f"{served}{THINKING_VARIANT_SUFFIX}"
 
 
 def _resolve_thinking_variant(model: str, served: str | None, engine: str | None) -> tuple[str, bool | None]:
-    """Map gateway model id -> upstream served id + optional enable_thinking override.
+    """Map gateway model id -> upstream served id + optional thinking override.
 
     Supports the stable "sparky" / "sparky-think" / "sparky-fast" ids in addition
     to concrete served names and their -think/-fast variants.
     """
     m = str(model or "").strip()
-    if not m or not served or not _is_qwen_active(engine, served):
+    if not m or not served or not _supports_thinking_variants(engine, served):
         return m, None
     fast_id, think_id = _thinking_variant_ids(served)
     ml = m.lower()
@@ -304,13 +313,18 @@ def _apply_thinking_variant(payload: dict[str, Any], orig_model: str, served: st
     payload = dict(payload)
     payload["model"] = upstream_model
     kwargs = dict(payload.get("chat_template_kwargs") or {})
-    kwargs["enable_thinking"] = think
+    if (engine or "").lower() == "sparkinfer":
+        kwargs["thinking"] = bool(think)
+        kwargs["reasoning_effort"] = "max" if think else "low"
+        kwargs.pop("enable_thinking", None)
+    else:
+        kwargs["enable_thinking"] = think
     payload["chat_template_kwargs"] = kwargs
     return payload
 
 
 def _expand_models_payload(payload: dict[str, Any], served: str | None, engine: str | None) -> dict[str, Any]:
-    if not served or not _is_qwen_active(engine, served):
+    if not served or not _supports_thinking_variants(engine, served):
         return payload
     data = payload.get("data")
     if not isinstance(data, list):
@@ -354,7 +368,10 @@ def _expand_models_payload(payload: dict[str, Any], served: str | None, engine: 
 
 
 def _inject_sparky_alias(
-    payload: dict[str, Any], served: str | None, profile: str | None
+    payload: dict[str, Any],
+    served: str | None,
+    profile: str | None,
+    engine: str | None = None,
 ) -> dict[str, Any]:
     """Ensure a stable 'sparky' entry is present in /v1/models pointing at the active model.
 
@@ -399,8 +416,14 @@ def _inject_sparky_alias(
     entry["name"] = f"sparky ({served})"
     if profile:
         entry["spark_profile"] = profile
-    # Put the stable alias first so it is prominent for clients that list models
-    new_data: list[Any] = [entry] + [d for d in data]
+    extras: list[Any] = [entry]
+    if _supports_thinking_variants(engine, served):
+        think_entry = dict(entry)
+        think_entry["id"] = f"{SPARKY_MODEL_ID}{THINKING_VARIANT_SUFFIX}"
+        think_entry["name"] = f"sparky-think ({served})"
+        extras.append(think_entry)
+    # Put the stable aliases first so they are prominent for clients that list models
+    new_data: list[Any] = extras + [d for d in data]
     payload = dict(payload)
     payload["data"] = new_data
     return payload
@@ -925,7 +948,7 @@ class Handler(BaseHTTPRequestHandler):
                 payload = json.loads(resp.read().decode())
             if isinstance(payload, dict):
                 payload = _expand_models_payload(payload, served, engine)
-                payload = _inject_sparky_alias(payload, served, prof)
+                payload = _inject_sparky_alias(payload, served, prof, engine)
             body = json.dumps(payload).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

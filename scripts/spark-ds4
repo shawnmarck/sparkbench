@@ -87,6 +87,7 @@ PY
 
 other_engines_running() {
   docker ps --format '{{.Names}}' 2>/dev/null | grep -qx vllm_node && return 0
+  docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'deepseek-v4-flash-spark' && return 0
   [[ -f /opt/spark/run/llama-server.pid ]] && kill -0 "$(cat /opt/spark/run/llama-server.pid)" 2>/dev/null && return 0
   return 1
 }
@@ -102,6 +103,7 @@ wait_for_exit() {
 stop_others() {
   /opt/spark/scripts/spark-eugr down 2>/dev/null || true
   /opt/spark/scripts/spark-llama down 2>/dev/null || true
+  /opt/spark/scripts/spark-sparkinfer down 2>/dev/null || true
   if [[ -f "${PID_FILE}" ]]; then
     old="$(cat "${PID_FILE}")"
     kill "${old}" 2>/dev/null || true

@@ -176,6 +176,8 @@ def default_context(recipe: dict[str, Any]) -> int | None:
         if c:
             return c
         return 32768
+    if engine == "sparkinfer":
+        return 384000
     if engine == "eugr":
         ctx, _ = _parse_eugr_defaults(recipe.get("eugr_recipe"))
         return ctx or 16384
@@ -198,6 +200,8 @@ def default_kv(recipe: dict[str, Any]) -> str:
         return "auto"
     if engine == "ds4":
         # Packed FP8/FP4 compressed KV is engine-managed; no recipe KV sweep.
+        return "auto"
+    if engine == "sparkinfer":
         return "auto"
     return "auto"
 
@@ -610,6 +614,10 @@ def prepare_launch(recipe: dict[str, Any], profile_id: str, *, ctx: int | None =
     elif engine == "ds4":
         path = materialize_ds4_recipe(recipe, ctx_i, kv_s)
         env["SPARK_DS4_RECIPE"] = str(path)
+    elif engine == "sparkinfer":
+        env["SPARK_SPARKINFER_RECIPE"] = str(recipe.get("_path") or "")
+        if not env["SPARK_SPARKINFER_RECIPE"]:
+            raise RuntimeError("sparkinfer recipe path missing")
     else:
         raise RuntimeError(f"unsupported engine: {engine!r}")
     return env

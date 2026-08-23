@@ -18,7 +18,7 @@ Groups:
   recipe list|scaffold|testing|works|promote|discard   (Model Lab)
   models verify|removal|inventory|golden
   shelf pull|push|rm|status
-  engine eugr|llama|ds4 <up|down|logs|status|build>
+  engine eugr|llama|ds4|sparkinfer <up|down|logs|status|build>
   gateway                 Unified :9000/v1 front door
   install                 Host bootstrap (sudo; see install/spark-install)
   gpu                    Metrics JSON (same as /api/gpu)
@@ -177,9 +177,10 @@ help_engine() {
   cat <<'EOF'
 spark engine — low-level inference engines (bypass profile switcher)
 
-  eugr  up | down | logs | status | build
-  llama up | down | logs | status
-  ds4   up | down | logs | status | build
+  eugr       up | down | logs | status | build
+  llama      up | down | logs | status
+  ds4        up | down | logs | status | build
+  sparkinfer up | down | logs | status
 EOF
 }
 
@@ -204,6 +205,17 @@ spark engine ds4 — DwarfStar (DeepSeek V4 Flash)
   logs    Tail server log
   status  PID + /v1/models
   build   Rebuild cuda-spark binaries
+EOF
+}
+
+help_engine_sparkinfer() {
+  cat <<'EOF'
+spark engine sparkinfer — Mia/0xSero SparkInfer (DeepSeek V4 Flash 0731)
+
+  up      Start SparkInfer on :8000 (needs ≥114 GiB free)
+  down    Stop the SparkInfer compose project
+  logs    Tail container log
+  status  Health + /v1/models
 EOF
 }
 
@@ -251,7 +263,7 @@ spark install — host bootstrap (runs install/spark-install via sudo)
   quickstart             bootstrap + core (no GPU engine)
   core                   Portal, APIs, CLI, inventory (no GPU engine)
   nas                  Optional CIFS shelf + /models layout
-  engine eugr|llama|ds4   One inference engine
+  engine eugr|llama|ds4|sparkinfer   One inference engine
   gateway              :9000/v1 proxy + client activity widget
   openwebui            Open WebUI compose
   bootstrap|agent      Sudo grants
@@ -395,11 +407,12 @@ EOF
         help_engine
       else
         local eng
-        eng="$(resolve_prefix "${args[1]}" eugr llama vllm llamacpp)" || return 1
+        eng="$(resolve_prefix "${args[1]}" eugr llama vllm llamacpp ds4 sparkinfer)" || return 1
         case "$eng" in
           eugr|vllm) help_engine_eugr ;;
           llama|llamacpp) help_engine_llama ;;
           ds4|dwarfstar) help_engine_ds4 ;;
+          sparkinfer) help_engine_sparkinfer ;;
         esac
       fi
       ;;
@@ -537,8 +550,9 @@ cmd_engine() {
     eugr|vllm) run "${LIB}/spark-eugr" "$@" ;;
     llama|llamacpp) run "${LIB}/spark-llama" "$@" ;;
     ds4|dwarfstar) run "${LIB}/spark-ds4" "$@" ;;
+    sparkinfer|mia) run "${LIB}/spark-sparkinfer" "$@" ;;
     *)
-      die "unknown engine: $engine (try: eugr, llama, ds4)"
+      die "unknown engine: $engine (try: eugr, llama, ds4, sparkinfer)"
       ;;
   esac
 }

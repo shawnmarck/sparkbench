@@ -1603,4 +1603,48 @@ profiles:
     tok_s_4k: 70.8
     tok_s_50k: 36.5
     tok_s_100k: 27.2
+  0xsero-deepseek-v4-flash-0731-sparkinfer:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: sparkinfer
+    inventory_path: 0xsero/deepseek-v4-flash-0731-spark
+    measured_at: '2026-08-23T20:04:25.736409+00:00'
+    loaded_ctx: 384000
+    fills:
+      '4096':
+        tok_s: 23.4
+        tok_s_min: 23.4
+        tok_s_max: 23.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 454
+        elapsed_s: 19.39
+        run_tok_s:
+        - 23.4
+      '50000':
+        tok_s: 26.0
+        tok_s_min: 26.0
+        tok_s_max: 26.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 439
+        elapsed_s: 16.85
+        run_tok_s:
+        - 26.0
+      '100000':
+        tok_s: 8.4
+        tok_s_min: 8.4
+        tok_s_max: 8.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 478
+        elapsed_s: 56.85
+        run_tok_s:
+        - 8.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=23.4 / 50000=26.0 / 100000=8.4
+    tok_s_4k: 23.4
+    tok_s_50k: 26.0
+    tok_s_100k: 8.4
 updated_at: '2026-08-20T04:20:40.527135+00:00'

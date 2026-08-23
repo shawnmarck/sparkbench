@@ -29,6 +29,15 @@ export const CLOUD_COMPS = [
     provider: 'Chutes',
     asOf: '2026-08-21',
   },
+  {
+    id: 'deepseek-v4-flash',
+    match: ['deepseek-v4-flash', '0xsero-deepseek'],
+    slug: 'deepseek/deepseek-v4-flash',
+    inPerM: 0.052,
+    outPerM: 0.103,
+    provider: 'StreamLake',
+    asOf: '2026-08-23',
+  },
 ]
 
 export function matchComp(profileId) {

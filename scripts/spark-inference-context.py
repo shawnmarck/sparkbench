@@ -178,6 +178,8 @@ def default_context(recipe: dict[str, Any]) -> int | None:
         return 32768
     if engine == "sparkinfer":
         return 384000
+    if engine == "sglang":
+        return 262144
     if engine == "eugr":
         ctx, _ = _parse_eugr_defaults(recipe.get("eugr_recipe"))
         return ctx or 16384
@@ -203,6 +205,8 @@ def default_kv(recipe: dict[str, Any]) -> str:
         return "auto"
     if engine == "sparkinfer":
         return "auto"
+    if engine == "sglang":
+        return "fp8"
     return "auto"
 
 
@@ -618,6 +622,10 @@ def prepare_launch(recipe: dict[str, Any], profile_id: str, *, ctx: int | None =
         env["SPARK_SPARKINFER_RECIPE"] = str(recipe.get("_path") or "")
         if not env["SPARK_SPARKINFER_RECIPE"]:
             raise RuntimeError("sparkinfer recipe path missing")
+    elif engine == "sglang":
+        env["SPARK_SGLANG_RECIPE"] = str(recipe.get("_path") or "")
+        if not env["SPARK_SGLANG_RECIPE"]:
+            raise RuntimeError("sglang recipe path missing")
     else:
         raise RuntimeError(f"unsupported engine: {engine!r}")
     return env

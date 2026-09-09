@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# SGLang — Qwen3.8-27B NVFP4 + DFlash2 companion on one DGX Spark.
+set -euo pipefail
+
+ROOT="${SPARK_ROOT:-/opt/spark}"
+LAUNCHER="${SPARK_SGLANG_LAUNCHER:-${ROOT}/services/sglang-qwen3-8-27b}"
+RUN_DIR="${ROOT}/run"
+LOG_DIR="${ROOT}/logs"
+LOG_FILE="${LOG_DIR}/sglang.log"
+PID_FILE="${RUN_DIR}/sglang.pid"
+PORT="${SGLANG_PORT:-8000}"
+CONTAINER_NAME="${SGLANG_NAME:-qwen38-sglang}"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+load_recipe() {
+  local recipe="${SPARK_SGLANG_RECIPE:-}"
+  CTX="${SGLANG_CTX:-262144}"
+  SERVED_NAME="${SGLANG_SERVED_NAME:-qwen3.8-27b-dflash2-sglang}"
+  MODEL="${SGLANG_MODEL:-/models/radixark/qwen3.8-27b/nvfp4}"
+  DRAFT="${SGLANG_DRAFT:-/models/incoai/qwen3.8-27b-dflash2/dflash}"
+  MEM_FRAC="${SGLANG_MEM_FRACTION:-0.80}"
+  MAX_RUNNING="${SGLANG_MAX_RUNNING:-8}"
+  IMAGE="${SGLANG_IMAGE:-lmsysorg/sglang:dev-qwen38-27b-dflash2}"
+  DRAFT_TOKENS="${SGLANG_DRAFT_TOKENS:-8}"
+  [[ -n "${recipe}" && -f "${recipe}" ]] || return 0
+  eval "$(
+    python3 - "${recipe}" <<'PY'
+import sys, yaml
+recipe = yaml.safe_load(open(sys.argv[1])) or {}
+sg = recipe.get("sglang") or {}
+ctx = (recipe.get("context") or {}).get("default") or 262144
+print(f"PORT={int(recipe.get('port') or 8000)}")
+print(f"CTX={int(ctx)}")
+print(f"SERVED_NAME={recipe.get('served_name') or 'qwen3.8-27b-dflash2-sglang'}")
+print(f"MODEL={sg.get('model') or '/models/radixark/qwen3.8-27b/nvfp4'}")
+print(f"DRAFT={sg.get('draft') or '/models/incoai/qwen3.8-27b-dflash2/dflash'}")
+print(f"MEM_FRAC={sg.get('mem_fraction') or 0.80}")
+print(f"MAX_RUNNING={int(sg.get('max_running') or 8)}")
+print(f"IMAGE={sg.get('image') or 'lmsysorg/sglang:dev-qwen38-27b-dflash2'}")
+print(f"DRAFT_TOKENS={int(sg.get('num_draft_tokens') or 8)}")
+PY
+  )"
+}
+
+load_launch_overrides() {
+  local ov="${ROOT}/run/inference-launch-overrides.json"
+  [[ -f "${ov}" ]] || return 0
+  eval "$(
+    python3 - "${ov}" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+if d.get("ctx"):
+    print(f"CTX={int(d['ctx'])}")
+PY
+  )"
+}
+
+sglang_running() {
+  docker inspect -f '{{.State.Running}}' "${CONTAINER_NAME}" 2>/dev/null | grep -qx true
+}
+
+ensure_image() {
+  if docker image inspect "${IMAGE}" >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "Pulling ${IMAGE} (first boot)..."
+  docker pull "${IMAGE}"
+}
+
+stop_others() {
+  "${ROOT}/scripts/spark-eugr" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-llama" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-ds4" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-sparkinfer" down 2>/dev/null || true
+}
+
+cmd_down() {
+  if [[ -x "${LAUNCHER}/run.sh" ]]; then
+    (cd "${LAUNCHER}" && ./run.sh down) >/dev/null 2>&1 || true
+  fi
+  docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  rm -f "${PID_FILE}"
+  echo "Stopped SGLang"
+}
+
+cmd_up() {
+  load_recipe
+  load_launch_overrides
+  [[ -x "${LAUNCHER}/run.sh" ]] || die "Missing launcher ${LAUNCHER}/run.sh"
+  mkdir -p "${RUN_DIR}" "${LOG_DIR}"
+  stop_others
+  cmd_down >/dev/null || true
+  ensure_image
+
+  export SGLANG_NAME="${CONTAINER_NAME}"
+  export SGLANG_IMAGE="${IMAGE}"
+  export SGLANG_MODEL="${MODEL}"
+  export SGLANG_DRAFT="${DRAFT}"
+  export SGLANG_PORT="${PORT}"
+  export SGLANG_MEM_FRACTION="${MEM_FRAC}"
+  export SGLANG_MAX_RUNNING="${MAX_RUNNING}"
+  export SGLANG_CTX="${CTX}"
+  export SGLANG_DRAFT_TOKENS="${DRAFT_TOKENS}"
+  export SGLANG_SERVED_NAME="${SERVED_NAME}"
+
+  : >"${LOG_FILE}"
+  (
+    cd "${LAUNCHER}"
+    ./run.sh up
+  ) >>"${LOG_FILE}" 2>&1
+  echo "started $(date -u +%FT%TZ) port=${PORT} ctx=${CTX} dflash k=${DRAFT_TOKENS}" >>"${LOG_FILE}"
+  echo "Started SGLang — ${SERVED_NAME} on :${PORT} ctx=${CTX} DFlash2 k=${DRAFT_TOKENS}"
+  echo "Log: ${LOG_FILE}"
+  echo "API: http://sparky:${PORT}/v1"
+}
+
+cmd_status() {
+  if sglang_running; then
+    echo "Running ${CONTAINER_NAME} — http://127.0.0.1:${PORT}/v1/models"
+    curl -sf --max-time 5 "http://127.0.0.1:${PORT}/v1/models" | head -c 800 || echo "(API not ready yet)"
+    echo
+  else
+    echo "Not running"
+  fi
+}
+
+cmd_logs() {
+  if sglang_running; then
+    docker logs -f "${CONTAINER_NAME}"
+  else
+    tail -f "${LOG_FILE}"
+  fi
+}
+
+usage() {
+  cat <<USAGE
+Usage: spark engine sglang {up|down|status|logs}
+
+SGLang — Qwen3.8-27B NVFP4 + DFlash2 k=8 (:${PORT}/v1)
+Launcher: ${LAUNCHER}
+USAGE
+}
+
+cmd="${1:-}"
+[[ -n "${cmd}" ]] || { usage; exit 1; }
+load_recipe
+case "${cmd}" in
+  up) cmd_up ;;
+  down) cmd_down ;;
+  status) cmd_status ;;
+  logs) cmd_logs ;;
+  *) usage >&2; exit 1 ;;
+esac

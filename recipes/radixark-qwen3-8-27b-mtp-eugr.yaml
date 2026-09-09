@@ -14,11 +14,31 @@ mtp:
   method: mtp
   num_speculative_tokens: 3
 eugr_recipe: /opt/spark/services/eugr-radixark-qwen3-8-27b-mtp-eugr.yaml
-notes: MTP scaffold 2026-08-19 from /models/radixark/qwen3.8-27b. Bench vs non-MTP
-  baseline before promote.
+notes: 'Text-only MTP companion (golden is radixark-qwen3-8-27b-dflash2-sglang).
+  --language-model-only (vision tower stays on disk). Default 262k / 16 seqs /
+  16k batch. Client max_tokens is the output budget — leftover window is
+  max_model_len minus prompt (32k–64k is the intended generation cap). Preset
+  slots4 if you want more KV per job. No YaRN on this profile (MTP-only if we
+  add it later).'
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
 context:
-  default: 65536
+  default: 262144
   native: 262144
   kv_default: fp8
-updated_at: '2026-08-19T02:03:14.072996+00:00'
+  presets:
+    slots16:
+      label: Text-only 262k / 16 seqs
+      ctx: 262144
+      kv: fp8
+      max_num_seqs: 16
+      max_num_batched_tokens: 16384
+    slots4:
+      label: Text-only 262k / 4 seqs (more KV per job)
+      ctx: 262144
+      kv: fp8
+      max_num_seqs: 4
+      max_num_batched_tokens: 8192
+updated_at: '2026-08-21T06:00:00.000000+00:00'
 promoted_at: '2026-08-19T04:02:48.392786+00:00'

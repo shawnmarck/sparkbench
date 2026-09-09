@@ -18,7 +18,7 @@ Groups:
   recipe list|scaffold|testing|works|promote|discard   (Model Lab)
   models verify|removal|inventory|golden
   shelf pull|push|rm|status
-  engine eugr|llama|ds4|sparkinfer <up|down|logs|status|build>
+  engine eugr|llama|ds4|sparkinfer|sglang <up|down|logs|status|build>
   gateway                 Unified :9000/v1 front door
   install                 Host bootstrap (sudo; see install/spark-install)
   gpu                    Metrics JSON (same as /api/gpu)
@@ -181,6 +181,7 @@ spark engine — low-level inference engines (bypass profile switcher)
   llama      up | down | logs | status
   ds4        up | down | logs | status | build
   sparkinfer up | down | logs | status
+  sglang     up | down | logs | status
 EOF
 }
 
@@ -214,6 +215,17 @@ spark engine sparkinfer — Mia/0xSero SparkInfer (DeepSeek V4 Flash 0731)
 
   up      Start SparkInfer on :8000 (needs ≥114 GiB free)
   down    Stop the SparkInfer compose project
+  logs    Tail container log
+  status  Health + /v1/models
+EOF
+}
+
+help_engine_sglang() {
+  cat <<'EOF'
+spark engine sglang — SGLang Qwen3.8-27B NVFP4 + DFlash2
+
+  up      Start SGLang on :8000 (DFlash2 k=8)
+  down    Stop the qwen38-sglang container
   logs    Tail container log
   status  Health + /v1/models
 EOF
@@ -407,12 +419,13 @@ EOF
         help_engine
       else
         local eng
-        eng="$(resolve_prefix "${args[1]}" eugr llama vllm llamacpp ds4 sparkinfer)" || return 1
+        eng="$(resolve_prefix "${args[1]}" eugr llama vllm llamacpp ds4 sparkinfer sglang)" || return 1
         case "$eng" in
           eugr|vllm) help_engine_eugr ;;
           llama|llamacpp) help_engine_llama ;;
           ds4|dwarfstar) help_engine_ds4 ;;
           sparkinfer) help_engine_sparkinfer ;;
+          sglang) help_engine_sglang ;;
         esac
       fi
       ;;
@@ -551,8 +564,9 @@ cmd_engine() {
     llama|llamacpp) run "${LIB}/spark-llama" "$@" ;;
     ds4|dwarfstar) run "${LIB}/spark-ds4" "$@" ;;
     sparkinfer|mia) run "${LIB}/spark-sparkinfer" "$@" ;;
+    sglang) run "${LIB}/spark-sglang" "$@" ;;
     *)
-      die "unknown engine: $engine (try: eugr, llama, ds4, sparkinfer)"
+      die "unknown engine: $engine (try: eugr, llama, ds4, sparkinfer, sglang)"
       ;;
   esac
 }

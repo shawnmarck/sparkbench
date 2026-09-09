@@ -1471,6 +1471,50 @@ profiles:
     tok_s_4k: 19.8
     tok_s_50k: 6.7
     tok_s_100k: 4.1
+  radixark-qwen3-8-27b-dflash2-sglang:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: sglang
+    inventory_path: radixark/qwen3.8-27b
+    measured_at: '2026-09-09T18:43:14.290886+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 41.3
+        tok_s_min: 41.3
+        tok_s_max: 41.3
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 846
+        elapsed_s: 20.5
+        run_tok_s:
+        - 41.3
+      '50000':
+        tok_s: 17.2
+        tok_s_min: 17.2
+        tok_s_max: 17.2
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 957
+        elapsed_s: 55.74
+        run_tok_s:
+        - 17.2
+      '100000':
+        tok_s: 10.4
+        tok_s_min: 10.4
+        tok_s_max: 10.4
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 677
+        elapsed_s: 64.91
+        run_tok_s:
+        - 10.4
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=41.3 / 50000=17.2 / 100000=10.4
+    tok_s_4k: 41.3
+    tok_s_50k: 17.2
+    tok_s_100k: 10.4
   radixark-qwen3-8-27b-mtp-eugr:
     method: perfbench-metrics
     version: '1.0'

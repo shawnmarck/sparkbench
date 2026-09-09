@@ -30,6 +30,7 @@ KV_SWEEP_BY_ENGINE: dict[str, list[str]] = {
     "llamacpp": ["q8_0", "q4_0", "f16"],
     "ds4": ["q8_0"],
     "sparkinfer": ["auto"],
+    "sglang": ["fp8"],
 }
 
 # Engines / families where KV dtype is not meaningfully swappable at runtime.

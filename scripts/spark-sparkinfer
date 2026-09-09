@@ -120,6 +120,7 @@ stop_others() {
   "${ROOT}/scripts/spark-eugr" down 2>/dev/null || true
   "${ROOT}/scripts/spark-llama" down 2>/dev/null || true
   "${ROOT}/scripts/spark-ds4" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-sglang" down 2>/dev/null || true
 }
 
 cmd_down() {

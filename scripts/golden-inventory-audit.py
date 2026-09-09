@@ -70,7 +70,7 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "ornith-ai/ornith-1.5-35b-a3b": "ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr",
     "jackrong/qwopus3.6-27b-coder-compat": "jackrong-qwopus3-6-27b-coder-compat-llama",
     "0xsero/deepseek-v4-flash-spark": "0xsero-deepseek-v4-flash-spark-llama",
-    "radixark/qwen3.8-27b": "radixark-qwen3-8-27b-mtp-eugr",
+    "radixark/qwen3.8-27b": "radixark-qwen3-8-27b-dflash2-sglang",
     "radixark/qwen3.8-27b-dspark-nvfp4": "radixark-qwen3-8-27b-dspark-eugr",
     "qwen/qwen3.8-27b": "qwen-qwen3-8-27b-dflash2-eugr",
 }
@@ -191,6 +191,8 @@ def ready_timeout_secs(recipe: dict[str, Any]) -> int:
     if engine == "ds4":
         return max(DEFAULT_READY_SECS, 600)
     if engine == "sparkinfer":
+        return max(DEFAULT_READY_SECS, 900)
+    if engine == "sglang":
         return max(DEFAULT_READY_SECS, 900)
     if engine == "llamacpp":
         model_path = Path(str(recipe.get("model") or ""))

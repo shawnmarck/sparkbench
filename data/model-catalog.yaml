@@ -765,7 +765,7 @@ models:
     hf_repo: unsloth/Qwen3.6-35B-A3B-NVFP4
 - id: radixark/qwen3.8-27b
   lab: radixark
-  name: Qwen3.8-27B MTP
+  name: Qwen3.8-27B
   slug: qwen3.8-27b
   hf_repo: RadixArk/Qwen3.8-27B-NVFP4
   param_b: 27
@@ -774,11 +774,14 @@ models:
   - explorer
   - nvfp4
   - vllm
+  - sglang
   - dense
+  - dflash2
   - mtp
   - speculative
   - agentic
-  why_downloaded: Qwen3.8-27B NVFP4 target; golden serve is native MTP k=3.
+  why_downloaded: Qwen3.8-27B NVFP4 target; golden serve is SGLang DFlash2 k=8
+    (radixark-qwen3-8-27b-dflash2-sglang). MTP eugr remains a companion.
   variants:
   - format: nvfp4
     subpath: nvfp4

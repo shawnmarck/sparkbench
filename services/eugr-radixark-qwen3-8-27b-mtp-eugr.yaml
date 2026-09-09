@@ -15,8 +15,8 @@ defaults:
   tensor_parallel: 1
   gpu_memory_utilization: 0.85
   max_model_len: 262144
-  max_num_seqs: 4
-  max_num_batched_tokens: 8192
+  max_num_seqs: 16
+  max_num_batched_tokens: 16384
 
 command: |
   vllm serve /models/radixark/qwen3.8-27b/nvfp4 \
@@ -25,6 +25,7 @@ command: |
     --served-model-name qwen3.8-27b-mtp \
     --tensor-parallel-size {tensor_parallel} \
     --trust-remote-code \
+    --language-model-only \
     --kv-cache-dtype fp8 \
     --attention-backend flashinfer \
     --enable-auto-tool-choice \

@@ -331,13 +331,13 @@ models:
     engine: eugr
   radixark/qwen3.8-27b:
     spark_status: works
-    updated_at: '2026-08-19T04:03:32.166633+00:00'
-    engine: eugr
-    tok_s: 25.1
-    tok_s_engine: eugr
-    tok_s_profile: radixark-qwen3-8-27b-mtp-eugr
-    note: "PBM 4k @ 25.1 / 50k @ 9.0 / 100k @ 6.6 tok/s \u2014 perfbench-metrics \u2014\
-      \ profile=radixark-qwen3-8-27b-mtp-eugr"
+    updated_at: '2026-09-09T18:43:14.290886+00:00'
+    engine: sglang
+    tok_s: 41.3
+    tok_s_engine: sglang
+    tok_s_profile: radixark-qwen3-8-27b-dflash2-sglang
+    note: "PBM 4k @ 41.3 / 50k @ 17.2 / 100k @ 10.4 tok/s \u2014 perfbench-metrics\
+      \ \u2014 profile=radixark-qwen3-8-27b-dflash2-sglang"
   radixark/qwen3.8-27b-dspark-nvfp4:
     spark_status: works
     updated_at: '2026-08-19T04:01:46.082129+00:00'

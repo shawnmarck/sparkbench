@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EngineLogDock } from '../components/EngineLog.jsx'
+import { LoadMeter } from '../components/LoadMeter.jsx'
 import { getInferenceContext, setRecipeLifecycle } from '../lib/api.js'
 import {
   benchMethodLabel,
   engineLabel,
   fmtCtx,
+  fmtEtaS,
   fmtTokS,
+  modalitiesLabel,
   shortName,
   stackLabel,
+  visionCapLabel,
 } from '../lib/fmt.js'
 
 const KV_LABELS = {
@@ -69,6 +73,7 @@ function launchPayload(launch) {
 
 export function InferencePage({ live, actions }) {
   const active = live.inference?.active
+  const loading = live.inference?.loading
   const activeId = active?.id
   const [q, setQ] = useState('')
   const [life, setLife] = useState('all')
@@ -85,7 +90,7 @@ export function InferencePage({ live, actions }) {
       .filter((r) => {
         if (life !== 'all' && (r.lifecycle || 'works') !== life) return false
         if (!query) return true
-        const hay = `${r.name || ''} ${r.id || ''} ${r.engine || ''}`.toLowerCase()
+        const hay = `${r.name || ''} ${r.id || ''} ${r.engine || ''} ${r.multimodal?.vision ? 'vision' : r.multimodal ? 'text language-only' : ''}`.toLowerCase()
         return hay.includes(query)
       })
       .sort((a, b) => cmpRows(a, b, sort))
@@ -142,7 +147,7 @@ export function InferencePage({ live, actions }) {
     || (launch.kv || 'auto') !== liveKv
   )
   const isLive = selected && selected.id === activeId
-  const canServe = Boolean(selected) && planReady && (inspectingOther || (isLive && dirty))
+  const canServe = Boolean(selected) && planReady && selected.switchable !== false && (inspectingOther || (isLive && dirty))
 
   function toggleSort(key) {
     setSort((prev) => (
@@ -210,8 +215,15 @@ export function InferencePage({ live, actions }) {
                   {stackLabel(active.engine)}
                   {active.ready ? ' · ready' : active.starting ? ' · starting' : ' · not ready'}
                   {` · ${fmtCtx(active.context?.effective || active.context?.default)} context`}
+                  {modalitiesLabel(active.multimodal) ? ` · ${modalitiesLabel(active.multimodal)}` : ''}
                   {active.tok_s != null ? ` · bench ${fmtTokS(active.tok_s)} tok/s` : ''}
                 </p>
+                {loading && !active.ready ? <LoadMeter loading={loading} /> : null}
+              </>
+            ) : loading ? (
+              <>
+                <p className="hero-name">{loading.name || loading.profile || 'Loading'}</p>
+                <LoadMeter loading={loading} />
               </>
             ) : (
               <p className="hero-name muted">Idle</p>
@@ -280,6 +292,8 @@ export function InferencePage({ live, actions }) {
                         <div className="pid">
                           {r.name || r.id}
                           {r.id === activeId ? <span className="live-tag">live</span> : null}
+                          {r.multimodal?.vision ? <span className="mod-tag vis">vision</span> : null}
+                          {r.multimodal && r.multimodal.vision === false ? <span className="mod-tag">text</span> : null}
                         </div>
                       </td>
                       <td>{engineLabel(r.engine)}</td>
@@ -310,6 +324,18 @@ export function InferencePage({ live, actions }) {
                     <dt>Engine</dt>
                     <dd>{stackLabel(selected.engine)}</dd>
                   </div>
+                  {selected.multimodal ? (
+                    <div title={selected.multimodal.vision ? 'This recipe loads the vision tower.' : 'This recipe is language-only. Vision tower stays on disk.'}>
+                      <dt>Modalities</dt>
+                      <dd>{modalitiesLabel(selected.multimodal)}</dd>
+                    </div>
+                  ) : null}
+                  {selected.multimodal?.vision ? (
+                    <div className="vision" title="Cookbook image caps. Live image-turn stats show on Home when this profile is serving.">
+                      <dt>Vision</dt>
+                      <dd>{visionCapLabel(selected.multimodal) || 'on'}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Lifecycle</dt>
                     <dd>{selected.lifecycle || 'works'}</dd>
@@ -320,6 +346,15 @@ export function InferencePage({ live, actions }) {
                       <dd>{selected.tier}</dd>
                     </div>
                   ) : null}
+                  <div>
+                    <dt>Typical load</dt>
+                    <dd>
+                      {fmtEtaS(selected.load?.typical_s)}
+                      {selected.load?.source === 'observed' || selected.load?.source === 'engine'
+                        ? ` · last ${fmtEtaS(selected.load.last_s)}`
+                        : ' · estimate'}
+                    </dd>
+                  </div>
                   <div>
                     <dt>Bench speed</dt>
                     <dd>{fmtTokS(selected.tok_s)} tok/s</dd>
@@ -383,6 +418,9 @@ export function InferencePage({ live, actions }) {
                     </label>
                   </div>
                   <p className="ctx-hint">{recLines}{mem}{ds4Hint}</p>
+                  {selected?.switchable === false ? (
+                    <p className="ctx-hint">Not switchable — add it to the production index to Serve.</p>
+                  ) : null}
                 </div>
 
                 <div className="toolbar tight" style={{ marginTop: '.85rem' }}>

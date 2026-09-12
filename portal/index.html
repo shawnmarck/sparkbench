@@ -908,13 +908,18 @@
         return Number.isNaN(t) ? null : t;
       }
 
+      function formatLoadingElapsedRaw(seconds) {
+        const s = Math.max(0, Math.floor(Number(seconds) || 0));
+        if (s < 60) return s + 's';
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return r ? (m + 'm ' + r + 's') : (m + 'm');
+      }
+
       function formatLoadingElapsed(startedAtMs) {
         if (!startedAtMs) return '';
         const s = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
-        if (s < 60) return ' (' + s + 's)';
-        const m = Math.floor(s / 60);
-        const r = s % 60;
-        return ' (' + m + 'm ' + r + 's)';
+        return ' (' + formatLoadingElapsedRaw(s) + ')';
       }
 
       function loadingPhaseKey(info) {
@@ -956,7 +961,13 @@
         const elapsed = formatLoadingElapsed(parseStartedAt(info && info.started_at));
         const fallback = { switch: 'Switching', starting: 'Starting', waiting: 'Waiting', model: 'Starting' };
         const label = (info && info.phase_label) || fallback[loadingPhaseKey(info)] || 'Loading';
-        return label + ' · ' + name + elapsed;
+        const expect = info && info.expect;
+        let eta = '';
+        if (expect && expect.typical_s) {
+          if (expect.overtime) eta = ' · still waiting';
+          else if (expect.eta_s != null) eta = ' · ~' + formatLoadingElapsedRaw(expect.eta_s) + ' left';
+        }
+        return label + ' · ' + name + elapsed + eta;
       }
 
       function inferenceLoadingTitle(info) {

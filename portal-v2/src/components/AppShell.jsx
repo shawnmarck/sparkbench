@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { fmtPct, shortName } from '../lib/fmt.js'
+import { fmtEtaS, fmtPct, shortName } from '../lib/fmt.js'
 import { PopOut } from './PopOut.jsx'
 import { ThemePicker } from './ThemePicker.jsx'
 
@@ -22,7 +22,8 @@ const external = [
   { href: 'http://sparky:19999/v3/', label: 'Netdata' },
 ]
 
-function servingTone(active, ready) {
+function servingTone(active, ready, loading) {
+  if (loading && !ready) return 'warn'
   if (!active) return 'down'
   if (ready) return 'ok'
   return 'warn'
@@ -31,9 +32,18 @@ function servingTone(active, ready) {
 export function AppShell({ live, children }) {
   const [navOpen, setNavOpen] = useState(false)
   const active = live.inference?.active
+  const loading = live.inference?.loading
   const ready = Boolean(active?.ready ?? live.inference?.ready)
   const gpu = live.gpu
-  const tone = servingTone(active, ready)
+  const tone = servingTone(active, ready, loading)
+  const eta = loading?.expect?.eta_s
+  const loadHint = loading && !ready
+    ? (loading.expect?.overtime
+      ? 'still loading'
+      : eta != null
+        ? `~${fmtEtaS(eta)} left`
+        : (loading.phase_label || 'loading'))
+    : null
 
   return (
     <div className="app">
@@ -41,9 +51,10 @@ export function AppShell({ live, children }) {
         <button type="button" className="btn nav-toggle" onClick={() => setNavOpen((v) => !v)}>Menu</button>
         <a className="brand" href="/v2/">SparkBench</a>
         <div className="pills">
-          <span className={`pill ${tone}`} title={active?.id || 'No profile'}>
+          <span className={`pill ${tone}`} title={active?.id || loading?.profile || 'No profile'}>
             <i className="dot" />
-            <b>{active ? shortName(active.name, active.id) : 'offline'}</b>
+            <b>{active ? shortName(active.name, active.id) : (loading?.name || 'offline')}</b>
+            {loadHint ? <span className="pill-eta">{loadHint}</span> : null}
           </span>
           <span className="pill">
             GPU <b>{fmtPct(gpu?.gpu_util_pct)}</b>%

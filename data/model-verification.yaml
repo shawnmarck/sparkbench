@@ -331,13 +331,13 @@ models:
     engine: eugr
   radixark/qwen3.8-27b:
     spark_status: works
-    updated_at: '2026-09-09T18:43:14.290886+00:00'
+    updated_at: '2026-09-10T04:34:11.317047+00:00'
     engine: sglang
-    tok_s: 41.3
+    tok_s: 38.1
     tok_s_engine: sglang
     tok_s_profile: radixark-qwen3-8-27b-dflash2-sglang
-    note: "PBM 4k @ 41.3 / 50k @ 17.2 / 100k @ 10.4 tok/s \u2014 perfbench-metrics\
-      \ \u2014 profile=radixark-qwen3-8-27b-dflash2-sglang"
+    note: "PBM 4k @ 38.1 / 50k @ 19.1 / 100k @ 10.7 tok/s \u2014 perfbench-metrics\
+      \ \u2014 vision on \u2014 profile=radixark-qwen3-8-27b-dflash2-sglang"
   radixark/qwen3.8-27b-dspark-nvfp4:
     spark_status: works
     updated_at: '2026-08-19T04:01:46.082129+00:00'
@@ -375,3 +375,13 @@ models:
     updated_at: '2026-08-23T20:01:30.927638+00:00'
     spark_status: works
     note: bench-v2 avg 25.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
+  mia-ailab/qwen3.8-flash-next:
+    spark_status: works
+    updated_at: '2026-09-11T16:59:13.587479+00:00'
+    engine: flashnext
+    tok_s: 36.1
+    tok_s_engine: flashnext
+    tok_s_profile: mia-ailab-qwen3.8-flash-next-vllm
+    note: "PBM 4k @ 36.1 / 50k @ 21.6 / 100k @ 19.6 tok/s \u2014 perfbench-metrics\
+      \ \u2014 native 262k MTP3 vision on \u2014 profile=mia-ailab-qwen3.8-flash-next-vllm\
+      \ \u2014 YaRN 512k companion 36.3/22.0/18.1 plus 200k=31.3 / 300k=12.7"

@@ -915,3 +915,31 @@ models:
   param_b: 35
   param_active_b: 3
   architecture: moe
+- id: mia-ailab/qwen3.8-flash-next
+  lab: mia-ailab
+  name: Qwen3.8-Flash-Next
+  slug: qwen3.8-flash-next
+  hf_repo: Mia-AiLab/Qwen3.8-Flash-Next-NVFP4
+  param_b: 125
+  param_active_b: 6
+  architecture: moe
+  capabilities:
+  - lab
+  - flashnext
+  - vllm
+  - nvfp4
+  - moe
+  - mtp
+  - vision
+  - agentic
+  why_downloaded: >-
+    Qwen3.8-Flash-Next 125B-A6B VLM on one Spark via MiaAI NVFP4 (~99 GiB)
+    plus a first-boot PLE mmap table (~27 GiB). Official NVIDIA NVFP4 ~135 GB
+    does not fit. Served by spark engine flashnext (vllm/vllm-openai:qwen38-flash-next),
+    not eugr. Companion A/B to golden 27B SGLang DFlash2. Site row is native
+    PBM 36.1/21.6/19.6; recipe stays testing until bench v2.
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: Mia-AiLab/Qwen3.8-Flash-Next-NVFP4

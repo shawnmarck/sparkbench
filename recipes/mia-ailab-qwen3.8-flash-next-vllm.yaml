@@ -1,0 +1,57 @@
+id: mia-ailab-qwen3.8-flash-next-vllm
+name: qwen3.8-flash-next · MTP
+inventory_path: mia-ailab/qwen3.8-flash-next
+engine: flashnext
+tier: heavy
+lifecycle: testing
+served_name: qwen3.8-flash-next
+port: 8000
+tags:
+- lab
+- flashnext
+- moe
+- mtp
+- vision
+- sidecar
+speculative:
+  method: mtp
+  num_speculative_tokens: 3
+flashnext:
+  launcher: /models/mia-ailab/qwen3.8-flash-next/kit
+  hf_home: /models/mia-ailab/qwen3.8-flash-next/hf
+  image: vllm/vllm-openai@sha256:fc120ece0a388cc0aa1caad4a9f1cd92113484ab7ec2fd0efadd62585be05bf8
+  container: vllm-fn-tp1
+  host_reserve_gib: 26
+  kv_target_gib: 20
+  max_num_seqs: 4
+  mtp_tokens: 3
+  draft_vocab: files/draft_vocab_en_code_47k.txt
+  yarn: false
+  ablit: false
+notes: 'Companion A/B vs golden SGLang DFlash2 27B. Mia-AiLab NVFP4 ~99 GiB
+  + first-boot PLE pack ~27 GiB mmap. Official NVIDIA ~135 GB does not fit
+  one Spark. Image pin vllm/vllm-openai@sha256:fc120ece0a388cc0aa1caad4a9f1cd92113484ab7ec2fd0efadd62585be05bf8
+  (qwen38-flash-next, 2026-08-26). eugr will not load this. HOST_RESERVE_GIB=26
+  (Mia lost boxes when KV was greedy). Native 262k, MTP 3, 47k draft vocab,
+  vision on. PBM native 36.1/21.6/19.6; YaRN 512k 36.3/22.0/18.1 plus
+  deep fills 200k=31.3 / 300k=12.7 (2026-09-11, tools ok). 27B DFlash2
+  vision is 38.1/19.1/10.7. sparkbench.dev row uses native PBM; keep this
+  recipe testing until bench v2. Skip gated ablit.'
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    native:
+      label: Native 262k
+      ctx: 262144
+      kv: fp8
+    yarn_512k:
+      label: YaRN 512k
+      ctx: 524288
+      kv: fp8
+      extended: true
+updated_at: '2026-09-11T16:59:13.587479+00:00'

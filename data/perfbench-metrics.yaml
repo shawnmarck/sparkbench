@@ -1476,45 +1476,46 @@ profiles:
     version: '1.0'
     engine: sglang
     inventory_path: radixark/qwen3.8-27b
-    measured_at: '2026-09-09T18:43:14.290886+00:00'
+    measured_at: '2026-09-10T04:34:11.317047+00:00'
     loaded_ctx: 262144
     fills:
       '4096':
-        tok_s: 41.3
-        tok_s_min: 41.3
-        tok_s_max: 41.3
+        tok_s: 38.1
+        tok_s_min: 38.1
+        tok_s_max: 38.1
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 846
-        elapsed_s: 20.5
+        completion_tokens: 977
+        elapsed_s: 25.62
         run_tok_s:
-        - 41.3
+        - 38.1
       '50000':
-        tok_s: 17.2
-        tok_s_min: 17.2
-        tok_s_max: 17.2
+        tok_s: 19.1
+        tok_s_min: 19.1
+        tok_s_max: 19.1
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 957
-        elapsed_s: 55.74
+        completion_tokens: 965
+        elapsed_s: 50.45
         run_tok_s:
-        - 17.2
+        - 19.1
       '100000':
-        tok_s: 10.4
-        tok_s_min: 10.4
-        tok_s_max: 10.4
+        tok_s: 10.7
+        tok_s_min: 10.7
+        tok_s_max: 10.7
         sessions: 1
         tool_roundtrip_ok: true
-        completion_tokens: 677
-        elapsed_s: 64.91
+        completion_tokens: 640
+        elapsed_s: 59.69
         run_tok_s:
-        - 10.4
+        - 10.7
     skipped: {}
     primary_fill: 50000
-    note: PBM 4096=41.3 / 50000=17.2 / 100000=10.4
-    tok_s_4k: 41.3
-    tok_s_50k: 17.2
-    tok_s_100k: 10.4
+    note: PBM 4096=38.1 / 50000=19.1 / 100000=10.7
+      (nightly-cu134-20260909-708f51e, vision on)
+    tok_s_4k: 38.1
+    tok_s_50k: 19.1
+    tok_s_100k: 10.7
   radixark-qwen3-8-27b-mtp-eugr:
     method: perfbench-metrics
     version: '1.0'
@@ -1691,4 +1692,83 @@ profiles:
     tok_s_4k: 23.4
     tok_s_50k: 26.0
     tok_s_100k: 8.4
-updated_at: '2026-08-20T04:20:40.527135+00:00'
+  mia-ailab-qwen3.8-flash-next-vllm:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: flashnext
+    inventory_path: mia-ailab/qwen3.8-flash-next
+    measured_at: '2026-09-11T16:59:13.587479+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 36.1
+        tok_s_min: 36.1
+        tok_s_max: 36.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 961
+        elapsed_s: 26.62
+        run_tok_s:
+        - 36.1
+      '50000':
+        tok_s: 21.6
+        tok_s_min: 21.6
+        tok_s_max: 21.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 1003
+        elapsed_s: 46.38
+        run_tok_s:
+        - 21.6
+      '100000':
+        tok_s: 19.6
+        tok_s_min: 19.6
+        tok_s_max: 19.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 966
+        elapsed_s: 49.18
+        run_tok_s:
+        - 19.6
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=36.1 / 50000=21.6 / 100000=19.6
+    tok_s_4k: 36.1
+    tok_s_50k: 21.6
+    tok_s_100k: 19.6
+    yarn_512k:
+      measured_at: '2026-09-11T18:16:50.095502+00:00'
+      loaded_ctx: 524288
+      fills:
+        '4096':
+          tok_s: 36.3
+          tool_roundtrip_ok: true
+          completion_tokens: 865
+          elapsed_s: 23.86
+        '50000':
+          tok_s: 22.0
+          tool_roundtrip_ok: true
+          completion_tokens: 1089
+          elapsed_s: 49.44
+        '100000':
+          tok_s: 18.1
+          tool_roundtrip_ok: true
+          completion_tokens: 972
+          elapsed_s: 53.75
+        '200000':
+          tok_s: 31.3
+          tool_roundtrip_ok: true
+          completion_tokens: 1005
+          elapsed_s: 32.1
+        '300000':
+          tok_s: 12.7
+          tool_roundtrip_ok: true
+          completion_tokens: 1093
+          elapsed_s: 86.22
+      tok_s_4k: 36.3
+      tok_s_50k: 22.0
+      tok_s_100k: 18.1
+      tok_s_200k: 31.3
+      tok_s_300k: 12.7
+      note: PBM YaRN 512k 4k=36.3 / 50k=22.0 / 100k=18.1 / 200k=31.3 / 300k=12.7
+updated_at: '2026-09-11T19:32:37.829461+00:00'

@@ -11,7 +11,7 @@
 # See docs/reference/published-evals.md
 
 version: "1.0"
-updated_at: "2026-08-23"
+updated_at: "2026-09-11"
 
 models:
 
@@ -116,6 +116,33 @@ models:
         source_name: Qwen model card
         source_url: https://huggingface.co/Qwen/Qwen3.8-27B
         as_of: "2026-08-14"
+
+  qwen/qwen3.8-flash-next:
+    aa_url: https://artificialanalysis.ai/models/qwen3-8-flash-next
+    aliases:
+      - mia-ailab/qwen3.8-flash-next
+    # Card publishes SWE-bench Pro, not SWE-Verified. No Terminal-Bench figure.
+    extras:
+      swe_pro:
+        score: 62.5
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+        as_of: "2026-08-26"
+        notes: "Claude Code harness; refined SWE-bench Pro set (vendor). DeepSWE 1.1 is 58.7 on the same card (not a site column)."
+      livecodebench:
+        score: 91.9
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+        as_of: "2026-08-26"
+        notes: "LiveCodeBench v6 (vendor)."
+      gpqa_diamond:
+        score: 91.7
+        unit: percent
+        source_name: Qwen model card
+        source_url: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+        as_of: "2026-08-26"
 
   qwen/qwen3-coder-next:
     aa_url: https://artificialanalysis.ai/models/qwen3-coder-next

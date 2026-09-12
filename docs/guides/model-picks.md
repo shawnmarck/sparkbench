@@ -48,6 +48,7 @@ Typical rows you will see:
 
 - Qwen3.6 35B-A3B (NVIDIA NVFP4, Unsloth GGUF / NVFP4-fast, official DFlash)
 - Qwen3.6 / 3.8 27B (official, Unsloth, DFlash / DFlash2 / DSpark, community quants)
+- Qwen3.8-Flash-Next 125B-A6B (Mia NVFP4, flashnext engine; companion to 27B, not a 27B alias)
 - Qwen3 Coder Next, AgentWorld, thinkingcap / Qwopus finetunes
 - Ornith 1.0 / 1.5
 - Gemma 4 12B / 26B-A4B, Mellum2, Laguna, Step-3.7 Flash

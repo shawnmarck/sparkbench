@@ -9,6 +9,10 @@ leaderboard_exclude:
 # already tucks (1) recipes without a 50k PBM fill and (2) weaker packs of
 # the same model family behind All recipes.
 leaderboard_more: []
+# Stay on the ladder, skip the Speed vs published-agents scatter.
+# Gemma 4 26B SWE/TB are Qwen-cited (17.4 / 34.2) and stretch the blend axis.
+scatter_exclude:
+- google/gemma-4-26b-a4b-it
 golden:
   nvidia/qwen3.6-35b-a3b: qwen36-35b-a3b-mtp-eugr
   nvidia/qwen3.6-27b: nvidia-qwen3-6-27b-eugr

@@ -121,7 +121,17 @@ models:
     aa_url: https://artificialanalysis.ai/models/qwen3-8-flash-next
     aliases:
       - mia-ailab/qwen3.8-flash-next
-    # Card publishes SWE-bench Pro, not SWE-Verified. No Terminal-Bench figure.
+    # Qwen's card publishes SWE-bench Pro, not SWE-Verified. TB 2.1 is NVIDIA's
+    # eval of the Flash-Next NVFP4 checkpoint (official NVIDIA pack does not fit
+    # one Spark; Mia NVFP4 is the pack we serve).
+    terminal_bench:
+      score: 82.9
+      unit: percent
+      suite: "2.1"
+      source_name: NVIDIA NVFP4 model card
+      source_url: https://huggingface.co/nvidia/Qwen3.8-Flash-Next-NVFP4
+      as_of: "2026-08-31"
+      notes: "NVIDIA NVFP4 column; temp=1.0, top_p=0.95, reasoning_effort=xhigh. FP8 baseline on the same card is 83.3. Not the Mia pack, not measured on Sparky."
     extras:
       swe_pro:
         score: 62.5

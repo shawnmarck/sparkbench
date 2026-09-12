@@ -106,6 +106,7 @@ stop_others() {
   /opt/spark/scripts/spark-llama down 2>/dev/null || true
   /opt/spark/scripts/spark-sparkinfer down 2>/dev/null || true
   /opt/spark/scripts/spark-sglang down 2>/dev/null || true
+  /opt/spark/scripts/spark-flash-next down 2>/dev/null || true
   if [[ -f "${PID_FILE}" ]]; then
     old="$(cat "${PID_FILE}")"
     kill "${old}" 2>/dev/null || true

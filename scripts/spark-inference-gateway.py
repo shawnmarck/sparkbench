@@ -77,7 +77,7 @@ def _is_sparky_alias(model: str | None) -> bool:
 
 THINKING_DISABLED_ENGINES = {"ds4"}
 THINKING_VARIANT_SUFFIX = "-think"
-THINKING_VARIANT_ENGINES = ("eugr", "vllm", "ds4", "sparkinfer")
+THINKING_VARIANT_ENGINES = ("eugr", "vllm", "ds4", "sparkinfer", "sglang", "flashnext")
 
 
 QWEN_ENGINE_MARKERS = ("eugr", "vllm", "ds4")
@@ -195,6 +195,47 @@ def _append_activity_sync(session: dict[str, Any]) -> None:
 
 
 # --- End activity logger ---
+
+
+def _usage_image_tokens(usage: Any) -> int:
+    if not isinstance(usage, dict):
+        return 0
+    details = usage.get("prompt_tokens_details")
+    if isinstance(details, dict):
+        try:
+            n = int(details.get("image_tokens") or 0)
+            if n:
+                return max(n, 0)
+        except (TypeError, ValueError):
+            pass
+    try:
+        return max(int(usage.get("image_tokens") or 0), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _session_usage(
+    session: dict[str, Any],
+    usage: Any | None = None,
+    *,
+    prompt: int = 0,
+    completion: int = 0,
+    image: int = 0,
+) -> None:
+    if isinstance(usage, dict):
+        try:
+            prompt = int(usage.get("prompt_tokens") or 0)
+        except (TypeError, ValueError):
+            prompt = 0
+        try:
+            completion = int(usage.get("completion_tokens") or 0)
+        except (TypeError, ValueError):
+            completion = 0
+        image = _usage_image_tokens(usage)
+    session["prompt_tokens"] = prompt
+    session["completion_tokens"] = completion
+    if image:
+        session["image_tokens"] = image
 
 
 def _message_text(content: Any) -> str:
@@ -643,14 +684,12 @@ class Handler(BaseHTTPRequestHandler):
                     session["status"] = str(status)
                     try:
                         j = json.loads(resp_body) if resp_body else {}
-                        usage = j.get("usage") or {}
-                        pt = usage.get("prompt_tokens") or 0
-                        ct = usage.get("completion_tokens") or 0
+                        _session_usage(session, j.get("usage") or {})
                     except (json.JSONDecodeError, TypeError):
-                        pt, ct = 0, 0
-                    session["prompt_tokens"] = pt
-                    session["completion_tokens"] = ct
+                        session["prompt_tokens"] = 0
+                        session["completion_tokens"] = 0
                     d_s = duration_ms / 1000 if duration_ms > 0 else 0.001
+                    ct = session.get("completion_tokens") or 0
                     session["tok_s"] = round((ct / d_s) if ct else 0, 1)
                     _append_activity(session)
                     self.send_response(status)
@@ -756,17 +795,17 @@ class Handler(BaseHTTPRequestHandler):
         duration_ms = int((time.time() - t0) * 1000)
         session["duration_ms"] = duration_ms
         session["status"] = "disconnect" if client_gone else str(status)
-        pt, ct = self._extract_stream_usage(collected)
-        session["prompt_tokens"] = pt
-        session["completion_tokens"] = ct
+        usage = self._extract_stream_usage(collected)
+        _session_usage(session, usage)
         d_s = duration_ms / 1000 if duration_ms > 0 else 0.001
+        ct = session.get("completion_tokens") or 0
         session["tok_s"] = round((ct / d_s) if ct else 0, 1)
         _append_activity(session)
 
-    def _extract_stream_usage(self, collected: bytearray) -> tuple[int, int]:
+    def _extract_stream_usage(self, collected: bytearray) -> dict[str, Any]:
         try:
             text = collected.decode("utf-8", errors="replace")
-            pt, ct = 0, 0
+            last: dict[str, Any] = {}
             for line in text.split("\n"):
                 if not line.startswith("data: "):
                     continue
@@ -777,29 +816,26 @@ class Handler(BaseHTTPRequestHandler):
                     obj = json.loads(data)
                     usage = obj.get("usage")
                     if usage:
-                        pt = usage.get("prompt_tokens") or 0
-                        ct = usage.get("completion_tokens") or 0
+                        last = usage
                 except (json.JSONDecodeError, TypeError):
                     continue
-            if not pt and not ct:
+            if not last:
                 for line in reversed(text.split("\n")):
                     if not line.startswith("data: "):
                         continue
                     data = line[6:]
                     if data == "[DONE]":
-                        break
+                        continue
                     try:
                         obj = json.loads(data)
                         usage = obj.get("usage")
                         if usage:
-                            pt = usage.get("prompt_tokens") or 0
-                            ct = usage.get("completion_tokens") or 0
-                            break
+                            return usage
                     except (json.JSONDecodeError, TypeError):
                         continue
-            return pt, ct
+            return last
         except Exception:
-            return 0, 0
+            return {}
 
     def _forward(
         self,

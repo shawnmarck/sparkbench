@@ -46,7 +46,15 @@ _TOKEN_SAMPLES: deque = deque(maxlen=8)
 _AGG_HISTORY: deque = deque()
 _TOKEN_RATE_LOCK = threading.Lock()
 _AGG_SAVE_AT = 0.0
-_MAX_SEQS_CACHE: dict = {"profile": None, "max": None}
+_MAX_SEQS_CACHE: dict = {"key": None, "max": None}
+_ACTIVE_ENGINE_CACHE: dict = {"profile": None, "engine": None}
+LAUNCH_OVERRIDES_FILE = SPARK_ROOT / "run" / "inference-launch-overrides.json"
+_PORT8000_RELABEL = {
+    "sglang": ("sglang", "SGLang"),
+    "ds4": ("ds4", "DS4"),
+    "sparkinfer": ("sparkinfer", "SparkInfer"),
+    "flashnext": ("flashnext", "Flash-Next"),
+}
 _PREV_CPU = None
 _PREV_CPU_CORES = None
 _PREV_NET = None
@@ -683,37 +691,194 @@ def parse_llamacpp_metrics(text: str) -> dict | None:
     }
 
 
+def _sglang_metric(text: str, name: str) -> list[float]:
+    """SGLang names flip between `sglang:` and `sglang_` across releases."""
+    return _gauge_values(text, f"sglang:{name}") or _gauge_values(text, f"sglang_{name}")
+
+
+def parse_sglang_metrics(text: str) -> dict | None:
+    """Prometheus /metrics after `--enable-metrics` (tok/s + occupancy)."""
+    running = _sglang_metric(text, "num_running_reqs")
+    waiting = _sglang_metric(text, "num_queue_reqs")
+    gen_total = _sglang_metric(text, "generation_tokens_total")
+    prompt_total = _sglang_metric(text, "prompt_tokens_total")
+    gen_gauge = _sglang_metric(text, "gen_throughput")
+    prompt_gauge = _sglang_metric(text, "prompt_throughput")
+    token_usage = _sglang_metric(text, "token_usage")
+    if not running and not waiting and not gen_total and not gen_gauge:
+        return None
+    kv_pct = None
+    if token_usage:
+        raw = sum(token_usage) / len(token_usage)
+        kv_pct = round(raw * 100 if raw <= 1.5 else raw, 2)
+    return {
+        "source": "sglang_metrics",
+        "running": int(round(sum(running))) if running else 0,
+        "waiting": int(round(sum(waiting))) if waiting else 0,
+        "kv_cache_pct": kv_pct,
+        "kv_max_concurrency": None,
+        "generation_tokens_total": sum(gen_total) if gen_total else None,
+        "prompt_tokens_total": sum(prompt_total) if prompt_total else None,
+        "gen_tok_s_gauge": sum(gen_gauge) if gen_gauge else None,
+        "prompt_tok_s_gauge": sum(prompt_gauge) if prompt_gauge else None,
+    }
+
+
+def parse_sglang_load(payload) -> dict | None:
+    """SGLang /get_load occupancy when Prometheus /metrics is off."""
+    if isinstance(payload, dict) and isinstance(payload.get("loads"), list):
+        rows = payload["loads"]
+    elif isinstance(payload, list):
+        rows = payload
+    elif isinstance(payload, dict):
+        rows = [payload]
+    else:
+        return None
+    running = 0
+    waiting = 0
+    found = False
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if "num_reqs" not in row and "num_waiting_reqs" not in row:
+            continue
+        found = True
+        running += int(row.get("num_reqs") or 0)
+        waiting += int(row.get("num_waiting_reqs") or 0)
+    if not found:
+        return None
+    return {
+        "source": "sglang_get_load",
+        "running": running,
+        "waiting": waiting,
+        "kv_cache_pct": None,
+        "kv_max_concurrency": None,
+    }
+
+
+def _fetch_json(url: str):
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json", "User-Agent": "spark-gpu-metrics/engine-load"},
+        )
+        with urllib.request.urlopen(req, timeout=ENGINE_METRICS_TIMEOUT_S) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _launch_overrides() -> dict:
+    try:
+        data = json.loads(LAUNCH_OVERRIDES_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _max_num_seqs_from_presets(recipe: dict, *, preset: str | None, ctx: int | None) -> int | None:
+    presets = ((recipe.get("context") or {}).get("presets") or {})
+    if not isinstance(presets, dict):
+        return None
+    if preset and isinstance(presets.get(preset), dict):
+        raw = presets[preset].get("max_num_seqs")
+        if raw is not None:
+            return int(raw)
+    if ctx is not None:
+        for cfg in presets.values():
+            if isinstance(cfg, dict) and cfg.get("ctx") == ctx and cfg.get("max_num_seqs") is not None:
+                return int(cfg["max_num_seqs"])
+    return None
+
+
+def _max_num_seqs_from_engine_block(recipe: dict) -> int | None:
+    for block_key in ("sglang", "flashnext"):
+        block = recipe.get(block_key)
+        if not isinstance(block, dict):
+            continue
+        for key in ("max_running", "max_running_requests", "max_num_seqs"):
+            if block.get(key) is not None:
+                return int(block[key])
+    return None
+
+
+def _active_recipe_engine() -> str | None:
+    try:
+        profile = json.loads(STATE_FILE.read_text(encoding="utf-8")).get("profile")
+    except (OSError, json.JSONDecodeError, TypeError, AttributeError):
+        return _ACTIVE_ENGINE_CACHE.get("engine")
+    if not profile:
+        return None
+    if _ACTIVE_ENGINE_CACHE.get("profile") == profile:
+        return _ACTIVE_ENGINE_CACHE.get("engine")
+    engine = None
+    recipe_path = SPARK_ROOT / "recipes" / f"{profile}.yaml"
+    try:
+        import yaml  # type: ignore
+
+        recipe = yaml.safe_load(recipe_path.read_text(encoding="utf-8")) or {}
+        if isinstance(recipe, dict):
+            engine = str(recipe.get("engine") or "").strip() or None
+    except (OSError, ImportError, ValueError, TypeError):
+        engine = None
+    _ACTIVE_ENGINE_CACHE["profile"] = profile
+    _ACTIVE_ENGINE_CACHE["engine"] = engine
+    return engine
+
+
 def _max_num_seqs_from_recipe() -> int | None:
-    """Scheduler cap from the active eugr recipe, cached per profile id."""
+    """Scheduler cap for the live launch (preset / ctx), not the first YAML match."""
     try:
         profile = json.loads(STATE_FILE.read_text(encoding="utf-8")).get("profile")
     except (OSError, json.JSONDecodeError, TypeError, AttributeError):
         return _MAX_SEQS_CACHE.get("max")
     if not profile:
         return None
-    if _MAX_SEQS_CACHE.get("profile") == profile:
+    overrides = _launch_overrides()
+    preset = str(overrides.get("preset") or "").strip() or None
+    try:
+        ctx = int(overrides["ctx"]) if overrides.get("ctx") is not None else None
+    except (TypeError, ValueError):
+        ctx = None
+    cache_key = (profile, preset, ctx)
+    if _MAX_SEQS_CACHE.get("key") == cache_key:
         return _MAX_SEQS_CACHE.get("max")
     max_seqs = None
     recipe_path = SPARK_ROOT / "recipes" / f"{profile}.yaml"
     try:
-        recipe_text = recipe_path.read_text(encoding="utf-8")
-    except OSError:
-        recipe_text = ""
-    match = re.search(r"^eugr_recipe:\s*(\S+)", recipe_text, re.M)
-    if match:
-        eugr_path = Path(match.group(1).strip().strip("\"'"))
-        try:
-            eugr_text = eugr_path.read_text(encoding="utf-8")
-        except OSError:
-            eugr_text = ""
-        seq = re.search(r"^\s*max_num_seqs:\s*(\d+)\s*$", eugr_text, re.M)
-        if seq:
-            max_seqs = int(seq.group(1))
+        import yaml  # type: ignore
+
+        recipe = yaml.safe_load(recipe_path.read_text(encoding="utf-8")) or {}
+        if isinstance(recipe, dict):
+            max_seqs = _max_num_seqs_from_presets(recipe, preset=preset, ctx=ctx)
+            if max_seqs is None:
+                max_seqs = _max_num_seqs_from_engine_block(recipe)
+    except (OSError, ImportError, ValueError, TypeError):
+        recipe = {}
     if max_seqs is None:
-        seq = re.search(r"^\s*max_num_seqs:\s*(\d+)\s*$", recipe_text, re.M)
-        if seq:
-            max_seqs = int(seq.group(1))
-    _MAX_SEQS_CACHE["profile"] = profile
+        try:
+            recipe_text = recipe_path.read_text(encoding="utf-8")
+        except OSError:
+            recipe_text = ""
+        match = re.search(r"^eugr_recipe:\s*(\S+)", recipe_text, re.M)
+        if match:
+            eugr_path = Path(match.group(1).strip().strip("\"'"))
+            try:
+                eugr_text = eugr_path.read_text(encoding="utf-8")
+            except OSError:
+                eugr_text = ""
+            seq = re.search(r"^\s*max_num_seqs:\s*(\d+)\s*$", eugr_text, re.M)
+            if seq:
+                max_seqs = int(seq.group(1))
+        if max_seqs is None:
+            seq = re.search(r"^\s*max_num_seqs:\s*(\d+)\s*$", recipe_text, re.M)
+            if seq:
+                max_seqs = int(seq.group(1))
+        if max_seqs is None:
+            seq = re.search(r"^\s*max_running(?:_requests)?:\s*(\d+)\s*$", recipe_text, re.M)
+            if seq:
+                max_seqs = int(seq.group(1))
+    _MAX_SEQS_CACHE["key"] = cache_key
     _MAX_SEQS_CACHE["max"] = max_seqs
     return max_seqs
 
@@ -829,7 +994,12 @@ def _save_agg_history() -> None:
 
 
 def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
-    """Decode/prefill tok/s over a fixed 2s window, independent of /api/gpu poll rate."""
+    """Decode/prefill tok/s over a fixed 2s window, independent of /api/gpu poll rate.
+
+    SGLang's generation_tokens_total is labeled is_streaming=false and often only
+    moves when a request finishes. Using that delta during decode reports 0 and
+    clobbers gen_throughput. Prefer the live gauge for SGLang.
+    """
     gen_s = parsed.get("gen_tok_s_gauge")
     prompt_s = parsed.get("prompt_tok_s_gauge")
     if gen_s is not None:
@@ -839,7 +1009,9 @@ def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
 
     gen_total = parsed.get("generation_tokens_total")
     prompt_total = parsed.get("prompt_tokens_total")
+    sglang_gauge = parsed.get("source") == "sglang_metrics" and gen_s is not None
     if gen_total is None and prompt_total is None:
+        _record_agg(now, gen_s)
         return gen_s, prompt_s
 
     with _TOKEN_RATE_LOCK:
@@ -847,8 +1019,11 @@ def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
             last_t, last_gen, _last_prompt = _TOKEN_SAMPLES[-1]
             if now - last_t < 0.35:
                 last = _ENGINE_LOAD_LAST or {}
+                inst = last.get("gen_tok_s_2s")
+                if inst is None:
+                    inst = last.get("gen_tok_s") if last.get("gen_tok_s") is not None else gen_s
                 return (
-                    last.get("gen_tok_s") if last.get("gen_tok_s") is not None else gen_s,
+                    inst,
                     last.get("prompt_tok_s") if last.get("prompt_tok_s") is not None else prompt_s,
                 )
             if last_gen is not None and gen_total is not None and gen_total < last_gen:
@@ -868,12 +1043,52 @@ def _token_rates(parsed: dict, now: float) -> tuple[float | None, float | None]:
         if base:
             dt = now - base[0]
             if dt >= 0.8:
-                if gen_total is not None and base[1] is not None and gen_total >= base[1]:
+                if (
+                    not sglang_gauge
+                    and gen_total is not None
+                    and base[1] is not None
+                    and gen_total >= base[1]
+                ):
                     gen_s = round((gen_total - base[1]) / dt, 1)
                 if prompt_total is not None and base[2] is not None and prompt_total >= base[2]:
                     prompt_s = round((prompt_total - base[2]) / dt, 1)
     _record_agg(now, gen_s)
     return gen_s, prompt_s
+
+
+def _engine_metrics_port(engine_id: str | None, primary: dict | None) -> int:
+    port = int((primary or {}).get("port") or 0)
+    if port > 0:
+        return port
+    if engine_id == "llamacpp":
+        return int(os.environ.get("SPARK_LLAMA_PORT", "8081"))
+    if engine_id in ("vllm", "eugr", "sglang", "ds4", "sparkinfer", "flashnext"):
+        return 8000
+    return 0
+
+
+def _scrape_engine_occupancy(engine_id: str | None, port: int) -> tuple[str | None, dict | None]:
+    """Return (engine_id, parsed occupancy). Prefer Prometheus; SGLang falls back to /get_load."""
+    text = _fetch_metrics_text(f"http://127.0.0.1:{port}/metrics")
+    parsed = None
+    if text:
+        if engine_id == "llamacpp":
+            parsed = parse_llamacpp_metrics(text)
+        elif engine_id == "sglang":
+            parsed = parse_sglang_metrics(text)
+        else:
+            parsed = parse_vllm_metrics(text)
+            if parsed is None:
+                parsed = parse_sglang_metrics(text)
+            if parsed is None:
+                parsed = parse_llamacpp_metrics(text)
+        if parsed and parsed.get("source") == "sglang_metrics":
+            engine_id = "sglang"
+    if parsed is None:
+        sgl = parse_sglang_load(_fetch_json(f"http://127.0.0.1:{port}/get_load"))
+        if sgl:
+            return "sglang", sgl
+    return engine_id, parsed
 
 
 def _sample_engine_tokens() -> None:
@@ -883,9 +1098,16 @@ def _sample_engine_tokens() -> None:
     text = _fetch_metrics_text(f"http://127.0.0.1:{port}/metrics")
     if not text:
         return
-    parsed = parse_vllm_metrics(text) if engine_id != "llamacpp" else parse_llamacpp_metrics(text)
-    if parsed is None and engine_id != "llamacpp":
+    if engine_id == "sglang":
+        parsed = parse_sglang_metrics(text)
+    elif engine_id == "llamacpp":
         parsed = parse_llamacpp_metrics(text)
+    else:
+        parsed = parse_vllm_metrics(text)
+        if parsed is None:
+            parsed = parse_sglang_metrics(text)
+        if parsed is None:
+            parsed = parse_llamacpp_metrics(text)
     if parsed:
         _token_rates(parsed, time.time())
 
@@ -905,7 +1127,7 @@ def _agg_sample_loop() -> None:
 
 
 def read_engine_load(inference: dict | None) -> dict | None:
-    """Live scheduler occupancy from the engine /metrics scrape (vLLM first)."""
+    """Live scheduler occupancy: vLLM/llama.cpp /metrics, else SGLang /get_load."""
     global _ENGINE_LOAD_LAST, _ENGINE_LOAD_LAST_AT
     now = time.time()
     inference = inference or {}
@@ -918,30 +1140,30 @@ def read_engine_load(inference: dict | None) -> dict | None:
     engine_id = inference.get("engine")
     engines = inference.get("engines") or []
     primary = next((e for e in engines if e.get("up")), None)
-    port = int((primary or {}).get("port") or (8000 if engine_id == "vllm" else 0))
+    port = _engine_metrics_port(engine_id, primary)
     if port <= 0:
         return _ENGINE_LOAD_LAST
 
-    text = _fetch_metrics_text(f"http://127.0.0.1:{port}/metrics")
-    parsed = None
-    if text:
-        if engine_id == "llamacpp":
-            parsed = parse_llamacpp_metrics(text)
-        else:
-            parsed = parse_vllm_metrics(text)
-            if parsed is None:
-                parsed = parse_llamacpp_metrics(text)
-
-    if parsed is None:
-        if _ENGINE_LOAD_LAST and (now - _ENGINE_LOAD_LAST_AT) < ENGINE_LOAD_STALE_S:
-            return {**_ENGINE_LOAD_LAST, "stale": True}
-        return None
-
-    max_seqs = parsed.get("max")
+    engine_id, parsed = _scrape_engine_occupancy(engine_id, port)
+    max_seqs = (parsed or {}).get("max")
     if max_seqs is None:
         max_seqs = _max_num_seqs_from_recipe()
-    if max_seqs is None and parsed.get("kv_max_concurrency") is not None:
-        max_seqs = int(parsed["kv_max_concurrency"])
+    if parsed is None:
+        if max_seqs is not None:
+            parsed = {
+                "source": "recipe",
+                "running": 0,
+                "waiting": 0,
+                "kv_cache_pct": None,
+                "kv_max_concurrency": None,
+            }
+        elif _ENGINE_LOAD_LAST and (now - _ENGINE_LOAD_LAST_AT) < ENGINE_LOAD_STALE_S:
+            return {**_ENGINE_LOAD_LAST, "stale": True}
+        else:
+            return None
+
+    # Do not use kv_cache_max_concurrency as the slot cap. That is leftover
+    # pool / max_model_len (1.45 on dual → int 1), not max_num_seqs.
     instant_s, prompt_s = _token_rates(parsed, now)
     peak_s = _agg_peak(now)
     payload = {
@@ -990,6 +1212,9 @@ def read_inference():
         status = probe_openai_models(f"http://127.0.0.1:{probe['port']}/v1/models")
         engines.append({**probe, **status})
     primary = next((e for e in engines if e["up"]), None)
+    recipe_engine = _active_recipe_engine()
+    if primary and primary.get("id") == "vllm" and recipe_engine in _PORT8000_RELABEL:
+        primary["id"], primary["label"] = _PORT8000_RELABEL[recipe_engine]
     gateway = probe_openai_models(f"http://127.0.0.1:{GATEWAY_PORT}/v1/models")
     return {
         "up": primary is not None,

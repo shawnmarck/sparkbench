@@ -1,17 +1,16 @@
-id: radixark-qwen3-8-27b-dflash2-sglang
-name: qwen3.8-27b DFlash2 · vision
+id: radixark-qwen3-8-27b-dflash2-sglang-text
+name: qwen3.8-27b DFlash2 · text
 inventory_path: radixark/qwen3.8-27b
 engine: sglang
 tier: heavy
 lifecycle: works
-served_name: qwen3.8-27b-dflash2-sglang
+served_name: qwen3.8-27b-dflash2-sglang-text
 port: 8000
 tags:
 - lab
 - sglang
 - dflash2
 - sidecar
-- vision
 speculative:
   method: dflash
   variant: dflash2
@@ -27,18 +26,10 @@ sglang:
   mem_fraction: 0.80
   max_running: 8
   num_draft_tokens: 8
-  language_only: false
-  image_max_pixels: 3686400
-  mm_per_request:
-    image: 4
-    video: 1
-notes: 'SGLang DFlash2 golden 2026-09-10: packed RadixArk NVFP4 + incoai/z-lab
-  DFlash2 k=8. Image pin nightly-cu134-20260909-708f51e (sglang #35255
-  zombie-request fix). Vision tower loaded (no --language-only); images
-  capped at 1920^2 px, 4/req. Sibling radixark-qwen3-8-27b-dflash2-sglang-text
-  is language-only. PBM 38.1/19.1/10.7 (vision on, 2026-09-10 nightly)
-  beats MTP eugr 25.1/9.0/6.6. Do not use BF16-lm_head. Not
-  nvidia/Qwen3.8-27B-NVFP4 until a measured A/B.'
+  language_only: true
+notes: 'SGLang DFlash2 language-only companion. Same packed NVFP4 + DFlash2 k=8
+  as radixark-qwen3-8-27b-dflash2-sglang, but --language-only so the vision
+  tower stays on disk. Use the vision profile when you need images.'
 generation:
   default_max_tokens: 32768
   max_tokens: 65536
@@ -46,5 +37,5 @@ context:
   default: 262144
   native: 262144
   kv_default: fp8
-updated_at: '2026-09-10T04:34:11.317047+00:00'
-promoted_at: '2026-09-09T18:43:14.290886+00:00'
+updated_at: '2026-09-10T03:15:00.000000+00:00'
+promoted_at: '2026-09-10T03:15:00.000000+00:00'

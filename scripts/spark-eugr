@@ -47,6 +47,7 @@ case "$cmd" in
     docker stop spark-vllm-qwen36 2>/dev/null || true
     /opt/spark/scripts/spark-sparkinfer down 2>/dev/null || true
     /opt/spark/scripts/spark-sglang down 2>/dev/null || true
+    /opt/spark/scripts/spark-flash-next down 2>/dev/null || true
     run_recipe --daemon
     echo "Started eugr vLLM (daemon). Chat: http://sparky:3000  API: http://sparky:8000/v1"
     echo "First boot may take several minutes — run: spark-eugr logs"

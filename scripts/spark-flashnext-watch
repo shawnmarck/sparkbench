@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Watch MiaAI Flash-Next for the promised 'files' drop that should cut TTFT.
+
+Primary signal is GitHub (the kit SHA). X.com is 403 without a session, so
+also scrape public mirrors / GitHub activity. State: $SPARK_ROOT/run/flashnext-watch.json
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(os.environ.get("SPARK_ROOT", "/opt/spark"))
+STATE_PATH = ROOT / "run" / "flashnext-watch.json"
+KIT_REPO = "MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark"
+DUAL_REPO = "MiaAI-Lab/Qwen3.8-Flash-Next-Dual-DGX-Sparks"
+X_URL = "https://x.com/MiaAI_lab"
+UA = "spark-flashnext-watch/1.0 (+https://github.com/shawnmarck/sparkbench)"
+KEYWORDS = re.compile(
+    r"\b(ttft|time[- ]to[- ]first|the files|files update|prefill|cudagraph|cuda graph)\b",
+    re.I,
+)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _get_json(url: str, timeout: int = 20):
+    req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode())
+
+
+def _get_text(url: str, timeout: int = 20) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
+def latest_commit(repo: str) -> dict:
+    rows = _get_json(f"https://api.github.com/repos/{repo}/commits?per_page=1")
+    row = rows[0]
+    msg = (row.get("commit") or {}).get("message") or ""
+    return {
+        "sha": row["sha"][:12],
+        "sha_full": row["sha"],
+        "date": (row.get("commit") or {}).get("author", {}).get("date"),
+        "title": msg.splitlines()[0][:160],
+        "url": row.get("html_url"),
+        "keyword_hit": bool(KEYWORDS.search(msg)),
+    }
+
+
+def github_events(user: str = "MiaAI-Lab", limit: int = 8) -> list[dict]:
+    rows = _get_json(f"https://api.github.com/users/{user}/events/public")
+    out = []
+    for row in rows[:limit]:
+        repo = (row.get("repo") or {}).get("name") or ""
+        payload = row.get("payload") or {}
+        commits = payload.get("commits") or []
+        titles = [((c.get("message") or "").splitlines()[0])[:120] for c in commits[:3]]
+        blob = " ".join(titles + [repo, row.get("type") or ""])
+        out.append(
+            {
+                "type": row.get("type"),
+                "repo": repo,
+                "created_at": row.get("created_at"),
+                "titles": titles,
+                "keyword_hit": bool(KEYWORDS.search(blob)),
+            }
+        )
+    return out
+
+
+def x_mirrors() -> dict:
+    """Best-effort public mirrors. Direct x.com is usually 403."""
+    tried = []
+    hits = []
+    for url in (
+        "https://www.unrollnow.com/search?q=MiaAI_lab",
+        "https://nitter.net/MiaAI_lab",
+        "https://nitter.privacydev.net/MiaAI_lab",
+    ):
+        try:
+            text = _get_text(url, timeout=12)
+            tried.append({"url": url, "ok": True, "bytes": len(text)})
+            if KEYWORDS.search(text) or "Flash Next" in text or "Flash-Next" in text:
+                hits.append(url)
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            tried.append({"url": url, "ok": False, "error": str(exc)[:160]})
+    return {"x": X_URL, "hits": hits, "tried": tried}
+
+
+def load_state() -> dict:
+    if not STATE_PATH.is_file():
+        return {}
+    try:
+        return json.loads(STATE_PATH.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_state(state: dict) -> None:
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    STATE_PATH.write_text(json.dumps(state, indent=2) + "\n")
+
+
+def main() -> int:
+    prev = load_state()
+    kit = latest_commit(KIT_REPO)
+    dual = latest_commit(DUAL_REPO)
+    events = github_events()
+    x = x_mirrors()
+    prev_kit = (prev.get("kit") or {}).get("sha_full")
+    changed = bool(prev_kit and prev_kit != kit["sha_full"])
+    alert = changed or kit["keyword_hit"] or dual["keyword_hit"] or any(
+        e.get("keyword_hit") for e in events
+    )
+    snap = {
+        "checked_at": _now(),
+        "alert": alert,
+        "kit_moved": changed,
+        "watching": {
+            "x": X_URL,
+            "kit": f"https://github.com/{KIT_REPO}",
+            "promise": "Mia: update to 'the files' should drop TTFT dramatically",
+        },
+        "kit": kit,
+        "dual": dual,
+        "events": events,
+        "x_mirrors": x,
+        "previous_kit_sha": prev_kit,
+    }
+    save_state(
+        {
+            "checked_at": snap["checked_at"],
+            "kit": kit,
+            "dual": dual,
+            "alert": alert,
+        }
+    )
+    json.dump(snap, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    if alert:
+        print(
+            f"ALERT: Flash-Next watch — kit={kit['sha']} moved={changed} "
+            f"title={kit['title']!r}",
+            file=sys.stderr,
+        )
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except urllib.error.HTTPError as exc:
+        print(f"ERROR http {exc.code} {exc.reason}", file=sys.stderr)
+        raise SystemExit(1)
+    except Exception as exc:  # noqa: BLE001 — CLI
+        print(f"ERROR {type(exc).__name__}: {exc}", file=sys.stderr)
+        raise SystemExit(1)

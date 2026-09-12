@@ -21,12 +21,18 @@ load_recipe() {
   DRAFT="${SGLANG_DRAFT:-/models/incoai/qwen3.8-27b-dflash2/dflash}"
   MEM_FRAC="${SGLANG_MEM_FRACTION:-0.80}"
   MAX_RUNNING="${SGLANG_MAX_RUNNING:-8}"
-  IMAGE="${SGLANG_IMAGE:-lmsysorg/sglang:dev-qwen38-27b-dflash2}"
+  IMAGE="${SGLANG_IMAGE:-lmsysorg/sglang@sha256:00205b89f74691f76a0ffbd6846376d9323971930a5d59bf63a65dadc7d67927}"
   DRAFT_TOKENS="${SGLANG_DRAFT_TOKENS:-8}"
+  LANGUAGE_ONLY="${SGLANG_LANGUAGE_ONLY:-0}"
+  IMAGE_MAX_PIXELS="${SGLANG_IMAGE_MAX_PIXELS:-3686400}"
+  MM_PER_REQUEST="${SGLANG_MM_PER_REQUEST:-}"
+  if [[ -z "$MM_PER_REQUEST" ]]; then
+    MM_PER_REQUEST='{"image":4,"video":1}'
+  fi
   [[ -n "${recipe}" && -f "${recipe}" ]] || return 0
   eval "$(
     python3 - "${recipe}" <<'PY'
-import sys, yaml
+import sys, json, yaml
 recipe = yaml.safe_load(open(sys.argv[1])) or {}
 sg = recipe.get("sglang") or {}
 ctx = (recipe.get("context") or {}).get("default") or 262144
@@ -37,8 +43,12 @@ print(f"MODEL={sg.get('model') or '/models/radixark/qwen3.8-27b/nvfp4'}")
 print(f"DRAFT={sg.get('draft') or '/models/incoai/qwen3.8-27b-dflash2/dflash'}")
 print(f"MEM_FRAC={sg.get('mem_fraction') or 0.80}")
 print(f"MAX_RUNNING={int(sg.get('max_running') or 8)}")
-print(f"IMAGE={sg.get('image') or 'lmsysorg/sglang:dev-qwen38-27b-dflash2'}")
+print(f"IMAGE={sg.get('image') or 'lmsysorg/sglang@sha256:00205b89f74691f76a0ffbd6846376d9323971930a5d59bf63a65dadc7d67927'}")
 print(f"DRAFT_TOKENS={int(sg.get('num_draft_tokens') or 8)}")
+print(f"LANGUAGE_ONLY={'1' if sg.get('language_only') else '0'}")
+print(f"IMAGE_MAX_PIXELS={int(sg.get('image_max_pixels') or 3686400)}")
+mm = sg.get("mm_per_request") or {"image": 4, "video": 1}
+print("MM_PER_REQUEST=" + json.dumps(json.dumps(mm, separators=(',', ':'))))
 PY
   )"
 }
@@ -73,6 +83,7 @@ stop_others() {
   "${ROOT}/scripts/spark-llama" down 2>/dev/null || true
   "${ROOT}/scripts/spark-ds4" down 2>/dev/null || true
   "${ROOT}/scripts/spark-sparkinfer" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-flash-next" down 2>/dev/null || true
 }
 
 cmd_down() {
@@ -103,6 +114,12 @@ cmd_up() {
   export SGLANG_CTX="${CTX}"
   export SGLANG_DRAFT_TOKENS="${DRAFT_TOKENS}"
   export SGLANG_SERVED_NAME="${SERVED_NAME}"
+  export SGLANG_LANGUAGE_ONLY="${LANGUAGE_ONLY:-0}"
+  export SGLANG_IMAGE_MAX_PIXELS="${IMAGE_MAX_PIXELS:-3686400}"
+  if [[ -z "${MM_PER_REQUEST:-}" ]]; then
+    MM_PER_REQUEST='{"image":4,"video":1}'
+  fi
+  export SGLANG_MM_PER_REQUEST="$MM_PER_REQUEST"
 
   : >"${LOG_FILE}"
   (
@@ -110,6 +127,32 @@ cmd_up() {
     ./run.sh up
   ) >>"${LOG_FILE}" 2>&1
   echo "started $(date -u +%FT%TZ) port=${PORT} ctx=${CTX} dflash k=${DRAFT_TOKENS}" >>"${LOG_FILE}"
+  python3 - "${SPARK_SGLANG_RECIPE:-}" "${RUN_DIR}/inference-active.json" <<'PY' || true
+import json, sys
+from datetime import datetime, timezone
+from pathlib import Path
+recipe_path, state_path = sys.argv[1], Path(sys.argv[2])
+profile = None
+if recipe_path:
+    try:
+        import yaml
+        profile = (yaml.safe_load(open(recipe_path)) or {}).get("id")
+    except Exception:
+        profile = None
+state = {}
+if state_path.is_file():
+    try:
+        state = json.loads(state_path.read_text()) or {}
+    except Exception:
+        state = {}
+if profile:
+    state["profile"] = profile
+elif not state.get("profile"):
+    sys.exit(0)
+state["started_at"] = datetime.now(timezone.utc).isoformat()
+state_path.parent.mkdir(parents=True, exist_ok=True)
+state_path.write_text(json.dumps(state, indent=2) + "\n")
+PY
   echo "Started SGLang — ${SERVED_NAME} on :${PORT} ctx=${CTX} DFlash2 k=${DRAFT_TOKENS}"
   echo "Log: ${LOG_FILE}"
   echo "API: http://sparky:${PORT}/v1"

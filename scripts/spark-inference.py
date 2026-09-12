@@ -43,6 +43,7 @@ MODELS_ROOT = Path("/models")
 SERVICES_DIR = ROOT / "services"
 PROFILES_INDEX = ROOT / "data" / "inference-profiles.yaml"
 STATE_FILE = ROOT / "run" / "inference-active.json"
+LOAD_TIMES_FILE = ROOT / "run" / "inference-load-times.json"
 SWITCH_PID_FILE = ROOT / "run" / "inference-switch.pid"
 SWITCH_META_FILE = ROOT / "run" / "inference-switch.meta.json"
 SWITCH_LOG_FILE = ROOT / "logs" / "inference-switch-latest.log"
@@ -75,6 +76,7 @@ SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
 SPARK_DS4 = ROOT / "scripts" / "spark-ds4"
 SPARK_SPARKINFER = ROOT / "scripts" / "spark-sparkinfer"
 SPARK_SGLANG = ROOT / "scripts" / "spark-sglang"
+SPARK_FLASHNEXT = ROOT / "scripts" / "spark-flash-next"
 DS4_PIN_FILE = ROOT / "data" / "ds4-dwarfstar.yaml"
 DFLASH2_MOD_DIR = ROOT / "mods" / "eugr-dflash2"
 VERIFY_SCRIPT = ROOT / "scripts" / "spark-model-verify"
@@ -1786,6 +1788,18 @@ def sglang_running() -> bool:
     return any(name.strip() == "qwen38-sglang" for name in out.splitlines())
 
 
+def flashnext_running() -> bool:
+    try:
+        out = subprocess.check_output(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+    return any(name.strip() == "vllm-fn-tp1" for name in out.splitlines())
+
+
 def llama_running() -> bool:
     pid_file = ROOT / "run" / "llama-server.pid"
     if not pid_file.is_file():
@@ -1830,6 +1844,8 @@ def detect_active_profile() -> dict[str, Any] | None:
                     return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "sglang" and sglang_running():
                     return {"profile": profile_id, "recipe": recipe, "state": state}
+                if engine == "flashnext" and flashnext_running():
+                    return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "eugr" and not eugr_running() and not llama_running():
                     clear_state()
                 elif engine == "llamacpp" and not llama_running() and not eugr_running():
@@ -1840,6 +1856,8 @@ def detect_active_profile() -> dict[str, Any] | None:
                     clear_state()
                 elif engine == "sglang" and not sglang_running():
                     clear_state()
+                elif engine == "flashnext" and not flashnext_running():
+                    clear_state()
         except (json.JSONDecodeError, OSError, SystemExit):
             pass
 
@@ -1848,7 +1866,8 @@ def detect_active_profile() -> dict[str, Any] | None:
     ds4_up = ds4_running()
     sparkinfer_up = sparkinfer_running()
     sglang_up = sglang_running()
-    if not (eugr_up or llama_up or ds4_up or sparkinfer_up or sglang_up):
+    flashnext_up = flashnext_running()
+    if not (eugr_up or llama_up or ds4_up or sparkinfer_up or sglang_up or flashnext_up):
         return None
 
     for profile_id in switchable_profile_ids():
@@ -1875,6 +1894,10 @@ def detect_active_profile() -> dict[str, Any] | None:
             served = served_name_from_port(port) if port else None
             if served and served == recipe.get("served_name"):
                 return {"profile": profile_id, "recipe": recipe, "state": None}
+        if engine == "flashnext" and flashnext_up:
+            served = served_name_from_port(port) if port else None
+            if served and served == recipe.get("served_name"):
+                return {"profile": profile_id, "recipe": recipe, "state": None}
 
     pending = ctxmod.read_launch_overrides().get("profile")
     if isinstance(pending, str) and pending.strip():
@@ -1887,6 +1910,7 @@ def detect_active_profile() -> dict[str, Any] | None:
                 or (engine == "ds4" and ds4_up)
                 or (engine == "sparkinfer" and sparkinfer_up)
                 or (engine == "sglang" and sglang_up)
+                or (engine == "flashnext" and flashnext_up)
             ):
                 return {"profile": pending.strip(), "recipe": recipe, "state": None}
         except SystemExit:
@@ -1955,7 +1979,8 @@ def cmd_status() -> int:
         d4 = "up" if ds4_running() else "down"
         si = "up" if sparkinfer_running() else "down"
         sg = "up" if sglang_running() else "down"
-        print(f"Engines: eugr {eu}, llama.cpp {la}, ds4 {d4}, sparkinfer {si}, sglang {sg}")
+        fn = "up" if flashnext_running() else "down"
+        print(f"Engines: eugr {eu}, llama.cpp {la}, ds4 {d4}, sparkinfer {si}, sglang {sg}, flashnext {fn}")
         return 0
 
     recipe = active["recipe"]
@@ -1982,6 +2007,8 @@ def cmd_status() -> int:
         run_script(SPARK_SPARKINFER, "status")
     elif engine == "sglang":
         run_script(SPARK_SGLANG, "status")
+    elif engine == "flashnext":
+        run_script(SPARK_FLASHNEXT, "status")
     else:
         run_script(SPARK_LLAMA, "status")
     return 0
@@ -1995,6 +2022,7 @@ def cmd_down() -> int:
         (SPARK_DS4, ("down",)),
         (SPARK_SPARKINFER, ("down",)),
         (SPARK_SGLANG, ("down",)),
+        (SPARK_FLASHNEXT, ("down",)),
     ):
         try:
             run_script(script, *args)
@@ -2059,6 +2087,9 @@ def cmd_up(
         elif engine == "sglang":
             env = {"SPARK_SGLANG_RECIPE": launch_env.get("SPARK_SGLANG_RECIPE", path)}
             run_script(SPARK_SGLANG, "up", env=env)
+        elif engine == "flashnext":
+            env = {"SPARK_FLASHNEXT_RECIPE": launch_env.get("SPARK_FLASHNEXT_RECIPE", path)}
+            run_script(SPARK_FLASHNEXT, "up", env=env)
         else:
             raise SystemExit(f"unsupported engine: {engine!r}")
 
@@ -2442,12 +2473,18 @@ def recipe_public(
         "notes": (recipe.get("notes") or "").strip(),
     }
     out["context"] = ctxmod.context_public(recipe)
+    load_info = load_time_public(profile_id, recipe)
+    if load_info:
+        out["load"] = load_info
     spec = recipe.get("speculative")
     if isinstance(spec, dict) and spec:
         out["speculative"] = spec
     mtp = recipe.get("mtp")
     if isinstance(mtp, dict) and mtp:
         out["mtp"] = mtp
+    mm = cookbook_multimodal(recipe)
+    if mm:
+        out["multimodal"] = mm
     pbm_tok = pbm_display_tok_s(profile_id) if profile_id else None
     if pbm_tok is not None:
         out["tok_s"] = pbm_tok
@@ -3109,6 +3146,8 @@ def engine_log_file(recipe: dict[str, Any] | None) -> Path:
         return LOG_DIR / "sparkinfer.log"
     if engine == "sglang":
         return LOG_DIR / "sglang.log"
+    if engine == "flashnext":
+        return LOG_DIR / "flashnext.log"
     return LOG_DIR / "llama-server.log"
 
 
@@ -3122,6 +3161,7 @@ def api_profiles(
     ds4_up: bool | None = None,
     sparkinfer_up: bool | None = None,
     sglang_up: bool | None = None,
+    flashnext_up: bool | None = None,
 ) -> list[dict[str, Any]]:
     if benchmarks is None:
         benchmarks = load_benchmarks()
@@ -3137,6 +3177,8 @@ def api_profiles(
         sparkinfer_up = sparkinfer_running()
     if sglang_up is None:
         sglang_up = sglang_running()
+    if flashnext_up is None:
+        flashnext_up = flashnext_running()
     profiles = []
     production = set(enabled_profiles())
     switchable = switchable_profile_ids()
@@ -3159,6 +3201,7 @@ def api_profiles(
                 or (recipe.get("engine") == "ds4" and ds4_up)
                 or (recipe.get("engine") == "sparkinfer" and sparkinfer_up)
                 or (recipe.get("engine") == "sglang" and sglang_up)
+                or (recipe.get("engine") == "flashnext" and flashnext_up)
             )
         else:
             item["ready"] = False
@@ -3189,11 +3232,23 @@ TIER_EXPECT_HINTS: dict[tuple[str, str], tuple[int, int, str]] = {
         900,
         "SGLang DFlash2 on Spark often takes 5–15 min (image, graphs, warmup).",
     ),
+    ("heavy", "flashnext"): (
+        600,
+        1200,
+        "Flash-Next first boot often takes 11–20 min (PLE pack ~27 GiB, graphs, warmup).",
+    ),
     ("fast", "eugr"): (30, 120, "Fast vLLM profiles (eugr build) usually ready within 30s–2 min."),
     ("fast", "llamacpp"): (15, 90, "Fast GGUF profiles usually ready within 15s–90s."),
 }
 
 DEFAULT_TIER_EXPECT = (60, 300, "First ready can take a few minutes depending on model size.")
+
+LOAD_SAMPLE_MIN_S = 8
+LOAD_SAMPLE_MAX_S = 2400
+LOAD_SAMPLES_KEEP = 8
+_LOAD_TIMES_LOCK = threading.Lock()
+_LOAD_TIMES_CACHE: dict[str, Any] = {"mtime": None, "data": None}
+_SGLANG_SEED_AT: dict[str, float] = {}
 
 
 def loading_elapsed_s(started_at: str | None) -> int | None:
@@ -3206,6 +3261,254 @@ def loading_elapsed_s(started_at: str | None) -> int | None:
         return max(0, int((datetime.now(timezone.utc) - ts).total_seconds()))
     except (TypeError, ValueError):
         return None
+
+
+def _median_int(values: list[int]) -> int:
+    xs = sorted(values)
+    return int(xs[len(xs) // 2])
+
+
+def _read_load_times() -> dict[str, Any]:
+    try:
+        mtime = LOAD_TIMES_FILE.stat().st_mtime
+    except OSError:
+        return {"profiles": {}}
+    cached = _LOAD_TIMES_CACHE
+    if cached.get("mtime") == mtime and isinstance(cached.get("data"), dict):
+        return cached["data"]
+    try:
+        data = json.loads(LOAD_TIMES_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        data = {"profiles": {}}
+    if not isinstance(data, dict):
+        data = {"profiles": {}}
+    data.setdefault("profiles", {})
+    _LOAD_TIMES_CACHE["mtime"] = mtime
+    _LOAD_TIMES_CACHE["data"] = data
+    return data
+
+
+def _write_load_times(data: dict[str, Any]) -> None:
+    LOAD_TIMES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = LOAD_TIMES_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(LOAD_TIMES_FILE)
+    try:
+        _LOAD_TIMES_CACHE["mtime"] = LOAD_TIMES_FILE.stat().st_mtime
+    except OSError:
+        _LOAD_TIMES_CACHE["mtime"] = None
+    _LOAD_TIMES_CACHE["data"] = data
+
+
+def observed_load(profile_id: str | None) -> dict[str, Any] | None:
+    if not profile_id:
+        return None
+    entry = (_read_load_times().get("profiles") or {}).get(profile_id)
+    if not isinstance(entry, dict):
+        return None
+    samples: list[int] = []
+    for raw in entry.get("samples") or []:
+        try:
+            samples.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    if not samples:
+        try:
+            last = int(entry.get("last_s"))
+        except (TypeError, ValueError):
+            return None
+        samples = [last]
+    last = int(entry.get("last_s") or samples[-1])
+    typical = int(entry.get("typical_s") or _median_int(samples))
+    return {
+        "last_s": last,
+        "typical_s": typical,
+        "n": len(samples),
+        "source": str(entry.get("source") or "observed"),
+    }
+
+
+def record_load_time(
+    profile_id: str,
+    *,
+    elapsed_s: int,
+    boot_id: str,
+    source: str = "observed",
+) -> None:
+    if not profile_id or elapsed_s < LOAD_SAMPLE_MIN_S or elapsed_s > LOAD_SAMPLE_MAX_S:
+        return
+    with _LOAD_TIMES_LOCK:
+        data = _read_load_times()
+        profiles = data.setdefault("profiles", {})
+        entry = profiles.get(profile_id) if isinstance(profiles.get(profile_id), dict) else {}
+        if entry.get("boot_id") == boot_id:
+            return
+        samples = []
+        for raw in entry.get("samples") or []:
+            try:
+                samples.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        samples.append(int(elapsed_s))
+        samples = samples[-LOAD_SAMPLES_KEEP:]
+        profiles[profile_id] = {
+            "last_s": int(elapsed_s),
+            "typical_s": _median_int(samples),
+            "samples": samples,
+            "boot_id": boot_id,
+            "source": source,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _write_load_times(data)
+
+
+def _sglang_server_info(port: int) -> dict[str, Any] | None:
+    try:
+        req = Request(
+            f"http://127.0.0.1:{int(port)}/get_server_info",
+            headers={"Accept": "application/json"},
+        )
+        with urlopen(req, timeout=0.8) as resp:
+            info = json.loads(resp.read().decode())
+    except (URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        return None
+    return info if isinstance(info, dict) else None
+
+
+def _sglang_startup_s(port: int) -> int | None:
+    info = _sglang_server_info(port)
+    if not info:
+        return None
+    st = info.get("startup_time")
+    if not isinstance(st, dict):
+        return None
+    for key in ("tokenizer_e2e", "scheduler_e2e"):
+        try:
+            val = float(st.get(key))
+        except (TypeError, ValueError):
+            continue
+        if LOAD_SAMPLE_MIN_S <= val <= LOAD_SAMPLE_MAX_S:
+            return int(round(val))
+    return None
+
+
+def cookbook_multimodal(recipe: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Intended modalities from the recipe. Not proof the tower is in VRAM."""
+    if not recipe:
+        return None
+    sg = recipe.get("sglang") if isinstance(recipe.get("sglang"), dict) else {}
+    if str(recipe.get("engine") or "") != "sglang":
+        return None
+    caps: dict[str, Any] = {}
+    px = sg.get("image_max_pixels")
+    if px is not None:
+        try:
+            caps["image_max_pixels"] = int(px)
+        except (TypeError, ValueError):
+            pass
+    per = sg.get("mm_per_request") if isinstance(sg.get("mm_per_request"), dict) else {}
+    if per.get("image") is not None:
+        try:
+            caps["image_per_request"] = int(per["image"])
+        except (TypeError, ValueError):
+            pass
+    if per.get("video") is not None:
+        try:
+            caps["video_per_request"] = int(per["video"])
+        except (TypeError, ValueError):
+            pass
+    if sg.get("language_only") is True:
+        return {"vision": False}
+    if sg.get("language_only") is False or "vision" in (recipe.get("tags") or []):
+        return {"vision": True, **caps}
+    return None
+
+
+def _mm_from_sglang_info(info: dict[str, Any]) -> dict[str, Any] | None:
+    language_only = info.get("language_only")
+    if language_only is True:
+        return {"vision": False}
+    if language_only is not False:
+        return None
+    out: dict[str, Any] = {"vision": True}
+    cfg = info.get("mm_process_config") if isinstance(info.get("mm_process_config"), dict) else {}
+    img_cfg = cfg.get("image") if isinstance(cfg.get("image"), dict) else {}
+    px = img_cfg.get("max_pixels")
+    if px is not None:
+        try:
+            out["image_max_pixels"] = int(px)
+        except (TypeError, ValueError):
+            pass
+    limit = info.get("limit_mm_data_per_request")
+    if isinstance(limit, dict):
+        if limit.get("image") is not None:
+            try:
+                out["image_per_request"] = int(limit["image"])
+            except (TypeError, ValueError):
+                pass
+        if limit.get("video") is not None:
+            try:
+                out["video_per_request"] = int(limit["video"])
+            except (TypeError, ValueError):
+                pass
+    return out
+
+
+_MM_CACHE: tuple[float, str, dict[str, Any] | None] = (0.0, "", None)
+
+
+def live_multimodal(recipe: dict[str, Any] | None, *, ready: bool, port: int | None) -> dict[str, Any] | None:
+    """What this serve actually loaded. Cookbook tags are not live (vision can sit on disk)."""
+    global _MM_CACHE
+    book = cookbook_multimodal(recipe)
+    if not ready or not recipe:
+        return book
+    engine = str(recipe.get("engine") or "")
+    if engine != "sglang":
+        return book
+    port_i = int(port or recipe.get("port") or 8000)
+    key = f"{recipe.get('id')}:{port_i}"
+    now = time.time()
+    cached_at, cached_key, cached_val = _MM_CACHE
+    if cached_key == key and now - cached_at < 15:
+        return cached_val
+    info = _sglang_server_info(port_i)
+    live = _mm_from_sglang_info(info) if info else None
+    if live and book:
+        out = {**book, **live}
+    else:
+        out = live or book
+    _MM_CACHE = (now, key, out)
+    return out
+
+
+def maybe_record_ready_load(
+    profile_id: str | None,
+    recipe: dict[str, Any] | None,
+    started_at: str | None,
+    *,
+    port: int | None = None,
+) -> None:
+    """Record wall-clock ready time once per boot; seed SGLang from engine startup_time."""
+    if not profile_id:
+        return
+    elapsed = loading_elapsed_s(started_at)
+    if elapsed is not None and LOAD_SAMPLE_MIN_S <= elapsed <= LOAD_SAMPLE_MAX_S:
+        record_load_time(profile_id, elapsed_s=elapsed, boot_id=str(started_at), source="observed")
+        return
+    if observed_load(profile_id):
+        return
+    engine = str((recipe or {}).get("engine") or "")
+    if engine != "sglang":
+        return
+    now = time.time()
+    if now - _SGLANG_SEED_AT.get(profile_id, 0) < 60:
+        return
+    _SGLANG_SEED_AT[profile_id] = now
+    seed = _sglang_startup_s(int(port or (recipe or {}).get("port") or 8000))
+    if seed is None:
+        return
+    record_load_time(profile_id, elapsed_s=seed, boot_id=f"seed:sglang:{seed}", source="engine")
 
 
 def tier_expect(tier: str | None, engine: str | None) -> dict[str, Any]:
@@ -3221,6 +3524,81 @@ def tier_expect(tier: str | None, engine: str | None) -> dict[str, Any]:
         "typical_max_s": max_s,
         "hint": hint,
     }
+
+
+def load_expect(
+    recipe: dict[str, Any] | None,
+    profile_id: str | None,
+    elapsed: int | None,
+) -> dict[str, Any]:
+    bucket = tier_expect(
+        (recipe or {}).get("tier"),
+        (recipe or {}).get("engine"),
+    )
+    obs = observed_load(profile_id)
+    if obs:
+        typical = int(obs["typical_s"])
+        source = obs["source"]
+        last_s = int(obs["last_s"])
+        n = int(obs["n"])
+        hint = f"Last ready in {_fmt_eta_s(last_s)}. Typically {_fmt_eta_s(typical)} on this box."
+    else:
+        typical = int(bucket["typical_min_s"])
+        source = "tier"
+        last_s = None
+        n = 0
+        hint = bucket["hint"]
+    eta = None
+    pct = None
+    overtime = False
+    if elapsed is not None and typical > 0:
+        eta = max(0, typical - elapsed)
+        overtime = elapsed >= typical
+        pct = round(0.95 if overtime else min(0.95, elapsed / typical), 3)
+    return {
+        **bucket,
+        "typical_s": typical,
+        "last_s": last_s,
+        "samples": n,
+        "source": source,
+        "eta_s": eta,
+        "pct": pct,
+        "overtime": overtime,
+        "hint": hint,
+    }
+
+
+def load_time_public(profile_id: str | None, recipe: dict[str, Any] | None) -> dict[str, Any]:
+    bucket = tier_expect((recipe or {}).get("tier"), (recipe or {}).get("engine"))
+    obs = observed_load(profile_id)
+    if obs:
+        return {
+            "typical_s": obs["typical_s"],
+            "last_s": obs["last_s"],
+            "n": obs["n"],
+            "source": obs["source"],
+            "typical_min_s": bucket["typical_min_s"],
+            "typical_max_s": bucket["typical_max_s"],
+        }
+    return {
+        "typical_s": bucket["typical_min_s"],
+        "last_s": None,
+        "n": 0,
+        "source": "tier",
+        "typical_min_s": bucket["typical_min_s"],
+        "typical_max_s": bucket["typical_max_s"],
+    }
+
+
+def _fmt_eta_s(seconds: int) -> str:
+    n = max(0, int(seconds))
+    if n < 60:
+        return f"{n}s"
+    m, r = divmod(n, 60)
+    if m < 60:
+        return f"{m}m {r}s" if r else f"{m}m"
+    h, m = divmod(m, 60)
+    return f"{h}h {m}m"
 
 
 def enrich_loading_state(
@@ -3241,14 +3619,11 @@ def enrich_loading_state(
         loading["engine"] = recipe.get("engine")
         loading["tier"] = recipe.get("tier")
     if phase in {"starting", "waiting", "switch"}:
-        expect = tier_expect(
-            recipe.get("tier") if recipe else loading.get("tier"),
-            recipe.get("engine") if recipe else loading.get("engine"),
-        )
+        expect = load_expect(recipe, loading.get("profile"), elapsed)
         if phase == "switch":
             expect = {
                 **expect,
-                "hint": "Switching profile, then engine startup. " + expect["hint"],
+                "hint": "Switching, then engine startup. " + expect["hint"],
             }
         loading["expect"] = expect
     return loading
@@ -3361,12 +3736,21 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
     ds4_up = ds4_running()
     sparkinfer_up = sparkinfer_running()
     sglang_up = sglang_running()
+    flashnext_up = flashnext_running()
     active = detect_active_profile()
     active_id = active["profile"] if active else None
     recipe = active["recipe"] if active else None
     ready = engine_ready(recipe) if recipe else False
     port = int(recipe.get("port") or 0) if recipe else None
     switch_job = active_switch_job()
+    active_started_at = (active.get("state") or {}).get("started_at") if active else None
+    if ready and active_id and recipe:
+        maybe_record_ready_load(
+            active_id,
+            recipe,
+            active_started_at,
+            port=port,
+        )
 
     payload: dict[str, Any] = {
         "active": None,
@@ -3383,6 +3767,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
                 ds4_up=ds4_up,
                 sparkinfer_up=sparkinfer_up,
                 sglang_up=sglang_up,
+                flashnext_up=flashnext_up,
             )
         ),
         "engines": {
@@ -3391,6 +3776,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
             "ds4": ds4_up,
             "sparkinfer": sparkinfer_up,
             "sglang": sglang_up,
+            "flashnext": flashnext_up,
         },
         "switch": switch_job,
         "bench": active_bench_job(),
@@ -3407,6 +3793,7 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
             or (recipe.get("engine") == "ds4" and ds4_up)
             or (recipe.get("engine") == "sparkinfer" and sparkinfer_up)
             or (recipe.get("engine") == "sglang" and sglang_up)
+            or (recipe.get("engine") == "flashnext" and flashnext_up)
         )
         active_pub = recipe_public(
                 recipe,
@@ -3425,11 +3812,13 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
             "api_url": f"http://sparky:{port}/v1" if port else None,
             "log_file": engine_log_file(recipe).name,
         }
+        mm = live_multimodal(recipe, ready=ready, port=port)
+        if mm:
+            payload["active"]["multimodal"] = mm
         payload["urls"]["api"] = payload["active"]["api_url"]
         bench = benchmarks.get(active_id) if active_id else None
         if isinstance(bench, dict) and bench:
             payload["active"]["benchmark"] = bench
-    active_started_at = (active.get("state") or {}).get("started_at") if active else None
     payload["loading"] = api_loading_state(
         switch_job=switch_job,
         active_id=active_id,
@@ -3772,6 +4161,8 @@ def cmd_logs(profile_id: str | None) -> int:
         run_script(SPARK_SPARKINFER, "logs")
     elif engine == "sglang":
         run_script(SPARK_SGLANG, "logs")
+    elif engine == "flashnext":
+        run_script(SPARK_FLASHNEXT, "logs")
     else:
         run_script(SPARK_LLAMA, "logs")
     return 0

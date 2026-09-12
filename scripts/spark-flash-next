@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# MiaAI Qwen3.8-Flash-Next NVFP4 on one DGX Spark.
+# Kit lives next to the weights (not in git). Engine id: flashnext.
+set -euo pipefail
+
+ROOT="${SPARK_ROOT:-/opt/spark}"
+LAUNCHER="${SPARK_FLASHNEXT_LAUNCHER:-/models/mia-ailab/qwen3.8-flash-next/kit}"
+HF_HOME_DEFAULT="/models/mia-ailab/qwen3.8-flash-next/hf"
+RUN_DIR="${ROOT}/run"
+LOG_DIR="${ROOT}/logs"
+LOG_FILE="${LOG_DIR}/flashnext.log"
+PID_FILE="${RUN_DIR}/flashnext.pid"
+PORT="${FLASHNEXT_PORT:-8000}"
+CONTAINER_NAME="${TP1_CONTAINER_NAME:-vllm-fn-tp1}"
+KIT_REPO="https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark.git"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+ensure_kit() {
+  if [[ -x "${LAUNCHER}/start.sh" && -x "${LAUNCHER}/stop.sh" ]]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "${LAUNCHER}")"
+  echo "Cloning Mia Flash-Next kit into ${LAUNCHER}..."
+  git clone --depth 1 "${KIT_REPO}" "${LAUNCHER}"
+  chmod +x "${LAUNCHER}"/*.sh
+  [[ -f "${LAUNCHER}/.env" ]] || cp "${LAUNCHER}/.env.sample" "${LAUNCHER}/.env"
+}
+
+load_recipe() {
+  local recipe="${SPARK_FLASHNEXT_RECIPE:-}"
+  CTX="${FLASHNEXT_CTX:-262144}"
+  SERVED_NAME="${FLASHNEXT_SERVED_NAME:-qwen3.8-flash-next}"
+  IMAGE="${FLASHNEXT_IMAGE:-vllm/vllm-openai:qwen38-flash-next}"
+  HF_HOME_DIR="${FLASHNEXT_HF_HOME:-${HF_HOME_DEFAULT}}"
+  HOST_RESERVE="${FLASHNEXT_HOST_RESERVE:-26}"
+  KV_TARGET="${FLASHNEXT_KV_TARGET:-20}"
+  MAX_SEQS="${FLASHNEXT_MAX_SEQS:-4}"
+  MTP_TOKENS="${FLASHNEXT_MTP:-3}"
+  KV_DTYPE="${FLASHNEXT_KV_DTYPE:-fp8}"
+  DRAFT_VOCAB="${FLASHNEXT_DRAFT_VOCAB:-files/draft_vocab_en_code_47k.txt}"
+  YARN="${FLASHNEXT_YARN:-0}"
+  ABLIT="${FLASHNEXT_ABLIT:-0}"
+  [[ -n "${recipe}" && -f "${recipe}" ]] || return 0
+  eval "$(
+    python3 - "${recipe}" <<'PY'
+import sys, yaml
+recipe = yaml.safe_load(open(sys.argv[1])) or {}
+fn = recipe.get("flashnext") or {}
+ctx = (recipe.get("context") or {}).get("default") or 262144
+kv = (recipe.get("context") or {}).get("kv_default") or "fp8"
+print(f"PORT={int(recipe.get('port') or 8000)}")
+print(f"CTX={int(ctx)}")
+print(f"SERVED_NAME={recipe.get('served_name') or 'qwen3.8-flash-next'}")
+print(f"IMAGE={fn.get('image') or 'vllm/vllm-openai:qwen38-flash-next'}")
+print(f"HF_HOME_DIR={fn.get('hf_home') or '/models/mia-ailab/qwen3.8-flash-next/hf'}")
+print(f"HOST_RESERVE={int(fn.get('host_reserve_gib') or 26)}")
+print(f"KV_TARGET={int(fn.get('kv_target_gib') or 20)}")
+print(f"MAX_SEQS={int(fn.get('max_num_seqs') or 4)}")
+print(f"MTP_TOKENS={int(fn.get('mtp_tokens') or 3)}")
+print(f"KV_DTYPE={kv}")
+print(f"DRAFT_VOCAB={fn.get('draft_vocab') or 'files/draft_vocab_en_code_47k.txt'}")
+print(f"YARN={1 if fn.get('yarn') else 0}")
+print(f"ABLIT={1 if fn.get('ablit') else 0}")
+if fn.get("launcher"):
+    print(f"LAUNCHER={fn['launcher']}")
+if fn.get("container"):
+    print(f"CONTAINER_NAME={fn['container']}")
+PY
+  )"
+}
+
+load_launch_overrides() {
+  local ov="${ROOT}/run/inference-launch-overrides.json"
+  [[ -f "${ov}" ]] || return 0
+  eval "$(
+    python3 - "${ov}" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+if d.get("ctx"):
+    print(f"CTX={int(d['ctx'])}")
+if d.get("kv"):
+    print(f"KV_DTYPE={d['kv']}")
+PY
+  )"
+  # Native rope is 262144. Anything above that is YaRN (Mia ceiling 512k).
+  if [[ "${CTX}" -gt 262144 ]]; then
+    YARN=1
+    YARN_MAX_MODEL_LEN="${CTX}"
+  fi
+}
+
+flashnext_running() {
+  docker inspect -f '{{.State.Running}}' "${CONTAINER_NAME}" 2>/dev/null | grep -qx true
+}
+
+ensure_image() {
+  if docker image inspect "${IMAGE}" >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "Pulling ${IMAGE} (first boot)..."
+  docker pull "${IMAGE}"
+}
+
+stop_others() {
+  "${ROOT}/scripts/spark-eugr" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-llama" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-ds4" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-sparkinfer" down 2>/dev/null || true
+  "${ROOT}/scripts/spark-sglang" down 2>/dev/null || true
+}
+
+cmd_down() {
+  if [[ -x "${LAUNCHER}/stop.sh" ]]; then
+    (cd "${LAUNCHER}" && TP1_CONTAINER_NAME="${CONTAINER_NAME}" ./stop.sh) || true
+  fi
+  docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  rm -f "${PID_FILE}"
+  echo "Stopped Flash-Next"
+}
+
+cmd_up() {
+  ensure_kit
+  load_recipe
+  load_launch_overrides
+  [[ -x "${LAUNCHER}/start.sh" ]] || die "Missing launcher ${LAUNCHER}/start.sh"
+  mkdir -p "${RUN_DIR}" "${LOG_DIR}" "${HF_HOME_DIR}"
+  stop_others
+  cmd_down >/dev/null || true
+  ensure_image
+
+  # Offline serve: weights are already in HF_HOME. Do not pass HF_TOKEN into docker.
+  unset HF_TOKEN || true
+  export HF_HOME="${HF_HOME_DIR}"
+  export PORT
+  export IMAGE
+  export SERVED_MODEL_NAME="${SERVED_NAME}"
+  export MAX_MODEL_LEN="${CTX}"
+  export YARN_MAX_MODEL_LEN="${YARN_MAX_MODEL_LEN:-${CTX}}"
+  export HOST_RESERVE_GIB="${HOST_RESERVE}"
+  export KV_TARGET_GIB="${KV_TARGET}"
+  export MAX_NUM_SEQS="${MAX_SEQS}"
+  export MTP_NUM_SPECULATIVE_TOKENS="${MTP_TOKENS}"
+  export KV_CACHE_DTYPE="${KV_DTYPE}"
+  export MTP_DRAFT_VOCAB="${DRAFT_VOCAB}"
+  export YARN
+  export ABLIT
+  export TP1_CONTAINER_NAME="${CONTAINER_NAME}"
+
+  : >"${LOG_FILE}"
+  (
+    cd "${LAUNCHER}"
+    ./start.sh
+  ) >>"${LOG_FILE}" 2>&1
+  echo "started $(date -u +%FT%TZ) port=${PORT} ctx=${CTX} yarn=${YARN} mtp=${MTP_TOKENS}" >>"${LOG_FILE}"
+  python3 - "${SPARK_FLASHNEXT_RECIPE:-}" "${RUN_DIR}/inference-active.json" <<'PY' || true
+import json, sys
+from pathlib import Path
+recipe_path, state_path = sys.argv[1], Path(sys.argv[2])
+profile = None
+if recipe_path:
+    try:
+        import yaml
+        profile = (yaml.safe_load(open(recipe_path)) or {}).get("id")
+    except Exception:
+        profile = None
+state = {}
+if state_path.is_file():
+    try:
+        state = json.loads(state_path.read_text()) or {}
+    except Exception:
+        state = {}
+if profile:
+    state["profile"] = profile
+elif not state.get("profile"):
+    sys.exit(0)
+# Keep CLI write_state() started_at so load-time samples are wall-clock.
+state_path.parent.mkdir(parents=True, exist_ok=True)
+state_path.write_text(json.dumps(state, indent=2) + "\n")
+PY
+  if flashnext_running; then
+    docker inspect -f '{{.Id}}' "${CONTAINER_NAME}" >"${PID_FILE}" 2>/dev/null || true
+  fi
+  echo "Started Flash-Next — ${SERVED_NAME} on :${PORT} ctx=${CTX} yarn=${YARN} MTP=${MTP_TOKENS}"
+  echo "Log: ${LOG_FILE}"
+  echo "API: http://sparky:${PORT}/v1"
+  echo "First boot packs a ~27 GiB PLE table; /v1/models often takes 11+ min."
+}
+
+cmd_status() {
+  if flashnext_running; then
+    echo "Running ${CONTAINER_NAME} — http://127.0.0.1:${PORT}/v1/models"
+    curl -sf --max-time 5 "http://127.0.0.1:${PORT}/v1/models" | head -c 800 || echo "(API not ready yet)"
+    echo
+  else
+    echo "Not running"
+  fi
+}
+
+cmd_logs() {
+  if flashnext_running; then
+    docker logs -f "${CONTAINER_NAME}"
+  else
+    tail -f "${LOG_FILE}"
+  fi
+}
+
+usage() {
+  cat <<USAGE
+Usage: spark engine flashnext {up|down|status|logs}
+
+MiaAI Qwen3.8-Flash-Next NVFP4 + MTP 3 (:${PORT}/v1)
+Launcher: ${LAUNCHER}
+USAGE
+}
+
+cmd="${1:-}"
+[[ -n "${cmd}" ]] || { usage; exit 1; }
+ensure_kit
+load_recipe
+case "${cmd}" in
+  up) cmd_up ;;
+  down) cmd_down ;;
+  status) cmd_status ;;
+  logs) cmd_logs ;;
+  *) usage >&2; exit 1 ;;
+esac

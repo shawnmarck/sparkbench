@@ -27,8 +27,19 @@ export function countsOf(block) {
 
 export function countsForDay(row, filterId) {
   if (!row) return countsOf(null)
-  if (filterId) return countsOf(row.profiles?.[filterId])
-  return countsOf(row)
+  if (filterId == null || filterId === '') return countsOf(row)
+  const ids = Array.isArray(filterId) ? filterId : [filterId]
+  if (!ids.length) return countsOf(row)
+  let requests = 0
+  let prompt = 0
+  let completion = 0
+  for (const id of ids) {
+    const c = countsOf(row.profiles?.[id])
+    requests += c.requests
+    prompt += c.prompt
+    completion += c.completion
+  }
+  return { requests, prompt, completion, total: prompt + completion }
 }
 
 export function shortProfileId(id) {

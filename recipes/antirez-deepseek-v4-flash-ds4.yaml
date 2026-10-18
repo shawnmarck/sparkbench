@@ -1,6 +1,7 @@
 id: antirez-deepseek-v4-flash-ds4
 name: deepseek-v4-flash (ds4 · 0731+DSpark)
 inventory_path: antirez/deepseek-v4-flash
+roi_profile: deepseek-v4-flash
 engine: ds4
 tier: heavy
 lifecycle: works

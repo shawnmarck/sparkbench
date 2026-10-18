@@ -50,8 +50,12 @@ export const CLOUD_COMPS = [
   },
 ]
 
-export function matchComp(profileId) {
+export function matchComp(profileId, cloudModel) {
   const id = String(profileId || '').toLowerCase()
+  const model = String(cloudModel || '').toLowerCase()
+  if (!id && !model) return null
+  const exact = CLOUD_COMPS.find((c) => c.id === id || (model && c.slug === model))
+  if (exact) return exact
   if (!id) return null
   return CLOUD_COMPS.find((c) => c.match.some((m) => id.includes(m))) || null
 }

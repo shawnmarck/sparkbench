@@ -1,6 +1,7 @@
 id: radixark-qwen3-8-27b-dflash2-sglang-text
 name: qwen3.8-27b DFlash2 · text
 inventory_path: radixark/qwen3.8-27b
+roi_profile: qwen3.8-27b
 engine: sglang
 tier: heavy
 lifecycle: works

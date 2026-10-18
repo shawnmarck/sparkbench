@@ -1,0 +1,46 @@
+id: orcarouter-qwen3-8-flash-next-uncensored-flashnext
+name: qwen3.8-flash-next-uncensored · Flash-Next · BF16 PLE mmap
+inventory_path: orcarouter/qwen3.8-flash-next-uncensored
+engine: flashnext
+tier: heavy
+lifecycle: testing
+served_name: qwen3.8-flash-next-uncensored
+port: 8000
+tags:
+- lab
+- flashnext
+- moe
+- mtp
+- vision
+- nvfp4
+speculative:
+  method: mtp
+  num_speculative_tokens: 3
+flashnext:
+  launcher: /opt/spark/local/orcarouter-flash-next
+  image: vllm/vllm-openai:qwen38-flash-next
+  container: vllm-fn-orca
+  hf_home: /models/orcarouter/qwen3.8-flash-next-uncensored/nvfp4
+  host_reserve_gib: 26
+  kv_target_gib: 20
+  max_num_seqs: 4
+  mtp_tokens: 3
+  yarn: false
+  ablit: false
+  vision: true
+notes: 'OrcaRouter compressed-tensors NVFP4. The n-gram table is BF16, 128
+  shards, 95.4 GiB in model-00002, not the Mia packed U8 table and not the
+  NVIDIA modelopt pack. Launcher memmaps those shards. Do not start the
+  stock eugr draft. Testing until a bench v2 run.'
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
+context:
+  default: 262144
+  native: 262144
+  kv_default: bfloat16
+  presets:
+    native:
+      label: Native 262k
+      ctx: 262144
+      kv: bfloat16

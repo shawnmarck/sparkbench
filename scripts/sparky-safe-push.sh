@@ -36,6 +36,7 @@ NEVER_STAGE=(
   data/hf-download-queue.yaml
   data/hf-explore-queue.yaml
   data/inference-benchmark-history.yaml
+  services/sparkinfer-mia/data
   host.env
   .env
   vendor/

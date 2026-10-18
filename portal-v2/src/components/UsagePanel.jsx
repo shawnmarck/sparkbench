@@ -40,7 +40,7 @@ function cacheHint(hitPct) {
 function sortVal(p, key, names) {
   const a = countsOf(p.all)
   const c24 = countsOf(p['24h'])
-  if (key === 'profile') return String(names.get(p.id) || p.id || '').toLowerCase()
+  if (key === 'profile') return String(p.label || p.name || names.get(p.id) || p.id || '').toLowerCase()
   if (key === 'req') return a.requests <= 2 && a.total > 1e6 ? -1 : a.requests
   if (key === 'tokens' || key === 'all') return a.total
   if (key === 'h24') return c24.total
@@ -97,14 +97,37 @@ function requestLabel(requests, total) {
   return { text: fmtTokens(requests), title: '' }
 }
 
+function sameIds(a, b) {
+  if (!a || !b || a.length !== b.length) return false
+  const left = [...a].sort()
+  const right = [...b].sort()
+  return left.every((id, i) => id === right[i])
+}
+
+function rateTitle(row) {
+  if (!row?.priced) return 'Set rates in the ledger'
+  const inn = Number(row.in_per_m)
+  const out = Number(row.out_per_m)
+  const bin = Number(row.blended_in_per_m)
+  const bout = Number(row.blended_out_per_m)
+  const drifted = Number.isFinite(bin) && Number.isFinite(bout) && (bin !== inn || bout !== out)
+  if (drifted) {
+    return `Current profile rate. Token-weighted from history: ${fmtRatePair(bin, bout)}`
+  }
+  return row.synthetic
+    ? 'Token-weighted avg from the recipe ledger'
+    : 'Profile rate, shared by every recipe in this row'
+}
+
 export function UsagePanel({ live }) {
   const usage = live.activity?.usage
   const summary = live.activity?.summary || {}
   const all = countsOf(usage?.windows?.all)
   const h24 = countsOf(usage?.windows?.['24h'])
   const d30 = countsOf(usage?.windows?.['30d'])
-  const [filterId, setFilterId] = useState(null)
-  const [ledgerId, setLedgerId] = useState(null)
+  const [filter, setFilter] = useState(null)
+  const [openId, setOpenId] = useState(null)
+  const [ledger, setLedger] = useState(null)
   const [sort, setSort] = useState({ key: 'h24', dir: 'desc' })
   const [hitPct, setHitPct] = useState(readHit)
   const names = useMemo(() => {
@@ -113,21 +136,35 @@ export function UsagePanel({ live }) {
     return m
   }, [live.recipes])
   const profiles = useMemo(() => {
-    const rows = (usage?.profiles || []).map((p) => {
+    const source = Array.isArray(usage?.roi_profiles) ? usage.roi_profiles : (usage?.profiles || [])
+    const rows = source.map((p) => {
+      const label = p.name || names.get(p.id) || p.id
       const a = countsOf(p.all)
+      const members = (p.members || []).flatMap((m) => {
+        const ma = countsOf(m.all)
+        if (ma.total <= 0) return []
+        return [{
+          ...m,
+          label: names.get(m.id) || m.id,
+          cacheUsd: m.priced ? cacheAdjustedUsd(m.usd, ma.prompt, m.in_per_m, hitPct) : null,
+        }]
+      })
       return {
         ...p,
+        label,
         cacheUsd: p.priced ? cacheAdjustedUsd(p.usd, a.prompt, p.in_per_m, hitPct) : null,
+        members,
       }
     })
     rows.sort((a, b) => cmpRows(a, b, sort, names))
     return rows
-  }, [usage?.profiles, sort, names, hitPct])
-  const filterLabel = filterId ? (names.get(filterId) || filterId) : ''
-  const ledgerName = ledgerId ? (names.get(ledgerId) || ledgerId) : ''
+  }, [usage?.roi_profiles, usage?.profiles, sort, names, hitPct])
+  const ledgerName = ledger ? (ledger.name || names.get(ledger.id) || ledger.id) : ''
 
-  function toggleFilter(id) {
-    setFilterId((cur) => (cur === id ? null : id))
+  function toggleFilter(row) {
+    const ids = (row.members || []).map((m) => m.id)
+    const next = { ids: ids.length ? ids : [row.id], label: row.label || row.id }
+    setFilter((cur) => (cur && sameIds(cur.ids, next.ids) ? null : next))
   }
 
   function toggleSort(key) {
@@ -221,7 +258,7 @@ export function UsagePanel({ live }) {
           </div>
         </div>
       </div>
-      <ActivityCalendar days={usage?.days} filterId={filterId} filterLabel={filterLabel} />
+      <ActivityCalendar days={usage?.days} filterId={filter?.ids || null} filterLabel={filter?.label || ''} />
       <div className="mix-line">
         <p>
           <b>{fmtTokens(all.prompt)}</b> in · <b>{fmtTokens(all.completion)}</b> out
@@ -266,31 +303,47 @@ export function UsagePanel({ live }) {
               </tr>
           </thead>
           <tbody>
-            {profiles.length ? profiles.map((p) => {
+            {profiles.length ? profiles.flatMap((p) => {
               const a = countsOf(p.all)
               const c24 = countsOf(p['24h'])
               const req = requestLabel(a.requests, a.total)
-              const label = names.get(p.id) || p.id
-              const on = filterId === p.id
-              return (
+              const label = p.label || names.get(p.id) || p.id
+              const memberIds = (p.members || []).map((m) => m.id)
+              const on = filter ? sameIds(filter.ids, memberIds.length ? memberIds : [p.id]) : false
+              const canExpand = (p.members || []).length > 0
+              const open = openId === p.id
+              const profileRow = (
                 <tr
                   key={p.id}
                   className={on ? 'picked' : ''}
                   aria-pressed={on}
                   title={on ? 'Show all models on the calendar' : `Show ${label} on the calendar`}
-                  onClick={() => toggleFilter(p.id)}
+                  onClick={() => toggleFilter(p)}
                 >
                   <td title={p.id}>
-                    <div className="pid">{label}</div>
+                    <div className="pid">
+                      {canExpand ? (
+                        <button
+                          type="button"
+                          className="pid-btn"
+                          aria-expanded={open}
+                          title={open ? 'Hide recipes' : 'Show recipes'}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenId((cur) => (cur === p.id ? null : p.id))
+                          }}
+                        >
+                          <span className="twist">{open ? '▾' : '▸'}</span>
+                          {label}
+                        </button>
+                      ) : label}
+                    </div>
                   </td>
                   <td title={req.title}>{req.text}</td>
                   <td><TokenMix prompt={a.prompt} completion={a.completion} /></td>
                   <td>{c24.total ? fmtTokens(c24.total) : '—'}</td>
                   <td>{fmtTokens(a.total)}</td>
-                  <td
-                    className="rate-cell"
-                    title={p.priced ? 'Token-weighted avg from ledger rates' : 'Set rates in the ledger'}
-                  >
+                  <td className="rate-cell" title={rateTitle(p)}>
                     {p.priced ? fmtRatePair(p.in_per_m, p.out_per_m) : '—'}
                   </td>
                   <td>
@@ -300,7 +353,7 @@ export function UsagePanel({ live }) {
                       title={`Open ledger for ${label}`}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setLedgerId(p.id)
+                        setLedger({ id: p.id, name: label, cloud: p.cloud?.model || '' })
                       }}
                     >
                       {p.priced ? fmtUsd(p.usd) : 'Set'}
@@ -311,6 +364,35 @@ export function UsagePanel({ live }) {
                   </td>
                 </tr>
               )
+              if (!open) return [profileRow]
+              const childRows = (p.members || []).map((m) => {
+                const ma = countsOf(m.all)
+                const mc24 = countsOf(m['24h'])
+                const mreq = requestLabel(ma.requests, ma.total)
+                const childOn = filter ? sameIds(filter.ids, [m.id]) : false
+                return (
+                  <tr
+                    key={`${p.id}:${m.id}`}
+                    className={`roi-child${childOn ? ' picked' : ''}`}
+                    title={`Show ${m.label} on the calendar`}
+                    onClick={() => toggleFilter({ ...m, label: m.label, members: [] })}
+                  >
+                    <td title={m.id}>
+                      <div className="pid">{m.label}</div>
+                    </td>
+                    <td title={mreq.title}>{mreq.text}</td>
+                    <td><TokenMix prompt={ma.prompt} completion={ma.completion} /></td>
+                    <td>{mc24.total ? fmtTokens(mc24.total) : '—'}</td>
+                    <td>{fmtTokens(ma.total)}</td>
+                    <td className="rate-cell" title={rateTitle(m)}>{p.priced ? fmtRatePair(p.in_per_m, p.out_per_m) : '—'}</td>
+                    <td>{p.priced ? fmtUsd(m.usd) : '—'}</td>
+                    <td className="cache-cell" title={p.priced ? cacheHint(hitPct) : 'Set rates in the ledger'}>
+                      {p.priced ? fmtUsd(m.cacheUsd) : '—'}
+                    </td>
+                  </tr>
+                )
+              })
+              return [profileRow, ...childRows]
             }) : (
               <tr><td className="muted" colSpan={8}>No usage yet</td></tr>
             )}
@@ -342,11 +424,12 @@ export function UsagePanel({ live }) {
           ) : null}
         </table>
       </div>
-      {ledgerId ? (
+      {ledger ? (
         <PriceLedger
-          profileId={ledgerId}
+          profileId={ledger.id}
           profileName={ledgerName}
-          onClose={() => setLedgerId(null)}
+          cloudModel={ledger.cloud}
+          onClose={() => setLedger(null)}
           onSaved={() => live.refresh?.()}
         />
       ) : null}

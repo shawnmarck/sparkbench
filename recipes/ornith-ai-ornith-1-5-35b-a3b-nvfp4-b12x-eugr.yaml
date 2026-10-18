@@ -1,6 +1,7 @@
 id: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
 name: Ornith 1.5 35B-A3B · MTP
 inventory_path: ornith-ai/ornith-1.5-35b-a3b
+roi_profile: ornith-1.5-35b-a3b
 engine: eugr
 tier: heavy
 lifecycle: works

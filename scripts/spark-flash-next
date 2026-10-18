@@ -111,11 +111,63 @@ stop_others() {
   "${ROOT}/scripts/spark-tensorfold" down 2>/dev/null || true
 }
 
-cmd_down() {
+# Every Flash-Next container, not only the recipe currently being launched.
+# `inference down` calls this with the default name vllm-fn-tp1. Leaving
+# vllm-fn-orca (or vllm-fn-keys) up holds the one GPU and the next start.sh
+# refuses its cgroup.
+flashnext_container_names() {
+  python3 - "${ROOT}/recipes" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+root = Path(sys.argv[1])
+names = {"vllm-fn-tp1"}
+paths = list(root.glob("*.yaml"))
+drafts = root / "drafts"
+if drafts.is_dir():
+    paths.extend(drafts.glob("*.yaml"))
+for path in paths:
+    try:
+        doc = yaml.safe_load(path.read_text()) or {}
+    except Exception:
+        continue
+    if not isinstance(doc, dict) or doc.get("engine") != "flashnext":
+        continue
+    fn = doc.get("flashnext") or {}
+    if isinstance(fn, dict) and fn.get("container"):
+        names.add(str(fn["container"]))
+for name in sorted(names):
+    print(name)
+PY
+}
+
+stop_flashnext_container() {
+  local name="$1"
+  [[ -n "${name}" ]] || return 0
   if [[ -x "${LAUNCHER}/stop.sh" ]]; then
-    (cd "${LAUNCHER}" && TP1_CONTAINER_NAME="${CONTAINER_NAME}" ./stop.sh) || true
+    (cd "${LAUNCHER}" && TP1_CONTAINER_NAME="${name}" ./stop.sh) || true
   fi
-  docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  pkill -f "memwatch.sh ${name}" >/dev/null 2>&1 || true
+  docker rm -f "${name}" >/dev/null 2>&1 || true
+}
+
+cmd_down() {
+  local name
+  local seen=" "
+  stop_flashnext_container "${CONTAINER_NAME}"
+  seen+=" ${CONTAINER_NAME} "
+  while IFS= read -r name; do
+    [[ -n "${name}" ]] || continue
+    [[ "${seen}" == *" ${name} "* ]] && continue
+    stop_flashnext_container "${name}"
+    seen+="${name} "
+  done < <(flashnext_container_names)
+  while IFS= read -r name; do
+    [[ -n "${name}" ]] || continue
+    [[ "${seen}" == *" ${name} "* ]] && continue
+    stop_flashnext_container "${name}"
+    seen+="${name} "
+  done < <(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E '^vllm-fn-' || true)
   rm -f "${PID_FILE}"
   echo "Stopped Flash-Next"
 }
@@ -154,10 +206,10 @@ cmd_up() {
     ./start.sh
   ) >>"${LOG_FILE}" 2>&1
   echo "started $(date -u +%FT%TZ) port=${PORT} ctx=${CTX} yarn=${YARN} mtp=${MTP_TOKENS}" >>"${LOG_FILE}"
-  python3 - "${SPARK_FLASHNEXT_RECIPE:-}" "${RUN_DIR}/inference-active.json" <<'PY' || true
-import json, sys
+  python3 - "${SPARK_FLASHNEXT_RECIPE:-}" "${RUN_DIR}/inference-active.json" "${CONTAINER_NAME}" <<'PY' || true
+import json, subprocess, sys
 from pathlib import Path
-recipe_path, state_path = sys.argv[1], Path(sys.argv[2])
+recipe_path, state_path, container = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
 profile = None
 if recipe_path:
     try:
@@ -176,6 +228,29 @@ if profile:
 elif not state.get("profile"):
     sys.exit(0)
 # Keep CLI write_state() started_at so load-time samples are wall-clock.
+# If a status poll deleted the file before docker run, recover the container
+# start instead of leaving the clock blank (the next rewrite would stamp "now").
+if not isinstance(state.get("started_at"), str) or not state.get("started_at"):
+    raw = ""
+    try:
+        raw = subprocess.check_output(
+            ["docker", "inspect", "-f", "{{.State.StartedAt}}", container],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        raw = ""
+    if raw and not raw.startswith("0001-"):
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        if "." in raw:
+            head, rest = raw.split(".", 1)
+            tz_at = max(rest.rfind("+"), rest.rfind("-"))
+            frac, tz = (rest[:tz_at], rest[tz_at:]) if tz_at > 0 else (rest, "")
+            digits = "".join(ch for ch in frac if ch.isdigit())
+            raw = f"{head}.{(digits + '000000')[:6]}{tz}"
+        state["started_at"] = raw
 state_path.parent.mkdir(parents=True, exist_ok=True)
 state_path.write_text(json.dumps(state, indent=2) + "\n")
 PY

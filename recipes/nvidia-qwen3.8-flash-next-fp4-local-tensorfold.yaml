@@ -1,6 +1,7 @@
 id: nvidia-qwen3.8-flash-next-fp4-local-tensorfold
 name: qwen3.8-flash-next · TensorFold · FP4 QAD · vision
 inventory_path: nvidia/qwen3.8-flash-next-fp4-local
+roi_profile: qwen3.8-flash-next
 engine: tensorfold
 tier: heavy
 lifecycle: testing

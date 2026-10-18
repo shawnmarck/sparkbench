@@ -1,5 +1,6 @@
 # ── Runtime / generated artifacts ─────────────────────────────────────────
 # Weights, K64 draft, JetStack caches (downloaded/built at runtime; ~100+ GiB)
+data
 data/
 cache/
 hf-hub/   # local HuggingFace cache root (default HF_CACHE; see start.sh)

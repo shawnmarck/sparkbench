@@ -1,6 +1,7 @@
 id: mia-ailab-qwen3.8-flash-next-vllm
 name: qwen3.8-flash-next · MTP · vision
 inventory_path: mia-ailab/qwen3.8-flash-next
+roi_profile: qwen3.8-flash-next
 engine: flashnext
 tier: heavy
 lifecycle: testing

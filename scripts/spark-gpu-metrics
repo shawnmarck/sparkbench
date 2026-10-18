@@ -904,6 +904,17 @@ def _max_num_seqs_from_engine_block(recipe: dict) -> int | None:
     return None
 
 
+def _recipe_yaml_path(profile: str) -> Path:
+    """Production recipe, then a testing draft. Drafts are not under recipes/."""
+    prod = SPARK_ROOT / "recipes" / f"{profile}.yaml"
+    if prod.is_file():
+        return prod
+    draft = SPARK_ROOT / "recipes" / "drafts" / f"{profile}.yaml"
+    if draft.is_file():
+        return draft
+    return prod
+
+
 def _active_recipe_engine() -> str | None:
     try:
         profile = json.loads(STATE_FILE.read_text(encoding="utf-8")).get("profile")
@@ -911,10 +922,11 @@ def _active_recipe_engine() -> str | None:
         return _ACTIVE_ENGINE_CACHE.get("engine")
     if not profile:
         return None
-    if _ACTIVE_ENGINE_CACHE.get("profile") == profile:
+    # A miss on the first poll (file still being written) must not stick.
+    if _ACTIVE_ENGINE_CACHE.get("profile") == profile and _ACTIVE_ENGINE_CACHE.get("engine"):
         return _ACTIVE_ENGINE_CACHE.get("engine")
     engine = None
-    recipe_path = SPARK_ROOT / "recipes" / f"{profile}.yaml"
+    recipe_path = _recipe_yaml_path(str(profile))
     try:
         import yaml  # type: ignore
 
@@ -923,8 +935,9 @@ def _active_recipe_engine() -> str | None:
             engine = str(recipe.get("engine") or "").strip() or None
     except (OSError, ImportError, ValueError, TypeError):
         engine = None
-    _ACTIVE_ENGINE_CACHE["profile"] = profile
-    _ACTIVE_ENGINE_CACHE["engine"] = engine
+    if engine:
+        _ACTIVE_ENGINE_CACHE["profile"] = profile
+        _ACTIVE_ENGINE_CACHE["engine"] = engine
     return engine
 
 
@@ -943,10 +956,10 @@ def _max_num_seqs_from_recipe() -> int | None:
     except (TypeError, ValueError):
         ctx = None
     cache_key = (profile, preset, ctx)
-    if _MAX_SEQS_CACHE.get("key") == cache_key:
+    if _MAX_SEQS_CACHE.get("key") == cache_key and _MAX_SEQS_CACHE.get("max") is not None:
         return _MAX_SEQS_CACHE.get("max")
     max_seqs = None
-    recipe_path = SPARK_ROOT / "recipes" / f"{profile}.yaml"
+    recipe_path = _recipe_yaml_path(str(profile))
     try:
         import yaml  # type: ignore
 
@@ -980,8 +993,9 @@ def _max_num_seqs_from_recipe() -> int | None:
             seq = re.search(r"^\s*max_running(?:_requests)?:\s*(\d+)\s*$", recipe_text, re.M)
             if seq:
                 max_seqs = int(seq.group(1))
-    _MAX_SEQS_CACHE["key"] = cache_key
-    _MAX_SEQS_CACHE["max"] = max_seqs
+    if max_seqs is not None:
+        _MAX_SEQS_CACHE["key"] = cache_key
+        _MAX_SEQS_CACHE["max"] = max_seqs
     return max_seqs
 
 
@@ -1233,10 +1247,33 @@ def read_engine_load(inference: dict | None) -> dict | None:
     now = time.time()
     inference = inference or {}
     if not inference.get("up"):
-        _ENGINE_LOAD_LAST = None
         with _TOKEN_RATE_LOCK:
             _TOKEN_SAMPLES.clear()
-        return None
+        # /v1/models is down for the whole first load. The slot cap is still
+        # known from the recipe, and the live card needs it before scrape.
+        max_seqs = _max_num_seqs_from_recipe()
+        engine = _active_recipe_engine()
+        if max_seqs is None and not engine:
+            _ENGINE_LOAD_LAST = None
+            return None
+        payload = {
+            "engine": engine,
+            "source": "recipe",
+            "running": 0,
+            "waiting": 0,
+            "max": max_seqs,
+            "kv_cache_pct": None,
+            "kv_max_concurrency": None,
+            "gen_tok_s": None,
+            "gen_tok_s_2s": None,
+            "prompt_tok_s": None,
+            "gen_window_s": AGG_PEAK_S,
+            "stale": False,
+            "booting": True,
+        }
+        _ENGINE_LOAD_LAST = payload
+        _ENGINE_LOAD_LAST_AT = now
+        return payload
 
     engine_id = inference.get("engine")
     engines = inference.get("engines") or []

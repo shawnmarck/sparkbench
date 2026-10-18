@@ -55,6 +55,14 @@ function RecipeModalities({ mm, vision }) {
   )
 }
 
+function slotCap(active, load) {
+  const scraped = Number(load?.max)
+  if (Number.isFinite(scraped) && scraped > 0) return scraped
+  const declared = Number(active?.max_num_seqs)
+  if (Number.isFinite(declared) && declared > 0) return declared
+  return 0
+}
+
 function SeqCubes({ running, waiting, max }) {
   const cap = Math.max(0, Number(max) || 0)
   if (!cap) return <p className="hero-meta tall">Concurrency —</p>
@@ -144,6 +152,7 @@ export function HomePage({ live }) {
   const p99Ready = sparkSpan >= 3300
   const up = sinceLabel(active?.started_at)
   const booting = Boolean(loading && !active?.ready)
+  const cap = slotCap(active, load)
 
   return (
     <div className="home">
@@ -159,6 +168,9 @@ export function HomePage({ live }) {
                   {loading.name ? ` · ${loading.name}` : ''}
                 </p>
                 <LoadMeter loading={loading} />
+                {cap > 0 ? (
+                  <SeqCubes running={load.running} waiting={load.waiting} max={cap} />
+                ) : null}
               </>
             ) : active ? (
               <>
@@ -166,7 +178,7 @@ export function HomePage({ live }) {
                   {active.ready ? (up ? `up ${up}` : 'ready') : active.starting ? 'starting' : 'not ready'}
                 </p>
                 {active.ready ? null : <LoadMeter loading={loading} />}
-                <SeqCubes running={load.running} waiting={load.waiting} max={load.max} />
+                <SeqCubes running={load.running} waiting={load.waiting} max={cap} />
                 {load.kv_cache_pct != null ? (
                   <div className="meters kv-meter">
                     <div className="meter-row">
@@ -239,8 +251,14 @@ export function HomePage({ live }) {
                   <div className="catalog" title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
                     <dt>Catalog bench</dt>
                     <dd>
-                      {fmtTokS(active.tok_s)}
-                      <small> {benchMethodLabel(active.tok_s_method)}, not live</small>
+                      {active.tok_s == null ? (
+                        'not measured'
+                      ) : (
+                        <>
+                          {fmtTokS(active.tok_s)}
+                          <small> {benchMethodLabel(active.tok_s_method)}, not live</small>
+                        </>
+                      )}
                     </dd>
                   </div>
                 </dl>

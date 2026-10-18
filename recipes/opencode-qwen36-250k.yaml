@@ -2,6 +2,7 @@ id: opencode-qwen36-250k
 name: "Qwen3.6-35B-A3B 250k NVFP4"
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
+roi_profile: qwen3.6-35b-a3b
 engine: eugr
 tier: heavy
 eugr_recipe: /opt/spark/services/eugr-qwen36-local.yaml

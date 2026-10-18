@@ -1,6 +1,7 @@
 id: radixark-qwen3-8-27b-dspark-eugr
 name: qwen3.8-27b DSpark (eugr)
 inventory_path: radixark/qwen3.8-27b
+roi_profile: qwen3.8-27b
 engine: eugr
 tier: heavy
 lifecycle: works

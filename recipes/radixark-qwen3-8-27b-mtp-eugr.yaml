@@ -1,6 +1,7 @@
 id: radixark-qwen3-8-27b-mtp-eugr
 name: qwen3.8-27b MTP (eugr)
 inventory_path: radixark/qwen3.8-27b
+roi_profile: qwen3.8-27b
 engine: eugr
 tier: heavy
 lifecycle: works

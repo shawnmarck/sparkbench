@@ -1,6 +1,7 @@
 id: azampatti-qwen3.8-flash-next-int4-autoround-tensorfold
 name: qwen3.8-flash-next · TensorFold · INT4-AR · vision
 inventory_path: azampatti/qwen3.8-flash-next-int4-autoround
+roi_profile: qwen3.8-flash-next
 engine: tensorfold
 tier: heavy
 lifecycle: testing

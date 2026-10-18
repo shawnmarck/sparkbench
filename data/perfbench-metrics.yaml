@@ -1913,4 +1913,92 @@ profiles:
     tok_s_4k: 45.4
     tok_s_50k: 22.6
     tok_s_100k: 13.8
-updated_at: '2026-10-18T05:11:02.779976+00:00'
+  orcarouter-qwen3-8-flash-next-uncensored-flashnext:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: flashnext
+    inventory_path: orcarouter/qwen3.8-flash-next-uncensored
+    measured_at: '2026-10-18T06:55:48.836968+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 27.1
+        tok_s_min: 27.1
+        tok_s_max: 27.1
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 977
+        elapsed_s: 36.1
+        run_tok_s:
+        - 27.1
+      '50000':
+        tok_s: 16.0
+        tok_s_min: 16.0
+        tok_s_max: 16.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 873
+        elapsed_s: 54.4
+        run_tok_s:
+        - 16.0
+      '100000':
+        tok_s: 15.0
+        tok_s_min: 15.0
+        tok_s_max: 15.0
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 891
+        elapsed_s: 59.2
+        run_tok_s:
+        - 15.0
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=27.1 / 50000=16.0 / 100000=15.0
+    tok_s_4k: 27.1
+    tok_s_50k: 16.0
+    tok_s_100k: 15.0
+  drowzeys-keys-qwen3.8-flash-next-ablit-flashnext:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: flashnext
+    inventory_path: drowzeys/keys-qwen3.8-flash-next-ablit-mia-single-spark-only
+    measured_at: '2026-10-18T08:08:38.924107+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 35.2
+        tok_s_min: 35.2
+        tok_s_max: 35.2
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 847
+        elapsed_s: 24.05
+        run_tok_s:
+        - 35.2
+      '50000':
+        tok_s: 19.3
+        tok_s_min: 19.3
+        tok_s_max: 19.3
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 795
+        elapsed_s: 41.17
+        run_tok_s:
+        - 19.3
+      '100000':
+        tok_s: 18.6
+        tok_s_min: 18.6
+        tok_s_max: 18.6
+        sessions: 1
+        tool_roundtrip_ok: true
+        completion_tokens: 833
+        elapsed_s: 44.83
+        run_tok_s:
+        - 18.6
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=35.2 / 50000=19.3 / 100000=18.6
+    tok_s_4k: 35.2
+    tok_s_50k: 19.3
+    tok_s_100k: 18.6
+updated_at: '2026-10-18T08:08:38.924107+00:00'

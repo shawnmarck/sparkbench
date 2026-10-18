@@ -86,6 +86,8 @@ spark gpu
 
 spark recipe list
 spark recipe scaffold google/gemma-4-12b-it llamacpp
+spark recipe roi <recipe-id> <roi-profile-id>      # required before testing/promote; see data/roi-profiles.yaml
+spark recipe roi-new <recipe-id> id= name= family= version= params= provider= model= in= out=
 spark models verify set google/gemma-4-12b-it works
 spark models inventory
 

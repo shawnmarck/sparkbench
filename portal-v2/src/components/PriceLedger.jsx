@@ -61,7 +61,7 @@ function sourceLabel(row) {
   return row.source || 'current'
 }
 
-export function PriceLedger({ profileId, profileName, onClose, onSaved }) {
+export function PriceLedger({ profileId, profileName, cloudModel, onClose, onSaved }) {
   const [grain, setGrain] = useState('day')
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
@@ -72,7 +72,7 @@ export function PriceLedger({ profileId, profileName, onClose, onSaved }) {
   const [ovIn, setOvIn] = useState('')
   const [ovOut, setOvOut] = useState('')
   const [history, setHistory] = useState([])
-  const analog = matchComp(profileId)
+  const analog = matchComp(profileId, cloudModel)
   const grainLabel = GRAINS.find((g) => g.id === grain)?.label || 'Day'
 
   function applyLedger(ledger) {

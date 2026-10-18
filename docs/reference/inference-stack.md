@@ -76,6 +76,16 @@ Public display names drop client branding. Profile ids keep the `opencode-` pref
 
 Scaffold: `spark recipe scaffold <lab/slug> <engine>`. Extend the router in `spark-inference.py` plus catalog `engine` / `capabilities`. Hand-write YAML only for MoE, multimodal, DFlash, ds4, MTP, SGLang, Flash-Next, or TensorFold.
 
+### ROI profiles (usage / cloud compare)
+
+Recipes that leave `draft` (`testing`, `works`, `production`, or `promote`) must set `roi_profile` to an id in git-tracked `data/roi-profiles.yaml`. That file is the cloud-SKU identity (provider, model name, family) — not dollar prices. Per-token prices stay in host-local `run/inference-pricing.json`, keyed by ROI profile id. Token counters stay keyed by recipe id.
+
+```yaml
+roi_profile: qwen3.6-35b-a3b
+```
+
+Tag an existing profile: `spark recipe roi <recipe-id> <roi-profile-id>`. Create one and tag: `spark recipe roi-new <recipe-id> id= name= family= version= params= provider= model= in= out=`. Recipe files win over the host-local tag map `run/roi-recipe-tags.json` (backfill: `/opt/spark/venv/bin/python3 scripts/spark-roi.py backfill`). The portal v2 usage card rolls tagged recipes up under each ROI profile for ledger vs cloud comps.
+
 ### ds4
 
 Native DeepSeek V4 Flash. Pin: `data/ds4-dwarfstar.yaml`. Production profile: `antirez-deepseek-v4-flash-ds4`.

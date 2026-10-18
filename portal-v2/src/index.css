@@ -1057,6 +1057,26 @@ tr.picked td { box-shadow: inset 2px 0 0 var(--accent); }
 .pick-table tbody tr { cursor: pointer; }
 .usage-hero .pick-table tbody tr:hover td { background: var(--card); }
 .usage-hero .pick-table tbody tr.picked td { background: var(--row-active); }
+.usage-hero .pick-table tbody tr.roi-child td { background: var(--bg-raise); }
+.usage-hero .pick-table tbody tr.roi-child .pid { padding-left: .85rem; font-weight: 450; }
+.pid-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pid-btn .twist {
+  color: var(--muted);
+  font-size: .7rem;
+  width: .7rem;
+}
 .usage-hero .pick-table tfoot td {
   border-top: 1px solid var(--accent-line);
   background: var(--bg-raise);

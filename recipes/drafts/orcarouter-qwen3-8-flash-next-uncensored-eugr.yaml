@@ -1,0 +1,14 @@
+id: orcarouter-qwen3-8-flash-next-uncensored-eugr
+name: qwen3.8-flash-next-uncensored (eugr)
+inventory_path: orcarouter/qwen3.8-flash-next-uncensored
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: qwen3.8-flash-next-uncensored
+port: 8000
+tags:
+- lab
+- eugr
+notes: Scaffolded 2026-10-18 from /models/orcarouter/qwen3.8-flash-next-uncensored.
+  Mark testing, switch, bench, then promote.
+eugr_recipe: /opt/spark/services/eugr-orcarouter-qwen3-8-flash-next-uncensored-eugr.yaml

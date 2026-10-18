@@ -1,6 +1,7 @@
 id: nvidia-qwen3.8-flash-next-fp4-local-eugr
 name: qwen3.8-flash-next · FP4-Local · vision
 inventory_path: nvidia/qwen3.8-flash-next-fp4-local
+roi_profile: qwen3.8-flash-next
 engine: eugr
 tier: heavy
 lifecycle: testing

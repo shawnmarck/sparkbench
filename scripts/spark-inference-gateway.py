@@ -39,6 +39,11 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 ROOT = Path("/opt/spark")
+_ROI_SPEC = importlib.util.spec_from_file_location("spark_roi", ROOT / "scripts" / "spark-roi.py")
+roimod = importlib.util.module_from_spec(_ROI_SPEC)
+if _ROI_SPEC is None or _ROI_SPEC.loader is None:
+    raise SystemExit("failed to load spark-roi")
+_ROI_SPEC.loader.exec_module(roimod)
 SPEC = importlib.util.spec_from_file_location(
     "inference_core", ROOT / "scripts" / "spark-inference.py"
 )
@@ -624,6 +629,13 @@ class Handler(BaseHTTPRequestHandler):
             "stream": is_stream,
             "status": "",
         }
+        roi = ""
+        try:
+            roi = roimod.effective_tags().get(str(prof or "").strip()) or ""
+        except Exception:
+            roi = ""
+        if roi:
+            session["roi_profile"] = roi
 
         if not port:
             duration_ms = int((time.time() - t0) * 1000)

@@ -25,8 +25,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
+import importlib.util
 
 ROOT = Path("/opt/spark")
+_ROI_SPEC = importlib.util.spec_from_file_location("spark_roi", ROOT / "scripts" / "spark-roi.py")
+roimod = importlib.util.module_from_spec(_ROI_SPEC)
+assert _ROI_SPEC is not None and _ROI_SPEC.loader is not None
+_ROI_SPEC.loader.exec_module(roimod)
 SPARKY_ALIAS_IDS = frozenset({"sparky", "sparky-think", "sparky-fast"})
 JSONL_PATH: Path = ROOT / "run" / "inference-activity.jsonl"
 USAGE_PATH: Path = ROOT / "run" / "inference-usage.json"
@@ -62,6 +67,7 @@ _USAGE: dict[str, Any] | None = None
 
 _PRICING_LOCK = threading.Lock()
 _PRICING: dict[str, Any] | None = None
+_PRICING_MTIME = -1.0
 
 
 def _classify_app(user_agent: str) -> str:
@@ -613,6 +619,7 @@ def _usage_view(store: dict[str, Any], now: float) -> dict[str, Any]:
         "profiles": profiles,
         "days": days_out,
         "fold_version": int(store.get("fold_version") or 0),
+        "roi_profiles": _roi_profiles_view(store, pricing, profiles),
     }
 
 
@@ -803,10 +810,15 @@ def _write_pricing(store: dict[str, Any]) -> None:
 
 
 def _load_pricing() -> dict[str, Any]:
-    global _PRICING
+    global _PRICING, _PRICING_MTIME
     with _PRICING_LOCK:
-        if _PRICING is None:
+        try:
+            mtime = PRICING_PATH.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        if _PRICING is None or mtime != _PRICING_MTIME:
             _PRICING = _read_pricing_file()
+            _PRICING_MTIME = mtime
         return _PRICING
 
 
@@ -847,8 +859,9 @@ def _profile_ledger(
     pricing: dict[str, Any],
     pid: str,
     allc: dict[str, int],
+    record: dict[str, Any] | None = None,
 ) -> dict[str, float | None] | None:
-    p = _profile_pricing(pricing, pid)
+    p = record if record is not None else _profile_pricing(pricing, pid)
     if not _profile_is_priced(p):
         return None
     in_num = 0.0
@@ -885,6 +898,183 @@ def _profile_ledger(
     }
 
 
+def _ledger_recipe_ids(profile: str) -> list[str]:
+    """ROI profile id sums its tagged recipes. A recipe id stays one recipe."""
+    tags = roimod.effective_tags()
+    members = sorted(rid for rid, roi in tags.items() if roi == profile)
+    if members or roimod.get_profile(profile):
+        return members
+    return [profile]
+
+
+def _summed_days(store: dict[str, Any], recipe_ids: list[str]) -> dict[str, dict[str, int]]:
+    want = set(recipe_ids)
+    out: dict[str, dict[str, int]] = {}
+    if not want:
+        return out
+    for dk, bucket in (store.get("days") or {}).items():
+        acc = _empty_counts()
+        for rid, pv in (bucket.get("profiles") or {}).items():
+            if rid in want and isinstance(pv, dict):
+                _add_counts(acc, pv)
+        if acc["requests"] or acc["prompt_tokens"] or acc["completion_tokens"]:
+            out[str(dk)] = acc
+    return out
+
+
+def _token_total(counts: dict[str, Any] | None) -> int:
+    counts = counts or {}
+    return int(counts.get("prompt_tokens") or 0) + int(counts.get("completion_tokens") or 0)
+
+
+def _roi_profiles_view(
+    store: dict[str, Any],
+    pricing: dict[str, Any],
+    recipe_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Join recipe counters onto ROI profiles. Does not write a second counter."""
+    by_id = {row["id"]: row for row in recipe_rows}
+    tags = roimod.effective_tags()
+    registry = {prof["id"]: prof for prof in roimod.load_profiles()}
+    grouped: dict[str, list[str]] = {}
+    for recipe_id, roi_id in tags.items():
+        grouped.setdefault(roi_id, []).append(recipe_id)
+    for roi_id in registry:
+        grouped.setdefault(roi_id, [])
+
+    covered: set[str] = set()
+    rows: list[dict[str, Any]] = []
+    for roi_id, recipe_ids in grouped.items():
+        meta = registry.get(roi_id) or {
+            "id": roi_id,
+            "name": roi_id,
+            "family": "",
+            "version": "",
+            "params": "",
+            "variant": "",
+            "cloud": {"provider": "", "model": "", "proxy": False},
+        }
+        record = _profile_pricing(pricing, roi_id)
+        priced = _profile_is_priced(record)
+        rate_in = record.get("in_per_m") if priced else None
+        rate_out = record.get("out_per_m") if priced else None
+        windows = {"24h": _empty_counts(), "30d": _empty_counts(), "all": _empty_counts()}
+        usd = 0.0
+        blend_in_num = 0.0
+        blend_out_num = 0.0
+        blend_in_tok = 0
+        blend_out_tok = 0
+        members: list[dict[str, Any]] = []
+        for rid in sorted(set(recipe_ids)):
+            src = by_id.get(rid) or {
+                "id": rid,
+                "24h": _empty_counts(),
+                "30d": _empty_counts(),
+                "all": _empty_counts(),
+            }
+            if rid in by_id:
+                covered.add(rid)
+            for key in ("24h", "30d", "all"):
+                _add_counts(windows[key], src.get(key) or {})
+            allc = src.get("all") or _empty_counts()
+            member_usd = None
+            blended_in = None
+            blended_out = None
+            if priced:
+                led = _profile_ledger(store, pricing, rid, allc, record=record)
+                if led:
+                    member_usd = led["usd"]
+                    usd += float(led["usd"] or 0)
+                    blended_in = led["in_per_m"]
+                    blended_out = led["out_per_m"]
+                    pt = int(allc.get("prompt_tokens") or 0)
+                    ct = int(allc.get("completion_tokens") or 0)
+                    if blended_in is not None and pt:
+                        blend_in_num += float(blended_in) * pt
+                        blend_in_tok += pt
+                    if blended_out is not None and ct:
+                        blend_out_num += float(blended_out) * ct
+                        blend_out_tok += ct
+            if _token_total(allc) <= 0:
+                continue
+            members.append({
+                "id": rid,
+                "24h": src.get("24h") or _empty_counts(),
+                "30d": src.get("30d") or _empty_counts(),
+                "all": allc,
+                "usd": member_usd,
+                "priced": priced,
+                "in_per_m": rate_in,
+                "out_per_m": rate_out,
+                "blended_in_per_m": blended_in,
+                "blended_out_per_m": blended_out,
+            })
+        members.sort(
+            key=lambda m: (
+                0 if _token_total(m.get("all")) or m.get("usd") else 1,
+                -(float(m["usd"]) if m.get("usd") is not None else 0.0),
+                -_token_total(m.get("all")),
+                m["id"],
+            )
+        )
+        rows.append({
+            "id": roi_id,
+            "name": meta.get("name") or roi_id,
+            "family": meta.get("family") or "",
+            "version": meta.get("version") or "",
+            "params": meta.get("params") or "",
+            "variant": meta.get("variant") or "",
+            "cloud": meta.get("cloud") or {},
+            "synthetic": False,
+            "24h": windows["24h"],
+            "30d": windows["30d"],
+            "all": windows["all"],
+            "usd": round(usd, 6) if priced else None,
+            "priced": priced,
+            "in_per_m": rate_in,
+            "out_per_m": rate_out,
+            "blended_in_per_m": round(blend_in_num / blend_in_tok, 6) if blend_in_tok else None,
+            "blended_out_per_m": round(blend_out_num / blend_out_tok, 6) if blend_out_tok else None,
+            "members": members,
+        })
+
+    for row in recipe_rows:
+        if row["id"] in covered:
+            continue
+        led = _profile_ledger(store, pricing, row["id"], row.get("all") or _empty_counts())
+        priced = led is not None
+        rows.append({
+            "id": row["id"],
+            "name": "",
+            "family": "",
+            "version": "",
+            "params": "",
+            "variant": "",
+            "cloud": {},
+            "synthetic": True,
+            "24h": row.get("24h") or _empty_counts(),
+            "30d": row.get("30d") or _empty_counts(),
+            "all": row.get("all") or _empty_counts(),
+            "usd": None if led is None else led["usd"],
+            "priced": priced,
+            "in_per_m": None if led is None else led["in_per_m"],
+            "out_per_m": None if led is None else led["out_per_m"],
+            "blended_in_per_m": None if led is None else led["in_per_m"],
+            "blended_out_per_m": None if led is None else led["out_per_m"],
+            "members": [],
+        })
+
+    rows.sort(
+        key=lambda r: (
+            0 if _token_total(r.get("all")) or r.get("usd") else 1,
+            -(float(r["usd"]) if r.get("usd") is not None else 0.0),
+            -_token_total(r.get("all")),
+            str(r.get("name") or r["id"]).lower(),
+        )
+    )
+    return rows
+
+
 def build_ledger(profile: str, grain: str) -> dict[str, Any]:
     global _USAGE
     grain = grain if grain in LEDGER_GRAINS else "day"
@@ -897,13 +1087,10 @@ def build_ledger(profile: str, grain: str) -> dict[str, Any]:
     pricing = _load_pricing()
     p = _profile_pricing(pricing, profile)
     buckets: dict[str, dict[str, Any]] = {}
-    for dk, bucket in (store.get("days") or {}).items():
-        pv = (bucket.get("profiles") or {}).get(profile)
-        if not isinstance(pv, dict):
-            continue
-        pt = int(pv.get("prompt_tokens") or 0)
-        ct = int(pv.get("completion_tokens") or 0)
-        req = int(pv.get("requests") or 0)
+    for dk, counts in _summed_days(store, _ledger_recipe_ids(profile)).items():
+        pt = int(counts.get("prompt_tokens") or 0)
+        ct = int(counts.get("completion_tokens") or 0)
+        req = int(counts.get("requests") or 0)
         if pt + ct + req <= 0:
             continue
         gk = _grain_key(dk, grain)

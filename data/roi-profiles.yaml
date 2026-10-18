@@ -1,0 +1,52 @@
+# Cloud-SKU identities for the ROI card. Prices live in run/inference-pricing.json.
+profiles:
+- id: qwen3.8-flash-next
+  name: Qwen3.8-Flash-Next
+  family: qwen
+  version: '3.8'
+  params: flash-next
+  variant: ''
+  cloud:
+    provider: QwenCloud
+    model: qwen/qwen3.8-flash
+    proxy: true
+- id: qwen3.8-27b
+  name: Qwen3.8-27B
+  family: qwen
+  version: '3.8'
+  params: 27b
+  variant: ''
+  cloud:
+    provider: Darkbloom
+    model: qwen/qwen3.8-27b
+    proxy: false
+- id: qwen3.6-35b-a3b
+  name: Qwen3.6-35B-A3B
+  family: qwen
+  version: '3.6'
+  params: 35b-a3b
+  variant: ''
+  cloud:
+    provider: Darkbloom
+    model: qwen/qwen3.6-35b-a3b
+    proxy: false
+- id: ornith-1.5-35b-a3b
+  name: Ornith 1.5 35B-A3B
+  family: ornith
+  version: '1.5'
+  params: 35b-a3b
+  variant: ''
+  cloud:
+    provider: Darkbloom
+    model: qwen/qwen3.6-35b-a3b
+    proxy: true
+- id: deepseek-v4-flash
+  name: DeepSeek V4 Flash
+  family: deepseek
+  version: v4
+  params: flash
+  variant: ''
+  cloud:
+    provider: OpenInference
+    model: deepseek/deepseek-v4-flash-0731
+    proxy: false

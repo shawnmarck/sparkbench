@@ -2,6 +2,7 @@ id: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
 name: "Mia · Unsloth Qwen3.6-35B NVFP4"
 catalog_id: unsloth/qwen3.6-35b-a3b-nvfp4
 inventory_path: unsloth/qwen3.6-35b-a3b-nvfp4
+roi_profile: qwen3.6-35b-a3b
 engine: eugr
 tier: heavy
 lifecycle: testing

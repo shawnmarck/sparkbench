@@ -37,6 +37,13 @@ benchv2 = importlib.util.module_from_spec(_BENCH_V2_SPEC)
 assert _BENCH_V2_SPEC.loader is not None
 _BENCH_V2_SPEC.loader.exec_module(benchv2)
 
+_ROI_SPEC = importlib.util.spec_from_file_location(
+    "spark_roi", ROOT / "scripts" / "spark-roi.py"
+)
+roimod = importlib.util.module_from_spec(_ROI_SPEC)
+assert _ROI_SPEC is not None and _ROI_SPEC.loader is not None
+_ROI_SPEC.loader.exec_module(roimod)
+
 RECIPES_DIR = ROOT / "recipes"
 RECIPES_DRAFTS_DIR = RECIPES_DIR / "drafts"
 MODELS_ROOT = Path("/models")
@@ -1650,6 +1657,26 @@ def scaffold_auto(
     return scaffold_recipe(inventory_path, "eugr", name=name, tier=tier)
 
 
+def require_roi_profile(recipe: dict[str, Any]) -> None:
+    """A recipe cannot leave draft until it joins or creates an ROI profile."""
+    roi = str(recipe.get("roi_profile") or "").strip()
+    recipe_id = str(recipe.get("id") or "").strip()
+    if not roi:
+        hint = ""
+        if recipe_id:
+            lines = roimod.suggestion_lines(recipe_id, str(recipe.get("inventory_path") or ""))
+            # First line repeats the requirement. Keep the join / create commands.
+            hint = " " + " ".join(lines[1:])
+        raise RuntimeError(f"roi_profile required before this recipe can leave draft.{hint}")
+    if not roimod.profile_exists(roi):
+        raise RuntimeError(f"unknown roi_profile: {roi}")
+    if recipe_id:
+        tags = roimod.load_tags()
+        if tags.get(recipe_id) != roi:
+            tags[recipe_id] = roi
+            roimod.save_tags(tags)
+
+
 def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
     if lifecycle not in LIFECYCLE_VALID:
         raise RuntimeError(f"invalid lifecycle: {lifecycle}")
@@ -1660,6 +1687,9 @@ def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
     if path.parent == RECIPES_DIR and lifecycle == LIFECYCLE_DRAFT:
         raise RuntimeError("production recipes live in recipes/ — use discard to remove")
     recipe = load_yaml(path)
+    recipe["id"] = profile_id
+    if lifecycle in {LIFECYCLE_TESTING, LIFECYCLE_WORKS, LIFECYCLE_PRODUCTION}:
+        require_roi_profile(recipe)
     recipe["lifecycle"] = lifecycle
     recipe["updated_at"] = datetime.now(timezone.utc).isoformat()
     save_recipe_file(path, recipe)
@@ -1675,9 +1705,11 @@ def promote_recipe(profile_id: str) -> dict[str, Any]:
     if not draft_path.is_file():
         raise RuntimeError(f"no draft recipe: {profile_id}")
     recipe = load_yaml(draft_path)
+    recipe["id"] = profile_id
     lifecycle = infer_lifecycle(recipe, draft_path)
     if lifecycle == LIFECYCLE_DRAFT:
         raise RuntimeError("mark recipe as testing before promote (bench first)")
+    require_roi_profile(recipe)
 
     recipe["lifecycle"] = LIFECYCLE_WORKS
     recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
@@ -1821,12 +1853,51 @@ def _active_recipe_container(engine: str, block: str) -> str | None:
     return str(section["container"])
 
 
+_RECIPE_CONTAINERS_CACHE: dict[str, tuple[float, set[str]]] = {}
+
+
+def _recipe_declared_containers(engine: str, block: str) -> set[str]:
+    """Container names declared on recipes for this engine.
+
+    The active-state file is not the only source: a status poll can delete it
+    in the gap before `docker run`, and the custom name (vllm-fn-orca) would
+    then be invisible.
+    """
+    key = f"{engine}:{block}"
+    now = time.time()
+    cached = _RECIPE_CONTAINERS_CACHE.get(key)
+    if cached and now - cached[0] < 5:
+        return cached[1]
+    found: set[str] = set()
+    for directory in (RECIPES_DIR, RECIPES_DRAFTS_DIR):
+        if not directory.is_dir():
+            continue
+        for path in directory.glob("*.yaml"):
+            try:
+                recipe = load_yaml(path)
+            except (OSError, yaml.YAMLError, ValueError, SystemExit):
+                continue
+            if str(recipe.get("engine") or "") != engine:
+                continue
+            section = recipe.get(block)
+            if isinstance(section, dict) and section.get("container"):
+                found.add(str(section["container"]))
+    _RECIPE_CONTAINERS_CACHE[key] = (now, found)
+    return found
+
+
 def _named_container_running(default: str, engine: str, block: str) -> bool:
     names = _docker_ps_names()
     if default in names:
         return True
     extra = _active_recipe_container(engine, block)
-    return bool(extra and extra in names)
+    if extra and extra in names:
+        return True
+    # State file still names the launch. Don't let some other recipe's
+    # container keep a dead profile looking active.
+    if STATE_FILE.is_file():
+        return False
+    return any(name in names for name in _recipe_declared_containers(engine, block))
 
 
 def flashnext_running() -> bool:
@@ -1863,6 +1934,62 @@ def served_name_from_port(port: int) -> str | None:
     return first.get("id") or first.get("name")
 
 
+def _launch_pid_guards(profile_id: str) -> bool:
+    """True while this profile's switch process is still in `up`.
+
+    The engine container does not exist for a few seconds after write_state().
+    A status poll in that window used to delete inference-active.json, and the
+    load meter then had no started_at (or a clock rewritten at ready time).
+    """
+    pid = read_pid_file(SWITCH_PID_FILE)
+    if not pid or not _pid_alive_not_zombie(pid):
+        return False
+    meta_profile = _read_switch_meta().get("profile")
+    if isinstance(meta_profile, str) and meta_profile.strip():
+        return meta_profile.strip() == str(profile_id)
+    return True
+
+
+def _clear_state_if_launch_done(profile_id: str) -> None:
+    if _launch_pid_guards(profile_id):
+        return
+    clear_state()
+
+
+def _engine_running(engine: str | None) -> bool:
+    if engine == "eugr":
+        return eugr_running()
+    if engine == "llamacpp":
+        return llama_running()
+    if engine == "ds4":
+        return ds4_running()
+    if engine == "sparkinfer":
+        return sparkinfer_running()
+    if engine == "sglang":
+        return sglang_running()
+    if engine == "flashnext":
+        return flashnext_running()
+    if engine == "tensorfold":
+        return tensorfold_running()
+    return False
+
+
+def _pending_launch_is_this_boot(recipe: dict[str, Any], engine_up: bool) -> bool:
+    """True when the launch override is the container that is actually up.
+
+    Matching only the engine published a Keys card over a still-running Orca
+    container, with no state file and therefore no start clock.
+    """
+    if not engine_up:
+        return False
+    engine = str(recipe.get("engine") or "")
+    section = recipe.get(engine)
+    want = section.get("container") if isinstance(section, dict) else None
+    if not want:
+        return True
+    return str(want) in _docker_ps_names()
+
+
 def detect_active_profile() -> dict[str, Any] | None:
     if STATE_FILE.is_file():
         try:
@@ -1871,6 +1998,10 @@ def detect_active_profile() -> dict[str, Any] | None:
             if profile_id:
                 recipe = load_recipe(profile_id)
                 engine = recipe.get("engine")
+                # docker run is minutes after write_state() on a first boot.
+                # Publish the recipe anyway so the live card is not Idle.
+                if not _engine_running(engine) and _launch_pid_guards(str(profile_id)):
+                    return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "eugr" and eugr_running():
                     return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "llamacpp" and llama_running():
@@ -1886,19 +2017,19 @@ def detect_active_profile() -> dict[str, Any] | None:
                 if engine == "tensorfold" and tensorfold_running():
                     return {"profile": profile_id, "recipe": recipe, "state": state}
                 if engine == "eugr" and not eugr_running() and not llama_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
                 elif engine == "llamacpp" and not llama_running() and not eugr_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
                 elif engine == "ds4" and not ds4_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
                 elif engine == "sparkinfer" and not sparkinfer_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
                 elif engine == "sglang" and not sglang_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
                 elif engine == "flashnext" and not flashnext_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
                 elif engine == "tensorfold" and not tensorfold_running():
-                    clear_state()
+                    _clear_state_if_launch_done(str(profile_id))
         except (json.JSONDecodeError, OSError, SystemExit):
             pass
 
@@ -1958,7 +2089,7 @@ def detect_active_profile() -> dict[str, Any] | None:
         try:
             recipe = load_recipe(pending.strip())
             engine = recipe.get("engine")
-            if (
+            engine_up = (
                 (engine == "eugr" and eugr_up)
                 or (engine == "llamacpp" and llama_up)
                 or (engine == "ds4" and ds4_up)
@@ -1966,20 +2097,79 @@ def detect_active_profile() -> dict[str, Any] | None:
                 or (engine == "sglang" and sglang_up)
                 or (engine == "flashnext" and flashnext_up)
                 or (engine == "tensorfold" and tensorfold_up)
-            ):
+            )
+            if _pending_launch_is_this_boot(recipe, engine_up):
                 return {"profile": pending.strip(), "recipe": recipe, "state": None}
         except SystemExit:
             pass
     return None
 
 
+def _kept_started_at(profile_id: str) -> str | None:
+    """Keep the original launch clock when `up` rewrites the state file at ready."""
+    if not STATE_FILE.is_file():
+        return None
+    try:
+        prev = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(prev, dict) or prev.get("profile") != profile_id:
+        return None
+    started = prev.get("started_at")
+    if isinstance(started, str) and loading_elapsed_s(started) is not None:
+        return started
+    return None
+
+
+def _remember_started_at(profile_id: str | None, started_at: str | None) -> None:
+    """Fill a blank launch clock. Never replace one that is already set.
+
+    A status poll can delete inference-active.json in the gap before the
+    container exists. Recreate it while that profile's switch is still running
+    so the next poll still has a start clock.
+    """
+    if not profile_id or not isinstance(started_at, str) or not started_at:
+        return
+    if not STATE_FILE.is_file():
+        if not _launch_pid_guards(str(profile_id)):
+            return
+        try:
+            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            STATE_FILE.write_text(
+                json.dumps(
+                    {"profile": profile_id, "started_at": started_at},
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            return
+        return
+    try:
+        state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(state, dict) or state.get("profile") != profile_id:
+        return
+    current = state.get("started_at")
+    if isinstance(current, str) and current:
+        return
+    state["started_at"] = started_at
+    try:
+        STATE_FILE.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        return
+
+
 def write_state(profile_id: str) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    started_at = _kept_started_at(profile_id) or datetime.now(timezone.utc).isoformat()
     STATE_FILE.write_text(
         json.dumps(
             {
                 "profile": profile_id,
-                "started_at": datetime.now(timezone.utc).isoformat(),
+                "started_at": started_at,
             },
             indent=2,
         )
@@ -2120,6 +2310,12 @@ def cmd_up(
         return cmd_status()
 
     logf = _begin_cli_switch_log(profile_id)
+    # Portal switches already record the child pid. A CLI `up` must too, or the
+    # next status poll treats the launch as finished and deletes started_at.
+    own_switch_pid = os.environ.get(SWITCH_LOG_CAPTURE_ENV) != "1"
+    if own_switch_pid:
+        SWITCH_PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SWITCH_PID_FILE.write_text(str(os.getpid()), encoding="utf-8")
     old_out, old_err = sys.stdout, sys.stderr
     if logf is not None:
         sys.stdout = _TeeIO(old_out, logf)
@@ -2159,9 +2355,31 @@ def cmd_up(
             raise SystemExit(f"unsupported engine: {engine!r}")
 
         write_state(profile_id)
+        if engine_ready(recipe):
+            started = None
+            if STATE_FILE.is_file():
+                try:
+                    raw_state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+                    if isinstance(raw_state, dict):
+                        started = raw_state.get("started_at")
+                except (OSError, json.JSONDecodeError):
+                    started = None
+            maybe_record_ready_load(
+                profile_id,
+                recipe,
+                started if isinstance(started, str) else None,
+                port=int(recipe.get("port") or 0) or None,
+            )
         print(f"Profile {profile_id} started — run: spark-inference status")
         return 0
     finally:
+        if own_switch_pid:
+            try:
+                current = SWITCH_PID_FILE.read_text(encoding="utf-8").strip()
+            except OSError:
+                current = ""
+            if current == str(os.getpid()):
+                SWITCH_PID_FILE.unlink(missing_ok=True)
         if logf is not None:
             sys.stdout = old_out
             sys.stderr = old_err
@@ -2513,6 +2731,39 @@ def infer_model_family(recipe: dict[str, Any]) -> str:
     return slug.replace("-", " ").replace("_", " ").title()
 
 
+def recipe_max_num_seqs(recipe: dict[str, Any] | None) -> int | None:
+    """Scheduler cap declared on the recipe. Known before /metrics exists."""
+    if not isinstance(recipe, dict):
+        return None
+    for block_key in (
+        "sglang",
+        "flashnext",
+        "tensorfold",
+        "eugr",
+        "llamacpp",
+        "ds4",
+        "sparkinfer",
+    ):
+        block = recipe.get(block_key)
+        if not isinstance(block, dict):
+            continue
+        for key in ("max_num_seqs", "max_running", "max_running_requests", "parallel"):
+            if block.get(key) is None:
+                continue
+            try:
+                return int(block[key])
+            except (TypeError, ValueError):
+                continue
+    for key in ("max_num_seqs", "max_running", "max_running_requests"):
+        if recipe.get(key) is None:
+            continue
+        try:
+            return int(recipe[key])
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def recipe_public(
     recipe: dict[str, Any],
     *,
@@ -2533,6 +2784,7 @@ def recipe_public(
         "port": recipe.get("port"),
         "served_name": recipe.get("served_name"),
         "inventory_path": recipe.get("inventory_path") or recipe.get("catalog_id"),
+        "roi_profile": recipe.get("roi_profile") or "",
         "model_family": infer_model_family(recipe),
         "tags": recipe.get("tags") or [],
         "notes": (recipe.get("notes") or "").strip(),
@@ -3320,7 +3572,9 @@ TIER_EXPECT_HINTS: dict[tuple[str, str], tuple[int, int, str]] = {
 DEFAULT_TIER_EXPECT = (60, 300, "First ready can take a few minutes depending on model size.")
 
 LOAD_SAMPLE_MIN_S = 8
-LOAD_SAMPLE_MAX_S = 2400
+# Two hours covers a cold Flash-Next / TensorFold boot (weights, autotune,
+# CUDA graphs). Longer than this is a stale state file, not a load.
+LOAD_SAMPLE_MAX_S = 7200
 LOAD_SAMPLES_KEEP = 8
 _LOAD_TIMES_LOCK = threading.Lock()
 _LOAD_TIMES_CACHE: dict[str, Any] = {"mtime": None, "data": None}
@@ -3507,9 +3761,15 @@ def cookbook_multimodal(recipe: dict[str, Any] | None) -> dict[str, Any] | None:
         return None
     if engine == "flashnext":
         caps = _mm_caps_from_block(fn)
-        if fn.get("ablit") is True or fn.get("vision") is False:
+        # An explicit vision flag wins. Ablit is a language o_proj splice and
+        # does not by itself unload the tower.
+        if fn.get("vision") is False:
             return {"vision": False}
-        if fn.get("ablit") is False or fn.get("vision") is True or "vision" in tags:
+        if fn.get("vision") is True:
+            return {"vision": True, **caps}
+        if fn.get("ablit") is True:
+            return {"vision": False}
+        if fn.get("ablit") is False or "vision" in tags:
             return {"vision": True, **caps}
         return None
     if engine == "tensorfold":
@@ -3583,6 +3843,101 @@ def live_multimodal(recipe: dict[str, Any] | None, *, ready: bool, port: int | N
     return out
 
 
+def recipe_runtime_container(recipe: dict[str, Any] | None) -> str | None:
+    if not recipe:
+        return None
+    engine = str(recipe.get("engine") or "")
+    defaults = {
+        "flashnext": ("flashnext", "vllm-fn-tp1"),
+        "tensorfold": ("tensorfold", "qwen38-flash-next-tf"),
+    }
+    spec = defaults.get(engine)
+    if spec is None:
+        return None
+    block_name, default = spec
+    block = recipe.get(block_name)
+    if isinstance(block, dict) and block.get("container"):
+        return str(block["container"])
+    return default
+
+
+def _normalize_docker_started(raw: str) -> str | None:
+    text = raw.strip()
+    if not text or text.startswith("0001-"):
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    if "." in text:
+        head, rest = text.split(".", 1)
+        tz_at = max(rest.rfind("+"), rest.rfind("-"))
+        if tz_at > 0:
+            frac, tz = rest[:tz_at], rest[tz_at:]
+        else:
+            frac, tz = rest, ""
+        digits = "".join(ch for ch in frac if ch.isdigit())
+        text = f"{head}.{(digits + '000000')[:6]}{tz}"
+    if loading_elapsed_s(text) is None:
+        return None
+    return text
+
+
+_CONTAINER_START_CACHE: dict[str, tuple[float, str | None]] = {}
+
+
+def container_started_at(name: str) -> str | None:
+    now = time.time()
+    cached = _CONTAINER_START_CACHE.get(name)
+    if cached and now - cached[0] < 5:
+        return cached[1]
+    started: str | None = None
+    try:
+        raw = subprocess.check_output(
+            ["docker", "inspect", "-f", "{{.State.StartedAt}}", name],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=2,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raw = ""
+    if raw:
+        started = _normalize_docker_started(raw)
+    _CONTAINER_START_CACHE[name] = (now, started)
+    return started
+
+
+def load_clock(recipe: dict[str, Any] | None, state_started_at: str | None) -> str | None:
+    """Launch clock for the load meter and the ready-time sample.
+
+    `up` rewrites inference-active.json when the launcher returns. If an earlier
+    poll deleted the file, that rewrite stamps "now" and the sample collapses
+    to a few seconds. A running container's StartedAt is the real boot. Use it
+    when the state clock is missing or was clearly rewritten at the end.
+    """
+    if isinstance(state_started_at, str) and loading_elapsed_s(state_started_at) is None:
+        state_started_at = None
+    name = recipe_runtime_container(recipe)
+    container_at: str | None = None
+    if name and name in _docker_ps_names():
+        container_at = container_started_at(name)
+    if not container_at:
+        return state_started_at
+    if not state_started_at:
+        return container_at
+    state_elapsed = loading_elapsed_s(state_started_at)
+    cont_elapsed = loading_elapsed_s(container_at)
+    if state_elapsed is None or cont_elapsed is None:
+        return state_started_at
+    # A clock rewritten at ready is only a few seconds old while the container
+    # has been up for the whole load. A healthy state file is at or before
+    # the container start, so its elapsed is not shorter.
+    if (
+        state_elapsed <= 120
+        and state_elapsed + LOAD_SAMPLE_MIN_S <= cont_elapsed <= LOAD_SAMPLE_MAX_S
+    ):
+        return container_at
+    return state_started_at
+
+
 def maybe_record_ready_load(
     profile_id: str | None,
     recipe: dict[str, Any] | None,
@@ -3593,6 +3948,7 @@ def maybe_record_ready_load(
     """Record wall-clock ready time once per boot; seed SGLang from engine startup_time."""
     if not profile_id:
         return
+    started_at = load_clock(recipe, started_at)
     elapsed = loading_elapsed_s(started_at)
     if elapsed is not None and LOAD_SAMPLE_MIN_S <= elapsed <= LOAD_SAMPLE_MAX_S:
         record_load_time(profile_id, elapsed_s=elapsed, boot_id=str(started_at), source="observed")
@@ -3845,7 +4201,35 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
     ready = engine_ready(recipe) if recipe else False
     port = int(recipe.get("port") or 0) if recipe else None
     switch_job = active_switch_job()
+    # cmd_down() deletes the state file before write_state(). Cover that gap
+    # from the switch job so the recipe card is filled the moment a load starts.
+    if not (active and recipe) and switch_job.get("running"):
+        pending_id = str(switch_job.get("profile") or "").strip()
+        if pending_id:
+            try:
+                pending_recipe = load_recipe(pending_id)
+            except SystemExit:
+                pending_recipe = None
+            if pending_recipe:
+                started = switch_job.get("started_at")
+                active = {
+                    "profile": pending_id,
+                    "recipe": pending_recipe,
+                    "state": {"started_at": started} if isinstance(started, str) else {},
+                }
+                active_id = pending_id
+                recipe = pending_recipe
+                ready = False
+                port = int(pending_recipe.get("port") or 0) or None
     active_started_at = (active.get("state") or {}).get("started_at") if active else None
+    if recipe:
+        clock = load_clock(
+            recipe,
+            active_started_at if isinstance(active_started_at, str) else None,
+        )
+        if clock:
+            active_started_at = clock
+            _remember_started_at(active_id, clock)
     if ready and active_id and recipe:
         maybe_record_ready_load(
             active_id,
@@ -3892,7 +4276,8 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
 
     if active and recipe:
         starting = not ready and (
-            (recipe.get("engine") == "llamacpp" and llama_up)
+            bool(switch_job.get("running") and switch_job.get("profile") == active_id)
+            or (recipe.get("engine") == "llamacpp" and llama_up)
             or (recipe.get("engine") == "eugr" and eugr_up)
             or (recipe.get("engine") == "ds4" and ds4_up)
             or (recipe.get("engine") == "sparkinfer" and sparkinfer_up)
@@ -3907,11 +4292,19 @@ def _build_api_status(*, lite: bool = False) -> dict[str, Any]:
             )
         launch = ctxmod.read_launch_overrides()
         if launch.get("profile") == active_id:
-            active_pub.setdefault("context", {})["effective"] = launch.get("ctx")
-            active_pub.setdefault("context", {})["kv_effective"] = launch.get("kv")
+            ctx_pub = active_pub.setdefault("context", {})
+            if launch.get("ctx") is not None:
+                ctx_pub["effective"] = launch.get("ctx")
+            if launch.get("kv"):
+                ctx_pub["kv_effective"] = launch.get("kv")
+        card_started = active_started_at if isinstance(active_started_at, str) else None
+        if not card_started:
+            raw_started = (active.get("state") or {}).get("started_at")
+            card_started = raw_started if isinstance(raw_started, str) else None
         payload["active"] = {
             **active_pub,
-            "started_at": (active.get("state") or {}).get("started_at"),
+            "started_at": card_started,
+            "max_num_seqs": recipe_max_num_seqs(recipe),
             "ready": ready,
             "starting": starting,
             "api_url": f"http://sparky:{port}/v1" if port else None,
@@ -4206,6 +4599,7 @@ def api_dispatch(
             return 400, {"ok": False, "error": str(exc)}
         pub = recipe_public(recipe)
         pub["lifecycle"] = recipe.get("lifecycle")
+        pub["roi_suggestion"] = roimod.suggest(str(recipe.get("inventory_path") or inv))
         return 201, {"ok": True, "recipe": pub}
 
     if route == "/api/inference/recipes/testing":
@@ -4415,10 +4809,26 @@ def cmd_bench(write_result: bool = False) -> int:
     return 0
 
 
+def _print_scaffolded(recipe: dict[str, Any], label: str = "Scaffolded draft") -> None:
+    print(f"{label} {recipe['id']} -> {draft_recipe_path(recipe['id'])}")
+    for line in roimod.suggestion_lines(str(recipe.get("id") or ""), str(recipe.get("inventory_path") or "")):
+        print(line)
+
+
+def _roi_new_fields(argv: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for arg in argv:
+        if "=" not in arg:
+            raise SystemExit(f"expected key=value, got {arg}")
+        key, value = arg.split("=", 1)
+        fields[key.strip().replace("-", "_")] = value.strip()
+    return fields
+
+
 def cmd_recipe(argv: list[str]) -> int:
     if len(argv) < 3:
         raise SystemExit(
-            "usage: spark-inference recipe {list|scaffold|testing|promote|discard} ..."
+            "usage: spark-inference recipe {list|scaffold|testing|promote|discard|roi|roi-new} ..."
         )
     sub = argv[2]
     if sub == "list":
@@ -4444,7 +4854,7 @@ def cmd_recipe(argv: list[str]) -> int:
                 recipe = scaffold_recipe(argv[3], argv[4])
         else:
             recipe = scaffold_auto(argv[3])
-        print(f"Scaffolded draft {recipe['id']} -> {draft_recipe_path(recipe['id'])}")
+        _print_scaffolded(recipe)
         return 0
     if sub == "scaffold-dflash":
         if len(argv) < 4:
@@ -4452,10 +4862,7 @@ def cmd_recipe(argv: list[str]) -> int:
                 "usage: spark-inference recipe scaffold-dflash <lab/slug>"
             )
         recipe = scaffold_dflash_recipe(argv[3])
-        print(
-            f"Scaffolded DFlash draft {recipe['id']} -> "
-            f"{draft_recipe_path(recipe['id'])}"
-        )
+        _print_scaffolded(recipe, "Scaffolded DFlash draft")
         return 0
     if sub == "scaffold-dspark":
         if len(argv) < 4:
@@ -4463,10 +4870,7 @@ def cmd_recipe(argv: list[str]) -> int:
                 "usage: spark-inference recipe scaffold-dspark <lab/slug>"
             )
         recipe = scaffold_dspark_recipe(argv[3])
-        print(
-            f"Scaffolded DSpark draft {recipe['id']} -> "
-            f"{draft_recipe_path(recipe['id'])}"
-        )
+        _print_scaffolded(recipe, "Scaffolded DSpark draft")
         return 0
     if sub == "scaffold-dflash2":
         if len(argv) < 4:
@@ -4474,10 +4878,7 @@ def cmd_recipe(argv: list[str]) -> int:
                 "usage: spark-inference recipe scaffold-dflash2 <lab/slug>"
             )
         recipe = scaffold_dflash2_recipe(argv[3])
-        print(
-            f"Scaffolded DFlash2 draft {recipe['id']} -> "
-            f"{draft_recipe_path(recipe['id'])}"
-        )
+        _print_scaffolded(recipe, "Scaffolded DFlash2 draft")
         return 0
     if sub == "testing":
         if len(argv) < 4:
@@ -4497,6 +4898,28 @@ def cmd_recipe(argv: list[str]) -> int:
         discard_recipe(argv[3])
         print(f"Discarded draft: {argv[3]}")
         return 0
+    if sub == "roi":
+        if len(argv) < 5:
+            raise SystemExit("usage: spark-inference recipe roi <recipe-id> <roi-profile-id>")
+        try:
+            roimod.assign_recipe(argv[3], argv[4])
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f"Tagged {argv[3]} as {argv[4]}")
+        return 0
+    if sub == "roi-new":
+        if len(argv) < 5:
+            raise SystemExit(
+                "usage: spark-inference recipe roi-new <recipe-id> "
+                "id= name= family= version= params= provider= model= in= out= [variant=] [proxy=true]"
+            )
+        try:
+            prof = roimod.create_profile(_roi_new_fields(argv[4:]))
+            roimod.assign_recipe(argv[3], prof["id"])
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f"Created {prof['id']} and tagged {argv[3]}")
+        return 0
     raise SystemExit(f"unknown recipe subcommand: {sub}")
 
 
@@ -4510,7 +4933,9 @@ recipe scaffold <lab/slug> [llamacpp|eugr] — Model Lab draft (auto-detect if e
 recipe scaffold-dflash <lab/slug> — DFlash sidecar + target eugr draft
 recipe scaffold-dspark <lab/slug> — DSpark sidecar + target eugr draft
 recipe scaffold-dflash2 <lab/slug> — DFlash2 sidecar + PR 52816 overlay
-recipe testing|works|promote|discard <profile> — lifecycle (draft → testing → works)"""
+recipe testing|works|promote|discard <profile> — lifecycle (draft → testing → works)
+recipe roi <recipe-id> <roi-profile-id> — tag a recipe with an existing ROI profile
+recipe roi-new <recipe-id> id= name= family= version= params= provider= model= in= out= — create one and tag"""
     )
 
 

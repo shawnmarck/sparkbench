@@ -1,6 +1,7 @@
 id: qwen-qwen3-8-27b-dflash2-eugr
 name: qwen3.8-27b DFlash2 (eugr)
 inventory_path: qwen/qwen3.8-27b
+roi_profile: qwen3.8-27b
 engine: eugr
 tier: heavy
 lifecycle: works

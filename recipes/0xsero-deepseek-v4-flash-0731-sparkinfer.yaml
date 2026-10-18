@@ -1,6 +1,7 @@
 id: 0xsero-deepseek-v4-flash-0731-sparkinfer
 name: deepseek-v4-flash-0731 (SparkInfer · EXL3 · DSpark)
 inventory_path: 0xsero/deepseek-v4-flash-0731-spark
+roi_profile: deepseek-v4-flash
 engine: sparkinfer
 tier: heavy
 lifecycle: works

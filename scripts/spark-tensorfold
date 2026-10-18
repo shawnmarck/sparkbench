@@ -156,10 +156,10 @@ cmd_up() {
     ./start.sh
   ) >>"${LOG_FILE}" 2>&1
   echo "started $(date -u +%FT%TZ) port=${PORT} ctx=${CTX} kv=${KV_DTYPE} vision=${VISION}" >>"${LOG_FILE}"
-  python3 - "${SPARK_TENSORFOLD_RECIPE:-}" "${RUN_DIR}/inference-active.json" <<'PY' || true
-import json, sys
+  python3 - "${SPARK_TENSORFOLD_RECIPE:-}" "${RUN_DIR}/inference-active.json" "${CONTAINER_NAME}" <<'PY' || true
+import json, subprocess, sys
 from pathlib import Path
-recipe_path, state_path = sys.argv[1], Path(sys.argv[2])
+recipe_path, state_path, container = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
 profile = None
 if recipe_path:
     try:
@@ -177,6 +177,29 @@ if profile:
     state["profile"] = profile
 elif not state.get("profile"):
     sys.exit(0)
+# Keep the CLI launch clock. If a status poll deleted the file before the
+# container existed, recover docker StartedAt instead of stamping "now".
+if not isinstance(state.get("started_at"), str) or not state.get("started_at"):
+    raw = ""
+    try:
+        raw = subprocess.check_output(
+            ["docker", "inspect", "-f", "{{.State.StartedAt}}", container],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        raw = ""
+    if raw and not raw.startswith("0001-"):
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        if "." in raw:
+            head, rest = raw.split(".", 1)
+            tz_at = max(rest.rfind("+"), rest.rfind("-"))
+            frac, tz = (rest[:tz_at], rest[tz_at:]) if tz_at > 0 else (rest, "")
+            digits = "".join(ch for ch in frac if ch.isdigit())
+            raw = f"{head}.{(digits + '000000')[:6]}{tz}"
+        state["started_at"] = raw
 state_path.parent.mkdir(parents=True, exist_ok=True)
 state_path.write_text(json.dumps(state, indent=2) + "\n")
 PY

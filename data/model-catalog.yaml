@@ -943,3 +943,29 @@ models:
     subpath: nvfp4
     engine: vllm
     hf_repo: Mia-AiLab/Qwen3.8-Flash-Next-NVFP4
+- id: azampatti/qwen3.8-flash-next-int4-autoround
+  lab: azampatti
+  name: Qwen3.8-Flash-Next INT4-AR
+  slug: qwen3.8-flash-next-int4-autoround
+  hf_repo: azampatti/Qwen3.8-Flash-Next-125B-A5B-INT4-AutoRound
+  param_b: 125
+  param_active_b: 4.8
+  architecture: moe
+  capabilities:
+  - lab
+  - tensorfold
+  - moe
+  - mtp
+  - vision
+  - int4
+  - agentic
+  why_downloaded: >-
+    Qwen3.8-Flash-Next on one Spark via azampatti INT4-AutoRound
+    (~122 GiB, top-5 experts, ~4.8B active) on MiaAI TensorFold.
+    Native 262k, FP8 KV, vision and MTP drafts on, PARALLEL 8.
+    PBM 50.2/26.6/15.4 tok/s. This is the Flash-Next ladder row.
+  variants:
+  - format: int4
+    subpath: hf
+    engine: tensorfold
+    hf_repo: azampatti/Qwen3.8-Flash-Next-125B-A5B-INT4-AutoRound

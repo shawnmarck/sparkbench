@@ -121,9 +121,10 @@ models:
     aa_url: https://artificialanalysis.ai/models/qwen3-8-flash-next
     aliases:
       - mia-ailab/qwen3.8-flash-next
+      - azampatti/qwen3.8-flash-next-int4-autoround
     # Qwen's card publishes SWE-bench Pro, not SWE-Verified. TB 2.1 is NVIDIA's
-    # eval of the Flash-Next NVFP4 checkpoint (official NVIDIA pack does not fit
-    # one Spark; Mia NVFP4 is the pack we serve).
+    # eval of the datacenter Flash-Next NVFP4 checkpoint. Mia NVFP4 and
+    # azampatti INT4-AR are Spark packs, not that TB column.
     terminal_bench:
       score: 82.9
       unit: percent

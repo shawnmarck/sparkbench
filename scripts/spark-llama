@@ -64,6 +64,9 @@ case "${cmd}" in
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx qwen38-sglang; then
       echo "WARNING: SGLang is running — stop with: spark engine sglang down"
     fi
+    # Same eviction as spark-eugr up. Direct llama up must not stack on these containers.
+    /opt/spark/scripts/spark-flash-next down 2>/dev/null || true
+    /opt/spark/scripts/spark-tensorfold down 2>/dev/null || true
     mkdir -p "${RUN_DIR}" "${LOG_DIR}"
     if [[ -f "${LOG_FILE}" ]]; then
       sz=$(stat -c%s "${LOG_FILE}" 2>/dev/null || echo 0)

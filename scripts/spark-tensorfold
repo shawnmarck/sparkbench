@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
-# MiaAI Qwen3.8-Flash-Next on TensorFold Zig (INT4-AutoRound) — one DGX Spark.
-# Kit lives next to the weights (not in git). Engine id: tensorfold.
+# MiaAI Qwen3.8-Flash-Next on TensorFold Zig — one DGX Spark.
+# The kit (start.sh) is host-local and is not in git. Engine id: tensorfold.
 set -euo pipefail
 
 ROOT="${SPARK_ROOT:-/opt/spark}"
+for _host_env in /etc/spark/host.env "${ROOT}/host.env"; do
+  if [[ -f "${_host_env}" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "${_host_env}"
+    set +a
+    break
+  fi
+done
+unset _host_env
 LAUNCHER="${SPARK_TENSORFOLD_LAUNCHER:-/models/azampatti/qwen3.8-flash-next-int4-autoround/kit}"
 HF_HOME_DEFAULT="/models/azampatti/qwen3.8-flash-next-int4-autoround/hf"
 RUN_DIR="${ROOT}/run"
@@ -12,18 +22,14 @@ LOG_FILE="${LOG_DIR}/tensorfold.log"
 PID_FILE="${RUN_DIR}/tensorfold.pid"
 PORT="${TENSORFOLD_PORT:-8000}"
 CONTAINER_NAME="${TENSORFOLD_CONTAINER:-qwen38-flash-next-tf}"
-KIT_REPO="https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark-TensorFold.git"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-ensure_kit() {
+require_kit() {
   if [[ -x "${LAUNCHER}/start.sh" && -x "${LAUNCHER}/stop.sh" ]]; then
     return 0
   fi
-  mkdir -p "$(dirname "${LAUNCHER}")"
-  echo "Cloning Mia TensorFold kit into ${LAUNCHER}..."
-  git clone --depth 1 "${KIT_REPO}" "${LAUNCHER}"
-  chmod +x "${LAUNCHER}"/*.sh
+  die "TensorFold kit not installed at ${LAUNCHER}. Set tensorfold.launcher in the recipe or SPARK_TENSORFOLD_LAUNCHER in host.env. The kit is host-local and is not cloned automatically."
 }
 
 load_recipe() {
@@ -43,32 +49,36 @@ load_recipe() {
   [[ -n "${recipe}" && -f "${recipe}" ]] || return 0
   eval "$(
     python3 - "${recipe}" <<'PY'
-import sys, yaml
+import shlex, sys, yaml
 recipe = yaml.safe_load(open(sys.argv[1])) or {}
 tf = recipe.get("tensorfold") or {}
 ctx = (recipe.get("context") or {}).get("default") or 262144
 kv = (recipe.get("context") or {}).get("kv_default") or "fp8"
+
+def emit(key, value):
+    print(f"{key}={shlex.quote(str(value))}")
+
 print(f"PORT={int(recipe.get('port') or 8000)}")
 print(f"CTX={int(ctx)}")
-print(f"SERVED_NAME={recipe.get('served_name') or 'Qwen3.8-Flash-Next'}")
-print(f"HF_HOME_DIR={tf.get('hf_home') or '/models/azampatti/qwen3.8-flash-next-int4-autoround/hf'}")
-print(f"KV_DTYPE={kv}")
+emit("SERVED_NAME", recipe.get("served_name") or "Qwen3.8-Flash-Next")
+emit("HF_HOME_DIR", tf.get("hf_home") or "/models/azampatti/qwen3.8-flash-next-int4-autoround/hf")
+emit("KV_DTYPE", kv)
 print(f"PARALLEL={int(tf.get('parallel') or 8)}")
 print(f"VISION={1 if tf.get('vision', True) else 0}")
 print(f"DRAFTS={1 if tf.get('drafts', True) else 0}")
 print(f"THINKING={1 if tf.get('thinking', True) else 0}")
 if tf.get("checkpoint"):
-    print(f"CHECKPOINT={tf['checkpoint']}")
+    emit("CHECKPOINT", tf["checkpoint"])
 if tf.get("model_id"):
-    print(f"MODEL_ID={tf['model_id']}")
+    emit("MODEL_ID", tf["model_id"])
 if tf.get("model_revision"):
-    print(f"MODEL_REVISION={tf['model_revision']}")
+    emit("MODEL_REVISION", tf["model_revision"])
 if tf.get("prepare") is not None:
-    print(f"PREPARE={tf['prepare']}")
+    emit("PREPARE", tf["prepare"])
 if tf.get("launcher"):
-    print(f"LAUNCHER={tf['launcher']}")
+    emit("LAUNCHER", tf["launcher"])
 if tf.get("container"):
-    print(f"CONTAINER_NAME={tf['container']}")
+    emit("CONTAINER_NAME", tf["container"])
 PY
   )"
 }
@@ -78,12 +88,12 @@ load_launch_overrides() {
   [[ -f "${ov}" ]] || return 0
   eval "$(
     python3 - "${ov}" <<'PY'
-import json, sys
+import json, shlex, sys
 d = json.load(open(sys.argv[1]))
 if d.get("ctx"):
     print(f"CTX={int(d['ctx'])}")
 if d.get("kv"):
-    print(f"KV_DTYPE={d['kv']}")
+    print(f"KV_DTYPE={shlex.quote(str(d['kv']))}")
 PY
   )"
 }
@@ -111,10 +121,9 @@ cmd_down() {
 }
 
 cmd_up() {
-  ensure_kit
   load_recipe
   load_launch_overrides
-  [[ -x "${LAUNCHER}/start.sh" ]] || die "Missing launcher ${LAUNCHER}/start.sh"
+  require_kit
   mkdir -p "${RUN_DIR}" "${LOG_DIR}" "${HF_HOME_DIR}"
   stop_others
   cmd_down >/dev/null || true
@@ -202,14 +211,13 @@ usage() {
   cat <<USAGE
 Usage: spark engine tensorfold {up|down|status|logs}
 
-MiaAI Qwen3.8-Flash-Next TensorFold Zig + INT4-AutoRound (:${PORT}/v1)
+MiaAI Qwen3.8-Flash-Next TensorFold Zig (:${PORT}/v1)
 Launcher: ${LAUNCHER}
 USAGE
 }
 
 cmd="${1:-}"
 [[ -n "${cmd}" ]] || { usage; exit 1; }
-ensure_kit
 load_recipe
 case "${cmd}" in
   up) cmd_up ;;

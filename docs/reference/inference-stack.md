@@ -16,25 +16,41 @@ Agents are not locked to one model. They wait out switch time when the requested
 
 ## Architecture
 
-```text
-OpenCode · Grok · Hermes · Open WebUI · curl
-        │
-        ▼
-  Gateway :9000/v1
-  (aliases, sparky, activity log)
-        │
-        ▼
-  spark inference API :8767  →  nginx /api/inference/*
-        │
-        ▼
-  One active profile
-  eugr :8000  ·  llama.cpp :8081  ·  ds4 :8000  ·  SparkInfer :8000
-        │
-        ▼
-  Portal Inference + System activity
+```mermaid
+flowchart TB
+  clients["OpenCode, Grok, Hermes, Open WebUI, curl"]
+  gw["Gateway :9000/v1"]
+  api["spark inference API :8767"]
+  subgraph slot["One GPU slot"]
+    direction LR
+    eugr["eugr container<br/>vllm_node :8000"]
+    llama["llama.cpp host<br/>:8081"]
+    ds4["ds4 host<br/>:8000"]
+    si["SparkInfer container<br/>:8000"]
+    sg["SGLang container<br/>qwen38-sglang :8000"]
+    fn["Flash-Next container<br/>vllm-fn-tp1 :8000"]
+    tf["TensorFold container<br/>qwen38-flash-next-tf :8000"]
+  end
+  clients --> gw --> api --> slot
 ```
 
-eugr, ds4, and SparkInfer share port 8000. Never run two GPU engines.
+eugr has always been a container (`vendor/spark-vllm-docker`, usually `vllm_node`). llama.cpp and ds4 are host processes. SparkInfer, SGLang, Flash-Next, and TensorFold are also containers. Everything except llama.cpp binds `:8000`. Never run two GPU engines.
+
+`spark inference up` stops every engine before the next start. `spark engine llama up` stops Flash-Next and TensorFold the same way. Do not start a second engine by hand while one of those containers is up.
+
+## Where the process runs
+
+| Engine | Process | Container | Port |
+|--------|---------|-----------|------|
+| eugr | vLLM in `spark-vllm-docker` | `vllm_node` | 8000 |
+| llama.cpp | host `llama-server` | none | 8081 |
+| ds4 | host `ds4-server` | none | 8000 |
+| sparkinfer | patched vLLM | `deepseek-v4-flash-spark` | 8000 |
+| sglang | `lmsysorg/sglang` pin | `qwen38-sglang` | 8000 |
+| flashnext | `vllm/vllm-openai:qwen38-flash-next` | `vllm-fn-tp1` | 8000 |
+| tensorfold | `tensorfold-native serve` in a local Zig image | `qwen38-flash-next-tf` | 8000 |
+
+A recipe may set `tensorfold.container` or `flashnext.container`. The control plane treats the active recipe's name, and the default name above, as "that engine is up."
 
 ## Recipes
 
@@ -45,7 +61,7 @@ id: opencode-qwen36-250k
 name: Qwen3.6-35B-A3B 250k NVFP4
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
-engine: eugr                    # eugr | llamacpp | ds4 | sparkinfer
+engine: eugr                    # eugr | llamacpp | ds4 | sparkinfer | sglang | flashnext | tensorfold
 tier: heavy
 eugr_recipe: /opt/spark/services/eugr-qwen36-local.yaml
 served_name: qwen3.6-35b-a3b-nvfp4
@@ -58,7 +74,7 @@ context:
 
 Public display names drop client branding. Profile ids keep the `opencode-` prefix so existing `up` commands stay stable.
 
-Scaffold: `spark recipe scaffold <lab/slug> <engine>`. Extend the router in `spark-inference.py` plus catalog `engine` / `capabilities`. Hand-write YAML only for MoE, multimodal, DFlash, ds4, or MTP.
+Scaffold: `spark recipe scaffold <lab/slug> <engine>`. Extend the router in `spark-inference.py` plus catalog `engine` / `capabilities`. Hand-write YAML only for MoE, multimodal, DFlash, ds4, MTP, SGLang, Flash-Next, or TensorFold.
 
 ### ds4
 
@@ -88,6 +104,40 @@ port: 8000
 ```
 
 Launch needs ≥114 GiB free. Default 384k / 1 seq / DSpark K5. Gateway ids: `sparky` (think off), `sparky-think`, plus `deepseek-v4-flash-0731` / `-think`. Smoke: `docs/runbooks/smoke-sparkinfer.md`.
+
+### SGLang
+
+Qwen3.8-27B DFlash2. Container `qwen38-sglang`, image pin on the recipe (`sglang.image`). Port 8000. Profiles: `radixark-qwen3-8-27b-dflash2-sglang` and the text-only twin.
+
+### Flash-Next
+
+Mia vLLM pack for Qwen3.8-Flash-Next NVFP4. Container `vllm-fn-tp1`. The kit under the model tree runs `docker run`; Spark does not shell out to vLLM on the host. Profile: `mia-ailab-qwen3.8-flash-next-vllm`.
+
+### TensorFold
+
+Mia Zig engine (`tensorfold-native`), not vLLM. Both TensorFold recipes share container `qwen38-flash-next-tf`, so the FP4 card and the INT4-AR card cannot run together. Spark sets `PORT=8000`. The kit's own default is 8888.
+
+```mermaid
+sequenceDiagram
+  participant CLI as spark inference up
+  participant TF as scripts/spark-tensorfold
+  participant Kit as host-local start.sh
+  participant Docker as qwen38-flash-next-tf
+  CLI->>TF: stop every other engine, then up
+  TF->>Kit: PORT=8000 and the recipe env
+  Kit->>Docker: docker run --gpus all --network host
+  Note over Docker: tensorfold-native serve<br/>weights mounted read-only
+  Docker-->>CLI: /health, then one smoke completion
+```
+
+The kit is not in git. `spark engine tensorfold up` fails with "kit not installed" if `start.sh` is missing. It does not clone. Set one of:
+
+| Recipe | Kit |
+|--------|-----|
+| `azampatti-qwen3.8-flash-next-int4-autoround-tensorfold` | `tensorfold.launcher` → `/models/azampatti/qwen3.8-flash-next-int4-autoround/kit` |
+| `nvidia-qwen3.8-flash-next-fp4-local-tensorfold` | `SPARK_TENSORFOLD_LAUNCHER` in gitignored `host.env` |
+
+`prepare: "0"` on the FP4 recipe skips the kit's image build and weight download. Weights are the hardlink tree under `tensorfold.hf_home`, mounted read-only at `/root/.cache/huggingface`. The image tag is local (`tensorfold-qwen38:zig-…`), not a registry pull.
 
 ## CLI
 
@@ -148,6 +198,6 @@ MTP, DFlash, DSpark, Eagle live on the recipe (`speculative:` / `mtp:`), not in 
 
 ## Portal
 
-Inference tab: active profile, switch, logs, engine filter (vLLM / llama.cpp / ds4 / SparkInfer), eugr upgrade banner. System tab: GPU + client activity. Benchmaster tab: overnight queue.
+Inference tab: active profile, switch, logs, engine filter (vLLM / llama.cpp / ds4 / SparkInfer / SGLang / Flash-Next / TensorFold), eugr upgrade banner. System tab: GPU + client activity. Benchmaster tab: overnight queue.
 
 Open WebUI (`:3000`) can point at the gateway or at an engine directly. Gateway is the one URL that survives a profile switch.

@@ -23,7 +23,7 @@ spark <group> <subcommand> [args...]
 | `recipe` | Model Lab lifecycle |
 | `models` | Inventory, verify, fetch, golden workflow |
 | `shelf` | Local disk ↔ NAS |
-| `engine` | Low-level `eugr`, `llama`, or `ds4` |
+| `engine` | Low-level `eugr`, `llama`, `ds4`, `sparkinfer`, `sglang`, `flashnext`, or `tensorfold` |
 | `gateway` | `:9000/v1` aliases and serve |
 | `bench` | Per-recipe benchmark history |
 | `benchmaster` | Overnight perf / intel queue |
@@ -200,6 +200,41 @@ spark engine sparkinfer logs
 ```
 
 Pin: `data/sparkinfer-mia.yaml`. Profile: `0xsero-deepseek-v4-flash-0731-sparkinfer`.
+
+## `spark engine sglang`
+
+SGLang container `qwen38-sglang` on **8000**. Mutually exclusive with the other GPU engines.
+
+```bash
+spark engine sglang up
+spark engine sglang status
+spark engine sglang down
+spark engine sglang logs
+```
+
+## `spark engine flashnext`
+
+Mia vLLM container `vllm-fn-tp1` on **8000**. Profile: `mia-ailab-qwen3.8-flash-next-vllm`.
+
+```bash
+spark engine flashnext up
+spark engine flashnext status
+spark engine flashnext down
+spark engine flashnext logs
+```
+
+## `spark engine tensorfold`
+
+Mia Zig `tensorfold-native` in container `qwen38-flash-next-tf` on **8000** (the kit's own default is 8888). Both TensorFold recipes share that container name. The kit is host-local: `tensorfold.launcher` on the recipe, or `SPARK_TENSORFOLD_LAUNCHER` in `host.env`. `up` does not clone a missing kit.
+
+```bash
+spark engine tensorfold up
+spark engine tensorfold status
+spark engine tensorfold down
+spark engine tensorfold logs
+```
+
+Stack detail: [inference-stack.md](inference-stack.md).
 
 ## Migration (old → new)
 

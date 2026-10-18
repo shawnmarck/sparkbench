@@ -1789,7 +1789,7 @@ def sglang_running() -> bool:
     return any(name.strip() == "qwen38-sglang" for name in out.splitlines())
 
 
-def flashnext_running() -> bool:
+def _docker_ps_names() -> set[str]:
     try:
         out = subprocess.check_output(
             ["docker", "ps", "--format", "{{.Names}}"],
@@ -1797,20 +1797,44 @@ def flashnext_running() -> bool:
             stderr=subprocess.DEVNULL,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return False
-    return any(name.strip() == "vllm-fn-tp1" for name in out.splitlines())
+        return set()
+    return {name.strip() for name in out.splitlines() if name.strip()}
+
+
+def _active_recipe_container(engine: str, block: str) -> str | None:
+    """Container name from the active recipe, when that recipe uses this engine."""
+    if not STATE_FILE.is_file():
+        return None
+    try:
+        state = json.loads(STATE_FILE.read_text())
+        profile_id = state.get("profile")
+        if not profile_id:
+            return None
+        recipe = load_recipe(str(profile_id))
+    except (OSError, json.JSONDecodeError, SystemExit, ValueError):
+        return None
+    if str(recipe.get("engine") or "") != engine:
+        return None
+    section = recipe.get(block)
+    if not isinstance(section, dict) or not section.get("container"):
+        return None
+    return str(section["container"])
+
+
+def _named_container_running(default: str, engine: str, block: str) -> bool:
+    names = _docker_ps_names()
+    if default in names:
+        return True
+    extra = _active_recipe_container(engine, block)
+    return bool(extra and extra in names)
+
+
+def flashnext_running() -> bool:
+    return _named_container_running("vllm-fn-tp1", "flashnext", "flashnext")
 
 
 def tensorfold_running() -> bool:
-    try:
-        out = subprocess.check_output(
-            ["docker", "ps", "--format", "{{.Names}}"],
-            text=True,
-            stderr=subprocess.DEVNULL,
-        )
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return False
-    return any(name.strip() == "qwen38-flash-next-tf" for name in out.splitlines())
+    return _named_container_running("qwen38-flash-next-tf", "tensorfold", "tensorfold")
 
 
 def llama_running() -> bool:

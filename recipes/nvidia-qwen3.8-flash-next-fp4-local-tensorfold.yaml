@@ -16,7 +16,6 @@ tags:
 speculative:
   method: mtp
 tensorfold:
-  launcher: /home/techno/tensorfold-flash-next
   hf_home: /models/nvidia/qwen3.8-flash-next-fp4-local/tf-hf
   container: qwen38-flash-next-tf
   checkpoint: nvfp4
@@ -35,8 +34,9 @@ notes: >-
   of them runs. Weights are the copy already under
   /models/nvidia/qwen3.8-flash-next-fp4-local/hf, hardlinked into tf-hf.
   prepare is 0 so start does not download a second copy.
+  The Mia kit is host-local (SPARK_TENSORFOLD_LAUNCHER in host.env).
   Not the eugr FP4 card and not azampatti INT4-AutoRound.
-  No PBM yet. Do not alias onto those catalog rows.
+  PBM 45.4/22.6/13.8 at 4k/50k/100k. Do not alias onto those catalog rows.
 generation:
   default_max_tokens: 32768
   max_tokens: 65536

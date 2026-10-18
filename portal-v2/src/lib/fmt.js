@@ -64,6 +64,10 @@ export function stackLabel(engine) {
   if (engine === 'eugr') return 'eugr / vLLM'
   if (engine === 'ds4') return 'ds4 / vLLM'
   if (engine === 'llamacpp') return 'llama.cpp'
+  if (engine === 'sparkinfer') return 'SparkInfer'
+  if (engine === 'sglang') return 'SGLang'
+  if (engine === 'flashnext') return 'Flash-Next'
+  if (engine === 'tensorfold') return 'TensorFold'
   return engine || '—'
 }
 

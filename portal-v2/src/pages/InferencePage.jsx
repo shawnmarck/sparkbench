@@ -29,7 +29,8 @@ const COLS = [
 function kvOptionsForEngine(engine) {
   if (engine === 'eugr') return ['auto', 'fp8']
   if (engine === 'llamacpp') return ['auto', 'q8_0', 'q4_0', 'f16']
-  if (engine === 'ds4') return ['auto']
+  if (engine === 'ds4' || engine === 'sparkinfer') return ['auto']
+  if (engine === 'sglang' || engine === 'flashnext' || engine === 'tensorfold') return ['auto', 'fp8']
   return ['auto', 'fp8', 'q8_0', 'q4_0']
 }
 

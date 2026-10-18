@@ -100,6 +100,7 @@ button { font: inherit; }
   padding-left: .15rem;
   padding-right: .15rem;
 }
+.pill.rx b.hot { color: var(--seq); }
 .dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: currentColor; box-shadow: 0 0 8px currentColor;

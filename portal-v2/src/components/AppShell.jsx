@@ -37,6 +37,12 @@ export function AppShell({ live, children }) {
   const gpu = live.gpu
   const tone = servingTone(active, ready, loading)
   const eta = loading?.expect?.eta_s
+  const downloading = Boolean(gpu?.download?.active)
+  const rx = gpu?.network?.rx_mbps_sum ?? gpu?.net_rx_mbps_sum
+  const tx = gpu?.network?.tx_mbps_sum ?? gpu?.net_tx_mbps_sum
+  const netTitle = downloading && gpu?.download?.repo
+    ? `Receiving ${gpu.download.repo} on Wi-Fi plus Ethernet`
+    : 'Receive and transmit, Wi-Fi plus Ethernet'
   const loadHint = loading && !ready
     ? (loading.expect?.overtime
       ? 'still loading'
@@ -65,16 +71,11 @@ export function AppShell({ live, children }) {
           <span className="pill" title="GPU and CPU package temps">
             <b>{gpu?.gpu_temp_c ?? '—'}</b>° · <b>{gpu?.cpu_temp_c ?? '—'}</b>°
           </span>
-          {gpu?.download?.active ? (
-            <span
-              className="pill rx"
-              title={gpu.download.repo
-                ? `Receiving ${gpu.download.repo} on Wi-Fi plus Ethernet`
-                : 'Receive rate, Wi-Fi plus Ethernet'}
-            >
-              ↓ <b>{gpu.network?.rx_mbps_sum ?? gpu.net_rx_mbps_sum ?? '—'}</b> Mb/s
-            </span>
-          ) : null}
+          <span className="pill rx" title={netTitle}>
+            ↓ <b className={downloading ? 'hot' : undefined}>{rx ?? '—'}</b>
+            {' ↑ '}
+            <b>{tx ?? '—'}</b> Mb/s
+          </span>
           {live.error ? <span className="pill down">API {live.error}</span> : null}
         </div>
         <ThemePicker />

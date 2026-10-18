@@ -376,12 +376,15 @@ models:
     spark_status: works
     note: bench-v2 avg 25.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
   nvidia/qwen3.8-flash-next-fp4-local:
-    spark_status: testing
-    updated_at: '2026-10-16T03:39:26+00:00'
-    engine: eugr
-    tok_s_engine: eugr
-    tok_s_profile: nvidia-qwen3.8-flash-next-fp4-local-eugr
-    note: "PBM 4k @ 42.5 / 50k @ 19.8 / 100k @ 15.4 tok/s \u2014 perfbench-metrics \u2014 profile=nvidia-qwen3.8-flash-next-fp4-local-eugr \u2014 testing until bench v2"
+    spark_status: works
+    updated_at: '2026-10-18T05:11:02.779976+00:00'
+    engine: tensorfold
+    tok_s: 45.4
+    tok_s_engine: tensorfold
+    tok_s_profile: nvidia-qwen3.8-flash-next-fp4-local-tensorfold
+    note: "PBM 4k @ 45.4 / 50k @ 22.6 / 100k @ 13.8 tok/s \u2014 perfbench-metrics\
+      \ \u2014 native 262k TensorFold FP4 QAD vision on, PARALLEL 5 \u2014\
+      \ profile=nvidia-qwen3.8-flash-next-fp4-local-tensorfold"
   mia-ailab/qwen3.8-flash-next:
     spark_status: works
     updated_at: '2026-09-11T16:59:13.587479+00:00'

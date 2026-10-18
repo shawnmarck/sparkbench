@@ -1,14 +1,29 @@
 bench_standard: '2.0'
 # Optional: inventory path currently serving on Sparky (not shown on the public site).
-currently_testing: ornith-ai/ornith-1.5-35b-a3b
+# Cleared 2026-10-18. The public pick is INT4-AR; this is not a live-card flag.
+currently_testing:
 leaderboard_exclude:
 - microsoft/phi-4
 - nousresearch/hermes-4-14b
 - deepseek-ai/deepseek-r1-distill-qwen-32b
-# Optional extra hides (on top of auto-fold). sparkbench.dev Full ladder
-# already tucks (1) recipes without a 50k PBM fill and (2) weaker packs of
-# the same model family behind All recipes.
-leaderboard_more: []
+# Extra hides on top of auto-fold. These stay under All recipes.
+# Summer finetunes and the previous generation, off the October full ladder.
+leaderboard_more:
+- qwen/qwen-agentworld-35b-a3b
+- empero-ai/qwythos-9b-claude-mythos-5-1m
+- aeon-7/qwen3.6-27b-aeon-ultimate-uncensored
+- aeon-7/qwen3.6-27b-aeon-ultimate-uncensored-text-nvfp4-mtp-xs
+- sakamakismile/thinkingcap-qwen3.6-27b
+- protolabsai/thinkingcap-qwen3.6-27b
+- yuxinlu1/gemma-4-12b-opus-reasoning
+- yuxinlu1/gemma-4-12b-agentic-v2
+- yuxinlu1/gemma-4-12b-coder-fable5-composer2.5-v1
+- unsloth/qwen3-coder-30b-a3b-instruct
+- stepfun-ai/step-3.7-flash
+- inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb
+- rdtand/qwen3.6-27b
+- kaitchup/qwen3.6-27b
+- unsloth/qwen3.6-27b
 # Stay on the ladder, skip the Speed vs published-agents scatter.
 # Gemma 4 26B SWE/TB are Qwen-cited (17.4 / 34.2) and stretch the blend axis.
 # Coder-30B's 51.6 is a discussion-cited OpenHands SWE-Verified, no TB — floors Y at 0.
@@ -56,6 +71,7 @@ golden:
   radixark/qwen3.8-27b-dspark-nvfp4: radixark-qwen3-8-27b-dspark-eugr
   qwen/qwen3.8-27b: qwen-qwen3-8-27b-dflash2-eugr
   mia-ailab/qwen3.8-flash-next: mia-ailab-qwen3.8-flash-next-vllm
+  nvidia/qwen3.8-flash-next-fp4-local: nvidia-qwen3.8-flash-next-fp4-local-tensorfold
   azampatti/qwen3.8-flash-next-int4-autoround: azampatti-qwen3.8-flash-next-int4-autoround-tensorfold
   ornith-ai/ornith-1.5-35b-a3b: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr
 deprecated_profiles:

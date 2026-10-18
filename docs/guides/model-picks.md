@@ -47,13 +47,14 @@ The public site folds weaker packs of the same family behind **All recipes**. Fu
 Typical rows you will see:
 
 - Qwen3.6 35B-A3B (NVIDIA NVFP4, Unsloth GGUF / NVFP4-fast, official DFlash)
-- Qwen3.6 / 3.8 27B (official, Unsloth, DFlash / DFlash2 / DSpark, community quants)
-- Qwen3.8-Flash-Next 125B-A6B (INT4-AR on TensorFold is the ladder row; Mia NVFP4 is under All recipes)
-- Qwen3.8-Flash-Next FP4-Local (NVIDIA QAD ~96 GiB, eugr/b12x; Spark-fit, not the datacenter NVFP4)
-- Qwen3 Coder Next, AgentWorld, thinkingcap / Qwopus finetunes
+- Qwen3.6 / 3.8 27B (radixark DFlash2 is the 3.8 ladder row; DSpark and the extra 3.6 quants are under All recipes)
+- Qwen3.8-Flash-Next 125B class (INT4-AR on TensorFold is the ladder row; Mia NVFP4 and NVIDIA FP4 QAD TensorFold fold under All recipes)
+- Qwen3 Coder Next (saricles is the family winner)
 - Ornith 1.0 / 1.5
-- Gemma 4 12B / 26B-A4B, Mellum2, Laguna, Step-3.7 Flash
-- DeepSeek V4 Flash (ds4 + DSpark)
+- Gemma 4 12B / 26B-A4B, Laguna S 2.1 and Laguna XS 2.1
+- DeepSeek V4 Flash 0731 (SparkInfer on one Spark; the October V4.1 posts are a later checkpoint)
+
+July finetunes live under All recipes via `leaderboard_more`: AgentWorld, thinkingcap, Qwythos, Aeon, the Gemma 4 12B variants, Step-3.7 Flash, GLM 4.7, Coder-30B, and the extra Qwen3.6-27B quants.
 
 Vendor SWE / Terminal-Bench numbers on the site are citations. See [published-evals.md](../reference/published-evals.md).
 

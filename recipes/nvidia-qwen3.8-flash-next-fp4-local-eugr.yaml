@@ -1,0 +1,43 @@
+id: nvidia-qwen3.8-flash-next-fp4-local-eugr
+name: qwen3.8-flash-next · FP4-Local · vision
+inventory_path: nvidia/qwen3.8-flash-next-fp4-local
+engine: eugr
+tier: heavy
+lifecycle: testing
+served_name: qwen3.8-flash-next-fp4-local
+port: 8000
+tags:
+- lab
+- eugr
+- b12x
+- moe
+- mtp
+- vision
+- nvfp4
+speculative:
+  method: mtp
+  num_speculative_tokens: 4
+eugr_recipe: /opt/spark/services/eugr-nvidia-qwen3.8-flash-next-fp4-local-eugr.yaml
+notes: >-
+  NVIDIA QAD FP4-Local (~96 GiB) on eugr/spark-vllm-b12x (2026-10-15 image
+  digest 03a95654). Card dated 2026-10-05,
+  HF lastModified 2026-10-15. Spark-validated: PLE on disk, 1M FP8 KV, MTP 4,
+  vision on, native 262k. Not nvidia/Qwen3.8-Flash-Next-NVFP4 (~124 GiB
+  datacenter pack) and not Mia NVFP4 or azampatti INT4. New NVFP4 scale
+  compression needs --load-format b12x; upstream vLLM cannot load it yet.
+  Card GPQA 91.5 / ToolEval 88.7 vs BF16 92.2 / 89.4. PBM 42.5/19.8/15.4
+  vs Mia NVFP4 36.1/21.6/19.6 vs TensorFold INT4 50.2/26.6/15.4. Recipe stays
+  testing until bench v2. Do not alias onto the Mia or TensorFold catalog rows.
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    native:
+      label: Native 262k
+      ctx: 262144
+      kv: fp8
+updated_at: '2026-10-16T03:39:26+00:00'

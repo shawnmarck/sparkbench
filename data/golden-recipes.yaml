@@ -14,6 +14,7 @@ golden:
   nvidia/qwen3.6-27b: nvidia-qwen3-6-27b-eugr
   qwen/qwen3.6-27b: qwen-qwen3-6-27b-dflash-n10-32k
   antirez/deepseek-v4-flash: antirez-deepseek-v4-flash-ds4
+  0xsero/deepseek-v4-flash-0731-spark: 0xsero-deepseek-v4-flash-0731-sparkinfer
   google/diffusiongemma-26b-a4b-it: google-diffusiongemma-26b-a4b-it-eugr
   google/gemma-4-12b-it: google-gemma-4-12b-it-llama
   google/gemma-4-26b-a4b-it: google-gemma-4-26b-a4b-it-eugr
@@ -45,7 +46,7 @@ golden:
   inference-snaps/glm-4.7-flash-30b-a3b-q4_k_m-5gb: inference-snaps-glm-4-7-flash-30b-a3b-q4-k-m-5gb-llama
   protolabsai/thinkingcap-qwen3.6-27b: protolabsai-thinkingcap-qwen3-6-27b-llama
   unsloth/qwen3.6-35b-a3b-nvfp4: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
-  radixark/qwen3.8-27b: radixark-qwen3-8-27b-mtp-eugr
+  radixark/qwen3.8-27b: radixark-qwen3-8-27b-dflash2-sglang
   radixark/qwen3.8-27b-dspark-nvfp4: radixark-qwen3-8-27b-dspark-eugr
   qwen/qwen3.8-27b: qwen-qwen3-8-27b-dflash2-eugr
   ornith-ai/ornith-1.5-35b-a3b: ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr

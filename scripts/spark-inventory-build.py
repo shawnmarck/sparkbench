@@ -940,9 +940,15 @@ def target_weight_bytes(target_entry: dict, weight_format: str | None) -> int:
 
 
 def attach_speculative_sidecars(
-    entries: list, by_path: dict[str, list[dict]]
+    entries: list,
+    by_path: dict[str, list[dict]],
+    golden_by_inv: dict[str, str] | None = None,
 ) -> None:
-    """Attribute speculative/DFlash profiles to sidecar rows; keep baseline-only on targets."""
+    """Attribute companion DFlash/DSpark profiles to sidecar rows.
+
+    The golden recipe stays on the target row even when it uses a draft sidecar,
+    so portal headlines follow the published PBM instead of a slower baseline.
+    """
     sidecar_links: dict[str, list[dict]] = {}
     for target_inv, profiles in by_path.items():
         for profile in profiles:
@@ -964,12 +970,20 @@ def attach_speculative_sidecars(
 
     entry_by_id = {str(e.get("id") or e.get("rel_path")): e for e in entries}
 
+    golden_by_inv = golden_by_inv or {}
     for entry in entries:
         rel = str(entry.get("rel_path") or entry.get("id"))
         profiles = list(by_path.get(rel) or [])
         if not profiles:
             continue
-        entry["inference_profiles"] = baseline_profiles(profiles)
+        kept = baseline_profiles(profiles)
+        golden_id = golden_by_inv.get(rel)
+        if golden_id:
+            for profile in profiles:
+                if profile.get("id") == golden_id and profile not in kept:
+                    kept.insert(0, profile)
+                    break
+        entry["inference_profiles"] = kept
         spec_on_target = speculative_profiles(profiles)
         if spec_on_target:
             entry["has_speculative_addon"] = True
@@ -1956,7 +1970,7 @@ def main() -> int:
         entry["golden_profile"] = golden_by_inv.get(rel)
     profile_map = load_inference_profile_map()
     attach_inference_profiles(entries, profile_map)
-    attach_speculative_sidecars(entries, profile_map)
+    attach_speculative_sidecars(entries, profile_map, golden_by_inv)
     attach_unlinked_sidecar_metadata(entries)
     for entry in entries:
         caps = {str(c).lower() for c in (entry.get("capabilities") or [])}

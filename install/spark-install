@@ -55,7 +55,7 @@ Targets:
   quickstart             bootstrap + core (portal, APIs, CLI — no GPU engine)
   core                 Portal, APIs, CLI, model inventory (no GPU engine)
   nas                  Optional CIFS shelf mount + re-layout /models
-  engine eugr|llama|ds4   Install one inference engine (one GPU at a time)
+  engine eugr|llama|ds4|sparkinfer   Install one inference engine (one GPU at a time)
   gateway              OpenAI gateway :9000 + client activity widget
   openwebui            Open WebUI dual-backend compose
   bootstrap            host.env + passwordless sudo for install + portal base
@@ -71,7 +71,7 @@ Typical fresh box:
   curl -fsSL …/scripts/bootstrap-sparkbench.sh | sudo bash   # or manually:
   sudo bash install/spark-install bootstrap    # once, if you want passwordless re-runs
   sudo bash install/spark-install core
-  sudo bash install/spark-install engine eugr    # or llama / ds4
+  sudo bash install/spark-install engine eugr    # or llama / ds4 / sparkinfer
   sudo bash install/spark-install gateway
 
 Env: SPARK_ROOT, SPARK_STAGING, SPARK_USER, SPARK_HOST, SPARK_LAN_IP — see install/common.sh
@@ -122,7 +122,7 @@ cmd_nas() {
 
 cmd_engine() {
   local engine="${1:-}"
-  [[ -n "$engine" ]] || die "usage: spark-install engine eugr|llama|ds4"
+  [[ -n "$engine" ]] || die "usage: spark-install engine eugr|llama|ds4|sparkinfer"
   case "$engine" in
     eugr|vllm)
       echo "spark-install: engine eugr (eugr vLLM NVFP4)"
@@ -136,8 +136,12 @@ cmd_engine() {
       echo "spark-install: engine ds4 (DwarfStar cuda-spark)"
       run_module engines/ds4-dwarfstar.sh
       ;;
+    sparkinfer|mia)
+      echo "spark-install: engine sparkinfer (Mia/0xSero SparkInfer)"
+      run_module engines/sparkinfer.sh
+      ;;
     *)
-      die "unknown engine: ${engine} (try: eugr, llama, ds4)"
+      die "unknown engine: ${engine} (try: eugr, llama, ds4, sparkinfer)"
       ;;
   esac
   echo "OK: engine ${engine} install complete"

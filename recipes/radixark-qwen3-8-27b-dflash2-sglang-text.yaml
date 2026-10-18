@@ -1,0 +1,41 @@
+id: radixark-qwen3-8-27b-dflash2-sglang-text
+name: qwen3.8-27b DFlash2 · text
+inventory_path: radixark/qwen3.8-27b
+engine: sglang
+tier: heavy
+lifecycle: works
+served_name: qwen3.8-27b-dflash2-sglang-text
+port: 8000
+tags:
+- lab
+- sglang
+- dflash2
+- sidecar
+speculative:
+  method: dflash
+  variant: dflash2
+  sidecar_inventory: incoai/qwen3.8-27b-dflash2
+  sidecar_path: /models/incoai/qwen3.8-27b-dflash2/dflash
+  num_speculative_tokens: 8
+  target_weight_format: nvfp4
+sglang:
+  # nightly-cu134-20260909-708f51e — sglang #35255 zombie-request fix
+  image: lmsysorg/sglang@sha256:00205b89f74691f76a0ffbd6846376d9323971930a5d59bf63a65dadc7d67927
+  model: /models/radixark/qwen3.8-27b/nvfp4
+  draft: /models/incoai/qwen3.8-27b-dflash2/dflash
+  mem_fraction: 0.80
+  max_running: 8
+  num_draft_tokens: 8
+  language_only: true
+notes: 'SGLang DFlash2 language-only companion. Same packed NVFP4 + DFlash2 k=8
+  as radixark-qwen3-8-27b-dflash2-sglang, but --language-only so the vision
+  tower stays on disk. Use the vision profile when you need images.'
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+updated_at: '2026-09-10T03:15:00.000000+00:00'
+promoted_at: '2026-09-10T03:15:00.000000+00:00'

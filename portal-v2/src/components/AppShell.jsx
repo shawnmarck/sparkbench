@@ -54,6 +54,16 @@ export function AppShell({ live, children }) {
           <span className="pill" title="GPU and CPU package temps">
             <b>{gpu?.gpu_temp_c ?? '—'}</b>° · <b>{gpu?.cpu_temp_c ?? '—'}</b>°
           </span>
+          {gpu?.download?.active ? (
+            <span
+              className="pill rx"
+              title={gpu.download.repo
+                ? `Receiving ${gpu.download.repo} on Wi-Fi plus Ethernet`
+                : 'Receive rate, Wi-Fi plus Ethernet'}
+            >
+              ↓ <b>{gpu.network?.rx_mbps_sum ?? gpu.net_rx_mbps_sum ?? '—'}</b> Mb/s
+            </span>
+          ) : null}
           {live.error ? <span className="pill down">API {live.error}</span> : null}
         </div>
         <ThemePicker />

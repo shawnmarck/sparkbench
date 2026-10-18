@@ -1,0 +1,49 @@
+id: azampatti-qwen3.8-flash-next-int4-autoround-tensorfold
+name: qwen3.8-flash-next · TensorFold · INT4-AR · vision
+inventory_path: azampatti/qwen3.8-flash-next-int4-autoround
+engine: tensorfold
+tier: heavy
+lifecycle: testing
+served_name: Qwen3.8-Flash-Next
+port: 8000
+tags:
+- lab
+- tensorfold
+- moe
+- mtp
+- vision
+- int4
+speculative:
+  method: mtp
+tensorfold:
+  launcher: /models/azampatti/qwen3.8-flash-next-int4-autoround/kit
+  hf_home: /models/azampatti/qwen3.8-flash-next-int4-autoround/hf
+  container: qwen38-flash-next-tf
+  checkpoint: int4
+  parallel: 8
+  vision: true
+  drafts: true
+  thinking: true
+  model_id: azampatti/Qwen3.8-Flash-Next-125B-A5B-INT4-AutoRound
+  model_revision: 1464274120d36a4d8fcaa934552334a7d83ce0fd
+notes: >-
+  MiaAI TensorFold v1.0 Zig engine (kit Qwen3.8-Flash-Next-Single-DGX-Spark-TensorFold)
+  on azampatti INT4-AutoRound (top-5 experts, ~4.8B active, ~122 GiB) + FP8
+  n-gram table. Native 262k, FP8 KV, vision on, PARALLEL 8, port 8000 (Mia
+  default is 8888). PBM 50.2/26.6/15.4 vs flashnext vLLM NVFP4
+  (mia-ailab-qwen3.8-flash-next-vllm 36.1/21.6/19.6). Mia sparkDash prose
+  64.4 tok/s single-stream is not PBM. Recipe stays testing until bench v2.
+  Do not alias onto the NVFP4 catalog row.
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    native:
+      label: Native 262k
+      ctx: 262144
+      kv: fp8
+updated_at: '2026-10-15T19:38:33+00:00'

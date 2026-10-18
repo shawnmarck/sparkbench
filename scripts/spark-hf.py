@@ -1421,6 +1421,30 @@ def queue_remove_download(item_id: str) -> None:
     save_download_queue(data)
 
 
+def _weight_intent_for_repo(repo: str) -> str | None:
+    """Safetensors intent when a GGUF shortlist does not match the repo."""
+    if "gguf" in repo.lower():
+        return None
+    fmt = _infer_weights_format(repo)
+    if fmt == "nvfp4":
+        return "nvfp4"
+    if fmt == "fp8":
+        return "fp8"
+    try:
+        siblings = repo_siblings(repo)
+    except Exception:
+        return None
+    names = [s.rfilename for s in siblings]
+    if _pick_gguf(names, GGUF_PREFERENCES["gguf_best"]):
+        return None
+    weights = _weights_files(siblings)
+    if not any(name.endswith(".safetensors") for name in weights):
+        return None
+    if fmt == "prismaquant":
+        return "hf_weights"
+    return "hf_weights"
+
+
 def queue_download_explore_item(item_id: str) -> dict[str, Any]:
     data = load_explore_queue()
     item = _find_item(data.get("items", []), item_id)
@@ -1432,6 +1456,13 @@ def queue_download_explore_item(item_id: str) -> dict[str, Any]:
     inventory_path = item.get("inventory_path")
     if intent == "files" and not files:
         intent = "gguf_best"
+    # Shortlist defaults to gguf_best. NVFP4 / FP8 / plain safetensors repos
+    # have no GGUF, so download the weight tree instead of erroring.
+    if intent in GGUF_PREFERENCES:
+        alt = _weight_intent_for_repo(repo)
+        if alt:
+            intent = alt
+            files = None
     return queue_add_download(
         repo=repo,
         intent=intent,
@@ -1613,6 +1644,19 @@ def _post_download_complete(item: dict[str, Any]) -> None:
         )
 
 
+def _download_failure_reason(log_path: Path) -> str:
+    lines = tail_log(log_path, lines=30)
+    for line in reversed(lines):
+        text = line.strip()
+        if text.startswith("Error:") or "Access denied" in text or "authorized list" in text:
+            return text[:240]
+    for line in reversed(lines):
+        text = line.strip()
+        if text and not text.startswith("==>"):
+            return text[:240]
+    return "download failed"
+
+
 def process_queue_item(item: dict[str, Any]) -> None:
     item_id = str(item["id"])
     plan = item.get("plan") or {}
@@ -1643,7 +1687,34 @@ def process_queue_item(item: dict[str, Any]) -> None:
         DOWNLOAD_LOG_FILE,
     )
     if rc != 0:
-        _update_item(item_id, state=STATE_FAILED, finished_at=utc_now(), exit_code=rc)
+        err = _download_failure_reason(DOWNLOAD_LOG_FILE)
+        low = err.lower()
+        if any(
+            needle in low
+            for needle in (
+                "access denied",
+                "requires approval",
+                "authorized list",
+                "gated repo",
+                "restricted",
+            )
+        ):
+            _update_item(
+                item_id,
+                state=STATE_AWAITING,
+                finished_at=utc_now(),
+                exit_code=rc,
+                error=err,
+                accept_url=f"https://huggingface.co/{repo}",
+            )
+            return
+        _update_item(
+            item_id,
+            state=STATE_FAILED,
+            finished_at=utc_now(),
+            exit_code=rc,
+            error=err,
+        )
         return
 
     _update_item(item_id, state=STATE_DONE, finished_at=utc_now())

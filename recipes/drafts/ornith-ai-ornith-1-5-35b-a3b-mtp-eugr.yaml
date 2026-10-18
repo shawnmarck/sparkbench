@@ -1,0 +1,22 @@
+id: ornith-ai-ornith-1-5-35b-a3b-mtp-eugr
+name: ornith-1.5-35b-a3b MTP (eugr)
+inventory_path: ornith-ai/ornith-1.5-35b-a3b
+engine: eugr
+tier: heavy
+lifecycle: draft
+served_name: ornith-1.5-35b-a3b-mtp
+port: 8000
+tags:
+- lab
+- eugr
+- mtp
+mtp:
+  method: mtp
+  num_speculative_tokens: 3
+eugr_recipe: /opt/spark/services/eugr-ornith-ai-ornith-1-5-35b-a3b-mtp-eugr.yaml
+notes: MTP scaffold 2026-08-20 from /models/ornith-ai/ornith-1.5-35b-a3b. Bench vs
+  non-MTP baseline before promote.
+context:
+  default: 65536
+  native: 262144
+  kv_default: fp8

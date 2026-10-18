@@ -176,6 +176,14 @@ def default_context(recipe: dict[str, Any]) -> int | None:
         if c:
             return c
         return 32768
+    if engine == "sparkinfer":
+        return 384000
+    if engine == "sglang":
+        return 262144
+    if engine == "flashnext":
+        return 262144
+    if engine == "tensorfold":
+        return 262144
     if engine == "eugr":
         ctx, _ = _parse_eugr_defaults(recipe.get("eugr_recipe"))
         return ctx or 16384
@@ -199,6 +207,14 @@ def default_kv(recipe: dict[str, Any]) -> str:
     if engine == "ds4":
         # Packed FP8/FP4 compressed KV is engine-managed; no recipe KV sweep.
         return "auto"
+    if engine == "sparkinfer":
+        return "auto"
+    if engine == "sglang":
+        return "fp8"
+    if engine == "flashnext":
+        return "fp8"
+    if engine == "tensorfold":
+        return "fp8"
     return "auto"
 
 
@@ -610,6 +626,22 @@ def prepare_launch(recipe: dict[str, Any], profile_id: str, *, ctx: int | None =
     elif engine == "ds4":
         path = materialize_ds4_recipe(recipe, ctx_i, kv_s)
         env["SPARK_DS4_RECIPE"] = str(path)
+    elif engine == "sparkinfer":
+        env["SPARK_SPARKINFER_RECIPE"] = str(recipe.get("_path") or "")
+        if not env["SPARK_SPARKINFER_RECIPE"]:
+            raise RuntimeError("sparkinfer recipe path missing")
+    elif engine == "sglang":
+        env["SPARK_SGLANG_RECIPE"] = str(recipe.get("_path") or "")
+        if not env["SPARK_SGLANG_RECIPE"]:
+            raise RuntimeError("sglang recipe path missing")
+    elif engine == "flashnext":
+        env["SPARK_FLASHNEXT_RECIPE"] = str(recipe.get("_path") or "")
+        if not env["SPARK_FLASHNEXT_RECIPE"]:
+            raise RuntimeError("flashnext recipe path missing")
+    elif engine == "tensorfold":
+        env["SPARK_TENSORFOLD_RECIPE"] = str(recipe.get("_path") or "")
+        if not env["SPARK_TENSORFOLD_RECIPE"]:
+            raise RuntimeError("tensorfold recipe path missing")
     else:
         raise RuntimeError(f"unsupported engine: {engine!r}")
     return env

@@ -28,13 +28,13 @@ OpenCode · Grok · Hermes · Open WebUI · curl
         │
         ▼
   One active profile
-  eugr :8000  ·  llama.cpp :8081  ·  ds4 :8000
+  eugr :8000  ·  llama.cpp :8081  ·  ds4 :8000  ·  SparkInfer :8000
         │
         ▼
   Portal Inference + System activity
 ```
 
-eugr and ds4 share port 8000. Never run two engines.
+eugr, ds4, and SparkInfer share port 8000. Never run two GPU engines.
 
 ## Recipes
 
@@ -45,7 +45,7 @@ id: opencode-qwen36-250k
 name: Qwen3.6-35B-A3B 250k NVFP4
 catalog_id: nvidia/qwen3.6-35b-a3b-nvfp4
 inventory_path: nvidia/qwen3.6-35b-a3b
-engine: eugr                    # eugr | llamacpp | ds4
+engine: eugr                    # eugr | llamacpp | ds4 | sparkinfer
 tier: heavy
 eugr_recipe: /opt/spark/services/eugr-qwen36-local.yaml
 served_name: qwen3.6-35b-a3b-nvfp4
@@ -76,6 +76,18 @@ ds4_args:
 ```
 
 OOM guard: `scripts/ds4-oom-guard.sh`. Casual chat: `:8002/v1` (thinking off) or model id `deepseek-chat` on `:8000`.
+
+### SparkInfer
+
+Mia/0xSero patched vLLM for DeepSeek V4 Flash 0731 EXL3. Pin: `data/sparkinfer-mia.yaml`. Production profile: `0xsero-deepseek-v4-flash-0731-sparkinfer`.
+
+```yaml
+engine: sparkinfer
+served_name: deepseek-v4-flash-0731
+port: 8000
+```
+
+Launch needs ≥114 GiB free. Default 384k / 1 seq / DSpark K5. Gateway ids: `sparky` (think off), `sparky-think`, plus `deepseek-v4-flash-0731` / `-think`. Smoke: `docs/runbooks/smoke-sparkinfer.md`.
 
 ## CLI
 
@@ -136,6 +148,6 @@ MTP, DFlash, DSpark, Eagle live on the recipe (`speculative:` / `mtp:`), not in 
 
 ## Portal
 
-Inference tab: active profile, switch, logs, engine filter (vLLM / llama.cpp / ds4), eugr upgrade banner. System tab: GPU + client activity. Benchmaster tab: overnight queue.
+Inference tab: active profile, switch, logs, engine filter (vLLM / llama.cpp / ds4 / SparkInfer), eugr upgrade banner. System tab: GPU + client activity. Benchmaster tab: overnight queue.
 
 Open WebUI (`:3000`) can point at the gateway or at an engine directly. Gateway is the one URL that survives a profile switch.

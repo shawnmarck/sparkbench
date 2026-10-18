@@ -22,7 +22,7 @@ Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer
 | `quickstart` | `bootstrap` + `core` in one target (portal, APIs, CLI — no GPU engine) |
 | `core` | Netdata + portal + CLI + `/models` layout + inventory refresh + GPU/shelf/HF/inference APIs + removal cron |
 | `nas` | CIFS shelf mount + re-layout `/models` |
-| `engine eugr\|llama\|ds4` | One GPU inference engine (mutually exclusive) |
+| `engine eugr\|llama\|ds4\|sparkinfer` | One GPU inference engine (mutually exclusive) |
 | `gateway` | OpenAI-compatible `:9000/v1` proxy + client activity API |
 | `openwebui` | Open WebUI dual-backend compose |
 | `bootstrap` | `host.env` + passwordless sudo for install + Netdata/portal base |

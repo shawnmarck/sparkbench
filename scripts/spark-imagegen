@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""spark-imagegen — Qwen-Image-2.1 NVFP4 via local ComfyUI (:8188).
+
+Usage:
+  spark-imagegen generate "prompt" [--w 1024 --h 1024] [--steps 40] [--seed N] [--rgba] [--out PATH]
+  spark-imagegen edit <image> "edit instruction" [--steps 40] [--seed N] [--out PATH]
+  spark-imagegen status
+"""
+import argparse, json, random, sys, time, urllib.request, urllib.parse, uuid
+from pathlib import Path
+
+HOST = "http://127.0.0.1:8188"
+OUT_DIR = Path("/opt/spark/run/imagegen")
+UNET = "qwen_image_2.1_nvfp4.safetensors"
+CLIP = "qwen3vl_8b_nvfp4.safetensors"
+VAE = "qwen_image_2.1_vae_bf16.safetensors"
+RGBA_BOILER = ("This is an RGBA image with transparency. {} The image has alpha "
+               "channel and the background is transparent.")
+
+def api(path, payload=None, timeout=60):
+    req = urllib.request.Request(HOST + path,
+        data=json.dumps(payload).encode() if payload is not None else None,
+        headers={"Content-Type": "application/json"},
+        method="POST" if payload is not None else "GET")
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read())
+
+def upload_image(path):
+    boundary = uuid.uuid4().hex
+    data = Path(path).read_bytes()
+    body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; "
+            f"filename=\"{Path(path).name}\"\r\nContent-Type: application/octet-stream\r\n\r\n"
+            ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+    req = urllib.request.Request(HOST + "/upload/image", data=body, method="POST",
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return json.loads(r.read())["name"]
+
+def base_nodes():
+    return {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": UNET, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": CLIP, "type": "qwen_image", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": VAE}},
+    }
+
+def build_t2i(prompt, w, h, steps, seed):
+    n = base_nodes()
+    n["4"] = {"class_type": "TextEncodeQwenImage21", "inputs": {
+        "clip": ["2", 0], "prompt": prompt, "negative_prompt": "", "resolution": max(w, h)}}
+    n["5"] = {"class_type": "EmptyLatentImage", "inputs": {"width": w, "height": h, "batch_size": 1}}
+    n["6"] = {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["4", 0],
+        "negative": ["4", 1], "latent_image": ["5", 0], "seed": seed, "steps": steps,
+        "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}}
+    n["7"] = {"class_type": "VAEDecode", "inputs": {"samples": ["6", 0], "vae": ["3", 0]}}
+    n["8"] = {"class_type": "SaveImage", "inputs": {"images": ["7", 0], "filename_prefix": "imagegen/t2i"}}
+    return n
+
+def build_edit(prompt, upload_name, steps, seed):
+    n = base_nodes()
+    n["10"] = {"class_type": "LoadImage", "inputs": {"image": upload_name}}
+    n["4"] = {"class_type": "TextEncodeQwenImage21", "inputs": {
+        "clip": ["2", 0], "prompt": prompt, "negative_prompt": "", "resolution": 1024,
+        "images.image_1": ["10", 0], "vae": ["3", 0]}}
+    n["6"] = {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["4", 0],
+        "negative": ["4", 1], "latent_image": ["4", 2], "seed": seed, "steps": steps,
+        "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}}
+    n["7"] = {"class_type": "VAEDecode", "inputs": {"samples": ["6", 0], "vae": ["3", 0]}}
+    n["8"] = {"class_type": "SaveImage", "inputs": {"images": ["7", 0], "filename_prefix": "imagegen/edit"}}
+    return n
+
+def run(workflow, out_path):
+    pid = api("/prompt", {"prompt": workflow, "client_id": "spark-imagegen"})["prompt_id"]
+    t0 = time.time()
+    while True:
+        time.sleep(2)
+        hist = api(f"/history/{pid}")
+        if pid in hist:
+            entry = hist[pid]
+            status = entry.get("status", {}).get("status_str", "?")
+            if status == "error":
+                sys.exit(f"generation error: {json.dumps(entry.get('status', {}))[:800]}")
+            outs = entry.get("outputs", {})
+            if outs:
+                for node_out in outs.values():
+                    for img in node_out.get("images", []):
+                        q = urllib.parse.urlencode({"filename": img["filename"],
+                            "subfolder": img.get("subfolder", ""), "type": img.get("type", "output")})
+                        with urllib.request.urlopen(f"{HOST}/view?{q}", timeout=120) as r:
+                            out_path.write_bytes(r.read())
+                        print(f"{out_path}  ({time.time()-t0:.0f}s total)")
+                        return
+        if time.time() - t0 > 1500:
+            sys.exit("timed out waiting for generation (25 min)")
+
+def main():
+    p = argparse.ArgumentParser(add_help=True)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    g = sub.add_parser("generate")
+    g.add_argument("prompt"); g.add_argument("--w", type=int, default=1024)
+    g.add_argument("--h", type=int, default=1024); g.add_argument("--steps", type=int, default=40)
+    g.add_argument("--seed", type=int); g.add_argument("--rgba", action="store_true")
+    g.add_argument("--out")
+    e = sub.add_parser("edit")
+    e.add_argument("image"); e.add_argument("instruction")
+    e.add_argument("--steps", type=int, default=40); e.add_argument("--seed", type=int)
+    e.add_argument("--out")
+    sub.add_parser("status")
+    a = p.parse_args()
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    if a.cmd == "status":
+        try: print(json.dumps(api("/system_stats"))[:300])
+        except Exception as x: sys.exit(f"comfyui not reachable at {HOST}: {x}")
+        return
+    seed = a.seed if a.seed is not None else random.randint(0, 2**48)
+    if a.cmd == "generate":
+        prompt = RGBA_BOILER.format(a.prompt) if a.rgba else a.prompt
+        wf = build_t2i(prompt, a.w, a.h, a.steps, seed)
+    else:
+        name = upload_image(a.image)
+        wf = build_edit(a.instruction, name, a.steps, seed)
+    out = Path(a.out) if a.out else OUT_DIR / f"{a.cmd}-{ts}-{seed % 100000}.png"
+    print(f"seed={seed} steps={a.steps} -> {out}", file=sys.stderr)
+    run(wf, out)
+
+if __name__ == "__main__":
+    main()

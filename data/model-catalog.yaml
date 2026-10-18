@@ -110,6 +110,30 @@ models:
     engine: ds4
     hf_repo: antirez/deepseek-v4-gguf
     note: 0731 IQ2XXS imatrix + DSpark drafter (~81+6.5 GB)
+- id: 0xsero/deepseek-v4-flash-0731-spark
+  lab: 0xsero
+  name: DeepSeek V4 Flash 0731 (SparkInfer)
+  slug: deepseek-v4-flash-0731-spark
+  hf_repo: 0xSero/deepseek-v4-flash-0731-spark
+  param_b: 180
+  capabilities:
+  - reasoning
+  - coding
+  - agentic
+  - moe
+  - tool-calling
+  - long-context
+  - experimental
+  summary: "DeepSeek V4 Flash 0731 EXL3 3.0 bpw (REAP-K216) via SparkInfer (patched\
+    \ vLLM) + DSpark K5 on one DGX Spark. 384k default ctx. Different artifact from\
+    \ the Entrpi ds4 GGUF golden.\n"
+  why_downloaded: "Mia/0xSero one-Spark EXL3 path — official FP4 still needs two Sparks.\n"
+  variants:
+  - format: exl3
+    subpath: data/tp1
+    engine: sparkinfer
+    hf_repo: 0xSero/deepseek-v4-flash-0731-spark
+    note: Coalesced TP1 EXL3 + K64 DSpark draft (~99 GiB)
 - id: stepfun-ai/step-3.7-flash
   lab: stepfun-ai
   name: Step-3.7-Flash
@@ -741,7 +765,7 @@ models:
     hf_repo: unsloth/Qwen3.6-35B-A3B-NVFP4
 - id: radixark/qwen3.8-27b
   lab: radixark
-  name: Qwen3.8-27B MTP
+  name: Qwen3.8-27B
   slug: qwen3.8-27b
   hf_repo: RadixArk/Qwen3.8-27B-NVFP4
   param_b: 27
@@ -750,11 +774,14 @@ models:
   - explorer
   - nvfp4
   - vllm
+  - sglang
   - dense
+  - dflash2
   - mtp
   - speculative
   - agentic
-  why_downloaded: Qwen3.8-27B NVFP4 target; golden serve is native MTP k=3.
+  why_downloaded: Qwen3.8-27B NVFP4 target; golden serve is SGLang DFlash2 k=8
+    (radixark-qwen3-8-27b-dflash2-sglang). MTP eugr remains a companion.
   variants:
   - format: nvfp4
     subpath: nvfp4
@@ -888,3 +915,87 @@ models:
   param_b: 35
   param_active_b: 3
   architecture: moe
+- id: mia-ailab/qwen3.8-flash-next
+  lab: mia-ailab
+  name: Qwen3.8-Flash-Next
+  slug: qwen3.8-flash-next
+  hf_repo: Mia-AiLab/Qwen3.8-Flash-Next-NVFP4
+  param_b: 125
+  param_active_b: 6
+  architecture: moe
+  capabilities:
+  - lab
+  - flashnext
+  - vllm
+  - nvfp4
+  - moe
+  - mtp
+  - vision
+  - agentic
+  why_downloaded: >-
+    Qwen3.8-Flash-Next 125B-A6B VLM on one Spark via MiaAI NVFP4 (~99 GiB)
+    plus a first-boot PLE mmap table (~27 GiB). Datacenter NVIDIA NVFP4
+    (~124 GiB) does not fit; nvidia/qwen3.8-flash-next-fp4-local is the
+    Spark-fit NVIDIA pack. Served by spark engine flashnext
+    (vllm/vllm-openai:qwen38-flash-next), not eugr. Companion A/B to golden
+    27B SGLang DFlash2. Site row is native PBM 36.1/21.6/19.6; recipe stays
+    testing until bench v2.
+  variants:
+  - format: nvfp4
+    subpath: nvfp4
+    engine: vllm
+    hf_repo: Mia-AiLab/Qwen3.8-Flash-Next-NVFP4
+- id: azampatti/qwen3.8-flash-next-int4-autoround
+  lab: azampatti
+  name: Qwen3.8-Flash-Next INT4-AR
+  slug: qwen3.8-flash-next-int4-autoround
+  hf_repo: azampatti/Qwen3.8-Flash-Next-125B-A5B-INT4-AutoRound
+  param_b: 125
+  param_active_b: 4.8
+  architecture: moe
+  capabilities:
+  - lab
+  - tensorfold
+  - moe
+  - mtp
+  - vision
+  - int4
+  - agentic
+  why_downloaded: >-
+    MiaAI TensorFold Zig recipe for Qwen3.8-Flash-Next on one Spark: azampatti
+    INT4-AutoRound (~122 GiB, 5 experts / 4.8B active) plus FP8 n-gram table.
+    Not the Mia NVFP4 vLLM pack. Served by spark engine tensorfold. Companion
+    A/B to mia-ailab/qwen3.8-flash-next.
+  variants:
+  - format: int4
+    subpath: hf
+    engine: tensorfold
+    hf_repo: azampatti/Qwen3.8-Flash-Next-125B-A5B-INT4-AutoRound
+- id: nvidia/qwen3.8-flash-next-fp4-local
+  lab: nvidia
+  name: Qwen3.8-Flash-Next FP4-Local
+  slug: qwen3.8-flash-next-fp4-local
+  hf_repo: nvidia/Qwen3.8-Flash-Next-FP4-Local
+  param_b: 125
+  param_active_b: 6
+  architecture: moe
+  capabilities:
+  - lab
+  - eugr
+  - vllm
+  - nvfp4
+  - b12x
+  - moe
+  - mtp
+  - vision
+  - agentic
+  why_downloaded: >-
+    NVIDIA QAD FP4-Local (~96 GiB) of Qwen3.8-Flash-Next, validated on one
+    DGX Spark. Not the Aug 31 datacenter NVFP4 and not Mia or TensorFold.
+    Served by spark engine eugr (eugr/spark-vllm-b12x) with --load-format
+    b12x. Companion A/B to mia-ailab/qwen3.8-flash-next.
+  variants:
+  - format: nvfp4
+    subpath: hf
+    engine: vllm
+    hf_repo: nvidia/Qwen3.8-Flash-Next-FP4-Local

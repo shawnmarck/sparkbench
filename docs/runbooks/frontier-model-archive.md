@@ -131,4 +131,8 @@ That copies shelf → `/models`. Skip unless you have a machine that can load it
 | Model | HF repo | Shelf path | Approx size | Started |
 |-------|---------|------------|-------------|---------|
 | GLM-5.2 NVFP4 | `nvidia/GLM-5.2-NVFP4` | `nvidia/glm-5.2-nvfp4/nvfp4` | ~465 GB (complete) | 2026-07-22 → 2026-07-23 |
+| Huihui-Qwen3.8-27B-abliterated | `sakamakismile/Huihui-Qwen3.8-27B-abliterated-NVFP4` | `huihui-ai/qwen3.8-27b-abliterated/nvfp4` | ~20 GB (complete, index-verified) | 2026-09-16 |
+| GLM-5.3-Flash ABLITERATED | `dealignai/GLM-5.3-Flash-ABLITERATED-NVFP4` | `dealignai/glm-5.3-flash-abliterated/nvfp4` | ~195 GB (complete, index-verified) | 2026-09-16 |
+| Qwen3.8-27B Uncensored-Cyber | `philbert440/Qwen3.8-27B-Uncensored-Cyber-NVFP4` | `philbert440/qwen3.8-27b-uncensored-cyber/nvfp4` | ~26 GB (complete, index-verified) | 2026-09-16 |
 | Kimi K3 | _(pending)_ | _(pending)_ | ~1.4 TB? | — |
+| Qwen-Image-2.1 NVFP4 | `BennyDaBall/Qwen-Image-2.1-NVFP4` | `qwen/qwen-image-2.1/nvfp4` | ~12.5 GB (complete, header-verified) | 2026-09-21 |

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
-# Passwordless on sparky via /opt/spark/install/*.sh sudoers.
+# Restart the :9000 gateway only. Safe on a live box (does not rewrite nginx).
 set -euo pipefail
-exec bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/modules/gateway/inference-gateway-restart.sh"
+systemctl restart spark-inference-gateway.service
+systemctl is-active spark-inference-gateway.service
+echo "OK: spark-inference-gateway restarted"

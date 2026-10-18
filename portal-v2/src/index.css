@@ -93,6 +93,13 @@ button { font: inherit; }
 .pill.ok b { color: var(--ok); }
 .pill.warn { border-color: var(--warn-line); color: var(--warn); }
 .pill.down { border-color: var(--danger-line); color: var(--down); }
+.pill.rx {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  padding-left: .15rem;
+  padding-right: .15rem;
+}
 .dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: currentColor; box-shadow: 0 0 8px currentColor;

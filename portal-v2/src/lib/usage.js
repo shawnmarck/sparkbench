@@ -1,3 +1,19 @@
+/** OpenRouter cache-read is typically ~10% of listed input. */
+export const CACHE_READ_FRAC = 0.1
+export const CACHE_HIT_PRESETS = [70, 83, 90]
+export const DEFAULT_CACHE_HIT = 83
+
+export function cacheAdjustedUsd(usd, promptTokens, inPerM, hitPct = DEFAULT_CACHE_HIT, cacheReadFrac = CACHE_READ_FRAC) {
+  if (usd == null || Number.isNaN(Number(usd))) return null
+  if (inPerM == null || Number.isNaN(Number(inPerM))) return null
+  const prompt = Number(promptTokens) || 0
+  const inn = Number(inPerM) || 0
+  const hit = Math.min(1, Math.max(0, (Number(hitPct) || 0) / 100))
+  const frac = Math.min(1, Math.max(0, Number(cacheReadFrac) || 0))
+  const save = prompt * hit * inn * (1 - frac) / 1e6
+  return Math.max(0, Number(usd) - save)
+}
+
 export function countsOf(block) {
   const prompt = Number(block?.prompt_tokens) || 0
   const completion = Number(block?.completion_tokens) || 0

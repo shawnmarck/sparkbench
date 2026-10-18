@@ -1702,13 +1702,34 @@ profiles:
     fills:
       '4096':
         tok_s: 36.1
+        tok_s_min: 36.1
+        tok_s_max: 36.1
+        sessions: 1
         tool_roundtrip_ok: true
+        completion_tokens: 961
+        elapsed_s: 26.62
+        run_tok_s:
+        - 36.1
       '50000':
         tok_s: 21.6
+        tok_s_min: 21.6
+        tok_s_max: 21.6
+        sessions: 1
         tool_roundtrip_ok: true
+        completion_tokens: 1003
+        elapsed_s: 46.38
+        run_tok_s:
+        - 21.6
       '100000':
         tok_s: 19.6
+        tok_s_min: 19.6
+        tok_s_max: 19.6
+        sessions: 1
         tool_roundtrip_ok: true
+        completion_tokens: 966
+        elapsed_s: 49.18
+        run_tok_s:
+        - 19.6
     skipped: {}
     primary_fill: 50000
     note: PBM native 36.1/21.6/19.6; YaRN 512k 36.3/22.0/18.1/200k=31.3/300k=12.7
@@ -1722,12 +1743,18 @@ profiles:
         '4096':
           tok_s: 36.3
           tool_roundtrip_ok: true
+          completion_tokens: 865
+          elapsed_s: 23.86
         '50000':
           tok_s: 22.0
           tool_roundtrip_ok: true
+          completion_tokens: 1089
+          elapsed_s: 49.44
         '100000':
           tok_s: 18.1
           tool_roundtrip_ok: true
+          completion_tokens: 972
+          elapsed_s: 53.75
         '200000':
           tok_s: 31.3
           tok_s_min: 31.3
@@ -1753,7 +1780,7 @@ profiles:
       tok_s_100k: 18.1
       tok_s_200k: 31.3
       tok_s_300k: 12.7
-      note: YaRN 512k 4k=36.3 / 50k=22.0 / 100k=18.1 / 200k=31.3 / 300k=12.7
+      note: PBM YaRN 512k 4k=36.3 / 50k=22.0 / 100k=18.1 / 200k=31.3 / 300k=12.7
   azampatti-qwen3.8-flash-next-int4-autoround-tensorfold:
     method: perfbench-metrics
     version: '1.0'

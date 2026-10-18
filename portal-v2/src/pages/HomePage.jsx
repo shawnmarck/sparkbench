@@ -1,6 +1,17 @@
 import { ActivityDock } from '../components/ActivityDock.jsx'
+import { LoadMeter } from '../components/LoadMeter.jsx'
 import { UsagePanel } from '../components/UsagePanel.jsx'
-import { benchMethodLabel, fmtCtx, fmtPct, fmtTokS, sinceLabel, stackLabel } from '../lib/fmt.js'
+import {
+  benchMethodLabel,
+  fmtCtx,
+  fmtPct,
+  fmtTokens,
+  fmtTokS,
+  modalitiesLabel,
+  sinceLabel,
+  stackLabel,
+  visionCapLabel,
+} from '../lib/fmt.js'
 
 function inferPreset(active, load) {
   const ctx = active?.context || {}
@@ -11,6 +22,37 @@ function inferPreset(active, load) {
     const seqMatch = p.max_num_seqs == null || p.max_num_seqs === load.max
     return ctxMatch && seqMatch
   })
+}
+
+function RecipeModalities({ mm, vision }) {
+  const label = modalitiesLabel(mm)
+  if (!label) return null
+  const cap = visionCapLabel(mm)
+  const h1 = vision?.h1
+  const last = vision?.last
+  const turns = Number(h1?.requests) || 0
+  const imgTok = Number(h1?.image_tokens) || 0
+  return (
+    <>
+      <div title={mm.vision ? 'Vision tower is loaded in this serve.' : 'Language-only. Vision tower stays on disk.'}>
+        <dt>Modalities</dt>
+        <dd>{label}</dd>
+      </div>
+      {mm.vision ? (
+        <div className="vision" title="Image caps for this serve, plus :9000 image turns in the last hour.">
+          <dt>Vision</dt>
+          <dd>
+            {cap || 'on'}
+            <small>
+              {turns
+                ? ` ${turns} img turn${turns === 1 ? '' : 's'} / 1h · ${fmtTokens(imgTok)} img tok${last?.image_tokens ? ` · last ${fmtTokens(last.image_tokens)}` : ''}`
+                : ' no image turns / 1h'}
+            </small>
+          </dd>
+        </div>
+      ) : null}
+    </>
+  )
 }
 
 function SeqCubes({ running, waiting, max }) {
@@ -93,6 +135,7 @@ function AggSpark({ values, p99 }) {
 
 export function HomePage({ live }) {
   const active = live.inference?.active
+  const loading = live.inference?.loading
   const load = live.gpu?.engine_load || {}
   const preset = inferPreset(active, load)
   const lastSess = lastSessionRate(live.activity?.recent)
@@ -100,6 +143,7 @@ export function HomePage({ live }) {
   const sparkSpan = Number(load.gen_spark_span_s) || 0
   const p99Ready = sparkSpan >= 3300
   const up = sinceLabel(active?.started_at)
+  const booting = Boolean(loading && !active?.ready)
 
   return (
     <div className="home">
@@ -108,11 +152,20 @@ export function HomePage({ live }) {
         <div className="home-duo">
           <section className="card live">
             <h2>Live</h2>
-            {active ? (
+            {booting ? (
+              <>
+                <p className="hero-meta tall">
+                  {loading.phase_label || 'Loading'}
+                  {loading.name ? ` · ${loading.name}` : ''}
+                </p>
+                <LoadMeter loading={loading} />
+              </>
+            ) : active ? (
               <>
                 <p className="hero-meta tall">
                   {active.ready ? (up ? `up ${up}` : 'ready') : active.starting ? 'starting' : 'not ready'}
                 </p>
+                {active.ready ? null : <LoadMeter loading={loading} />}
                 <SeqCubes running={load.running} waiting={load.waiting} max={load.max} />
                 {load.kv_cache_pct != null ? (
                   <div className="meters kv-meter">
@@ -182,6 +235,7 @@ export function HomePage({ live }) {
                       <dd>{preset.label}</dd>
                     </div>
                   ) : null}
+                  <RecipeModalities mm={active.multimodal} vision={live.activity?.summary?.vision} />
                   <div className="catalog" title="Catalog bench, not live. PBM 4k is decode speed at a 4k fill.">
                     <dt>Catalog bench</dt>
                     <dd>

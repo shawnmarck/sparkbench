@@ -73,6 +73,7 @@ DEFAULT_GOLDEN: dict[str, str] = {
     "radixark/qwen3.8-27b": "radixark-qwen3-8-27b-dflash2-sglang",
     "radixark/qwen3.8-27b-dspark-nvfp4": "radixark-qwen3-8-27b-dspark-eugr",
     "qwen/qwen3.8-27b": "qwen-qwen3-8-27b-dflash2-eugr",
+    "mia-ailab/qwen3.8-flash-next": "mia-ailab-qwen3.8-flash-next-vllm",
 }
 
 SKIP_INVENTORY: set[str] = {

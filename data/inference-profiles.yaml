@@ -16,6 +16,7 @@ profiles:
 - google-diffusiongemma-26b-a4b-it-eugr
 - kaitchup-qwen3-6-27b-llama
 - antirez-deepseek-v4-flash-ds4
+- 0xsero-deepseek-v4-flash-0731-sparkinfer
 - opencode-qwen36-250k
 - opencode-qwen27-dflash-262k
 - qwen-qwen-agentworld-35b-a3b-eugr

@@ -6,7 +6,7 @@ import { ConfirmDialog } from './components/ConfirmDialog.jsx'
 import { LogPage } from './components/EngineLog.jsx'
 import { stopInference, switchProfile } from './lib/api.js'
 import { useLive } from './lib/live.js'
-import { fmtCtx, shortName } from './lib/fmt.js'
+import { fmtCtx, fmtEtaS, shortName } from './lib/fmt.js'
 import { HomePage } from './pages/HomePage.jsx'
 import { InferencePage } from './pages/InferencePage.jsx'
 import { ExplorePage } from './pages/ExplorePage.jsx'
@@ -35,14 +35,16 @@ export default function App() {
     const relaunch = recipe.id === active?.id
     if (relaunch && !launch) return
     const evict = shortName(active?.name, active?.id) || 'the current profile'
+    const eta = recipe.load?.typical_s
+    const etaNote = eta ? ` Usually ${fmtEtaS(eta)} to ready.` : ''
     setConfirm({
       kind: 'switch',
       recipe,
       launch,
       title: relaunch ? 'Relaunch inference' : 'Switch inference',
       body: relaunch
-        ? `Reload ${recipe.name || recipe.id} with new context settings.${launchNote(launch)} GPU goes offline while it comes back.`
-        : `This evicts ${evict} and loads ${recipe.name || recipe.id}.${launchNote(launch)} One GPU engine at a time.`,
+        ? `Reload ${recipe.name || recipe.id} with new context settings.${launchNote(launch)}${etaNote} GPU goes offline while it comes back.`
+        : `This evicts ${evict} and loads ${recipe.name || recipe.id}.${launchNote(launch)}${etaNote} One GPU engine at a time.`,
       confirmLabel: recipe.tier === 'heavy' ? 'Confirm heavy switch' : (relaunch ? 'Relaunch now' : 'Switch now'),
       danger: true,
     })

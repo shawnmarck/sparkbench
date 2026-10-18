@@ -382,13 +382,6 @@ models:
     tok_s_engine: eugr
     tok_s_profile: nvidia-qwen3.8-flash-next-fp4-local-eugr
     note: "PBM 4k @ 42.5 / 50k @ 19.8 / 100k @ 15.4 tok/s \u2014 perfbench-metrics \u2014 profile=nvidia-qwen3.8-flash-next-fp4-local-eugr \u2014 testing until bench v2"
-  azampatti/qwen3.8-flash-next-int4-autoround:
-    spark_status: testing
-    updated_at: '2026-10-15T19:05:00+00:00'
-    engine: tensorfold
-    tok_s_engine: tensorfold
-    tok_s_profile: azampatti-qwen3.8-flash-next-int4-autoround-tensorfold
-    note: "TensorFold Zig INT4-AR companion to Mia NVFP4 vLLM Flash-Next. Testing until PBM + bench v2."
   mia-ailab/qwen3.8-flash-next:
     spark_status: works
     updated_at: '2026-09-11T16:59:13.587479+00:00'
@@ -399,3 +392,13 @@ models:
     note: "PBM 4k @ 36.1 / 50k @ 21.6 / 100k @ 19.6 tok/s \u2014 perfbench-metrics\
       \ \u2014 native 262k MTP3 vision on \u2014 profile=mia-ailab-qwen3.8-flash-next-vllm\
       \ \u2014 YaRN 512k companion 36.3/22.0/18.1 plus 200k=31.3 / 300k=12.7"
+  azampatti/qwen3.8-flash-next-int4-autoround:
+    spark_status: works
+    updated_at: '2026-10-15T19:38:33.899682+00:00'
+    engine: tensorfold
+    tok_s: 50.2
+    tok_s_engine: tensorfold
+    tok_s_profile: azampatti-qwen3.8-flash-next-int4-autoround-tensorfold
+    note: "PBM 4k @ 50.2 / 50k @ 26.6 / 100k @ 15.4 tok/s \u2014 perfbench-metrics\
+      \ \u2014 native 262k TensorFold INT4-AR vision on, PARALLEL 8 \u2014\
+      \ profile=azampatti-qwen3.8-flash-next-int4-autoround-tensorfold"

@@ -962,10 +962,10 @@ models:
   - int4
   - agentic
   why_downloaded: >-
-    MiaAI TensorFold Zig recipe for Qwen3.8-Flash-Next on one Spark: azampatti
-    INT4-AutoRound (~122 GiB, 5 experts / 4.8B active) plus FP8 n-gram table.
-    Not the Mia NVFP4 vLLM pack. Served by spark engine tensorfold. Companion
-    A/B to mia-ailab/qwen3.8-flash-next.
+    Qwen3.8-Flash-Next on one Spark via azampatti INT4-AutoRound
+    (~122 GiB, top-5 experts, ~4.8B active) on MiaAI TensorFold.
+    Native 262k, FP8 KV, vision and MTP drafts on, PARALLEL 8.
+    PBM 50.2/26.6/15.4 tok/s. This is the Flash-Next ladder row.
   variants:
   - format: int4
     subpath: hf

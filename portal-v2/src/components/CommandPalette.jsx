@@ -34,7 +34,7 @@ export function CommandPalette({ live, onSwitch, onStop }) {
     const recipeHits = (live.recipes || [])
       .filter((r) => {
         if (!query) return false
-        const hay = `${r.name || ''} ${r.id || ''} ${r.engine || ''}`.toLowerCase()
+        const hay = `${r.name || ''} ${r.id || ''} ${r.engine || ''} ${r.multimodal?.vision ? 'vision' : ''}`.toLowerCase()
         return hay.includes(query)
       })
       .slice(0, 8)

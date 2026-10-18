@@ -48,6 +48,34 @@ export function getActivity() {
   return getJson('/api/activity?window=1h')
 }
 
+export function getLedger(profile, grain = 'day') {
+  const qs = new URLSearchParams({ profile, grain })
+  return getJson(`/api/activity/ledger?${qs}`)
+}
+
+async function putJson(path, body, timeoutMs = 15000) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(path, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+      signal: ctrl.signal,
+      cache: 'no-store',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `${path} ${res.status}`)
+    return data
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+export function putPricing(body) {
+  return putJson('/api/activity/pricing', body)
+}
+
 export function getInferenceLogs(lines = 50) {
   return getJson(`/api/inference/logs?lines=${lines}`)
 }

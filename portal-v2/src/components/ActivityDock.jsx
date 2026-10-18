@@ -85,7 +85,7 @@ export function ActivityDock({ recent, recipes }) {
                 <span className="t">{row.at ? new Date(row.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—'}</span>
                 <span className="app">{row.app || row.client_ip || '—'}</span>
                 <span className="model">{modelLabel(row)}</span>
-                <span className="tok">{fmtTokens(row.prompt_tokens)}</span>
+                <span className="tok" title={row.image_tokens ? `${fmtTokens(row.prompt_tokens)} in · ${fmtTokens(row.image_tokens)} image` : undefined}>{fmtTokens(row.prompt_tokens)}{row.image_tokens ? `·${fmtTokens(row.image_tokens)}v` : ''}</span>
                 <span className="tok">{fmtTokens(row.completion_tokens)}</span>
                 <span className="rate">{fmtTokS(row.tok_s)}</span>
                 <span className="dur">{fmtDur(row.duration_ms)}</span>

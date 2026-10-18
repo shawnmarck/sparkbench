@@ -57,7 +57,7 @@ Golden models have a committed profile in `data/golden-recipes.yaml`. In the por
 - Filter **Golden**
 - Open a row → Model Lab shows recipe id, ctx ladder, KV sweep from git
 
-Editor's pick on [sparkbench.dev](https://sparkbench.dev) is Ornith 1.5 (`ornith-ai/ornith-1.5-35b-a3b`). Everyday long-context Qwen is `opencode-qwen36-250k` (Qwen3.6-35B-A3B).
+Editor's pick on [sparkbench.dev](https://sparkbench.dev) is Qwen3.8-Flash-Next INT4-AR (`azampatti/qwen3.8-flash-next-int4-autoround`). Everyday long-context Qwen is `opencode-qwen36-250k` (Qwen3.6-35B-A3B).
 
 ### 6. Download a golden model
 

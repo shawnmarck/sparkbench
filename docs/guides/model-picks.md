@@ -21,11 +21,11 @@ Skip or fold:
 
 ## Editor's pick
 
-**Ornith 1.5** (`ornith-ai/ornith-1.5-35b-a3b`)
+**Qwen3.8-Flash-Next INT4-AR** (`azampatti/qwen3.8-flash-next-int4-autoround`)
 
-- Profile: `ornith-ai-ornith-1-5-35b-a3b-nvfp4-b12x-eugr`
-- Why: current site pick for “start here on a Spark”
-- Marked `currently_testing` in `golden-recipes.yaml` while we keep measuring it
+- Profile: `azampatti-qwen3.8-flash-next-int4-autoround-tensorfold`
+- Why: PBM 50.2 / 26.6 / 15.4 and on the speed-vs-agents Pareto front
+- TensorFold, top-5 experts, about 4.8B active
 
 ## Everyday agent profiles
 
@@ -48,9 +48,8 @@ Typical rows you will see:
 
 - Qwen3.6 35B-A3B (NVIDIA NVFP4, Unsloth GGUF / NVFP4-fast, official DFlash)
 - Qwen3.6 / 3.8 27B (official, Unsloth, DFlash / DFlash2 / DSpark, community quants)
-- Qwen3.8-Flash-Next 125B-A6B (Mia NVFP4, flashnext engine; companion to 27B, not a 27B alias)
+- Qwen3.8-Flash-Next 125B-A6B (INT4-AR on TensorFold is the ladder row; Mia NVFP4 is under All recipes)
 - Qwen3.8-Flash-Next FP4-Local (NVIDIA QAD ~96 GiB, eugr/b12x; Spark-fit, not the datacenter NVFP4)
-- Qwen3.8-Flash-Next INT4-AR (azampatti, TensorFold Zig; A/B vs the NVFP4 vLLM pack)
 - Qwen3 Coder Next, AgentWorld, thinkingcap / Qwopus finetunes
 - Ornith 1.0 / 1.5
 - Gemma 4 12B / 26B-A4B, Mellum2, Laguna, Step-3.7 Flash

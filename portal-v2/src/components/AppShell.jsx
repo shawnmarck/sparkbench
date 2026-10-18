@@ -55,7 +55,7 @@ export function AppShell({ live, children }) {
     <div className="app">
       <header className="topbar">
         <button type="button" className="btn nav-toggle" onClick={() => setNavOpen((v) => !v)}>Menu</button>
-        <a className="brand" href="/v2/">SparkBench</a>
+        <a className="brand" href="/">SparkBench</a>
         <div className="pills">
           <span className={`pill ${tone}`} title={active?.id || loading?.profile || 'No profile'}>
             <i className="dot" />

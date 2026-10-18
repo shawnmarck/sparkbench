@@ -9,7 +9,7 @@ initTheme()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter basename="/v2">
+    <BrowserRouter>
       <App />
     </BrowserRouter>
   </StrictMode>,

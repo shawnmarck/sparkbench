@@ -4,11 +4,11 @@ import react from '@vitejs/plugin-react'
 const sparkHost = process.env.SPARK_HOST || 'sparky'
 
 export default defineConfig({
-  base: '/v2/',
+  base: '/',
   plugins: [react()],
   build: {
-    outDir: '../portal/v2',
-    emptyOutDir: true,
+    outDir: '../portal',
+    emptyOutDir: false,
   },
   server: {
     proxy: {

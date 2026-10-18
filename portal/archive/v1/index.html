@@ -1,0 +1,3800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sparky — Home Lab Portal</title>
+  <link rel="stylesheet" href="/archive/v1/themes/theme-ui.css">
+  <link rel="stylesheet" href="/archive/v1/themes/theme-b.css" id="theme-b-stylesheet" media="not all">
+  <link rel="stylesheet" href="/archive/v1/themes/portal.css?v=20260821-usage-line">
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var fromUrl = p.get('theme');
+      if (fromUrl) localStorage.setItem('sparky-theme', fromUrl);
+      var t = fromUrl || localStorage.getItem('sparky-theme') || 'a';
+      if (t === 'b') {
+        document.documentElement.classList.add('theme-b');
+        document.getElementById('theme-b-stylesheet').media = 'all';
+      }
+    })();
+  </script>
+</head>
+<body>
+  <header class="topnav">
+    <a href="/archive/v1/" class="brand" id="brand-home">Sparky<small>home lab</small></a>
+    <nav class="nav" id="nav">
+      <a href="/archive/v1/" class="nav-btn active" data-view="system">System</a>
+      <a href="/archive/v1/#models" class="nav-btn" data-src="/archive/v1/models.html" data-title="Model inventory" data-popout="/#models">Models</a>
+      <a href="#explore" class="nav-btn" data-view="explore">Explore</a>
+      <a href="#inference" class="nav-btn" data-view="inference">Inference</a>
+      <a href="#benchmaster" class="nav-btn" data-view="benchmaster">Benchmaster</a>
+      <a href="http://sparky:9119/" class="nav-btn" id="nav-hermes" data-src="http://sparky:9119/" data-title="Hermes" data-popout="http://sparky:9119/">Hermes<span class="svc-dot down" id="nav-hermes-dot" aria-hidden="true"></span></a>
+      <a href="http://sparky:3000/" class="nav-btn" data-src="http://sparky:3000/" data-title="Open WebUI" data-popout="http://sparky:3000/">Chat</a>
+      <a href="http://sparky:19999/v3/" class="nav-btn" data-src="http://sparky:19999/v3/" data-title="Netdata" data-popout="http://sparky:19999/v3/">Netdata</a>
+          </nav>
+    <div class="nav-meta">
+      <div class="nav-metrics" id="nav-metrics">
+        <a href="#inference" class="nav-metric inf down" id="nav-inf" title="Active inference profile">
+          <span class="pill-dot" aria-hidden="true"></span>
+          <span class="nav-metric-val" id="nav-inf-text">offline</span>
+        </a>
+        <a href="#system-health" class="nav-metric gpu" id="nav-gpu" title="GPU utilization">
+          <span class="nav-metric-label">GPU</span>
+          <span class="nav-metric-val"><span id="nav-gpu-util">—</span>%</span>
+          <span class="nav-metric-bar" aria-hidden="true"><i id="nav-gpu-bar"></i></span>
+        </a>
+        <a href="#inference-stats" class="nav-metric seq" id="nav-seq" title="Engine sequences in flight">
+          <span class="nav-metric-label">SEQ</span>
+          <span class="nav-metric-val" id="nav-seq-val">—</span>
+          <span class="nav-metric-bar" aria-hidden="true"><i id="nav-seq-bar"></i></span>
+        </a>
+        <a href="#system-health" class="nav-metric mem" id="nav-mem" title="System memory">
+          <span class="nav-metric-label">MEM</span>
+          <span class="nav-metric-val"><span id="nav-mem-util">—</span>%</span>
+          <span class="nav-metric-bar" aria-hidden="true"><i id="nav-mem-bar"></i></span>
+        </a>
+      </div>
+      <button type="button" class="theme-toggle" id="theme-toggle" title="Nebula background" aria-label="Toggle nebula background">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle class="theme-toggle-ring" cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width=".55" stroke-dasharray="3.5 16" fill="none"/>
+          <circle class="theme-toggle-core" cx="12" cy="12" r="1.6" fill="currentColor"/>
+          <g class="theme-toggle-orbit">
+            <circle cx="7.2" cy="9" r="1" fill="currentColor" opacity=".75"/>
+            <circle cx="17" cy="8.2" r="1" fill="currentColor" opacity=".75"/>
+            <circle cx="15.2" cy="16" r=".9" fill="currentColor" opacity=".55"/>
+            <circle cx="8.2" cy="15.4" r=".75" fill="currentColor" opacity=".45"/>
+            <path d="M12 12L7.2 9M12 12L17 8.2M12 12L15.2 16M7.2 9L8.2 15.4" stroke="currentColor" stroke-width=".65" stroke-linecap="round" opacity=".35"/>
+          </g>
+        </svg>
+      </button>
+      <span class="live" id="live"><i></i>live</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <div class="theme-b-nebula-wrap" id="theme-b-nebula-wrap" aria-hidden="true">
+      <canvas id="theme-b-nebula-canvas"></canvas>
+      <div class="scrim"></div>
+    </div>
+    <div class="dashboard" id="dashboard">
+      <div class="dashboard-inner">
+        <div class="card" id="system-card">
+          <div class="card-head">
+            <h2>System</h2>
+            <div class="card-head-meta">
+              <span id="gpu-name">—</span>
+              <span class="sep">·</span>
+              <svg class="uptime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span id="uptime-text">—</span>
+              <span class="sep">·</span>
+              <span id="load-line">load —</span>
+            </div>
+          </div>
+
+          <div class="sys-group" id="system-health">
+            <div class="section-title">Health</div>
+            <div class="metric-grid">
+              <div class="metric">
+                <h3>CPU</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="cpu-util">—</span><span>%</span></div>
+                  <div class="metric-hint" id="cpu-sub">peak —%</div>
+                </div>
+                <div class="metric-bar"><i id="cpu-bar"></i></div>
+                <div class="spark" id="cpu-spark"></div>
+              </div>
+              <div class="metric">
+                <h3>GPU</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="gpu-util">—</span><span>%</span></div>
+                  <div class="metric-hint" id="gpu-sub">— W</div>
+                </div>
+                <div class="metric-bar"><i id="gpu-bar"></i></div>
+                <div class="spark" id="gpu-spark"></div>
+              </div>
+              <div class="metric">
+                <h3>Memory</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="mem-util">—</span><span>%</span></div>
+                  <div class="metric-hint" id="mem-sub">— / — GB</div>
+                </div>
+                <div class="metric-bar"><i id="mem-bar"></i></div>
+                <div class="spark" id="mem-spark"></div>
+              </div>
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric">
+                <h3>GPU temp</h3>
+                <div class="metric-value" id="gpu-temp-val"><span id="gpu-temp">—</span><span>°C</span></div>
+                <div class="metric-bar temp-bar"><i id="gpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
+                <div class="spark" id="gpu-temp-spark"></div>
+              </div>
+              <div class="metric">
+                <h3>CPU temp</h3>
+                <div class="metric-value" id="cpu-temp-val"><span id="cpu-temp">—</span><span>°C</span></div>
+                <div class="metric-bar temp-bar"><i id="cpu-temp-bar" class="temp-fill-ok"></i><span class="temp-redline" title="DGX Spark caution threshold"></span></div>
+                <div class="spark" id="cpu-temp-spark"></div>
+              </div>
+              <div class="metric" title="Uplink only. Docker to :9000 is host-local and will not show here.">
+                <h3>Network</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span class="net-dir">↓</span><span id="net-rx">—</span><span>Mbps</span></div>
+                  <div class="metric-hint" id="net-sub">↑ — · —</div>
+                </div>
+                <div class="metric-bar"><i id="net-bar"></i></div>
+                <div class="spark" id="net-spark"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sys-group" id="inference-stats">
+            <div class="section-title">Inference</div>
+            <div class="status-row" id="inference-status"></div>
+            <div class="metric-grid metric-grid-4" id="activity-summary">
+              <div class="metric seq-metric" id="engine-metric">
+                <h3>Engine</h3>
+                <div class="metric-head">
+                  <div class="metric-value" id="engine-load-val"><span id="engine-running">—</span><span id="engine-max-suffix">/—</span></div>
+                  <div class="metric-hint" id="engine-sub">seqs in flight</div>
+                </div>
+                <div class="metric-bar seq-bar"><i id="engine-bar"></i></div>
+                <div class="spark" id="engine-spark"></div>
+              </div>
+              <div class="metric" id="act-clients">
+                <h3>Clients</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="act-clients-n">—</span></div>
+                  <div class="metric-hint" id="act-clients-sub">last 5 min</div>
+                </div>
+                <div class="act-app-row" id="act-clients-apps"></div>
+              </div>
+              <div class="metric" id="act-sessions" title="Completed /v1 requests">
+                <h3>Sessions</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="act-sessions-n">—</span><span>/1h</span></div>
+                  <div class="metric-hint" id="act-sessions-sub">— / 24h</div>
+                </div>
+                <div class="act-tile-slot"></div>
+              </div>
+              <div class="metric" id="act-toks" title="Finished-session tok/s from the gateway, vs single-stream bench">
+                <h3>Tok/s</h3>
+                <div class="metric-head">
+                  <div class="metric-value"><span id="act-toks-n">—</span></div>
+                  <div class="metric-hint" id="act-toks-sub">1h completed</div>
+                </div>
+                <div class="act-tile-slot"></div>
+              </div>
+            </div>
+            <div class="usage-block" id="usage-block" title="Gateway :9000 only. Direct engine hits are not counted.">
+              <div class="activity-recent-wrap usage-profiles-wrap" id="usage-profiles-wrap">
+                <div class="activity-recent-head usage-head">
+                  <span>Usage by profile</span>
+                  <span class="usage-line" id="usage-summary">
+                    <span>24h <b id="use-24h-n">—</b></span>
+                    <span class="usage-line-sep">·</span>
+                    <span>30D <b id="use-30d-n">—</b></span>
+                    <span class="usage-line-sep">·</span>
+                    <span class="usage-line-all">All <b id="use-all-n">—</b></span>
+                    <span class="usage-line-note">:9000</span>
+                  </span>
+                </div>
+                <div class="activity-table-scroll" id="usage-table-scroll">
+                  <table class="activity-table" id="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Profile</th>
+                        <th>24h</th>
+                        <th>30D</th>
+                        <th>All</th>
+                      </tr>
+                    </thead>
+                    <tbody id="usage-tbody">
+                      <tr><td colspan="4" class="activity-empty">No usage yet</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="activity-recent-wrap" id="activity-recent-wrap">
+              <div class="activity-recent-head">Recent requests</div>
+              <div class="activity-table-scroll" id="activity-table-scroll">
+                <table class="activity-table" id="activity-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Who</th>
+                      <th>Tok/s</th>
+                      <th>Tokens</th>
+                      <th>Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-tbody">
+                    <tr><td colspan="5" class="activity-empty">No activity data — API starting up</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="sys-group" id="system-services">
+            <div class="section-title">Services</div>
+            <div class="svc-list" id="containers"></div>
+          </div>
+
+          <div class="sys-group" id="system-storage">
+            <div class="section-title">Storage</div>
+            <div class="storage-grid" id="storage"></div>
+          </div>
+        </div>
+
+        <div class="card" id="explore-card" hidden>
+          <div class="card-head">
+            <h2>Explore</h2>
+            <div class="card-head-meta" id="exp-head-meta">Hugging Face · file-only downloads</div>
+          </div>
+          <div class="exp-card-body">
+            <div class="exp-status-panel ok" id="exp-status-panel">
+              <div class="exp-status-banner" id="exp-status-banner">Loading HF status…</div>
+              <pre class="exp-download-log" id="exp-download-log" hidden></pre>
+            </div>
+
+            <!-- Sub-nav: Browse | Shortlist | Downloads -->
+            <div class="exp-subnav" id="exp-subnav" role="tablist">
+              <button type="button" class="exp-subnav-btn active" id="exp-tab-browse" role="tab" aria-selected="true" data-exp-tab="browse">Browse</button>
+              <button type="button" class="exp-subnav-btn" id="exp-tab-shortlist" role="tab" aria-selected="false" data-exp-tab="shortlist">Shortlist <span class="exp-shortlist-count" id="exp-shortlist-count"></span></button>
+              <button type="button" class="exp-subnav-btn" id="exp-tab-downloads" role="tab" aria-selected="false" data-exp-tab="downloads">Downloads <span class="exp-shortlist-count" id="exp-downloads-count"></span></button>
+            </div>
+
+            <!-- Browse pane -->
+            <div class="exp-tabpane" id="exp-pane-browse" role="tabpanel">
+              <div class="exp-toolbar">
+                <input type="search" id="exp-q" placeholder="Search Hugging Face models…" autocomplete="off" aria-label="Search models">
+                <div class="exp-mode-row">
+                  <button type="button" class="exp-mode-btn active" data-exp-mode="trending" title="HF Hub trending (recent momentum, not all-time downloads)">Trending</button>
+                  <button type="button" class="exp-mode-btn" data-exp-mode="new">New</button>
+                </div>
+                <div class="exp-chip-row" id="exp-filter-chips">
+                  <button type="button" class="exp-chip" data-exp-chip="gguf">GGUF</button>
+                  <button type="button" class="exp-chip" data-exp-chip="nvfp4">NVFP4</button>
+                  <button type="button" class="exp-chip" data-exp-chip="moe">MoE</button>
+                  <button type="button" class="exp-chip active" data-exp-chip="fits_spark">Fits Spark</button>
+                </div>
+                <div class="exp-chip-legend" aria-label="Model card chip colors">
+                  <span class="exp-chip-legend-label">Cards</span>
+                  <span class="exp-badge gguf">GGUF</span>
+                  <span class="exp-badge nvfp4">NVFP4</span>
+                  <span class="exp-badge moe">MoE</span>
+                  <span class="exp-badge dense">Dense</span>
+                  <span class="exp-badge mtp">MTP</span>
+                  <span class="exp-badge vision">Vision</span>
+                  <span class="exp-badge diffusion">Diffusion</span>
+                </div>
+              </div>
+              <div class="exp-main">
+                <div class="exp-results-panel">
+                  <div class="exp-results-head">
+                    <span id="exp-results-label">Trending on HF</span>
+                    <span id="exp-results-count">—</span>
+                  </div>
+                  <div class="exp-results-scroll" id="exp-results">
+                    <div class="exp-empty">Loading…</div>
+                  </div>
+                </div>
+                <div class="exp-detail" id="exp-detail" hidden>
+                  <div class="exp-detail-title" id="exp-detail-title">—</div>
+                  <div class="exp-detail-meta" id="exp-detail-meta">—</div>
+                  <div class="exp-spark-warning" id="exp-spark-warning" hidden></div>
+                  <div class="exp-variants-wrap">
+                    <div class="exp-variants-head">Download options · single DGX Spark (128GB)</div>
+                    <div class="exp-variants-scroll">
+                      <table class="exp-variants-table">
+                        <thead>
+                          <tr>
+                            <th>Variant</th>
+                            <th>Engine</th>
+                            <th>Size</th>
+                            <th>Spark</th>
+                            <th>Notes</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody id="exp-variants-body">
+                          <tr><td colspan="6" class="exp-empty">Select a model</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="exp-detail-actions">
+                    <button type="button" class="inf-btn" id="exp-save-explore">Save to Shortlist</button>
+                    <a href="#" id="exp-hf-link" target="_blank" rel="noopener">Open on Hugging Face ↗</a>
+                  </div>
+                  <div class="exp-msg" id="exp-detail-msg"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shortlist pane -->
+            <div class="exp-tabpane" id="exp-pane-shortlist" role="tabpanel" hidden>
+              <div class="exp-shortlist-toolbar" id="exp-shortlist-toolbar">
+                <div class="exp-shortlist-actions" id="exp-shortlist-bulk-actions" hidden>
+                  <span class="exp-shortlist-sel-label" id="exp-shortlist-sel-label"></span>
+                  <button type="button" class="exp-shortlist-btn danger" id="exp-bulk-remove">Remove selected</button>
+                  <button type="button" class="exp-shortlist-btn" id="exp-bulk-download">Download selected</button>
+                </div>
+                <div class="exp-shortlist-sort-row">
+                  <span class="exp-shortlist-summary" id="exp-shortlist-summary"></span>
+                  <button type="button" class="exp-shortlist-btn small" id="exp-shortlist-select-all">Select all</button>
+                </div>
+              </div>
+              <div class="exp-shortlist-table-wrap" id="exp-shortlist-table-wrap">
+                <div class="exp-empty">No models in Shortlist yet. Browse HF and click "Save to Shortlist".</div>
+              </div>
+              <!-- Shortlist detail drawer -->
+              <div class="exp-shortlist-drawer" id="exp-shortlist-drawer" hidden>
+                <div class="exp-shortlist-drawer-head">
+                  <span class="exp-detail-title" id="exp-sl-detail-title">—</span>
+                  <button type="button" class="exp-shortlist-drawer-close" id="exp-sl-drawer-close" title="Close">×</button>
+                </div>
+                <div class="exp-detail-meta" id="exp-sl-detail-meta">—</div>
+                <div class="exp-variants-wrap">
+                  <div class="exp-variants-head">Download options · single DGX Spark (128GB)</div>
+                  <div class="exp-variants-scroll">
+                    <table class="exp-variants-table">
+                      <thead>
+                        <tr>
+                          <th>Variant</th>
+                          <th>Engine</th>
+                          <th>Size</th>
+                          <th>Spark</th>
+                          <th>Notes</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="exp-sl-variants-body">
+                        <tr><td colspan="6" class="exp-empty">Loading…</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="exp-detail-actions">
+                  <a href="#" id="exp-sl-hf-link" target="_blank" rel="noopener">Open on Hugging Face ↗</a>
+                </div>
+                <div class="exp-msg" id="exp-sl-detail-msg"></div>
+              </div>
+            </div>
+
+            <!-- Downloads pane -->
+            <div class="exp-tabpane" id="exp-pane-downloads" role="tabpanel" hidden>
+              <div class="exp-dl-pane">
+                <div class="exp-queue-head">Download queue</div>
+                <div class="exp-queue-scroll exp-dl-scroll" id="exp-download-queue"><div class="exp-empty">Empty</div></div>
+              </div>
+            </div>
+
+            <div class="exp-msg" id="exp-msg"></div>
+          </div>
+        </div>
+
+        <div class="card" id="benchmaster-card" hidden>
+          <div class="card-head">
+            <h2>Benchmaster</h2>
+            <div class="card-head-meta" id="bm-head-meta">queue offline</div>
+          </div>
+          <div class="bm-card-body">
+            <div class="bm-controls">
+              <button type="button" class="bm-btn primary" data-bm-action="resume">Resume</button>
+              <button type="button" class="bm-btn" data-bm-action="pause">Pause</button>
+              <button type="button" class="bm-btn" data-bm-action="stop_after_current">Stop after current</button>
+              <button type="button" class="bm-btn warn" data-bm-action="abort_current_requeue_front">Abort &amp; requeue front</button>
+              <button type="button" class="bm-btn" data-bm-action="refresh">Refresh</button>
+            </div>
+            <div class="bm-msg" id="bm-msg" hidden></div>
+            <div class="bm-section">
+              <div class="section-title">Current job</div>
+              <div id="bm-current" class="bm-panel"><div class="bm-empty bm-pending">Connecting…</div></div>
+            </div>
+            <div class="bm-section">
+              <div class="section-title">Queue</div>
+              <div id="bm-queue" class="bm-panel"><div class="bm-empty bm-pending">Connecting…</div></div>
+            </div>
+            <div class="bm-section">
+              <div class="section-title">Add job</div>
+              <div class="bm-add-row">
+                <input type="text" id="bm-add-profile" placeholder="profile id (e.g. opencode-qwen36-250k)" aria-label="Profile id">
+                <input type="text" id="bm-add-inv" placeholder="inventory path (optional)" aria-label="Inventory path">
+                <select id="bm-add-type" aria-label="Job type">
+                  <option value="perf_sweep">perf_sweep</option>
+                  <option value="ctx_ladder">ctx_ladder</option>
+                  <option value="kv_sweep">kv_sweep</option>
+                  <option value="golden_workflow">golden_workflow</option>
+                </select>
+                <button type="button" class="bm-btn primary" id="bm-add-btn">Enqueue</button>
+              </div>
+            </div>
+            <div class="bm-section">
+              <div class="section-title">Recent runs</div>
+              <div id="bm-runs" class="bm-panel"><div class="bm-empty bm-pending">Connecting…</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="inference-card" hidden>
+          <div class="card-head">
+            <h2>Inference</h2>
+            <div class="card-head-meta" id="inf-head-meta">vLLM · llama.cpp · ds4 · SparkInfer · SGLang · Flash-Next · TensorFold — one GPU at a time</div>
+          </div>
+
+          <div class="inf-card-body">
+            <div class="inf-active-box" id="inf-active-box">
+              <div class="inf-active-title" id="inf-active-title">No active profile</div>
+              <div class="inf-active-meta" id="inf-active-meta">Pick a recipe and switch — log stays visible below.</div>
+              <div class="inf-switch-banner" id="inf-switch-banner" hidden></div>
+              <div class="inf-update-banner" id="inf-update-banner" hidden></div>
+            </div>
+
+            <div class="inf-controls-block">
+              <div class="inf-actions">
+                <select id="inf-select" aria-label="Inference profile"></select>
+                <button type="button" class="inf-btn" id="inf-switch">Switch</button>
+                <button type="button" class="inf-btn" id="inf-bench">Benchmark</button>
+                <button type="button" class="inf-btn danger" id="inf-down">Stop</button>
+              </div>
+
+              <div class="inf-ctx-panel" id="inf-ctx-panel" hidden>
+                <div class="inf-ctx-head">
+                  <span class="inf-ctx-title">Context window</span>
+                  <span class="inf-ctx-native" id="inf-ctx-native"></span>
+                </div>
+                <div class="inf-ctx-presets" id="inf-ctx-presets"></div>
+                <div class="inf-ctx-row">
+                  <label>Custom <input type="number" id="inf-ctx-custom" min="4096" step="1024" placeholder="65536"></label>
+                  <label>KV cache <select id="inf-ctx-kv"><option value="auto">auto</option><option value="fp8">fp8 (vLLM)</option><option value="q8_0">q8_0 (GGUF)</option><option value="q4_0">q4_0 (GGUF)</option><option value="f16">f16</option></select></label>
+                </div>
+                <div class="inf-ctx-hint" id="inf-ctx-hint"></div>
+              </div>
+              <div class="inf-msg" id="inf-msg"></div>
+            </div>
+
+            <div class="inf-recipes-panel">
+              <div class="inf-recipes-head">
+                <div class="section-title">Recipes</div>
+                <span class="inf-recipes-count" id="inf-recipes-count">0 profiles</span>
+              </div>
+              <div class="inf-recipes-toolbar">
+                <input type="search" id="inf-q" placeholder="Search recipes… (/)" autocomplete="off" aria-label="Search recipes">
+                <div class="inf-chip-row" id="inf-filter-chips">
+                  <button type="button" class="inf-chip active" data-inf-chip="switchable">Switchable</button>
+                  <button type="button" class="inf-chip" data-inf-chip="eugr" title="eugr / vLLM">vLLM</button>
+                  <button type="button" class="inf-chip" data-inf-chip="llamacpp" title="llama.cpp GGUF">llama.cpp</button>
+                  <button type="button" class="inf-chip" data-inf-chip="ds4" title="DwarfStar 4 (DeepSeek V4 Flash)">ds4</button>
+                  <button type="button" class="inf-chip" data-inf-chip="sparkinfer" title="SparkInfer (Mia / 0xSero DSv4 Flash)">SparkInfer</button>
+                  <button type="button" class="inf-chip" data-inf-chip="sglang" title="SGLang">SGLang</button>
+                  <button type="button" class="inf-chip" data-inf-chip="flashnext" title="Flash-Next vLLM">Flash-Next</button>
+                  <button type="button" class="inf-chip" data-inf-chip="tensorfold" title="TensorFold Zig">TensorFold</button>
+                  <button type="button" class="inf-chip" data-inf-chip="fast">fast</button>
+                  <button type="button" class="inf-chip" data-inf-chip="heavy">heavy</button>
+                  <button type="button" class="inf-chip" data-inf-chip="bench">Bench'd</button>
+                  <button type="button" class="inf-chip" data-inf-chip="drafts">Drafts</button>
+                </div>
+                <div class="inf-view-toggle" id="inf-view-toggle">
+                  <button type="button" class="inf-chip active" data-inf-view="flat">Flat list</button>
+                  <button type="button" class="inf-chip" data-inf-view="family">By family</button>
+                </div>
+                <div class="inf-group-actions" id="inf-group-actions" hidden>
+                  <button type="button" class="inf-link-btn" id="inf-expand-all">Expand all</button>
+                  <span class="inf-group-actions-sep">·</span>
+                  <button type="button" class="inf-link-btn" id="inf-collapse-all">Collapse all</button>
+                </div>
+              </div>
+              <div class="inf-recipes-scroll" id="inf-recipes-scroll">
+                <div class="inf-grid-inventory" id="inf-profiles"></div>
+              </div>
+            </div>
+
+            <div class="inf-log-wrap">
+              <div class="section-title">Log</div>
+              <pre class="inf-log" id="inf-log">—</pre>
+              <div class="inf-links">
+                <a href="/archive/v1/#models" id="inf-models-link">Model inventory</a>
+                <a href="http://sparky:3000/" target="_blank" rel="noopener">Open WebUI ↗</a>
+                <a href="#" id="inf-api-link" target="_blank" rel="noopener">API ↗</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-panel" id="frame-panel">
+      <div class="frame-bar">
+        <span id="frame-title">—</span>
+        <a id="frame-popout" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+      </div>
+      <iframe id="content-frame" title="Sparky portal content" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"></iframe>
+    </div>
+  </div>
+
+  <div class="inf-log-overlay" id="inf-log-overlay" hidden>
+    <div class="inf-log-overlay-backdrop" data-inf-log-close></div>
+    <div class="inf-log-overlay-panel" id="inf-log-overlay-panel">
+      <button type="button" class="inf-log-overlay-close" id="inf-log-overlay-close" aria-label="Close expanded log">×</button>
+      <div class="inf-log-overlay-head">
+        <div class="inf-log-overlay-title" id="inf-log-overlay-title">Loading</div>
+        <div class="inf-log-overlay-meta" id="inf-log-overlay-meta"></div>
+      </div>
+      <pre class="inf-log inf-log-overlay-log" id="inf-log-overlay-log">—</pre>
+      <div class="inf-log-overlay-hint">Click outside or × to return to Inference</div>
+    </div>
+  </div>
+
+  <div class="portal-dock" id="portal-dock">
+    <button type="button" class="portal-dock-btn" id="wide-toggle" title="Wide layout off" aria-label="Toggle wide layout" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M18 15.5 21 17.5 18 19.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <script src="/archive/v1/assets/sparky-theme.js" defer></script>
+  <script src="/archive/v1/assets/spark-inventory-grid.js" defer></script>
+  <script src="/archive/v1/assets/spark-benchmaster.js?v=20260702e" defer></script>
+  <script>document.addEventListener('DOMContentLoaded', () => SparkyTheme.init());</script>
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const dashboard = $('dashboard');
+      const framePanel = $('frame-panel');
+      const frame = $('content-frame');
+      const nav = $('nav');
+      let pollTimer = null;
+      let infPollTimer = null;
+      let gpuPollInFlight = false;
+      let infTickInFlight = false;
+      let expTickInFlight = false;
+      let gpuPollErrors = 0;
+      let gpuPollNextDelay = 1000;
+      let lastEngineLoad = null;
+      const GPU_POLL_BASE_MS = 1000;
+      const GPU_POLL_MAX_MS = 30000;
+      const INF_POLL_BASE_MS = 2000;
+      let onSystem = true;
+      let onInference = false;
+      let onExplore = false;
+      let expMode = 'trending';
+      let expFilterChips = new Set(['fits_spark']);
+      let expResults = [];
+      let expSelectedRepo = null;
+      let expVariants = [];
+      let expSelectedVariantId = null;
+      let expSparkWarning = null;
+      let expStatus = null;
+      let expBrowseBusy = false;
+      let expSearchTimer = null;
+      // Shortlist state
+      const EXP_TAB_KEY = 'sparky-explore-tab';
+      let expTab = localStorage.getItem(EXP_TAB_KEY) || 'browse';
+      let expShortlistItems = [];
+      let expShortlistSelected = new Set();
+      let expShortlistSort = { col: 'added_at', dir: 'desc' };
+      let expShortlistEnriching = false;
+      // Shortlist drawer state (separate from browse detail)
+      let expSlVariants = [];
+      let expSlSelectedVariantId = null;
+      let lastInfStatus = null;
+      let lastInfNavStatus = null;
+      let lastInfNavFetchAt = 0;
+      const INF_NAV_POLL_MS = 5000;
+      let pendingStartProfile = null;
+      let pendingPickProfile = null;
+      let benchBusy = false;
+      let benchMsgUntil = 0;
+      let infLogOverlayOpen = false;
+      const INF_PREFS_KEY = 'spark-inference-filters';
+      const INF_CHIP_OPTS = ['switchable', 'eugr', 'llamacpp', 'ds4', 'sparkinfer', 'sglang', 'flashnext', 'tensorfold', 'fast', 'heavy', 'bench', 'drafts'];
+      const engineDisplay = (engine) => {
+        if (engine === 'eugr' || engine === 'vllm') return 'vLLM';
+        if (engine === 'llamacpp') return 'llama.cpp';
+        if (engine === 'ds4') return 'ds4';
+        if (engine === 'sparkinfer') return 'SparkInfer';
+        if (engine === 'sglang') return 'SGLang';
+        if (engine === 'flashnext') return 'Flash-Next';
+        if (engine === 'tensorfold') return 'TensorFold';
+        return engine || '?';
+      };
+      const engineDisplayMeta = (engine) => {
+        if (engine === 'eugr' || engine === 'vllm') return 'vLLM · eugr';
+        if (engine === 'llamacpp') return 'llama.cpp';
+        if (engine === 'ds4') return 'ds4 · DwarfStar';
+        if (engine === 'sparkinfer') return 'SparkInfer · Mia/0xSero';
+        if (engine === 'sglang') return 'SGLang';
+        if (engine === 'flashnext') return 'Flash-Next · vLLM';
+        if (engine === 'tensorfold') return 'TensorFold · Zig';
+        return engineDisplay(engine);
+      };
+      let infFilterChips = new Set(['switchable']);
+      let infGroupByFamily = false;
+      let infSortCol = null;
+      let infSortDir = 'asc';
+      let infCtxPlan = null;
+      let infCtxSelection = { preset: 'default', ctx: null, kv: null };
+
+      let infFilterQ = '';
+      let lastInfProfilesSnapshot = '';
+      let lastStorageSnapshot = '';
+      let lastContainersSnapshot = '';
+      let lastActivitySnapshot = '';
+      let activityApiOffline = false;
+      let lastNavHermesSnapshot = '';
+      let lastNavInferenceSnapshot = '';
+      const infModelGroupsOpen = new Set();
+      let suppressInfGroupToggle = false;
+      const systemCard = $('system-card');
+      const inferenceCard = $('inference-card');
+      const exploreCard = $('explore-card');
+      const benchmasterCard = $('benchmaster-card');
+
+      const fmtGb = (mb) => (mb / 1024).toFixed(1);
+      const setBar = (el, pct) => { el.style.setProperty('--bar-pct', (Math.max(0, Math.min(100, pct)) / 100)); };
+      const TEMP_SCALE_MAX = 100;
+      const TEMP_REDLINE_C = 85;
+
+      function tempZone(c) {
+        if (c == null && c !== 0) return { cls: '', fill: 'temp-fill-ok' };
+        if (c >= TEMP_REDLINE_C) return { cls: 'temp-hot', fill: 'temp-fill-hot' };
+        if (c >= 75) return { cls: 'temp-warn', fill: 'temp-fill-warn' };
+        if (c >= 65) return { cls: 'temp-warm', fill: 'temp-fill-warm' };
+        return { cls: 'temp-ok', fill: 'temp-fill-ok' };
+      }
+
+      const setTempWidget = (wrapId, valId, barId, c) => {
+        const zone = tempZone(c);
+        $(wrapId).className = 'metric-value ' + zone.cls;
+        $(valId).textContent = c != null ? Math.round(c) : '—';
+        const bar = $(barId);
+        const pct = c != null ? Math.min(100, (c / TEMP_SCALE_MAX) * 100) : 0;
+        bar.style.setProperty('--bar-pct', pct / 100);
+        bar.className = zone.fill;
+      };
+
+      function sparkline(el, values, color) {
+        if (!values || !values.length) { el.innerHTML = ''; return; }
+        const w = 120, h = 28;
+        const max = Math.max(...values, 1);
+        const pts = values.map((v, i) => {
+          const x = values.length === 1 ? w / 2 : (i / (values.length - 1)) * w;
+          const y = h - (v / max) * (h - 2) - 1;
+          return x.toFixed(1) + ',' + y.toFixed(1);
+        }).join(' ');
+        const fill = color + '33';
+        const area = pts + ' ' + w + ',' + h + ' 0,' + h;
+        el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+          + '<polygon fill="' + fill + '" points="' + area + '"/>'
+          + '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + pts + '"/>'
+          + '</svg>';
+      }
+
+      function fmtStorageSize(gb) {
+        if (gb == null) return '—';
+        if (gb >= 1024) return (gb / 1024).toFixed(1) + ' TB';
+        return gb.toFixed(1) + ' GB';
+      }
+
+      function renderStorage(volumes) {
+        const snap = JSON.stringify(volumes || []);
+        if (snap === lastStorageSnapshot) return;
+        lastStorageSnapshot = snap;
+        $('storage').innerHTML = (volumes || []).map((v) => {
+          if (!v.online) {
+            return '<div class="storage-card"><div class="storage-head"><strong>' + v.label + '</strong>'
+              + '<span class="storage-offline">offline</span></div>'
+              + '<div class="storage-disk">' + v.models_path + '</div></div>';
+          }
+          const models = v.models_gb != null
+            ? '<span class="storage-models">' + fmtStorageSize(v.models_gb) + ' models</span>'
+            : '<span class="storage-models">models —</span>';
+          const disk = fmtStorageSize(v.used_gb) + ' / ' + fmtStorageSize(v.total_gb)
+            + ' · ' + fmtStorageSize(v.avail_gb) + ' free';
+          return '<div class="storage-card"><div class="storage-head"><strong>' + v.label + '</strong>' + models + '</div>'
+            + '<div class="metric-bar"><i style="--bar-pct:' + (Math.max(0, Math.min(100, v.used_pct)) / 100) + '"></i></div>'
+            + '<div class="storage-disk">' + disk + '</div></div>';
+        }).join('');
+      }
+
+      function truncateNote(text, max) {
+        if (!text) return '';
+        const t = String(text).trim();
+        return t.length <= max ? t : t.slice(0, max - 1) + '…';
+      }
+
+      function attrEsc(text) {
+        return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      }
+
+      function escHtml(text) {
+        return String(text || '').replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+      }
+
+      function readInfPrefs() {
+        try { return JSON.parse(localStorage.getItem(INF_PREFS_KEY) || '{}'); } catch { return {}; }
+      }
+
+      function saveInfPrefs() {
+        localStorage.setItem(INF_PREFS_KEY, JSON.stringify({
+          q: infFilterQ,
+          chips: [...infFilterChips],
+          viewMode: infGroupByFamily ? 'family' : 'flat',
+          sortCol: infSortCol,
+          sortDir: infSortDir,
+        }));
+      }
+
+      function loadInfPrefs() {
+        const stored = readInfPrefs();
+        infFilterQ = stored.q || '';
+        const chips = Array.isArray(stored.chips)
+          ? stored.chips.filter((c) => INF_CHIP_OPTS.includes(c)) : [];
+        infFilterChips = new Set(chips.length ? chips : ['switchable']);
+        infGroupByFamily = stored.viewMode === 'family';
+        infSortCol = stored.sortCol || null;
+        infSortDir = stored.sortDir || 'asc';
+        const qEl = $('inf-q');
+        if (qEl) qEl.value = infFilterQ;
+        syncInfFilterChips();
+        syncInfViewToggle();
+      }
+
+      function syncInfFilterChips() {
+        document.querySelectorAll('#inf-filter-chips .inf-chip').forEach((chip) => {
+          const val = chip.dataset.infChip;
+          chip.classList.toggle('active', infFilterChips.has(val));
+        });
+      }
+
+      function syncInfViewToggle() {
+        const mode = infGroupByFamily ? 'family' : 'flat';
+        document.querySelectorAll('#inf-view-toggle [data-inf-view]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.infView === mode);
+        });
+        const ga = $('inf-group-actions');
+        if (ga) ga.hidden = !infGroupByFamily;
+      }
+
+      function toggleInfChip(name) {
+        if (!INF_CHIP_OPTS.includes(name)) return;
+        if (infFilterChips.has(name)) infFilterChips.delete(name);
+        else infFilterChips.add(name);
+        syncInfFilterChips();
+        saveInfPrefs();
+        rerenderInfProfiles();
+      }
+
+      function clearInfFilters() {
+        infFilterQ = '';
+        infFilterChips = new Set(['switchable']);
+        if ($('inf-q')) $('inf-q').value = '';
+        syncInfFilterChips();
+        saveInfPrefs();
+        rerenderInfProfiles();
+      }
+
+      function profileSearchHay(p) {
+        return [
+          p.id, p.name, p.model_family, p.inventory_path, p.engine, p.tier, p.port, p.served_name, p.notes, p.lifecycle,
+        ].filter(Boolean).join(' ').toLowerCase();
+      }
+
+      function profileModelFamily(p) {
+        return p.model_family || p.inventory_path || p.id || 'Other';
+      }
+
+      function profileMatchesInfFilters(p, activeId) {
+        if (p.active || p.id === activeId) return true;
+        const chips = infFilterChips;
+        const q = infFilterQ.trim().toLowerCase();
+        if ((p.lifecycle || 'works') === 'draft' && !chips.has('drafts')) return false;
+        if (chips.has('switchable') && p.switchable === false) return false;
+        const engineOn = chips.has('eugr') || chips.has('llamacpp') || chips.has('ds4') || chips.has('sparkinfer')
+          || chips.has('sglang') || chips.has('flashnext') || chips.has('tensorfold');
+        if (engineOn) {
+          const eng = p.engine || '';
+          const engineMatch = (chips.has('eugr') && eng === 'eugr')
+            || (chips.has('llamacpp') && eng === 'llamacpp')
+            || (chips.has('ds4') && eng === 'ds4')
+            || (chips.has('sparkinfer') && eng === 'sparkinfer')
+            || (chips.has('sglang') && eng === 'sglang')
+            || (chips.has('flashnext') && eng === 'flashnext')
+            || (chips.has('tensorfold') && eng === 'tensorfold');
+          if (!engineMatch) return false;
+        }
+        const tierOn = chips.has('fast') || chips.has('heavy');
+        if (tierOn) {
+          const tier = p.tier || '';
+          const tierMatch = (chips.has('fast') && tier === 'fast')
+            || (chips.has('heavy') && tier === 'heavy');
+          if (!tierMatch) return false;
+        }
+        if (chips.has('bench') && (p.tok_s == null || Number.isNaN(Number(p.tok_s)))) return false;
+        if (q && !profileSearchHay(p).includes(q)) return false;
+        return true;
+      }
+
+      function filterInfProfiles(profiles, activeId) {
+        return (profiles || []).filter((p) => profileMatchesInfFilters(p, activeId));
+      }
+
+      function groupInfProfiles(profiles) {
+        const groups = new Map();
+        profiles.forEach((p) => {
+          const key = profileModelFamily(p);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(p);
+        });
+        return [...groups.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([family, items]) => ({ family, items: items.sort(infProfileSort) }));
+      }
+
+      function activeModelFamily() {
+        if (!lastInfStatus || !lastInfStatus.active) return null;
+        const p = (lastInfStatus.profiles || []).find((x) => x.id === lastInfStatus.active.id);
+        return p ? profileModelFamily(p) : null;
+      }
+
+      function expandAllInfGroups() {
+        document.querySelectorAll('#inf-profiles details.inf-model-group').forEach((det) => {
+          const key = det.dataset.modelGroup;
+          if (!key) return;
+          infModelGroupsOpen.add(key);
+          det.open = true;
+        });
+      }
+
+      function collapseAllInfGroups() {
+        const keep = activeModelFamily();
+        infModelGroupsOpen.clear();
+        if (keep) infModelGroupsOpen.add(keep);
+        rerenderInfProfiles();
+      }
+
+      function infProfilesSnapshot(data, activeId) {
+        const profiles = data.profiles || [];
+        const parts = profiles.map((p) => [
+          p.id, p.active, p.ready, p.starting, p.tok_s, p.switchable, p.lifecycle,
+        ].join(':'));
+        return [
+          activeId,
+          data.switch && data.switch.running,
+          data.bench && data.bench.running,
+          infFilterQ,
+          [...infFilterChips].sort().join(','),
+          infGroupByFamily ? 'family' : 'flat',
+          (infSortCol || '') + ':' + infSortDir,
+          [infCtxSelection.preset, infCtxSelection.ctx, infCtxSelection.kv].join(':'),
+          parts.join('|'),
+        ].join(';');
+      }
+
+      function modelGroupShouldOpen(family, multiGroup, hasActive, hasSelected) {
+        if (infModelGroupsOpen.has(family)) return true;
+        if (!multiGroup) return true;
+        return hasActive || hasSelected;
+      }
+
+      function rerenderInfProfiles() {
+        if (!lastInfStatus) return;
+        lastInfProfilesSnapshot = '';
+        const busy = (lastInfStatus.switch && lastInfStatus.switch.running)
+          || (lastInfStatus.bench && lastInfStatus.bench.running);
+        renderInfProfiles(
+          lastInfStatus.profiles || [],
+          lastInfStatus.active && lastInfStatus.active.id,
+          busy
+        );
+      }
+
+      function parseStartedAt(iso) {
+        if (!iso) return null;
+        const t = Date.parse(iso);
+        return Number.isNaN(t) ? null : t;
+      }
+
+      function formatLoadingElapsedRaw(seconds) {
+        const s = Math.max(0, Math.floor(Number(seconds) || 0));
+        if (s < 60) return s + 's';
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return r ? (m + 'm ' + r + 's') : (m + 'm');
+      }
+
+      function formatLoadingElapsed(startedAtMs) {
+        if (!startedAtMs) return '';
+        const s = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+        return ' (' + formatLoadingElapsedRaw(s) + ')';
+      }
+
+      function loadingPhaseKey(info) {
+        const phase = info && info.phase;
+        return phase === 'model' ? 'starting' : phase;
+      }
+
+      function inferenceLoadingInfo(data) {
+        if (!data) return null;
+        if (data.loading && data.loading.profile) return data.loading;
+        const sw = data.switch;
+        if (sw && sw.running) {
+          const id = sw.profile;
+          if (!id) {
+            return { phase: 'switch', profile: null, name: null, started_at: sw.started_at };
+          }
+          const prof = (data.profiles || []).find((p) => p.id === id);
+          return {
+            phase: 'switch',
+            profile: id,
+            name: (prof && prof.name) || id,
+            started_at: sw.started_at,
+          };
+        }
+        const active = data.active;
+        if (active && !active.ready) {
+          return {
+            phase: active.starting ? 'starting' : 'waiting',
+            profile: active.id,
+            name: active.name || active.id,
+            started_at: active.started_at,
+          };
+        }
+        return null;
+      }
+
+      function inferenceLoadingLabel(info) {
+        const name = (info && (info.name || info.profile)) || '…';
+        const elapsed = formatLoadingElapsed(parseStartedAt(info && info.started_at));
+        const fallback = { switch: 'Switching', starting: 'Starting', waiting: 'Waiting', model: 'Starting' };
+        const label = (info && info.phase_label) || fallback[loadingPhaseKey(info)] || 'Loading';
+        const expect = info && info.expect;
+        let eta = '';
+        if (expect && expect.typical_s) {
+          if (expect.overtime) eta = ' · still waiting';
+          else if (expect.eta_s != null) eta = ' · ~' + formatLoadingElapsedRaw(expect.eta_s) + ' left';
+        }
+        return label + ' · ' + name + elapsed + eta;
+      }
+
+      function inferenceLoadingTitle(info) {
+        if (!info || !info.profile) return 'Inference loading';
+        const parts = [];
+        if (info.detail) parts.push(info.detail);
+        if (info.expect && info.expect.hint) parts.push(info.expect.hint);
+        if (parts.length) return parts.join(' ');
+        const name = info.name || info.profile;
+        if (loadingPhaseKey(info) === 'switch') return 'Switching to ' + name;
+        if (loadingPhaseKey(info) === 'starting') return 'Engine starting — ' + name;
+        return 'Waiting for engine — ' + name;
+      }
+
+      function profileShortName(active) {
+        if (!active) return '';
+        const name = String(active.name || '').trim();
+        return name || active.id || '';
+      }
+
+      function renderNavInference(data) {
+        const el = $('nav-inf');
+        const text = $('nav-inf-text');
+        const snap = data ? JSON.stringify({
+          active: data.active ? {
+            id: data.active.id, ready: data.active.ready, name: data.active.name,
+            tok_s: data.active.tok_s, starting: data.active.starting,
+          } : null,
+          switch: data.switch ? { running: data.switch.running, profile: data.switch.profile, phase: data.switch.phase } : null,
+          loading: data.loading || null,
+        }) : 'null';
+        if (snap === lastNavInferenceSnapshot) return;
+        lastNavInferenceSnapshot = snap;
+        if (!data) {
+          el.className = 'nav-metric inf down';
+          text.textContent = 'API offline';
+          el.title = 'Inference API offline';
+          return;
+        }
+        const loading = inferenceLoadingInfo(data);
+        if (loading) {
+          el.className = 'nav-metric inf warn';
+          text.textContent = inferenceLoadingLabel(loading);
+          el.title = inferenceLoadingTitle(loading);
+          return;
+        }
+        const active = data.active;
+        if (active && active.ready) {
+          el.className = 'nav-metric inf up';
+          const short = profileShortName(active);
+          text.textContent = short;
+          const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
+          el.title = short + ' · ready' + tok;
+          return;
+        }
+        el.className = 'nav-metric inf down';
+        text.textContent = 'offline';
+        el.title = 'No active profile — click to switch';
+      }
+
+      function eugrStackUpdateInfo(data) {
+        const stack = data && data.eugr_stack;
+        if (!stack || !stack.update_available) return null;
+        return stack;
+      }
+
+      function renderInfUpdateBanner(data) {
+        const el = $('inf-update-banner');
+        if (!el) return;
+        const stack = eugrStackUpdateInfo(data);
+        if (!stack) {
+          el.hidden = true;
+          el.textContent = '';
+          return;
+        }
+        const runbook = stack.runbook || 'docs/runbooks/eugr-vllm-upgrade.md';
+        el.innerHTML = 'vLLM stack update available — ' + escHtml(stack.message || 'new upstream prebuilts')
+          + ' · <a href="#inference">details below</a>'
+          + ' · runbook <code>' + escHtml(runbook) + '</code>'
+          + ' (tell an agent during a maintenance window)';
+        el.hidden = false;
+      }
+
+      function engineLoadParts(load) {
+        if (!load || load.running == null) return null;
+        const running = Math.round(Number(load.running) || 0);
+        const waiting = Math.round(Number(load.waiting) || 0);
+        const max = load.max != null && load.max !== '' ? Math.round(Number(load.max)) : null;
+        const kv = load.kv_cache_pct != null ? Number(load.kv_cache_pct) : null;
+        let label = max != null ? (running + '/' + max) : String(running);
+        if (waiting > 0) label += '+' + waiting + 'q';
+        const bits = [running + (max != null ? '/' + max : '') + ' sequences in flight'];
+        if (waiting > 0) bits.push(waiting + ' waiting');
+        if (kv != null) bits.push('KV ' + kv.toFixed(kv >= 10 ? 0 : 1) + '%');
+        if (load.engine) bits.push(load.engine);
+        if (load.stale) bits.push('stale');
+        const pct = max && max > 0 ? (running / max) * 100 : (running > 0 ? 100 : 0);
+        return { running, waiting, max, kv, label, title: bits.join(' · '), pct, queued: waiting > 0 };
+      }
+
+      function renderInferencePills(data) {
+        renderNavInference(data);
+        const el = $('inference-status');
+        if (!data) {
+          el.innerHTML = '<span class="pill down"><span class="pill-dot"></span>Inference · API offline</span>';
+          return;
+        }
+        const loading = inferenceLoadingInfo(data);
+        const active = data.active;
+        const pills = [];
+        const eugrUpdate = eugrStackUpdateInfo(data);
+
+        if (eugrUpdate) {
+          pills.push('<a href="#inference" class="pill muted inf-pill-link" data-goto-inference>'
+            + 'vLLM update · Inference tab</a>');
+        }
+
+        if (loading) {
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference data-inf-log-focus="1">'
+            + '<span class="pill-dot"></span><span class="inf-loading-pill-text">' + inferenceLoadingLabel(loading) + '</span></a>');
+          pills.push('<a href="#inference" class="pill warn inf-pill-link" data-goto-inference data-inf-log-focus="1">'
+            + '<span class="pill-dot"></span>View log →</a>');
+        } else if (active && active.ready) {
+          const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
+          pills.push('<a href="#inference" class="pill up inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>' + profileShortName(active) + ' · ready' + tok + '</a>');
+        } else {
+          pills.push('<span class="pill down"><span class="pill-dot"></span>Inference offline</span>');
+          pills.push('<a href="#inference" class="pill inf-pill-link" data-goto-inference>'
+            + '<span class="pill-dot"></span>Switch profile →</a>');
+        }
+        el.innerHTML = pills.join('');
+      }
+
+      function escAttr(text) {
+        return String(text == null ? '' : text)
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/</g, '&lt;');
+      }
+
+      function fmtSvcEndpoint(ep) {
+        if (!ep) return '';
+        const port = ep.port != null ? ':' + ep.port : '';
+        const path = ep.path || '';
+        let tail = '';
+        if (ep.model) tail = ' · ' + ep.model;
+        else if (ep.kind === 'gateway') tail = ' · stable front door';
+        const cls = 'svc-ep' + (ep.up === false ? ' down' : ep.up ? ' up' : '');
+        const href = ep.url || ep.local_url || '#';
+        const label = ep.label ? ep.label + ' ' : '';
+        return '<a class="' + cls + '" href="' + escAttr(href) + '" target="_blank" rel="noopener">'
+          + escHtml((label + port + path + tail).trim()) + '</a>';
+      }
+
+      function renderContainers(list) {
+        const snap = JSON.stringify(list || []);
+        if (snap === lastContainersSnapshot) return;
+        lastContainersSnapshot = snap;
+        if (!list.length) {
+          $('containers').innerHTML = '<div class="svc-item"><span class="name">No running containers</span></div>';
+          return;
+        }
+        $('containers').innerHTML = list.map((c) => {
+          const net = c.network && c.network !== 'default' && c.network !== 'bridge'
+            ? ' · ' + c.network : '';
+          const eps = (c.endpoints || []).map(fmtSvcEndpoint).join('');
+          const legacyPorts = !eps.length && c.ports
+            ? '<span class="ports">' + escHtml(c.ports) + '</span>' : '';
+          return '<div class="svc-item">'
+            + '<div class="svc-row">'
+            + '<span class="name">' + escHtml(c.name) + '</span>'
+            + '<span class="svc-meta">' + escHtml(c.status + net) + '</span>'
+            + '</div>'
+            + (eps ? '<div class="svc-eps">' + eps + '</div>' : legacyPorts)
+            + '</div>';
+        }).join('');
+      }
+
+      // --- Client activity widget ---
+      function fmtActivityTokens(n) {
+        if (n == null || Number(n) === 0) return '0';
+        var v = Number(n);
+        if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+        if (v >= 1000) return (v / 1000).toFixed(0) + 'k';
+        return String(v);
+      }
+
+      function fmtAgo(iso) {
+        var ts = Date.parse(iso || '');
+        if (!ts) return (iso || '').slice(11, 19) || '—';
+        var sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+        if (sec < 60) return sec + 's ago';
+        if (sec < 3600) return Math.round(sec / 60) + 'm ago';
+        if (sec < 86400) return Math.round(sec / 3600) + 'h ago';
+        return Math.round(sec / 86400) + 'd ago';
+      }
+
+      function fmtDur(ms) {
+        if (ms == null || ms === '') return '—';
+        var n = Number(ms);
+        if (Number.isNaN(n)) return '—';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 's';
+        return Math.round(n) + 'ms';
+      }
+
+      function activityBenchTok() {
+        var inf = lastInfNavStatus || lastInfStatus;
+        var tok = inf && inf.active && inf.active.tok_s;
+        if (tok == null || Number(tok) <= 0) return null;
+        return Number(tok);
+      }
+
+      function activityAppCounts(data) {
+        var apps = data && data.summary && data.summary.apps;
+        if (apps && typeof apps === 'object') return apps;
+        var counts = {};
+        ((data && data.active) || []).forEach(function (c) {
+          var app = (c && c.app) || 'unknown';
+          counts[app] = (counts[app] || 0) + 1;
+        });
+        return counts;
+      }
+
+      function activityDisplayApp(app, ip) {
+        var raw = String(app || '');
+        if (raw && raw !== 'unknown' && raw !== '?') return raw;
+        if (ip) {
+          var parts = String(ip).split('.');
+          if (parts.length === 4) return parts.slice(2).join('.');
+          return String(ip);
+        }
+        return 'local';
+      }
+
+      function activityAppClass(app) {
+        var raw = String(app || 'unknown');
+        if (!raw || raw === '?' || raw === 'unknown') return 'unknown';
+        return raw.replace(/[^a-z0-9_-]+/gi, '') || 'unknown';
+      }
+
+      function renderActivityApps(apps, activeList) {
+        var el = $('act-clients-apps');
+        if (!el) return;
+        var keys = Object.keys(apps || {}).filter(function (k) { return Number(apps[k]) > 0; });
+        if (!keys.length) {
+          el.innerHTML = '<span class="act-app-empty">no recent clients</span>';
+          return;
+        }
+        var ipByApp = {};
+        (activeList || []).forEach(function (c) {
+          var a = (c && c.app) || 'unknown';
+          if (!ipByApp[a] && c && c.ip) ipByApp[a] = c.ip;
+        });
+        keys.sort(function (a, b) { return Number(apps[b]) - Number(apps[a]); });
+        el.innerHTML = keys.map(function (app) {
+          var n = Number(apps[app]) || 0;
+          var label = activityDisplayApp(app, ipByApp[app]);
+          if (n > 1) label = label + ' ' + n;
+          return '<span class="activity-app activity-app-' + escHtml(activityAppClass(app)) + '">' + escHtml(label) + '</span>';
+        }).join('');
+      }
+
+      function usageCounts(block) {
+        var b = block || {};
+        return {
+          requests: Number(b.requests) || 0,
+          prompt: Number(b.prompt_tokens) || 0,
+          completion: Number(b.completion_tokens) || 0,
+          total: (Number(b.prompt_tokens) || 0) + (Number(b.completion_tokens) || 0)
+        };
+      }
+
+      function setUsageLine(id, counts) {
+        var el = $(id);
+        if (!el) return;
+        if (!counts || (counts.total === 0 && counts.requests === 0)) {
+          el.textContent = '—';
+          return;
+        }
+        el.textContent = fmtActivityTokens(counts.total);
+      }
+
+      function setUsageOffline() {
+        setUsageLine('use-24h-n', null);
+        setUsageLine('use-30d-n', null);
+        setUsageLine('use-all-n', null);
+        var line = $('usage-summary');
+        if (line) line.title = 'API unavailable';
+        var body = $('usage-tbody');
+        if (body) body.innerHTML = '<tr><td colspan="4" class="activity-empty">No usage data — API offline</td></tr>';
+      }
+
+      function renderUsage(usage) {
+        var windows = (usage && usage.windows) || {};
+        setUsageLine('use-24h-n', usageCounts(windows['24h']));
+        setUsageLine('use-30d-n', usageCounts(windows['30d']));
+        setUsageLine('use-all-n', usageCounts(windows.all));
+        var line = $('usage-summary');
+        if (line) line.removeAttribute('title');
+        var body = $('usage-tbody');
+        if (!body) return;
+        var rows = (usage && usage.profiles) || [];
+        if (!rows.length) {
+          body.innerHTML = '<tr><td colspan="4" class="activity-empty">No usage yet — gateway :9000 only</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map(function (r) {
+          var c24 = usageCounts(r['24h']);
+          var c30 = usageCounts(r['30d']);
+          var call = usageCounts(r.all);
+          return '<tr>'
+            + '<td class="usage-profile" title="' + escAttr(r.id || '') + '">' + escHtml(r.id || 'unknown') + '</td>'
+            + '<td>' + escHtml(fmtActivityTokens(c24.total)) + '</td>'
+            + '<td>' + escHtml(fmtActivityTokens(c30.total)) + '</td>'
+            + '<td>' + escHtml(fmtActivityTokens(call.total)) + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      function setActivitySummaryOffline() {
+        $('act-clients-n').textContent = '—';
+        $('act-clients-sub').textContent = 'API unavailable';
+        $('act-clients-apps').innerHTML = '';
+        $('act-sessions-n').textContent = '—';
+        $('act-sessions-sub').textContent = 'API unavailable';
+        $('act-toks-n').textContent = '—';
+        $('act-toks-sub').textContent = 'API unavailable';
+        setUsageOffline();
+      }
+
+      function renderClientActivity(data) {
+        var bodyEl = $('activity-tbody');
+        var wrapEl = $('activity-recent-wrap');
+
+        if (!data || !data.summary) {
+          if (!activityApiOffline) {
+            setActivitySummaryOffline();
+            bodyEl.innerHTML = '<tr><td colspan="5" class="activity-empty">No activity data — API offline</td></tr>';
+            if (wrapEl) wrapEl.style.display = 'none';
+            activityApiOffline = true;
+          }
+          return;
+        }
+
+        var s = data.summary;
+        var bench = activityBenchTok();
+        var running = lastEngineLoad && lastEngineLoad.running;
+        var snap = JSON.stringify({ summary: s, recent: data.recent, usage: data.usage, bench: bench, running: running });
+        if (snap === lastActivitySnapshot && !activityApiOffline) return;
+        lastActivitySnapshot = snap;
+        activityApiOffline = false;
+
+        var clients = Number(s.active_clients) || 0;
+        $('act-clients-n').textContent = clients;
+        $('act-clients-sub').textContent = 'last 5 min';
+        renderActivityApps(activityAppCounts(data), data.active);
+
+        var h1 = Number(s.sessions_1h) || 0;
+        var h24 = Number(s.sessions_24h) || 0;
+        $('act-sessions-n').textContent = h1;
+        $('act-sessions-sub').textContent = h24 + ' / 24h';
+
+        var avg = s.avg_tok_s;
+        var avgN = Number(avg);
+        var wide = running != null && Number(running) > 1 ? Math.round(Number(running)) + '-wide' : null;
+        if (avg == null || avg === '' || h1 === 0 || Number.isNaN(avgN)) {
+          $('act-toks-n').textContent = '—';
+          $('act-toks-sub').textContent = wide ? (wide + ' · 1h completed') : '1h completed';
+        } else {
+          $('act-toks-n').textContent = String(Math.round(avgN));
+          var tokHint = [];
+          if (wide) tokHint.push(wide);
+          if (bench != null) tokHint.push('vs ' + Math.round(bench) + ' bench');
+          $('act-toks-sub').textContent = tokHint.length ? tokHint.join(' · ') : '1h completed';
+        }
+
+        renderUsage(data.usage);
+
+        var rows = data.recent || [];
+        if (wrapEl) wrapEl.style.display = '';
+        if (!rows.length) {
+          bodyEl.innerHTML = '<tr><td colspan="5" class="activity-empty">No requests yet</td></tr>';
+          return;
+        }
+        bodyEl.innerHTML = rows.map(function (r) {
+          var who = activityDisplayApp(r.app, r.client_ip);
+          var cls = activityAppClass(r.app);
+          var tokS = r.tok_s != null ? String(Math.round(r.tok_s)) : '—';
+          var totalT = fmtActivityTokens((r.prompt_tokens || 0) + (r.completion_tokens || 0));
+          return '<tr>'
+            + '<td class="activity-time" title="' + escAttr(r.at || '') + '">' + escHtml(fmtAgo(r.at)) + '</td>'
+            + '<td><span class="activity-app activity-app-' + escHtml(cls) + '" title="' + escAttr(r.client_ip || '') + '">' + escHtml(who) + '</span></td>'
+            + '<td>' + escHtml(tokS) + '</td>'
+            + '<td>' + escHtml(totalT) + '</td>'
+            + '<td>' + escHtml(fmtDur(r.duration_ms)) + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      async function fetchClientActivity() {
+        try {
+          var res = await fetch('/api/activity?window=1h', { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          var data = await res.json();
+          if (onSystem) renderClientActivity(data);
+        } catch (e) {
+          if (onSystem) renderClientActivity(null);
+        }
+      }
+
+      function setInfMsg(text, kind, force) {
+        if (!force && (benchBusy || Date.now() < benchMsgUntil)) return;
+        const el = $('inf-msg');
+        el.textContent = text || '';
+        el.className = 'inf-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function infLifeBadge(lifecycle) {
+        const lc = lifecycle || 'works';
+        return '<span class="inf-life life-' + lc + '">' + lc + '</span>';
+      }
+
+      function infRecipeFeatureBadges(p) {
+        const tags = new Set((p.tags || []).map((t) => String(t).toLowerCase()));
+        const spec = p.speculative || {};
+        let html = '';
+        if (spec.method === 'dflash' || tags.has('dflash')) {
+          html += '<span class="inf-spec dflash">DFlash</span>';
+        }
+        if (p.mtp || spec.method === 'mtp' || tags.has('mtp')) {
+          html += '<span class="inf-spec mtp">MTP</span>';
+        }
+        return html;
+      }
+
+      function infProfileSort(a, b) {
+        const rank = { works: 0, production: 0, testing: 1, failed: 2, draft: 3 };
+        const ra = rank[a.lifecycle || 'works'] ?? 1;
+        const rb = rank[b.lifecycle || 'works'] ?? 1;
+        if (ra !== rb) return ra - rb;
+        if (!!b.active - !!a.active) return (b.active ? 1 : 0) - (a.active ? 1 : 0);
+        return SparkInventoryGrid.compareValues(a, b, 'id', 'asc');
+      }
+
+      function infSortValue(p, col) {
+        if (col === 'recipe') return p.id || '';
+        if (col === 'engine') return engineDisplay(p.engine) || '';
+        if (col === 'tier') return p.tier || '';
+        if (col === 'lifecycle') return p.lifecycle || 'works';
+        if (col === 'ctx') {
+          const c = p.context;
+          const v = c && (c.effective != null ? c.effective : c.default);
+          return v != null ? Number(v) : null;
+        }
+        if (col === 'bench') return p.tok_s != null ? Number(p.tok_s) : null;
+        if (col === 'status') {
+          return p.active ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
+        }
+        return null;
+      }
+
+      function compareInfValues(a, b, col, dir) {
+        const av = infSortValue(a, col);
+        const bv = infSortValue(b, col);
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        let r;
+        if (typeof av === 'string' && typeof bv === 'string') {
+          r = av.localeCompare(bv);
+          if (r < 0) r = -1; else if (r > 0) r = 1;
+        } else {
+          r = av < bv ? -1 : av > bv ? 1 : 0;
+        }
+        return dir === 'desc' ? -r : r;
+      }
+
+      function fmtCtx(n) {
+        if (n == null || n === '' || Number.isNaN(Number(n))) return '—';
+        const v = Number(n);
+        if (v >= 1024 && v % 1024 === 0) return (v / 1024) + 'k';
+        if (v >= 1024) return (v / 1024).toFixed(1) + 'k';
+        return String(v);
+      }
+
+      function kvOptionsForEngine(engine) {
+        if (engine === 'eugr') return ['auto', 'fp8'];
+        if (engine === 'llamacpp') return ['auto', 'q8_0', 'q4_0', 'f16'];
+        // ds4 manages packed FP8/FP4 KV internally; recipe presets only change -c.
+        if (engine === 'ds4') return ['auto'];
+        if (engine === 'sparkinfer') return ['auto'];
+        if (engine === 'sglang' || engine === 'flashnext' || engine === 'tensorfold') return ['auto', 'fp8'];
+        return ['auto', 'fp8', 'q8_0', 'q4_0'];
+      }
+
+      function profileCtxLabel(p) {
+        const c = p && p.context;
+        if (!c) return null;
+        const eff = c.effective != null ? c.effective : c.default;
+        const kv = c.kv_effective || c.kv_default || 'auto';
+        if (eff == null) return null;
+        return fmtCtx(eff) + (kv && kv !== 'auto' ? ' · kv ' + kv : '');
+      }
+
+      async function loadInfContextPanel(profileId) {
+        const panel = $('inf-ctx-panel');
+        if (!profileId) {
+          panel.hidden = true;
+          infCtxPlan = null;
+          return;
+        }
+        try {
+          const res = await fetch('/api/inference/context?profile=' + encodeURIComponent(profileId));
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            panel.hidden = true;
+            return;
+          }
+          infCtxPlan = d;
+          renderInfContextPanel();
+        } catch (_) {
+          panel.hidden = true;
+        }
+      }
+
+      function renderInfContextPanel() {
+        const panel = $('inf-ctx-panel');
+        const d = infCtxPlan;
+        if (!d || !d.context) {
+          panel.hidden = true;
+          return;
+        }
+        panel.hidden = false;
+        const c = d.context;
+        const native = c.native ? ('native ' + fmtCtx(c.native)) : 'native unknown';
+        const def = c.default ? (' · default ' + fmtCtx(c.default)) : '';
+        $('inf-ctx-native').textContent = native + def;
+
+        const recBal = (c.recommendations || []).find((r) => r.label === 'balanced');
+        const presetsEl = $('inf-ctx-presets');
+        presetsEl.innerHTML = (c.presets || []).map((p) => {
+          const active = infCtxSelection.preset === p.id ? ' active' : '';
+          const rec = recBal && recBal.ctx === p.ctx ? ' rec' : '';
+          const tested = p.source === 'ctx_ladder' ? ' tested' : '';
+          const title = p.label + ' · ' + fmtCtx(p.ctx) + (p.kv && p.kv !== 'auto' ? ' kv ' + p.kv : '');
+          return '<button type="button" class="inf-ctx-preset' + active + rec + tested + '" data-ctx-preset="' + attrEsc(p.id)
+            + '" data-ctx-val="' + p.ctx + '" data-ctx-kv="' + attrEsc(p.kv || 'auto') + '" title="' + attrEsc(title) + '">'
+            + escHtml(p.label) + ' ' + escHtml(fmtCtx(p.ctx)) + '</button>';
+        }).join('');
+
+        const kvSel = $('inf-ctx-kv');
+        const testedKv = (c.kv_tested && c.kv_tested.length) ? c.kv_tested : kvOptionsForEngine(d.engine).filter((k) => k !== 'auto');
+        const kvLabels = {
+          auto: (d.engine === 'ds4' ? 'auto (ds4 packed FP8/FP4)' : 'auto'),
+          fp8: 'fp8 (vLLM)',
+          q8_0: 'q8_0 (llama.cpp)',
+          q4_0: 'q4_0 (llama.cpp)',
+          f16: 'f16',
+        };
+        const kvChoices = testedKv.length ? testedKv : ['auto'];
+        kvSel.innerHTML = kvChoices.map((k) => {
+          const lab = kvLabels[k] || k;
+          return '<option value="' + attrEsc(k) + '">' + escHtml(lab) + '</option>';
+        }).join('');
+        kvSel.disabled = d.engine === 'ds4';
+        const allowed = new Set(kvChoices);
+        const selKv = infCtxSelection.kv || (infCtxSelection.preset && (c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).kv || c.kv_default || 'auto';
+        kvSel.value = allowed.has(selKv) ? selKv : (kvChoices[0] || 'auto');
+
+        const selCtx = infCtxSelection.ctx != null ? infCtxSelection.ctx
+          : ((c.presets || []).find((p) => p.id === infCtxSelection.preset) || {}).ctx || c.default;
+        $('inf-ctx-custom').value = selCtx != null ? selCtx : '';
+        // OOM-safe soft max for ds4 on 128GB Spark (engine also clamps).
+        if (d.engine === 'ds4') {
+          $('inf-ctx-custom').max = '131072';
+          $('inf-ctx-custom').placeholder = '32768';
+        } else {
+          $('inf-ctx-custom').removeAttribute('max');
+          $('inf-ctx-custom').placeholder = '65536';
+        }
+
+        const recLines = (c.recommendations || []).map((r) => r.label + ': ' + fmtCtx(r.ctx) + ' — ' + r.reason).join(' ');
+        const mem = c.mem_avail_gb != null && c.weight_gb != null
+          ? (' ~' + Math.round(c.weight_gb) + ' GB weights · ' + c.mem_avail_gb + ' GB free.') : '';
+        const ds4Hint = d.engine === 'ds4'
+          ? ' ds4: ship ctx 32k (OOM-safe); cap 128k. DSpark on when recipe has --dspark.'
+          : '';
+        $('inf-ctx-hint').textContent = recLines + mem + ds4Hint;
+      }
+
+      function infLaunchContextPayload() {
+        const custom = parseInt($('inf-ctx-custom').value, 10);
+        const kv = $('inf-ctx-kv').value || 'auto';
+        const body = {};
+        if (!Number.isNaN(custom) && custom > 0) body.ctx = custom;
+        if (kv && kv !== 'auto') body.kv = kv;
+        if (infCtxSelection.preset) body.preset = infCtxSelection.preset;
+        return body;
+      }
+
+      function renderInfGridHead(allowSort) {
+        const cols = [
+          { label: 'Recipe', key: 'recipe', cls: 'grid-head-title', sortable: true },
+          { label: 'Model path', key: null, cls: 'grid-head-rail', sortable: false },
+          { label: 'Engine', key: 'engine', cls: 'grid-head-rail', sortable: true },
+          { label: 'Tier', key: 'tier', cls: 'grid-head-rail', sortable: true },
+          { label: 'Lifecycle', key: 'lifecycle', cls: 'grid-head-rail', sortable: true },
+          { label: 'Ctx', key: 'ctx', cls: 'grid-head-rail', sortable: true },
+          { label: 'Bench 4k', key: 'bench', cls: 'grid-head-rail bench', sortable: true },
+          { label: 'Status', key: 'status', cls: 'grid-head-rail', sortable: true },
+        ];
+        const cells = cols.map((c) => {
+          const sortable = allowSort && c.sortable;
+          const isSorted = sortable && c.key && infSortCol === c.key;
+          const ind = isSorted ? (infSortDir === 'desc' ? ' ↓' : ' ↑') : '';
+          const sortCls = sortable ? ' inf-gh-sort' : '';
+          const ariaSort = isSorted ? ' aria-sort="' + (infSortDir === 'desc' ? 'descending' : 'ascending') + '"' : '';
+          const dataAttr = sortable && c.key ? ' data-inf-sort-col="' + c.key + '"' : '';
+          return '<span class="' + c.cls + sortCls + '"' + ariaSort + dataAttr + ' role="columnheader">'
+            + escHtml(c.label) + escHtml(ind) + '</span>';
+        }).join('');
+        return '<div class="inf-grid-head">' + cells + '<span class="grid-head-spacer"></span></div>';
+      }
+
+      function renderInfGridRow(p, selectedId) {
+        const lc = p.lifecycle || 'works';
+        const canPick = p.switchable !== false && lc !== 'draft';
+        const isActive = !!p.active;
+        const isSelected = p.id === selectedId && !isActive;
+        const cls = 'inf-grid-row'
+          + (isActive ? ' active' : '')
+          + (lc === 'draft' ? ' draft' : '')
+          + (isSelected ? ' selected' : '')
+          + (canPick ? ' pickable' : '');
+        const pickAttrs = canPick
+          ? ' data-profile-id="' + attrEsc(p.id) + '" tabindex="0" role="button" title="Select for switch"'
+          : '';
+
+        const statusPill = isActive
+          ? '<span class="inf-active-pill">ACTIVE</span>'
+          : (isSelected ? '<span class="inf-selected-pill">selected</span>' : '');
+        const nameCell = '<span class="inf-gcell g-name">'
+          + infRecipeFeatureBadges(p)
+          + '<span class="g-name-text" title="' + attrEsc(p.id) + '">' + escHtml(p.id) + '</span>'
+          + statusPill + '</span>';
+
+        const shelf = p.inventory_path ? String(p.inventory_path).split('/').pop() : '—';
+        const pathCell = '<span class="inf-gcell" title="' + attrEsc(p.inventory_path || '') + '">' + escHtml(shelf) + '</span>';
+
+        const engineCell = '<span class="inf-gcell">' + escHtml(engineDisplay(p.engine) || '—') + '</span>';
+
+        const tierCell = '<span class="inf-gcell">' + escHtml(p.tier || '—') + '</span>';
+
+        const lcCell = '<span class="inf-gcell">' + infLifeBadge(lc) + '</span>';
+
+        let ctxText = profileCtxLabel(p) || '—';
+        let ctxCls = 'inf-gcell';
+        if (isSelected && infCtxPlan && infCtxPlan.profile === p.id) {
+          const selCtx = infCtxSelection.ctx;
+          const selKv = infCtxSelection.kv;
+          const hasOverride = selCtx != null || (selKv && selKv !== 'auto');
+          if (hasOverride) {
+            const parts = [];
+            if (selCtx != null) parts.push(fmtCtx(selCtx));
+            if (selKv && selKv !== 'auto') parts.push('kv ' + selKv);
+            ctxText = parts.join(' · ');
+            ctxCls = 'inf-gcell g-ctx-override';
+          }
+        }
+        const ctxCell = '<span class="' + ctxCls + '">' + escHtml(ctxText) + '</span>';
+
+        const tok = p.tok_s != null ? Math.round(p.tok_s) + ' tok/s' : '—';
+        const benchCell = '<span class="inf-gcell g-bench">' + escHtml(tok) + '</span>';
+
+        const state = isActive ? (p.ready ? 'ready' : (p.starting ? 'starting' : 'waiting')) : 'idle';
+        const statusCls = 'inf-gcell' + (isActive && p.ready ? ' g-active-label' : '');
+        const statusCell = '<span class="' + statusCls + '">' + escHtml(state) + '</span>';
+
+        return '<div class="' + cls + '"' + pickAttrs + '>'
+          + nameCell + pathCell + engineCell + tierCell + lcCell + ctxCell + benchCell + statusCell
+          + '<span class="inf-gcell"></span>'
+          + '</div>';
+      }
+
+      function renderInfProfiles(profiles, activeId, switching) {
+        const all = (profiles || []).slice();
+        const switchable = all.filter((p) => p.switchable !== false);
+        const filtered = filterInfProfiles(all, activeId);
+
+        const sel = $('inf-select');
+        const prev = sel.value;
+        sel.innerHTML = switchable.map((p) => {
+          const lc = p.lifecycle && p.lifecycle !== 'production' && p.lifecycle !== 'works'
+            ? ' · ' + p.lifecycle : '';
+          return '<option value="' + attrEsc(p.id) + '" data-tier="' + attrEsc(p.tier || '') + '" data-engine="' + attrEsc(p.engine || '') + '">'
+            + escHtml(p.id + ' · ' + engineDisplayMeta(p.engine) + ' · ' + (p.tier || '') + lc) + '</option>';
+        }).join('');
+        if (prev && switchable.some((p) => p.id === prev)) sel.value = prev;
+        else if (activeId && switchable.some((p) => p.id === activeId)) sel.value = activeId;
+        else if (switchable.length) sel.value = switchable[0].id;
+
+        const countEl = $('inf-recipes-count');
+        if (countEl) {
+          SparkInventoryGrid.renderSummary(countEl, { filtered: filtered.length, total: all.length });
+        }
+
+        const selectedId = sel.value;
+        const listEl = $('inf-profiles');
+        if (!all.length) {
+          listEl.innerHTML = '<div class="inf-empty-filter">No recipes yet — create drafts on the '
+            + '<a href="/archive/v1/#models">Models</a> page.</div>';
+        } else if (!filtered.length) {
+          listEl.innerHTML = '<div class="inf-empty-filter">No recipes match — '
+            + '<button type="button" class="inf-link-btn" data-inf-clear-filters>Clear filters</button></div>';
+        } else if (infGroupByFamily) {
+          const groups = groupInfProfiles(filtered);
+          const multiGroup = groups.length > 1;
+          suppressInfGroupToggle = true;
+          const groupsHtml = groups.map((g) => {
+            const hasActive = g.items.some((p) => p.active);
+            const hasSelected = g.items.some((p) => p.id === selectedId);
+            if (hasActive) infModelGroupsOpen.add(g.family);
+            const open = modelGroupShouldOpen(g.family, multiGroup, hasActive, hasSelected);
+            const rows = g.items.map((p) => renderInfGridRow(p, selectedId)).join('');
+            const groupCls = 'inf-model-group' + (hasActive ? ' has-active' : '');
+            const activeTag = hasActive ? '<span class="inf-model-group-active-tag">● active</span>' : '';
+            return '<details class="' + groupCls + '" data-model-group="' + attrEsc(g.family) + '"'
+              + (open ? ' open' : '') + '>'
+              + '<summary><span class="inf-model-group-name">' + escHtml(g.family) + '</span>'
+              + activeTag
+              + '<span class="inf-model-group-count">(' + g.items.length + ')</span></summary>'
+              + '<div class="inf-grid-rows">' + rows + '</div></details>';
+          }).join('');
+          listEl.innerHTML = renderInfGridHead(false) + '<div class="inf-model-family-groups">' + groupsHtml + '</div>';
+          suppressInfGroupToggle = false;
+        } else {
+          const sortFn = infSortCol
+            ? (a, b) => compareInfValues(a, b, infSortCol, infSortDir) || infProfileSort(a, b)
+            : infProfileSort;
+          const rows = filtered.slice().sort(sortFn).map((p) => renderInfGridRow(p, selectedId)).join('');
+          listEl.innerHTML = renderInfGridHead(true) + '<div class="inf-grid-rows">' + rows + '</div>';
+        }
+
+        const activeRow = listEl.querySelector('.inf-grid-row.active');
+        if (activeRow && activeRow.scrollIntoView) {
+          requestAnimationFrame(() => activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+        }
+
+        $('inf-switch').disabled = !!switching || !switchable.length;
+        $('inf-down').disabled = !!switching;
+        const _ctxProf = $('inf-select').value;
+        if (_ctxProf && (!infCtxPlan || infCtxPlan.profile !== _ctxProf)) loadInfContextPanel(_ctxProf);
+        $('inf-bench').disabled = !!switching
+          || !(activeId && all.some((p) => p.id === activeId && p.ready));
+      }
+
+      function applyPendingPickProfile(profiles) {
+        if (!pendingPickProfile) return;
+        const id = pendingPickProfile;
+        const prof = (profiles || []).find((p) => p.id === id);
+        if (!prof) return;
+        pendingPickProfile = null;
+        if (infGroupByFamily) infModelGroupsOpen.add(profileModelFamily(prof));
+        pickInfProfile(id);
+        requestAnimationFrame(() => {
+          const row = document.querySelector('.inf-grid-row[data-profile-id="' + CSS.escape(id) + '"]');
+          if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+      }
+
+      function renderInferencePanel(data) {
+        const active = data.active;
+        const loading = inferenceLoadingInfo(data);
+        const switching = data.switch && data.switch.running;
+        const benching = data.bench && data.bench.running;
+        const profiles = data.profiles || [];
+        const switchBanner = $('inf-switch-banner');
+        renderInfUpdateBanner(data);
+
+        if (loading && !benching) {
+          const prof = loading.profile || '…';
+          const expectHint = loading.expect && loading.expect.hint ? loading.expect.hint : '';
+          const phaseKey = loadingPhaseKey(loading);
+          if (phaseKey === 'switch') {
+            $('inf-head-meta').textContent = 'switching… pid ' + (data.switch.pid || '—');
+            $('inf-active-title').textContent = inferenceLoadingLabel(loading);
+            $('inf-active-meta').textContent = (loading.detail || prof + ' — log updates below')
+              + (expectHint ? ' · ' + expectHint : '');
+            const tail = (data.switch.log_tail || []).slice(-4).join('\n');
+            if (tail) {
+              switchBanner.hidden = false;
+              switchBanner.textContent = tail;
+            } else {
+              switchBanner.hidden = true;
+              switchBanner.textContent = '';
+            }
+            setInfMsg(expectHint || 'Profile switch running — API may be unavailable until ready.', 'warn');
+          } else {
+            switchBanner.hidden = true;
+            switchBanner.textContent = '';
+            $('inf-head-meta').textContent = (active && active.engine ? engineDisplayMeta(active.engine) + ' · :' + active.port : 'engine starting')
+              + (active && active.tier ? ' · ' + active.tier : '');
+            $('inf-active-title').textContent = inferenceLoadingLabel(loading);
+            $('inf-active-meta').textContent = (loading.detail || prof)
+              + (expectHint ? ' · ' + expectHint : '');
+            setInfMsg(expectHint || (loading.detail || 'Waiting for /v1/models.'), 'warn');
+          }
+        } else if (benching) {
+          switchBanner.hidden = true;
+          switchBanner.textContent = '';
+          $('inf-head-meta').textContent = 'benchmark running… pid ' + (data.bench.pid || '—');
+          $('inf-active-title').textContent = 'Throughput benchmark';
+          $('inf-active-meta').textContent = '3 sessions × 3 turns (~45s) — dashboard stays live';
+          if (!benchBusy) {
+            setInfMsg('Benchmark in progress — status updates every 2s.', 'warn');
+          }
+        } else {
+          switchBanner.hidden = true;
+          switchBanner.textContent = '';
+          if (active && active.ready) {
+            $('inf-head-meta').textContent = engineDisplayMeta(active.engine) + ' · :' + active.port
+              + (active.tier ? ' · ' + active.tier : '');
+            $('inf-active-title').textContent = active.name || active.id;
+            const tok = active.tok_s != null ? ' · ' + Math.round(active.tok_s) + ' tok/s' : '';
+            const owuiHint = active.engine === 'ds4'
+              ? ' · Open WebUI: backend :8002/v1 (thinking off)' : '';
+            const actCtx = profileCtxLabel(active);
+            $('inf-active-meta').textContent = active.id + ' · ' + active.served_name
+              + (actCtx ? ' · ctx ' + actCtx : '')
+              + tok + ' · ready' + owuiHint + (active.started_at ? ' · since ' + active.started_at : '');
+            setInfMsg('');
+          } else {
+            $('inf-head-meta').textContent = 'no active profile';
+            $('inf-active-title').textContent = 'Inference offline';
+            $('inf-active-meta').textContent = 'vLLM: ' + (data.engines.eugr ? 'up' : 'down')
+              + ' · llama.cpp: ' + (data.engines.llamacpp ? 'up' : 'down')
+              + ' · ds4: ' + (data.engines.ds4 ? 'up' : 'down');
+            setInfMsg('');
+          }
+        }
+
+        const activeId = active && active.id;
+        const profSnap = infProfilesSnapshot(data, activeId);
+        if (profSnap !== lastInfProfilesSnapshot) {
+          lastInfProfilesSnapshot = profSnap;
+          renderInfProfiles(profiles, activeId, switching || benching);
+        }
+        applyPendingPickProfile(profiles);
+        $('inf-api-link').href = (data.urls && data.urls.api) || '#';
+        $('inf-api-link').style.display = (data.urls && data.urls.api) ? '' : 'none';
+        const invPath = active && active.inventory_path;
+        $('inf-models-link').href = invPath
+          ? '/?highlight=' + encodeURIComponent(invPath) + '#models'
+          : '/#models';
+        $('inf-models-link').textContent = invPath ? 'View model in inventory' : 'Model inventory';
+      }
+
+      let lastInfLogMeta = { file: '', engine: '' };
+
+      function formatInfLogText(d) {
+        if (d.file) lastInfLogMeta.file = d.file;
+        if (d.engine) lastInfLogMeta.engine = d.engine;
+        if (d.sections && d.sections.length) {
+          return d.sections.map((s) => {
+            const head = s.kind === 'switch'
+              ? '[switch] ' + s.file
+              : '# ' + (s.engine === 'eugr' ? 'docker logs ' : '') + s.file
+                + (s.engine ? ' (' + engineDisplayMeta(s.engine) + ')' : '');
+            const body = (s.lines || []).join('\n');
+            return head + '\n' + (body || '—');
+          }).join('\n\n').trim() || '—';
+        }
+        const header = d.file ? '# ' + d.file + (d.engine ? ' (' + engineDisplayMeta(d.engine) + ')' : '') + '\n' : '';
+        const lines = (d.lines || []).join('\n');
+        const sw = d.switch && d.switch.running
+          ? '\n[switch running]\n' + (d.switch.log_tail || []).join('\n') : '';
+        return (header + (lines || sw || '—')).trim() || '—';
+      }
+
+      async function fetchInfLogs() {
+        const lineCount = infLogOverlayOpen ? 120 : 40;
+        try {
+          const res = await fetch('/api/inference/logs?lines=' + lineCount, { cache: 'no-store' });
+          if (!res.ok) return;
+          const d = await res.json();
+          const text = formatInfLogText(d);
+          $('inf-log').textContent = text;
+          if (infLogOverlayOpen) $('inf-log-overlay-log').textContent = text;
+        } catch (e) {
+          const msg = 'log unavailable';
+          $('inf-log').textContent = msg;
+          if (infLogOverlayOpen) $('inf-log-overlay-log').textContent = msg;
+        }
+      }
+
+      function updateInfLogOverlayChrome() {
+        const info = lastInfStatus && inferenceLoadingInfo(lastInfStatus);
+        $('inf-log-overlay-title').textContent = info
+          ? inferenceLoadingLabel(info) : 'Inference log';
+        const eng = (info && info.engine) || lastInfLogMeta.engine;
+        const logHint = lastInfLogMeta.file ? lastInfLogMeta.file : 'engine log';
+        const engHint = eng ? engineDisplayMeta(eng) + ' · ' : '';
+        $('inf-log-overlay-meta').textContent = info
+          ? (inferenceLoadingTitle(info) + '\n' + engHint + logHint)
+          : (engHint + logHint);
+      }
+
+      function openInfLogOverlay() {
+        infLogOverlayOpen = true;
+        $('inf-log-overlay').hidden = false;
+        document.body.classList.add('inf-log-overlay-open');
+        updateInfLogOverlayChrome();
+        fetchInfLogs();
+      }
+
+      function closeInfLogOverlay() {
+        if (!infLogOverlayOpen) return;
+        infLogOverlayOpen = false;
+        $('inf-log-overlay').hidden = true;
+        document.body.classList.remove('inf-log-overlay-open');
+        fetchInfLogs();
+      }
+
+      function maybeCloseInfLogOverlay(data) {
+        if (infLogOverlayOpen && data && !inferenceLoadingInfo(data)) {
+          closeInfLogOverlay();
+        }
+      }
+
+      async function fetchInferenceStatus(opts) {
+        opts = opts || {};
+        try {
+          const url = opts.lite ? '/api/inference/status?lite=1' : '/api/inference/status';
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          const data = await res.json();
+          if (!opts.lite) lastInfStatus = data;
+          return data;
+        } catch (e) {
+          if (!opts.lite) lastInfStatus = null;
+          return null;
+        }
+      }
+
+      async function infTick() {
+        if (!onInference) return;
+        if (infTickInFlight) return;
+        if (document.visibilityState !== 'visible') return;
+        infTickInFlight = true;
+        try {
+          const d = await fetchInferenceStatus();
+          if (!onInference) return;
+          if (d) {
+            renderInferencePanel(d);
+            maybeCloseInfLogOverlay(d);
+            await fetchInfLogs();
+            if (infLogOverlayOpen) updateInfLogOverlayChrome();
+            $('live').classList.remove('live-stale');
+            $('live').lastChild.textContent = 'live';
+            maybeAutoStartProfile(d);
+          } else {
+            $('live').classList.add('live-stale');
+            $('live').lastChild.textContent = 'offline';
+            setInfMsg('Inference API unavailable — run sudo bash install/spark-install core', 'err');
+          }
+        } finally {
+          infTickInFlight = false;
+        }
+      }
+
+      function maybeAutoStartProfile(data) {
+        if (!pendingStartProfile || !data) return;
+        const profile = pendingStartProfile;
+        const prof = (data.profiles || []).find((p) => p.id === profile);
+        if (!prof || prof.switchable === false) {
+          pendingStartProfile = null;
+          setInfMsg(prof ? 'Profile not switchable (draft) — mark testing on Models first.' : 'Unknown profile: ' + profile, 'err');
+          return;
+        }
+        if (data.switch && data.switch.running) return;
+        if (data.active && data.active.id === profile && data.active.ready) {
+          pendingStartProfile = null;
+          return;
+        }
+        pendingStartProfile = null;
+        $('inf-select').value = profile;
+        infCtxSelection = { preset: 'default', ctx: null, kv: null };
+        loadInfContextPanel(profile);
+        if (prof.tier === 'heavy') {
+          setInfMsg('Confirm heavy profile switch using the Switch button.', 'warn');
+          return;
+        }
+        infSwitch();
+      }
+
+      async function infSwitch() {
+        const sel = $('inf-select');
+        const profile = sel.value;
+        const tier = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.tier;
+        if (!profile) return;
+        if (tier === 'heavy') {
+          const ok = confirm(
+            'Heavy profile (“' + profile + '”) may take several minutes to load.\n\nContinue?'
+          );
+          if (!ok) return;
+        }
+        setInfMsg('Starting switch…', 'warn');
+        $('inf-switch').disabled = true;
+        try {
+          const body = { profile: profile, confirm: true, ...infLaunchContextPayload() };
+          if (tier === 'heavy') body.confirm_heavy = true;
+          const res = await fetch('/api/inference/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setInfMsg(d.error || 'switch failed', 'err');
+            return;
+          }
+          setInfMsg('Switch started for ' + profile, 'warn');
+          const eng = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.engine;
+          if (tier === 'heavy' || eng === 'ds4') openInfLogOverlay();
+          infTick();
+        } catch (e) {
+          setInfMsg('switch request failed', 'err');
+        }
+      }
+
+      function showBenchResult(d) {
+        let msg = 'Avg ' + Math.round(d.tok_s) + ' tok/s';
+        if (d.tok_s_min != null && d.tok_s_max != null) {
+          msg += ' (' + Math.round(d.tok_s_min) + '–' + Math.round(d.tok_s_max) + ')';
+        }
+        if (d.sessions && d.turns_per_session) {
+          msg += ' · ' + d.sessions + '×' + d.turns_per_session + ' turns';
+        }
+        if (d.completion_tokens) msg += ' · ' + d.completion_tokens + ' tokens';
+        benchMsgUntil = Date.now() + 120000;
+        setInfMsg(msg, 'ok', true);
+        infTick();
+      }
+
+      async function pollBenchJob() {
+        setInfMsg('Running agent benchmark (3 sessions × 3 turns, ~45s)…', 'warn', true);
+        for (let i = 0; i < 90; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const d = await fetchInferenceStatus();
+          if (!d) continue;
+          renderInferencePanel(d);
+          const bench = d.bench || {};
+          if (bench.running) continue;
+          const result = bench.result || {};
+          if (result.ok !== false && result.tok_s != null) {
+            showBenchResult(result);
+            return;
+          }
+          benchMsgUntil = Date.now() + 60000;
+          setInfMsg(bench.error || result.error || 'benchmark failed', 'err', true);
+          return;
+        }
+        benchMsgUntil = Date.now() + 60000;
+        setInfMsg('Benchmark timed out waiting for result', 'err', true);
+      }
+
+      async function infBench() {
+        if (benchBusy) return;
+        benchBusy = true;
+        benchMsgUntil = 0;
+        setInfMsg('Starting benchmark…', 'warn', true);
+        $('inf-bench').disabled = true;
+        try {
+          const res = await fetch('/api/inference/bench', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            benchMsgUntil = Date.now() + 60000;
+            let err = d.error || 'benchmark failed';
+            if (res.status === 404) {
+              err = 'Benchmark API missing — restart: sudo systemctl restart spark-inference-api';
+            }
+            setInfMsg(err, 'err', true);
+            return;
+          }
+          if (res.status === 202 || (d.bench && d.bench.running)) {
+            await pollBenchJob();
+            return;
+          }
+          if (d.tok_s != null) {
+            showBenchResult(d);
+            return;
+          }
+          benchMsgUntil = Date.now() + 60000;
+          setInfMsg('Unexpected benchmark response', 'err', true);
+        } catch (e) {
+          benchMsgUntil = Date.now() + 60000;
+          setInfMsg('Benchmark request failed', 'err', true);
+        } finally {
+          benchBusy = false;
+          const switching = lastInfStatus && lastInfStatus.switch && lastInfStatus.switch.running;
+          const benching = lastInfStatus && lastInfStatus.bench && lastInfStatus.bench.running;
+          const ready = lastInfStatus && lastInfStatus.active && lastInfStatus.active.ready;
+          $('inf-bench').disabled = !!switching || !!benching || !ready;
+        }
+      }
+
+      async function infDown() {
+        if (!confirm('Stop the active inference engine?')) return;
+        setInfMsg('Stopping…', 'warn');
+        try {
+          const res = await fetch('/api/inference/down', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirm: true }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setInfMsg(d.error || 'stop failed', 'err');
+            return;
+          }
+          setInfMsg('Inference stopped');
+          infTick();
+        } catch (e) {
+          setInfMsg('stop request failed', 'err');
+        }
+      }
+
+      function renderNavHermes(h, containers) {
+        const dot = $('nav-hermes-dot');
+        const link = $('nav-hermes');
+        if (!dot || !link) return;
+        const snap = JSON.stringify({ h: h || null, c: (containers || []).map((x) => ({ name: x.name, up: x.up })) });
+        if (snap === lastNavHermesSnapshot) return;
+        lastNavHermesSnapshot = snap;
+        let online = false;
+        if (h) {
+          online = !!h.online;
+        } else if (containers) {
+          const c = containers.find((x) => x.name === 'spark-bot');
+          online = !!(c && c.up);
+        }
+        dot.className = 'svc-dot ' + (online ? 'up' : 'down');
+        if (h) {
+          if (online) link.title = 'Hermes · online';
+          else if (h.container && !h.service) link.title = 'Hermes · container up, dashboard not responding';
+          else link.title = 'Hermes · offline';
+        } else if (online) {
+          link.title = 'Hermes · container running';
+        } else {
+          link.title = 'Hermes · offline';
+        }
+      }
+
+      function updateNavMetrics(d) {
+        $('nav-gpu-util').textContent = d.gpu_util_pct != null ? Math.round(d.gpu_util_pct) : '—';
+        $('nav-mem-util').textContent = d.memory_used_pct != null ? Math.round(d.memory_used_pct) : '—';
+        setBar($('nav-gpu-bar'), d.gpu_util_pct || 0);
+        setBar($('nav-mem-bar'), d.memory_used_pct || 0);
+        const gpuTitle = (d.gpu_name || 'GPU') + ' · ' + (d.gpu_util_pct != null ? d.gpu_util_pct.toFixed(1) + '%' : '—');
+        $('nav-gpu').title = d.gpu_power_w != null ? gpuTitle + ' · ' + d.gpu_power_w + ' W' : gpuTitle;
+        $('nav-mem').title = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB system memory';
+        lastEngineLoad = d.engine_load || null;
+        const load = engineLoadParts(lastEngineLoad);
+        const seqEl = $('nav-seq');
+        const seqVal = $('nav-seq-val');
+        if (seqEl && seqVal) {
+          if (load) {
+            seqVal.textContent = load.label;
+            seqEl.className = 'nav-metric seq' + (load.queued ? ' warn' : '');
+            seqEl.title = load.title;
+            setBar($('nav-seq-bar'), load.pct);
+          } else {
+            seqVal.textContent = '—';
+            seqEl.className = 'nav-metric seq';
+            seqEl.title = 'Engine sequences in flight';
+            setBar($('nav-seq-bar'), 0);
+          }
+        }
+      }
+
+      function modelsFrameUrl(base) {
+        let url = window.SparkyTheme && SparkyTheme.themedUrl ? SparkyTheme.themedUrl(base) : base;
+        const hp = new URLSearchParams(location.search).get('highlight');
+        if (hp && base.includes('models.html')) {
+          url += (url.includes('?') ? '&' : '?') + 'highlight=' + encodeURIComponent(hp);
+        }
+        // Bust iframe cache when Models UI changes (quant rows, variant labels, …)
+        url += (url.includes('?') ? '&' : '?') + 'ui=20260710-quants';
+        return url;
+      }
+
+      async function gpuPoll() {
+        if (gpuPollInFlight) return;
+        if (document.visibilityState !== 'visible') return;
+        gpuPollInFlight = true;
+        try {
+          const now = Date.now();
+          const infPromise = (now - lastInfNavFetchAt >= INF_NAV_POLL_MS)
+            ? fetchInferenceStatus({ lite: true }).then((d) => {
+                if (d) {
+                  lastInfNavFetchAt = Date.now();
+                  lastInfNavStatus = d;
+                }
+                return d;
+              })
+            : Promise.resolve(lastInfNavStatus);
+          const [gpuRes, infData] = await Promise.all([
+            fetch('/api/gpu', { cache: 'no-store' }),
+            infPromise,
+          ]);
+          if (!gpuRes.ok) throw new Error('bad status');
+          const d = await gpuRes.json();
+          const hist = d.history || {};
+
+          gpuPollErrors = 0;
+          gpuPollNextDelay = GPU_POLL_BASE_MS;
+
+          updateNavMetrics(d);
+          renderNavHermes(d.hermes, d.containers);
+          renderNavInference(infData);
+          maybeCloseInfLogOverlay(infData);
+          if (infLogOverlayOpen) {
+            updateInfLogOverlayChrome();
+          }
+          if (!onSystem) {
+            $('live').classList.remove('live-stale');
+            $('live').lastChild.textContent = 'live';
+            return;
+          }
+
+          $('gpu-name').textContent = d.gpu_name;
+          $('uptime-text').textContent = d.uptime_human;
+          $('load-line').textContent = 'load ' + d.load_1 + ' · ' + d.load_5 + ' · ' + d.load_15;
+          $('cpu-util').textContent = d.cpu_util_pct.toFixed(1);
+          $('gpu-util').textContent = d.gpu_util_pct.toFixed(1);
+          $('mem-util').textContent = d.memory_used_pct.toFixed(1);
+          setBar($('cpu-bar'), d.cpu_util_pct);
+          setBar($('gpu-bar'), d.gpu_util_pct);
+          setBar($('mem-bar'), d.memory_used_pct);
+          const peak = Math.min(100, d.cpu_peak_core_pct || 0);
+          $('cpu-sub').textContent = (peak >= 95 && d.cpu_util_pct < 20)
+            ? '1 core maxed'
+            : ('peak core ' + peak.toFixed(1) + '%');
+          $('mem-sub').textContent = fmtGb(d.memory_used_mb) + ' / ' + fmtGb(d.memory_total_mb) + ' GB';
+          $('gpu-sub').textContent = d.gpu_power_w != null ? d.gpu_power_w + ' W' : '— W';
+
+          sparkline($('cpu-spark'), hist.cpu_util_pct, '#6eb5ff');
+          sparkline($('gpu-spark'), hist.gpu_util_pct, '#76b900');
+          sparkline($('mem-spark'), hist.memory_used_pct, '#c5a3ff');
+
+          const load = engineLoadParts(d.engine_load);
+          const engTile = $('engine-metric');
+          if (load) {
+            $('engine-running').textContent = load.running;
+            $('engine-max-suffix').textContent = load.max != null ? '/' + load.max : '';
+            const hint = [];
+            if (load.waiting > 0) hint.push(load.waiting + ' queued');
+            else hint.push(load.running === 1 ? '1 seq' : load.running + ' seqs');
+            if (load.kv != null) hint.push('KV ' + load.kv.toFixed(load.kv >= 10 ? 0 : 1) + '%');
+            $('engine-sub').textContent = hint.join(' · ');
+            if (engTile) {
+              engTile.classList.toggle('warn', load.queued);
+              engTile.title = load.title;
+            }
+            setBar($('engine-bar'), load.pct);
+          } else {
+            $('engine-running').textContent = '—';
+            $('engine-max-suffix').textContent = '/—';
+            $('engine-sub').textContent = 'seqs in flight';
+            if (engTile) {
+              engTile.classList.remove('warn');
+              engTile.title = 'Engine sequences in flight';
+            }
+            setBar($('engine-bar'), 0);
+          }
+          sparkline($('engine-spark'), hist.engine_running, '#6eb5ff');
+
+          setTempWidget('gpu-temp-val', 'gpu-temp', 'gpu-temp-bar', d.gpu_temp_c);
+          setTempWidget('cpu-temp-val', 'cpu-temp', 'cpu-temp-bar', d.cpu_temp_c);
+          sparkline($('gpu-temp-spark'), hist.gpu_temp_c, '#f08a5d');
+          sparkline($('cpu-temp-spark'), hist.cpu_temp_c, '#e8b84a');
+
+          const net = d.network || {};
+          if (net.rx_mbps != null) {
+            $('net-rx').textContent = net.rx_mbps.toFixed(1);
+            $('net-sub').textContent = '↑ ' + net.tx_mbps.toFixed(1) + ' Mbps · ' + (net.label || net.iface || '—');
+            const netMax = Math.min(10000, Math.max(100, ...(hist.net_rx_mbps || []), net.rx_mbps));
+            setBar($('net-bar'), (net.rx_mbps / netMax) * 100);
+          } else {
+            $('net-rx').textContent = '—';
+            $('net-sub').textContent = net.iface
+              ? ('↑ — Mbps · ' + (net.label || net.iface))
+              : 'offline';
+            setBar($('net-bar'), 0);
+          }
+          sparkline($('net-spark'), hist.net_rx_mbps, '#6bc46d');
+
+          renderStorage(d.storage || []);
+          renderInferencePills(infData);
+          renderContainers(d.containers || []);
+          fetchClientActivity();
+
+          $('live').classList.remove('live-stale');
+          $('live').lastChild.textContent = 'live';
+        } catch (e) {
+          $('live').classList.add('live-stale');
+          $('live').lastChild.textContent = 'offline';
+          gpuPollErrors++;
+          gpuPollNextDelay = Math.min(GPU_POLL_MAX_MS, GPU_POLL_BASE_MS * Math.pow(2, gpuPollErrors));
+        } finally {
+          gpuPollInFlight = false;
+          if (pollTimer != null) {
+            clearTimeout(pollTimer);
+            pollTimer = setTimeout(gpuPoll, gpuPollNextDelay);
+          }
+        }
+      }
+
+      function fmtDownloads(n) {
+        if (n == null || n < 0) return '—';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+        return String(n);
+      }
+
+      function fmtExpDate(iso) {
+        if (!iso) return '';
+        try {
+          return new Date(iso).toLocaleDateString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+          });
+        } catch {
+          return '';
+        }
+      }
+
+      function expBadgeHtml(m) {
+        const badges = [];
+        if (m.spark_warning) badges.push('<span class="exp-badge incompatible">No Spark</span>');
+        if (m.has_gguf) badges.push('<span class="exp-badge gguf">GGUF</span>');
+        if (m.has_nvfp4) badges.push('<span class="exp-badge nvfp4">NVFP4</span>');
+        if (m.has_moe) badges.push('<span class="exp-badge moe">MoE</span>');
+        else if (m.has_dense) badges.push('<span class="exp-badge dense">Dense</span>');
+        if (m.has_mtp) badges.push('<span class="exp-badge mtp">MTP</span>');
+        if (m.has_vision) badges.push('<span class="exp-badge vision">Vision</span>');
+        if (m.has_diffusion) badges.push('<span class="exp-badge diffusion">Diffusion</span>');
+        return badges;
+      }
+
+      function expFilterQuery() {
+        return [...expFilterChips].join(',');
+      }
+
+      function setExpMsg(text, kind) {
+        const el = $('exp-msg');
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = 'exp-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function setExpDetailMsg(text, kind) {
+        const el = $('exp-detail-msg');
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = 'exp-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function renderExpSparkWarning(warning) {
+        expSparkWarning = warning || null;
+        const el = $('exp-spark-warning');
+        const saveBtn = $('exp-save-explore');
+        if (!el) return;
+        if (!warning || !warning.message) {
+          el.hidden = true;
+          el.innerHTML = '';
+          if (saveBtn) saveBtn.disabled = false;
+          return;
+        }
+        el.hidden = false;
+        el.innerHTML = '<strong>' + escHtml(warning.title || 'Does not work on Spark') + '</strong>'
+          + escHtml(warning.message);
+        if (saveBtn) saveBtn.disabled = true;
+      }
+
+      function expFormatState(state) {
+        if (!state) return 'unknown';
+        return String(state).replace(/_/g, ' ');
+      }
+
+      function expActiveDownloadInfo(data) {
+        const active = (data && data.active) || {};
+        if (!active.running) return null;
+        const item = active.item || {};
+        const prog = active.progress || {};
+        const repo = item.repo || prog.repo || null;
+        const dest = String(item.dest || prog.dest || '').replace('/models/', '');
+        return {
+          source: active.source || 'unknown',
+          pid: active.pid,
+          repo: repo,
+          state: item.state || (prog.finished ? 'finishing' : 'downloading'),
+          dest: dest,
+          size: item.size_human || '',
+          files: item.file_count || prog.file_count || null,
+          startedAt: item.started_at || prog.log_started_at || null,
+          activity: prog.last_activity || null,
+          queued: active.queued_count || 0,
+          awaiting: active.awaiting_count || 0,
+          logTail: (active.log_tail || []).filter((l) => String(l).trim()),
+        };
+      }
+
+      function renderExpStatusBanner(data) {
+        const panel = $('exp-status-panel');
+        const el = $('exp-status-banner');
+        const logEl = $('exp-download-log');
+        if (!el) return;
+        if (!data) {
+          el.textContent = 'HF API offline';
+          if (panel) panel.className = 'exp-status-panel down';
+          if (logEl) logEl.hidden = true;
+          return;
+        }
+        const legacy = data.legacy || {};
+        const active = data.active || {};
+        let cls = 'ok';
+        let title = '';
+        let detail = '';
+        let logLines = [];
+
+        const dlInfo = expActiveDownloadInfo(data);
+        if (legacy.running) {
+          cls = 'warn';
+          title = 'Legacy download in progress';
+          if (dlInfo && dlInfo.repo) {
+            detail = dlInfo.repo + (dlInfo.dest ? ' → ' + dlInfo.dest : '')
+              + ' · queue paused (never interrupted)';
+          } else {
+            detail = 'Queue paused — ad-hoc download script running';
+          }
+          logLines = dlInfo ? dlInfo.logTail : [];
+        } else if (active.running && dlInfo && dlInfo.repo) {
+          cls = 'warn';
+          title = 'Downloading · ' + dlInfo.repo;
+          const bits = [expFormatState(dlInfo.state)];
+          if (dlInfo.size) bits.push(dlInfo.size);
+          if (dlInfo.files) bits.push(dlInfo.files + ' file' + (dlInfo.files === 1 ? '' : 's'));
+          if (dlInfo.dest) bits.push('→ ' + dlInfo.dest);
+          if (dlInfo.pid) bits.push('pid ' + dlInfo.pid);
+          detail = bits.join(' · ');
+          if (dlInfo.activity) detail += '\n' + dlInfo.activity;
+          if (dlInfo.queued) detail += '\n' + dlInfo.queued + ' more queued after this';
+          logLines = dlInfo.logTail;
+        } else if (active.running) {
+          cls = 'warn';
+          title = 'Download worker active';
+          detail = (active.source || 'queue') + (active.pid ? ' · pid ' + active.pid : '')
+            + ' — waiting for queue item details';
+          logLines = (active.log_tail || []).filter((l) => String(l).trim());
+        } else if (data.bench_running && !data.can_start) {
+          cls = 'warn';
+          title = 'Downloads deferred';
+          detail = 'Benchmark running — new queue items wait until bench finishes';
+          const dl = (data.queue && data.queue.download) || [];
+          const pending = dl.filter((i) => i.state === 'queued').length;
+          if (pending) detail += '\n' + pending + ' item(s) queued';
+        } else {
+          const dl = (data.queue && data.queue.download) || [];
+          const queued = dl.filter((i) => i.state === 'queued');
+          const awaiting = dl.filter((i) => i.state === 'awaiting_license');
+          if (queued.length || awaiting.length) {
+            cls = 'ok';
+            title = 'Download queue';
+            const bits = [];
+            if (queued.length) bits.push(queued.length + ' queued');
+            if (awaiting.length) bits.push(awaiting.length + ' awaiting HF license');
+            detail = bits.join(' · ') + ' · idle';
+            if (queued.length === 1) {
+              const p = queued[0].plan || {};
+              detail += '\nNext: ' + queued[0].repo
+                + (p.size_human ? ' · ' + p.size_human : '')
+                + (p.dest ? ' → ' + String(p.dest).replace('/models/', '') : '');
+            }
+          } else {
+            title = 'Download queue idle';
+            detail = 'Pick a variant and click Download, or use Download on the explore queue';
+          }
+        }
+        if (data.defer_reason && !legacy.running && !active.running) {
+          detail = (detail ? detail + '\n' : '') + data.defer_reason;
+        }
+        el.innerHTML = '<div class="exp-status-title">' + escHtml(title) + '</div>'
+          + '<div class="exp-status-detail">' + escHtml(detail).replace(/\n/g, '<br>') + '</div>';
+        if (panel) panel.className = 'exp-status-panel ' + cls;
+        if (logEl) {
+          if (logLines.length) {
+            logEl.hidden = false;
+            logEl.textContent = logLines.slice(-8).join('\n');
+          } else {
+            logEl.hidden = true;
+            logEl.textContent = '';
+          }
+        }
+      }
+
+      // ─── Shortlist / Compare view ───────────────────────────────────────────
+
+      function expSparkFitOrder(fit) {
+        return { recommended: 0, ok: 1, tight: 2, too_large: 3, not_recommended: 4 }[fit] ?? 5;
+      }
+
+      function expShortlistSortItems(items) {
+        const { col, dir } = expShortlistSort;
+        return items.slice().sort((a, b) => {
+          let av, bv;
+          if (col === 'spark_fit') {
+            av = expSparkFitOrder((a.snapshot || {}).spark_fit);
+            bv = expSparkFitOrder((b.snapshot || {}).spark_fit);
+          } else if (col === 'size_bytes') {
+            av = (a.snapshot || {}).size_bytes ?? null;
+            bv = (b.snapshot || {}).size_bytes ?? null;
+          } else if (col === 'added_at') {
+            av = a.added_at || '';
+            bv = b.added_at || '';
+          } else if (col === 'repo') {
+            av = (a.repo || '').toLowerCase();
+            bv = (b.repo || '').toLowerCase();
+          } else if (col === 'engine') {
+            av = ((a.snapshot || {}).engine || '').toLowerCase();
+            bv = ((b.snapshot || {}).engine || '').toLowerCase();
+          } else if (col === 'status') {
+            av = a.status || '';
+            bv = b.status || '';
+          } else {
+            av = null; bv = null;
+          }
+          if (window.SparkInventoryGrid) {
+            return SparkInventoryGrid.compareValues({ _v: av }, { _v: bv }, '_v', dir);
+          }
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          const r = av < bv ? -1 : av > bv ? 1 : 0;
+          return dir === 'desc' ? -r : r;
+        });
+      }
+
+      function expShortlistStatusBadge(status) {
+        const map = {
+          downloading: '<span class="exp-status-chip downloading">downloading</span>',
+          download_queued: '<span class="exp-status-chip queued">queued</span>',
+          gated: '<span class="exp-status-chip gated">gated</span>',
+          on_disk: '<span class="exp-status-chip on-disk">on disk</span>',
+          saved: '<span class="exp-status-chip saved">shortlisted</span>',
+        };
+        return map[status] || '<span class="exp-status-chip saved">shortlisted</span>';
+      }
+
+      function renderShortlist() {
+        const wrap = $('exp-shortlist-table-wrap');
+        if (!wrap) return;
+        const items = expShortlistSortItems(expShortlistItems);
+        const total = items.length;
+        const summEl = $('exp-shortlist-summary');
+        if (summEl) summEl.textContent = total ? total + ' model' + (total === 1 ? '' : 's') + ' in Shortlist' : '';
+        const selCount = expShortlistSelected.size;
+        const bulkEl = $('exp-shortlist-bulk-actions');
+        const selLabel = $('exp-shortlist-sel-label');
+        if (bulkEl) bulkEl.hidden = selCount === 0;
+        if (selLabel) selLabel.textContent = selCount + ' selected';
+
+        if (!items.length) {
+          wrap.innerHTML = '<div class="exp-empty">No models in Shortlist yet. Browse HF and click "Save to Shortlist".</div>';
+          return;
+        }
+        const cols = [
+          { key: 'repo', label: 'Repo' },
+          { key: 'badges', label: 'Tags', sortable: false },
+          { key: 'variant', label: 'Variant', sortable: false },
+          { key: 'engine', label: 'Engine' },
+          { key: 'size_bytes', label: 'Size' },
+          { key: 'spark_fit', label: 'Spark fit' },
+          { key: 'status', label: 'Status' },
+          { key: 'added_at', label: 'Added' },
+          { key: 'actions', label: '', sortable: false },
+        ];
+        const sortDir = (col) => expShortlistSort.col === col
+          ? (expShortlistSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+        const thCls = (col) => 'exp-sl-th' + (col !== 'badges' && col !== 'variant' && col !== 'actions' ? ' sortable' : '');
+        const thead = '<thead><tr>'
+          + cols.map((c) => '<th class="' + escHtml(thCls(c.key)) + '" data-sl-sort="' + escHtml(c.key) + '">'
+            + escHtml(c.label) + escHtml(sortDir(c.key)) + '</th>').join('')
+          + '</tr></thead>';
+
+        const tbody = '<tbody>'
+          + items.map((item) => {
+            const snap = item.snapshot || {};
+            const sel = expShortlistSelected.has(item.id);
+            const status = item.status || 'saved';
+            const badges = Array.isArray(snap.badges) ? snap.badges : [];
+            const badgeHtml = badges.map((b) => '<span class="exp-badge ' + escHtml(b) + '">' + escHtml(b.toUpperCase()) + '</span>').join('');
+            const sparkFit = snap.spark_fit || '';
+            const sparkLabel = snap.spark_fit_label || sparkFit;
+            const sparkStar = sparkFit === 'recommended' ? '★ ' : '';
+            const sparkCell = sparkFit
+              ? '<span class="exp-spark-badge ' + escHtml(sparkFit) + '">' + escHtml(sparkStar + sparkLabel) + '</span>'
+              : '—';
+            const addedDate = item.added_at ? item.added_at.slice(0, 10) : '—';
+            return '<tr class="exp-sl-row' + (sel ? ' selected' : '') + '" data-sl-id="' + attrEsc(item.id) + '" data-sl-repo="' + attrEsc(item.repo) + '">'
+              + '<td class="exp-sl-td exp-sl-repo"><label class="exp-sl-check-wrap">'
+              + '<input type="checkbox" class="exp-sl-check" data-sl-check="' + attrEsc(item.id) + '"' + (sel ? ' checked' : '') + '>'
+              + '<span class="exp-sl-repo-name" title="' + attrEsc(item.repo) + '">' + escHtml(item.repo) + '</span></label></td>'
+              + '<td class="exp-sl-td">' + (badgeHtml || '—') + '</td>'
+              + '<td class="exp-sl-td exp-sl-variant">' + escHtml(item.variant_label || item.intent || '—') + '</td>'
+              + '<td class="exp-sl-td">' + escHtml(engineLabel(snap.engine, snap.format) || '—') + '</td>'
+              + '<td class="exp-sl-td exp-sl-size">' + escHtml(snap.size_human || '—') + '</td>'
+              + '<td class="exp-sl-td">' + sparkCell + '</td>'
+              + '<td class="exp-sl-td">' + expShortlistStatusBadge(status) + '</td>'
+              + '<td class="exp-sl-td exp-sl-date">' + escHtml(addedDate) + '</td>'
+              + '<td class="exp-sl-td exp-sl-actions">'
+              + '<button type="button" class="exp-sl-action-btn" data-sl-dl="' + attrEsc(item.id) + '" title="Queue download">↓</button>'
+              + '<button type="button" class="exp-sl-action-btn danger" data-sl-rm="' + attrEsc(item.id) + '" title="Remove">✕</button>'
+              + '</td></tr>';
+          }).join('')
+          + '</tbody>';
+
+        wrap.innerHTML = '<div class="exp-shortlist-scroll"><table class="exp-sl-table">' + thead + tbody + '</table></div>';
+      }
+
+      async function expEnrichShortlistItems() {
+        if (expShortlistEnriching) return;
+        const needsEnrich = expShortlistItems.filter((i) => !i.snapshot).slice(0, 10);
+        if (!needsEnrich.length) return;
+        expShortlistEnriching = true;
+        try {
+          await Promise.all(needsEnrich.map(async (item) => {
+            try {
+              const repoPath = item.repo.split('/').map(encodeURIComponent).join('/');
+              const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
+              if (!res.ok) return;
+              const d = await res.json();
+              const variants = d.variants || [];
+              const pick = variants.find((v) => v.spark_fit === 'recommended') || variants[0];
+              if (!pick) return;
+              const badges = expBadgesForModel(d.model || {});
+              const snap = {
+                format: pick.format,
+                engine: pick.engine,
+                size_bytes: pick.size_bytes,
+                size_human: pick.size_human,
+                spark_fit: pick.spark_fit,
+                spark_fit_label: pick.spark_fit_label,
+                badges: badges,
+                downloads: (d.model || {}).downloads,
+              };
+              const variantLabel = item.variant_label || pick.label || null;
+              // Persist the snapshot back to server so it survives expTick reassignment
+              await fetch('/api/hf/queue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'explore',
+                  repo: item.repo,
+                  intent: item.intent || 'gguf_best',
+                  files: item.files,
+                  inventory_path: item.inventory_path,
+                  variant_label: variantLabel,
+                  snapshot: snap,
+                }),
+              });
+            } catch (_) { /* ignore per-item errors */ }
+          }));
+          // Refresh queue to get server-persisted snapshots
+          expTick();
+        } finally {
+          expShortlistEnriching = false;
+        }
+      }
+
+      function expBadgesForModel(m) {
+        const badges = [];
+        if (m.has_gguf) badges.push('gguf');
+        if (m.has_nvfp4) badges.push('nvfp4');
+        if (m.has_moe) badges.push('moe');
+        else if (m.has_dense) badges.push('dense');
+        if (m.has_mtp) badges.push('mtp');
+        if (m.has_vision) badges.push('vision');
+        if (m.has_diffusion) badges.push('diffusion');
+        return badges;
+      }
+
+      async function expShortlistBulkRemove() {
+        const ids = [...expShortlistSelected];
+        if (!ids.length) return;
+        for (const id of ids) {
+          try {
+            await fetch('/api/hf/queue/' + encodeURIComponent(id) + '/remove', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ queue: 'explore' }),
+            });
+          } catch (_) { /* ignore errors; refresh will clean up */ }
+        }
+        expShortlistSelected.clear();
+        setExpMsg('Removed ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') + ' from Shortlist');
+        expTick();
+      }
+
+      async function expShortlistBulkDownload() {
+        const ids = [...expShortlistSelected];
+        if (!ids.length) return;
+        const all = ids.map((id) => expShortlistItems.find((i) => i.id === id)).filter(Boolean);
+        const skipped = all.filter((i) => {
+          const fit = (i.snapshot || {}).spark_fit;
+          return fit === 'too_large' || fit === 'not_recommended';
+        });
+        const queueIds = all.filter((i) => skipped.indexOf(i) === -1).map((i) => i.id);
+        let queued = 0;
+        for (const id of queueIds) {
+          try {
+            const res = await fetch('/api/hf/queue/' + encodeURIComponent(id) + '/download', { method: 'POST' });
+            if (res.ok) queued++;
+          } catch (_) { /* ignore */ }
+        }
+        expShortlistSelected.clear();
+        const parts = ['Queued ' + queued + ' download' + (queued === 1 ? '' : 's')];
+        if (skipped.length) {
+          parts.push('skipped ' + skipped.length + ' not Spark-ready: ' + skipped.map((i) => i.repo).join(', '));
+        }
+        setExpMsg(parts.join(' · '), skipped.length ? 'warn' : '');
+        expTick();
+      }
+
+      function expShortlistSetTab(tab) {
+        if (tab !== 'browse' && tab !== 'shortlist' && tab !== 'downloads') tab = 'browse';
+        expTab = tab;
+        localStorage.setItem(EXP_TAB_KEY, tab);
+        ['browse', 'shortlist', 'downloads'].forEach((t) => {
+          const btn = $('exp-tab-' + t);
+          const pane = $('exp-pane-' + t);
+          if (btn) { btn.classList.toggle('active', t === tab); btn.setAttribute('aria-selected', String(t === tab)); }
+          if (pane) pane.hidden = t !== tab;
+        });
+        if (tab === 'shortlist') {
+          renderShortlist();
+          expEnrichShortlistItems();
+        }
+      }
+
+      async function expSlShowDetail(repo) {
+        const drawer = $('exp-shortlist-drawer');
+        if (!drawer) return;
+        drawer.hidden = false;
+        $('exp-sl-detail-title').textContent = repo;
+        $('exp-sl-detail-meta').textContent = 'Loading variants…';
+        $('exp-sl-hf-link').href = 'https://huggingface.co/' + repo;
+        setExpSlMsg('');
+        expSlSelectedVariantId = null;
+        $('exp-sl-variants-body').innerHTML = '<tr><td colspan="6" class="exp-empty">Loading…</td></tr>';
+        try {
+          const repoPath = repo.split('/').map(encodeURIComponent).join('/');
+          const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'model fetch failed');
+          const m = d.model || {};
+          const lines = [];
+          if (m.release_date) lines.push('released ' + fmtExpDate(m.release_date));
+          if (m.downloads != null) lines.push('↓ ' + fmtDownloads(m.downloads));
+          if (m.gated) lines.push('gated — accept license on HF first');
+          $('exp-sl-detail-meta').textContent = lines.join(' · ') || '—';
+          expSlVariants = d.variants || [];
+          const firstPick = expSlVariants.find((v) => v.spark_fit === 'recommended') || expSlVariants[0];
+          expSlSelectedVariantId = firstPick ? firstPick.id : null;
+          renderExpSlVariants();
+        } catch (e) {
+          $('exp-sl-detail-meta').textContent = 'Failed to load model';
+          setExpSlMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function renderExpSlVariants() {
+        const body = $('exp-sl-variants-body');
+        if (!body) return;
+        if (!expSlVariants.length) {
+          body.innerHTML = '<tr><td colspan="6" class="exp-empty">No downloadable variants found</td></tr>';
+          return;
+        }
+        body.innerHTML = expSlVariants.map((v) => {
+          const sel = v.id === expSlSelectedVariantId ? ' selected' : '';
+          const rowCls = 'exp-variant-row' + sel + (v.on_disk ? ' on-disk' : '');
+          return '<tr class="' + rowCls + '" data-sl-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
+            + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
+            + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
+            + '<td class="exp-var-size">' + escHtml(v.size_human || '—') + '</td>'
+            + '<td>' + sparkBadgeHtml(v) + '</td>'
+            + '<td class="exp-var-note">' + escHtml(v.on_disk ? ('Already on disk' + (v.on_disk_path ? ' · ' + String(v.on_disk_path).replace(/^\/models\//, '') : '')) : (v.explanation || '')) + '</td>'
+            + '<td>' + expVariantDlCell(v, 'sl-variant-dl') + '</td></tr>';
+        }).join('');
+      }
+
+      async function expSlQueueVariant(variantId) {
+        const v = expSlVariants.find((vv) => vv.id === variantId);
+        if (!v) return;
+        if (v.on_disk) {
+          setExpSlMsg('Already on disk' + (v.on_disk_path ? ' · ' + v.on_disk_path : ''), 'ok');
+          return;
+        }
+        const drawer = $('exp-shortlist-drawer');
+        const repo = drawer ? $('exp-sl-detail-title').textContent : null;
+        if (!repo) return;
+        if (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') {
+          setExpSlMsg('This variant is not recommended for Spark', 'warn');
+          return;
+        }
+        setExpSlMsg('Queueing ' + v.label + '…', 'warn');
+        try {
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo, intent: v.intent || 'files', files: v.files, inventory_path: v.inventory_path }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'queue failed');
+          setExpSlMsg('Queued ' + v.label, 'ok');
+          expTick();
+        } catch (e) {
+          setExpSlMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function setExpSlMsg(msg, cls) {
+        const el = $('exp-sl-detail-msg');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.className = 'exp-msg' + (cls ? ' ' + cls : '');
+      }
+
+      // ─── (end Shortlist) ─────────────────────────────────────────────────────
+
+      function renderExpQueues(data) {
+        const explore = (data && data.queue && data.queue.explore) || [];
+        const download = (data && data.queue && data.queue.download) || [];
+        // Update shortlist items for rendering
+        expShortlistItems = explore;
+        // Update badge counts in sub-nav
+        const scEl = $('exp-shortlist-count');
+        if (scEl) scEl.textContent = explore.length ? String(explore.length) : '';
+        const dcEl = $('exp-downloads-count');
+        if (dcEl) dcEl.textContent = download.length ? String(download.length) : '';
+        // If shortlist tab is active, re-render
+        if (expTab === 'shortlist') renderShortlist();
+        const dlEl = $('exp-download-queue');
+        if (dlEl) {
+          const activeItem = expActiveDownloadInfo(data);
+          dlEl.innerHTML = download.length ? download.slice().reverse().map((item) => {
+            const plan = item.plan || {};
+            const state = item.state || 'queued';
+            const isLive = state === 'downloading' || state === 'checking_access';
+            const size = plan.size_human ? ' · ' + plan.size_human : '';
+            const files = Array.isArray(plan.files) && plan.files.length
+              ? ' · ' + plan.files.length + ' file' + (plan.files.length === 1 ? '' : 's')
+              : '';
+            let actions = '';
+            if (state === 'awaiting_license') {
+              actions = '<div class="exp-queue-actions">'
+                + (item.accept_url ? '<a href="' + attrEsc(item.accept_url) + '" target="_blank" rel="noopener">Accept on HF ↗</a>' : '')
+                + '<button type="button" data-exp-recheck="' + attrEsc(item.id) + '">Recheck</button>'
+                + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Dismiss</button></div>';
+            } else if (state === 'failed') {
+              actions = '<div class="exp-queue-actions">'
+                + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Dismiss</button></div>';
+            } else if (state === 'queued') {
+              actions = '<div class="exp-queue-actions">'
+                + '<button type="button" data-exp-rm-download="' + attrEsc(item.id) + '">Cancel</button></div>';
+            } else if (isLive) {
+              actions = '<div class="exp-queue-meta" style="margin-top:.25rem">Active now'
+                + (activeItem && activeItem.activity ? ' · ' + escHtml(activeItem.activity) : '')
+                + '</div>';
+            }
+            return '<div class="exp-queue-item state-' + escHtml(state) + '">'
+              + '<div class="exp-queue-repo">' + escHtml(item.repo) + '</div>'
+              + '<div class="exp-queue-meta">' + escHtml(expFormatState(state))
+              + size + files
+              + (plan.dest ? ' → ' + escHtml(plan.dest.replace('/models/', '')) : '') + '</div>'
+              + actions + '</div>';
+          }).join('') : '<div class="exp-empty">Empty</div>';
+        }
+      }
+
+      function renderExpResults(models) {
+        const el = $('exp-results');
+        if (!el) return;
+        if (!models || !models.length) {
+          el.innerHTML = '<div class="exp-empty">No models match filters</div>';
+          $('exp-results-count').textContent = '0';
+          return;
+        }
+        $('exp-results-count').textContent = String(models.length);
+        el.innerHTML = models.map((m) => {
+          const repo = m.repo || '';
+          const badges = expBadgeHtml(m);
+          const released = fmtExpDate(m.release_date);
+          const sel = repo === expSelectedRepo ? ' selected' : '';
+          const incompatible = m.spark_warning ? ' exp-model-incompatible' : '';
+          return '<article class="exp-model' + sel + incompatible + '" data-repo="' + attrEsc(repo) + '" tabindex="0" role="button">'
+            + '<div class="exp-model-head"><span class="exp-model-repo">' + escHtml(repo) + '</span>'
+            + '<span class="exp-model-stats"><span class="exp-model-dl">↓ ' + escHtml(fmtDownloads(m.downloads)) + '</span>'
+            + (released ? '<span class="exp-model-date">' + escHtml(released) + '</span>' : '')
+            + '</span></div>'
+            + '<div class="exp-model-badges">' + badges.join('') + '</div></article>';
+        }).join('');
+      }
+
+      function sparkBadgeHtml(v) {
+        const fit = v.spark_fit || 'ok';
+        const label = v.spark_fit_label || 'OK';
+        const star = fit === 'recommended' ? '★ ' : '';
+        return '<span class="exp-spark-badge ' + escHtml(fit) + '">' + star + escHtml(label) + '</span>';
+      }
+
+      function engineLabel(engine, format) {
+        if (engine === 'ds4') return 'ds4';
+        if (engine === 'llamacpp' || format === 'gguf') return 'llama.cpp';
+        if (format === 'nvfp4') return 'vLLM · NVFP4';
+        if (format === 'fp8') return 'vLLM · FP8';
+        return 'vLLM · HF';
+      }
+
+      function expVariantDlCell(v, attrName) {
+        const onDisk = !!v.on_disk;
+        const blocked = !onDisk && (expSparkWarning || v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended');
+        if (onDisk) {
+          const title = v.on_disk_path
+            ? ('Already on disk at ' + v.on_disk_path)
+            : 'Already on disk';
+          return '<button type="button" class="exp-var-dl on-disk" disabled title="' + attrEsc(title) + '">On disk</button>';
+        }
+        return '<button type="button" class="exp-var-dl" data-' + attrName + '="' + attrEsc(v.id) + '"'
+          + (blocked ? ' disabled' : '') + '>Download</button>';
+      }
+
+      function renderExpVariants(variants) {
+        const body = $('exp-variants-body');
+        if (!body) return;
+        expVariants = variants || [];
+        if (!expVariants.length) {
+          body.innerHTML = '<tr><td colspan="6" class="exp-empty">No downloadable variants found in this repo</td></tr>';
+          expSelectedVariantId = null;
+          return;
+        }
+        const firstPick = expVariants.find((v) => v.spark_fit === 'recommended' && !v.on_disk)
+          || expVariants.find((v) => !v.on_disk)
+          || expVariants.find((v) => v.spark_fit === 'recommended')
+          || expVariants[0];
+        if (!expSelectedVariantId || !expVariants.some((v) => v.id === expSelectedVariantId)) {
+          expSelectedVariantId = firstPick.id;
+        }
+        body.innerHTML = expVariants.map((v) => {
+          const sel = v.id === expSelectedVariantId ? ' selected' : '';
+          const rowCls = 'exp-variant-row' + sel + (v.on_disk ? ' on-disk' : '');
+          return '<tr class="' + rowCls + '" data-variant-id="' + attrEsc(v.id) + '" tabindex="0">'
+            + '<td class="exp-var-label">' + escHtml(v.label) + '</td>'
+            + '<td class="exp-var-engine">' + escHtml(engineLabel(v.engine, v.format)) + '</td>'
+            + '<td class="exp-var-size">' + escHtml(v.size_human || '—') + '</td>'
+            + '<td>' + sparkBadgeHtml(v) + '</td>'
+            + '<td class="exp-var-note">' + escHtml(v.on_disk ? ('Already on disk' + (v.on_disk_path ? ' · ' + String(v.on_disk_path).replace(/^\/models\//, '') : '')) : (v.explanation || '')) + '</td>'
+            + '<td>' + expVariantDlCell(v, 'variant-dl') + '</td></tr>';
+        }).join('');
+      }
+
+      async function expShowDetail(repo) {
+        expSelectedRepo = repo;
+        document.querySelectorAll('.exp-model').forEach((n) => {
+          n.classList.toggle('selected', n.dataset.repo === repo);
+        });
+        document.querySelectorAll('.exp-queue-item.pickable').forEach((n) => {
+          n.classList.toggle('selected', n.dataset.expRepo === repo);
+        });
+        const panel = $('exp-detail');
+        if (!panel || !repo) { if (panel) panel.hidden = true; return; }
+        panel.hidden = false;
+        $('exp-detail-title').textContent = repo;
+        $('exp-detail-meta').textContent = 'Loading variants…';
+        $('exp-hf-link').href = 'https://huggingface.co/' + repo;
+        setExpDetailMsg('');
+        renderExpSparkWarning(null);
+        expSelectedVariantId = null;
+        renderExpVariants([]);
+        try {
+          const repoPath = repo.split('/').map(encodeURIComponent).join('/');
+          const res = await fetch('/api/hf/model/' + repoPath, { cache: 'no-store' });
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'model fetch failed');
+          renderExpSparkWarning(d.spark_warning || null);
+          const m = d.model || {};
+          const arch = [];
+          if (m.has_moe) arch.push('MoE');
+          else if (m.has_dense) arch.push('Dense');
+          if (m.has_mtp) arch.push('MTP');
+          if (m.has_vision) arch.push('Vision');
+          if (m.has_diffusion) arch.push('Diffusion');
+          const lines = [];
+          if (arch.length) lines.push(arch.join(' · '));
+          if (m.release_date) lines.push('released ' + fmtExpDate(m.release_date));
+          if (m.downloads != null) lines.push('↓ ' + fmtDownloads(m.downloads));
+          if (m.gated) lines.push('gated — accept license on HF first');
+          if (!m.accessible) lines.push('access restricted');
+          $('exp-detail-meta').textContent = lines.join(' · ') || '—';
+          renderExpVariants(d.variants || []);
+          if (d.spark_warning) {
+            setExpDetailMsg(d.spark_warning.title || 'Does not work on Spark', 'err');
+          } else {
+            const picks = (d.variants || []).filter((v) => v.spark_fit === 'recommended').length;
+            if (picks) {
+              setExpDetailMsg(picks + ' Spark pick' + (picks === 1 ? '' : 's') + ' — ★ rows are good defaults for 128GB', 'ok');
+            }
+          }
+        } catch (e) {
+          $('exp-detail-meta').textContent = 'Failed to load model';
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function expVariantById(id) {
+        return expVariants.find((v) => v.id === id) || null;
+      }
+
+      async function expQueueVariant(variantId) {
+        const v = expVariantById(variantId);
+        if (!v || !expSelectedRepo) return;
+        if (v.on_disk) {
+          setExpDetailMsg('Already on disk' + (v.on_disk_path ? ' · ' + v.on_disk_path : ''), 'ok');
+          return;
+        }
+        if (expSparkWarning) {
+          setExpDetailMsg(expSparkWarning.message || 'This model does not work on Spark', 'err');
+          return;
+        }
+        if (v.spark_fit === 'too_large' || v.spark_fit === 'not_recommended') {
+          setExpDetailMsg('This variant is not recommended for Spark', 'warn');
+          return;
+        }
+        setExpDetailMsg('Queueing ' + v.label + '…', 'warn');
+        try {
+          const body = {
+            repo: expSelectedRepo,
+            intent: v.intent || 'files',
+            files: v.files,
+            inventory_path: v.inventory_path,
+          };
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'queue failed');
+          setExpDetailMsg('Queued ' + v.label + ' → ' + (v.dest || '').replace('/models/', '/models/'), 'ok');
+          setExpMsg('Download queued: ' + v.label);
+          expTick();
+        } catch (e) {
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expBrowse() {
+        if (expBrowseBusy || !onExplore || expTab !== 'browse') return;
+        expBrowseBusy = true;
+        const q = ($('exp-q') && $('exp-q').value || '').trim();
+        const filter = expFilterQuery();
+        const label = q ? ('Search: ' + q) : (expMode === 'new' ? 'Recently updated' : 'Trending on HF');
+        $('exp-results-label').textContent = label;
+        $('exp-results').innerHTML = '<div class="exp-empty">Loading…</div>';
+        try {
+          let url;
+          if (q) {
+            url = '/api/hf/search?q=' + encodeURIComponent(q) + '&limit=30&filter=' + encodeURIComponent(filter);
+          } else {
+            url = '/api/hf/' + expMode + '?limit=30&filter=' + encodeURIComponent(filter);
+          }
+          const res = await fetch(url, { cache: 'no-store' });
+          const d = await res.json();
+          if (!res.ok) throw new Error(d.error || 'browse failed');
+          expResults = d.models || [];
+          renderExpResults(expResults);
+        } catch (e) {
+          $('exp-results').innerHTML = '<div class="exp-empty">' + escHtml(String(e.message || e)) + '</div>';
+          $('exp-results-count').textContent = '—';
+        } finally {
+          expBrowseBusy = false;
+        }
+      }
+
+      async function fetchExpStatus() {
+        try {
+          const res = await fetch('/api/hf/status', { cache: 'no-store' });
+          if (!res.ok) throw new Error('bad status');
+          expStatus = await res.json();
+          return expStatus;
+        } catch (e) {
+          expStatus = null;
+          return null;
+        }
+      }
+
+      async function expTick() {
+        if (!onExplore) return;
+        if (expTickInFlight) return;
+        if (document.visibilityState !== 'visible') return;
+        expTickInFlight = true;
+        try {
+          const d = await fetchExpStatus();
+          if (!onExplore) return;
+          if (d) {
+            renderExpStatusBanner(d);
+            renderExpQueues(d);
+            $('live').classList.remove('live-stale');
+            $('live').lastChild.textContent = 'live';
+          } else {
+            renderExpStatusBanner(null);
+            $('live').classList.add('live-stale');
+            $('live').lastChild.textContent = 'offline';
+            setExpMsg('HF API unavailable — run sudo bash install/spark-install core', 'err');
+          }
+        } finally {
+          expTickInFlight = false;
+        }
+      }
+
+      async function expSaveExplore() {
+        if (!expSelectedRepo) return;
+        if (expSparkWarning) {
+          setExpDetailMsg(expSparkWarning.message || 'This model does not work on Spark', 'err');
+          return;
+        }
+        const v = expVariantById(expSelectedVariantId) || expVariants[0];
+        const intent = (v && v.intent) || 'gguf_best';
+        const snapshot = v ? {
+          format: v.format,
+          engine: v.engine,
+          size_bytes: v.size_bytes,
+          size_human: v.size_human,
+          spark_fit: v.spark_fit,
+          spark_fit_label: v.spark_fit_label,
+          badges: expBadgesForCurrentDetail(),
+          dest: v.dest,
+        } : null;
+        try {
+          const res = await fetch('/api/hf/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'explore',
+              repo: expSelectedRepo,
+              intent: intent,
+              files: v && v.files,
+              inventory_path: v && v.inventory_path,
+              variant_label: v && v.label,
+              snapshot: snapshot,
+            }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'save failed');
+          setExpDetailMsg('Saved to Shortlist', 'ok');
+          expTick();
+        } catch (e) {
+          setExpDetailMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function expBadgesForCurrentDetail() {
+        const metaText = ($('exp-detail-meta') && $('exp-detail-meta').textContent) || '';
+        const badges = [];
+        if (metaText.includes('MoE')) badges.push('moe');
+        else if (metaText.includes('Dense')) badges.push('dense');
+        if (metaText.includes('MTP')) badges.push('mtp');
+        if (metaText.includes('Vision')) badges.push('vision');
+        if (metaText.includes('Diffusion')) badges.push('diffusion');
+        const v = expVariantById(expSelectedVariantId) || expVariants[0];
+        if (v) {
+          if (v.format === 'gguf' || (v.intent && v.intent.startsWith('gguf'))) badges.push('gguf');
+          if (v.format === 'nvfp4') badges.push('nvfp4');
+        }
+        return [...new Set(badges)];
+      }
+
+      async function expRecheck(itemId) {
+        try {
+          const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/recheck', { method: 'POST' });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'recheck failed');
+          setExpMsg('Rechecked ' + itemId);
+          expTick();
+        } catch (e) {
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expRemoveQueueItem(itemId, queue) {
+        try {
+          const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queue: queue }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'remove failed');
+          setExpMsg('Removed from ' + queue + ' queue');
+          expTick();
+        } catch (e) {
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
+      async function expDownloadExploreItem(itemId, warnMsg) {
+        try {
+          const res = await fetch('/api/hf/queue/' + encodeURIComponent(itemId) + '/download', {
+            method: 'POST',
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(d.error || 'download queue failed');
+          setExpMsg(warnMsg || 'Download queued', warnMsg ? 'warn' : '');
+          expTick();
+        } catch (e) {
+          setExpMsg(String(e.message || e), 'err');
+        }
+      }
+
+      function toggleExpChip(chip) {
+        if (expFilterChips.has(chip)) expFilterChips.delete(chip);
+        else expFilterChips.add(chip);
+        document.querySelectorAll('[data-exp-chip]').forEach((el) => {
+          el.classList.toggle('active', expFilterChips.has(el.dataset.expChip));
+        });
+        expBrowse();
+      }
+
+      function setExpMode(mode) {
+        expMode = mode;
+        document.querySelectorAll('[data-exp-mode]').forEach((el) => {
+          el.classList.toggle('active', el.dataset.expMode === mode);
+        });
+        expBrowse();
+      }
+
+      function setActiveNav(btn) {
+        nav.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+      }
+
+      function hideAllViews() {
+        systemCard.hidden = true;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
+      }
+
+      function showSystem(btn) {
+        closeInfLogOverlay();
+        onSystem = true;
+        onInference = false;
+        onExplore = false;
+        document.body.classList.remove('inf-view', 'exp-view', 'bm-view');
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        systemCard.hidden = false;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
+        gpuPoll();
+        fetchClientActivity();
+      }
+
+      function showExplore(btn) {
+        closeInfLogOverlay();
+        onSystem = false;
+        onInference = false;
+        onExplore = true;
+        document.body.classList.remove('inf-view', 'bm-view');
+        document.body.classList.add('exp-view');
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        hideAllViews();
+        exploreCard.hidden = false;
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
+        expShortlistSetTab(expTab);
+        expTick();
+        if (expTab === 'browse') expBrowse();
+      }
+
+      function showBenchmaster(btn) {
+        closeInfLogOverlay();
+        onSystem = false;
+        onInference = false;
+        onExplore = false;
+        document.body.classList.remove('inf-view', 'exp-view');
+        document.body.classList.add('bm-view');
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        systemCard.hidden = true;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
+        benchmasterCard.hidden = false;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        if (window.SparkBenchmaster) {
+          SparkBenchmaster.show();
+        } else {
+          window.addEventListener('load', function onBmLoad() {
+            window.removeEventListener('load', onBmLoad);
+            if (window.SparkBenchmaster) SparkBenchmaster.show();
+          });
+        }
+      }
+
+      function showInference(btn) {
+        onSystem = false;
+        onInference = true;
+        onExplore = false;
+        document.body.classList.remove('exp-view', 'bm-view');
+        document.body.classList.add('inf-view');
+        setActiveNav(btn);
+        dashboard.style.display = '';
+        systemCard.hidden = true;
+        inferenceCard.hidden = false;
+        exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
+        framePanel.classList.remove('open');
+        frame.removeAttribute('src');
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
+        const qParam = new URLSearchParams(location.search).get('q');
+        if (qParam) {
+          infFilterQ = qParam;
+          if ($('inf-q')) $('inf-q').value = qParam;
+          saveInfPrefs();
+        }
+        infTick();
+      }
+
+      function showFrame(btn) {
+        closeInfLogOverlay();
+        document.body.classList.remove('inf-view');
+        const src = btn.dataset.src;
+        const title = btn.dataset.title || src;
+        const popout = btn.dataset.popout || src;
+        const frameSrc = src.includes('models.html') ? modelsFrameUrl(src) : (
+          window.SparkyTheme && SparkyTheme.themedUrl ? SparkyTheme.themedUrl(src) : src
+        );
+        let popoutHref = popout;
+        if (popout.includes('models') && !popout.includes('models.html')) {
+          const hp = new URLSearchParams(location.search).get('highlight');
+          popoutHref = '/' + (hp ? '?highlight=' + encodeURIComponent(hp) : '') + '#models';
+        } else if (window.SparkyTheme && SparkyTheme.themedUrl) {
+          popoutHref = SparkyTheme.themedUrl(popout);
+        }
+        onSystem = false;
+        onInference = false;
+        onExplore = false;
+        document.body.classList.remove('inf-view', 'exp-view', 'bm-view');
+        setActiveNav(btn);
+        dashboard.style.display = 'none';
+        systemCard.hidden = true;
+        inferenceCard.hidden = true;
+        exploreCard.hidden = true;
+        benchmasterCard.hidden = true;
+        if (window.SparkBenchmaster) SparkBenchmaster.hide();
+        framePanel.classList.add('open');
+        $('frame-title').textContent = title;
+        $('frame-popout').href = popoutHref;
+        frame.src = frameSrc;
+      }
+
+      function navModifierClick(e) {
+        return e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1;
+      }
+
+      function handleNavClick(btn, e) {
+        if (navModifierClick(e)) return;
+        if (!btn.dataset.view && !btn.dataset.src) return;
+        e.preventDefault();
+        if (btn.dataset.view === 'system') {
+          showSystem(btn);
+          history.replaceState(null, '', '#system');
+          return;
+        }
+        if (btn.dataset.view === 'inference') {
+          showInference(btn);
+          history.replaceState(null, '', '#inference');
+          return;
+        }
+        if (btn.dataset.view === 'explore') {
+          showExplore(btn);
+          history.replaceState(null, '', '#explore');
+          return;
+        }
+        if (btn.dataset.view === 'benchmaster') {
+          showBenchmaster(btn);
+          history.replaceState(null, '', '#benchmaster');
+          return;
+        }
+        if (btn.dataset.src) {
+          showFrame(btn);
+          const slug = (btn.textContent || 'view').trim().toLowerCase();
+          history.replaceState(null, '', '#' + slug);
+        }
+      }
+
+      nav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nav-btn');
+        if (!btn) return;
+        handleNavClick(btn, e);
+      });
+
+      nav.addEventListener('auxclick', (e) => {
+        const btn = e.target.closest('.nav-btn');
+        if (!btn || e.button !== 1) return;
+        if (!navModifierClick(e)) e.preventDefault();
+      });
+
+      $('brand-home').addEventListener('click', (e) => {
+        if (navModifierClick(e)) return;
+        e.preventDefault();
+        showSystem(nav.querySelector('[data-view="system"]'));
+        history.replaceState(null, '', '#system');
+      });
+
+      $('nav-metrics').addEventListener('click', (e) => {
+        const link = e.target.closest('.nav-metric');
+        if (!link || navModifierClick(e)) return;
+        e.preventDefault();
+        if (link.id === 'nav-inf') {
+          const loading = lastInfStatus && inferenceLoadingInfo(lastInfStatus);
+          showInference(nav.querySelector('[data-view="inference"]'));
+          history.replaceState(null, '', '#inference');
+          if (loading) openInfLogOverlay();
+          return;
+        }
+        showSystem(nav.querySelector('[data-view="system"]'));
+        const targetId = link.id === 'nav-seq' ? 'inference-stats' : 'system-health';
+        history.replaceState(null, '', '#' + targetId);
+        const section = $(targetId);
+        if (section && section.scrollIntoView) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+
+
+      $('inf-ctx-presets').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-ctx-preset]');
+        if (!btn) return;
+        infCtxSelection = {
+          preset: btn.getAttribute('data-ctx-preset'),
+          ctx: parseInt(btn.getAttribute('data-ctx-val'), 10),
+          kv: btn.getAttribute('data-ctx-kv') || 'auto',
+        };
+        renderInfContextPanel();
+        rerenderInfProfiles();
+      });
+      $('inf-ctx-custom').addEventListener('input', () => {
+        infCtxSelection.preset = null;
+        const v = parseInt($('inf-ctx-custom').value, 10);
+        infCtxSelection.ctx = Number.isNaN(v) ? null : v;
+        rerenderInfProfiles();
+      });
+      $('inf-ctx-kv').addEventListener('change', () => {
+        infCtxSelection.kv = $('inf-ctx-kv').value;
+        infCtxSelection.preset = null;
+        rerenderInfProfiles();
+      });
+
+      $('inf-switch').addEventListener('click', infSwitch);
+      $('inf-bench').addEventListener('click', infBench);
+      $('inf-down').addEventListener('click', infDown);
+
+      function pickInfProfile(profileId) {
+        const sel = $('inf-select');
+        if (!sel || !profileId) return;
+        const opt = Array.from(sel.options).find((o) => o.value === profileId);
+        if (!opt) return;
+        sel.value = profileId;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      $('inf-profiles').addEventListener('toggle', (e) => {
+        if (suppressInfGroupToggle) return;
+        const det = e.target.closest('details.inf-model-group');
+        if (!det || !det.dataset.modelGroup || !det.isConnected) return;
+        if (det.open) infModelGroupsOpen.add(det.dataset.modelGroup);
+        else infModelGroupsOpen.delete(det.dataset.modelGroup);
+      }, true);
+
+      $('inf-profiles').addEventListener('click', (e) => {
+        if (e.target.closest('[data-inf-clear-filters]')) {
+          clearInfFilters();
+          return;
+        }
+        const sortSpan = e.target.closest('[data-inf-sort-col]');
+        if (sortSpan && !infGroupByFamily) {
+          const col = sortSpan.dataset.infSortCol;
+          if (infSortCol === col) {
+            infSortDir = infSortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            infSortCol = col;
+            infSortDir = 'asc';
+          }
+          saveInfPrefs();
+          rerenderInfProfiles();
+          return;
+        }
+        const row = e.target.closest('.inf-profile.pickable[data-profile-id], .inf-grid-row.pickable[data-profile-id]');
+        if (!row) return;
+        pickInfProfile(row.dataset.profileId);
+      });
+      $('inf-profiles').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const row = e.target.closest('.inf-profile.pickable[data-profile-id], .inf-grid-row.pickable[data-profile-id]');
+        if (!row) return;
+        e.preventDefault();
+        pickInfProfile(row.dataset.profileId);
+      });
+      $('inf-view-toggle').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-inf-view]');
+        if (!btn) return;
+        infGroupByFamily = btn.dataset.infView === 'family';
+        syncInfViewToggle();
+        saveInfPrefs();
+        rerenderInfProfiles();
+      });
+      $('inf-select').addEventListener('change', () => {
+        infCtxSelection = { preset: 'default', ctx: null, kv: null };
+        loadInfContextPanel($('inf-select').value);
+        rerenderInfProfiles();
+      });
+      $('inf-q').addEventListener('input', (e) => {
+        infFilterQ = e.target.value;
+        saveInfPrefs();
+        rerenderInfProfiles();
+      });
+      $('inf-filter-chips').addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-inf-chip]');
+        if (!chip) return;
+        toggleInfChip(chip.dataset.infChip);
+      });
+      $('inf-expand-all').addEventListener('click', expandAllInfGroups);
+      $('inf-collapse-all').addEventListener('click', collapseAllInfGroups);
+
+      $('exp-q').addEventListener('input', () => {
+        clearTimeout(expSearchTimer);
+        expSearchTimer = setTimeout(expBrowse, 350);
+      });
+      $('exp-q').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { clearTimeout(expSearchTimer); expBrowse(); }
+      });
+      $('exp-filter-chips').addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-exp-chip]');
+        if (!chip) return;
+        toggleExpChip(chip.dataset.expChip);
+      });
+      document.querySelectorAll('[data-exp-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => setExpMode(btn.dataset.expMode));
+      });
+      $('exp-results').addEventListener('click', (e) => {
+        const card = e.target.closest('.exp-model[data-repo]');
+        if (!card) return;
+        expShowDetail(card.dataset.repo);
+      });
+      $('exp-results').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.exp-model[data-repo]');
+        if (!card) return;
+        e.preventDefault();
+        expShowDetail(card.dataset.repo);
+      });
+      $('exp-variants-body').addEventListener('click', (e) => {
+        const dl = e.target.closest('[data-variant-dl]');
+        if (dl) {
+          e.stopPropagation();
+          expQueueVariant(dl.dataset.variantDl);
+          return;
+        }
+        const row = e.target.closest('.exp-variant-row[data-variant-id]');
+        if (!row) return;
+        expSelectedVariantId = row.dataset.variantId;
+        document.querySelectorAll('.exp-variant-row').forEach((r) => {
+          r.classList.toggle('selected', r.dataset.variantId === expSelectedVariantId);
+        });
+      });
+      $('exp-variants-body').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const row = e.target.closest('.exp-variant-row[data-variant-id]');
+        if (!row) return;
+        e.preventDefault();
+        expSelectedVariantId = row.dataset.variantId;
+        document.querySelectorAll('.exp-variant-row').forEach((r) => {
+          r.classList.toggle('selected', r.dataset.variantId === expSelectedVariantId);
+        });
+      });
+      $('exp-save-explore').addEventListener('click', expSaveExplore);
+      $('exp-download-queue').addEventListener('click', (e) => {
+        const rm = e.target.closest('[data-exp-rm-download]');
+        if (rm) {
+          e.stopPropagation();
+          expRemoveQueueItem(rm.dataset.expRmDownload, 'download');
+          return;
+        }
+        const btn = e.target.closest('[data-exp-recheck]');
+        if (!btn) return;
+        expRecheck(btn.dataset.expRecheck);
+      });
+
+      // Sub-nav tabs
+      $('exp-subnav').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-exp-tab]');
+        if (!btn) return;
+        expShortlistSetTab(btn.dataset.expTab);
+        if (btn.dataset.expTab === 'browse' && !expResults.length) expBrowse();
+      });
+
+      // Shortlist table events (delegated from table-wrap)
+      $('exp-shortlist-table-wrap').addEventListener('click', (e) => {
+        const th = e.target.closest('[data-sl-sort]');
+        if (th) {
+          const col = th.dataset.slSort;
+          if (col && col !== 'badges' && col !== 'variant' && col !== 'actions') {
+            if (expShortlistSort.col === col) {
+              expShortlistSort.dir = expShortlistSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+              expShortlistSort = { col, dir: 'asc' };
+            }
+            renderShortlist();
+          }
+          return;
+        }
+        const check = e.target.closest('[data-sl-check]');
+        if (check) {
+          const id = check.dataset.slCheck;
+          if (check.checked) expShortlistSelected.add(id);
+          else expShortlistSelected.delete(id);
+          renderShortlist();
+          return;
+        }
+        const dlBtn = e.target.closest('[data-sl-dl]');
+        if (dlBtn) {
+          e.stopPropagation();
+          const id = dlBtn.dataset.slDl;
+          const item = expShortlistItems.find((i) => i.id === id);
+          const fit = item && (item.snapshot || {}).spark_fit;
+          const warnMsg = item && item.repo && (fit === 'too_large' || fit === 'not_recommended')
+            ? 'Warning: ' + item.repo + ' may not work on Spark — queued anyway'
+            : '';
+          expDownloadExploreItem(id, warnMsg);
+          return;
+        }
+        const rmBtn = e.target.closest('[data-sl-rm]');
+        if (rmBtn) {
+          e.stopPropagation();
+          expRemoveQueueItem(rmBtn.dataset.slRm, 'explore');
+          return;
+        }
+        // Row click → open drawer (not on checkbox or action button)
+        const row = e.target.closest('.exp-sl-row[data-sl-repo]');
+        if (!row) return;
+        expSlShowDetail(row.dataset.slRepo);
+      });
+
+      // Bulk action buttons
+      $('exp-bulk-remove').addEventListener('click', expShortlistBulkRemove);
+      $('exp-bulk-download').addEventListener('click', expShortlistBulkDownload);
+      $('exp-shortlist-select-all').addEventListener('click', () => {
+        if (expShortlistSelected.size === expShortlistItems.length && expShortlistItems.length > 0) {
+          expShortlistSelected.clear();
+        } else {
+          expShortlistItems.forEach((i) => expShortlistSelected.add(i.id));
+        }
+        renderShortlist();
+      });
+
+      // Shortlist drawer events
+      $('exp-sl-drawer-close').addEventListener('click', () => {
+        const drawer = $('exp-shortlist-drawer');
+        if (drawer) drawer.hidden = true;
+      });
+      $('exp-sl-variants-body').addEventListener('click', (e) => {
+        const dl = e.target.closest('[data-sl-variant-dl]');
+        if (dl) {
+          e.stopPropagation();
+          expSlQueueVariant(dl.dataset.slVariantDl);
+          return;
+        }
+        const row = e.target.closest('.exp-variant-row[data-sl-variant-id]');
+        if (!row) return;
+        expSlSelectedVariantId = row.dataset.slVariantId;
+        document.querySelectorAll('#exp-sl-variants-body .exp-variant-row').forEach((r) => {
+          r.classList.toggle('selected', r.dataset.slVariantId === expSlSelectedVariantId);
+        });
+      });
+
+      $('inference-status').addEventListener('click', (e) => {
+        const link = e.target.closest('[data-goto-inference]');
+        if (!link) return;
+        e.preventDefault();
+        showInference(nav.querySelector('[data-view="inference"]'));
+        history.replaceState(null, '', '#inference');
+        if (link.dataset.infLogFocus === '1') openInfLogOverlay();
+      });
+
+      window.addEventListener('message', (e) => {
+        if (e.origin !== location.origin) return;
+        const d = e.data;
+        if (!d || d.type !== 'sparky-portal-nav') return;
+        if (d.view === 'inference') {
+          const btn = nav.querySelector('[data-view="inference"]');
+          if (btn) showInference(btn);
+          history.replaceState(null, '', '#inference');
+          if (d.profile) pendingPickProfile = d.profile;
+          if (d.infFilterQ) {
+            infFilterQ = d.infFilterQ;
+            if ($('inf-q')) $('inf-q').value = infFilterQ;
+            saveInfPrefs();
+            rerenderInfProfiles();
+          }
+          if (d.infLogFocus) openInfLogOverlay();
+        }
+      });
+
+      document.querySelectorAll('[data-inf-log-close]').forEach((el) => {
+        el.addEventListener('click', closeInfLogOverlay);
+      });
+      $('inf-log-overlay-panel').addEventListener('click', (e) => e.stopPropagation());
+      $('inf-log-overlay-close').addEventListener('click', closeInfLogOverlay);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && infLogOverlayOpen) closeInfLogOverlay();
+        if (e.key === '/' && onInference) {
+          const t = e.target;
+          if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+          e.preventDefault();
+          const qEl = $('inf-q');
+          if (qEl) qEl.focus();
+        }
+      });
+
+      loadInfPrefs();
+      const urlParams = new URLSearchParams(location.search);
+      pendingStartProfile = urlParams.get('start');
+      pendingPickProfile = urlParams.get('pick') || pendingPickProfile;
+      if (urlParams.get('q')) {
+        infFilterQ = urlParams.get('q');
+        if ($('inf-q')) $('inf-q').value = infFilterQ;
+        saveInfPrefs();
+      }
+
+      const hash = location.hash.replace('#', '');
+      if (hash === 'explore') {
+        showExplore(nav.querySelector('[data-view="explore"]'));
+      } else if (hash === 'benchmaster') {
+        showBenchmaster(nav.querySelector('[data-view="benchmaster"]'));
+      } else if (hash === 'inference' || pendingStartProfile) {
+        showInference(nav.querySelector('[data-view="inference"]'));
+        if (pendingStartProfile) history.replaceState(null, '', '#inference');
+      } else if (hash && hash !== 'system') {
+        const match = Array.from(nav.querySelectorAll('.nav-btn')).find((b) =>
+          (b.textContent || '').trim().toLowerCase() === hash
+        );
+        if (match && match.dataset.src) showFrame(match);
+        else {
+          showSystem(nav.querySelector('[data-view="system"]'));
+          if (hash === 'inference-stats' || hash === 'system-health') {
+            requestAnimationFrame(function () {
+              const section = $(hash);
+              if (section) section.scrollIntoView({ block: 'start' });
+            });
+          }
+        }
+      } else {
+        showSystem(nav.querySelector('[data-view="system"]'));
+      }
+
+      const WIDE_KEY = 'sparky-portal-wide';
+      const wideBtn = $('wide-toggle');
+
+      function applyWideMode(on) {
+        document.body.classList.toggle('portal-wide', on);
+        wideBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        wideBtn.title = on ? 'Wide layout on' : 'Wide layout off';
+        wideBtn.classList.toggle('active', on);
+      }
+
+      applyWideMode(localStorage.getItem(WIDE_KEY) === '1');
+      wideBtn.addEventListener('click', () => {
+        const on = !document.body.classList.contains('portal-wide');
+        localStorage.setItem(WIDE_KEY, on ? '1' : '0');
+        applyWideMode(on);
+      });
+
+      pollTimer = setTimeout(gpuPoll, 0);
+      infPollTimer = setInterval(() => { infTick(); expTick(); }, INF_POLL_BASE_MS);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(gpuPoll, 0);
+        if (onInference) infTick();
+        if (onExplore) expTick();
+      });
+    })();
+  </script>
+</body>
+</html>

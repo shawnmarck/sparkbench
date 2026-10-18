@@ -148,7 +148,7 @@ export function EngineLogDock() {
         </button>
         <a
           className="log-pop"
-          href="/v2/inference/log"
+          href="/inference/log"
           title="Open the full engine log"
         >
           Open full

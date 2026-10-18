@@ -107,7 +107,7 @@ Workflow: `docs/runbooks/new-model-golden-benchmark.md`. Reports in `run/golden-
 |------|--------|
 | Nginx portal site | `install/common.sh` → `write_nginx_portal_site` (batch via `SPARK_INSTALL_BATCH` in orchestrator) |
 | Portal shared grid UX | `portal/assets/spark-inventory-grid.js` (`window.SparkInventoryGrid`) |
-| Explore / shortlist / inference UI | `portal/index.html` |
+| Explore / shortlist / inference UI | `portal-v2/` → build to `portal/`; legacy in `portal/archive/v1/` |
 | HF explore queue + dedupe | `scripts/spark-hf.py` |
 | Activity pipeline | Gateway appends `run/inference-activity.jsonl` → `spark-client-activity.py` :8769 → `/api/activity` |
 | Optional chat UIs | `services/spark-bot/README.md` (gateway on :9000) |

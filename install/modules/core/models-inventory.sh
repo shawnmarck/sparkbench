@@ -11,7 +11,9 @@ echo "==> Sync to ${SPARK_ROOT}"
 mkdir -p "${SPARK_ROOT}"/{data,scripts,portal,install}
 rsync -a "${STAGING}/data/" "${SPARK_ROOT}/data/"
 rsync -a "${STAGING}/scripts/spark-inventory-build" "${STAGING}/scripts/spark-inventory-build.py" "${SPARK_ROOT}/scripts/"
-cp "${STAGING}/portal/models.html" "${STAGING}/portal/index.html" "${SPARK_ROOT}/portal/"
+mkdir -p "${SPARK_ROOT}/portal/archive/v1"
+cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null \
+  || cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/"
 cp "${STAGING}/scripts/spark-download-models.sh" "${SPARK_ROOT}/scripts/" 2>/dev/null || true
 chown -R "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}"
 

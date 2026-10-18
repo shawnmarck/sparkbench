@@ -7,7 +7,9 @@ INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${INSTALL_DIR}/common.sh"
 
 echo "==> Sync portal + scripts"
-cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/"
+mkdir -p "${SPARK_ROOT}/portal/archive/v1"
+cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null \
+  || cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null || true
 cp "${STAGING}/scripts/spark-inventory-refresh.sh" "${STAGING}/scripts/spark-inventory-watch.sh" "${SPARK_ROOT}/scripts/"
 chmod +x "${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" "${SPARK_ROOT}/scripts/spark-inventory-watch.sh"
 

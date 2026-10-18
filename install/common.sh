@@ -123,8 +123,51 @@ server {
         try_files \$uri =404;
     }
 
+    # Hermes agent dashboard (same-origin proxy — MagicDNS portal login works)
+    location = /hermes {
+        return 308 /hermes/;
+    }
+
+    location /hermes/ {
+        proxy_pass http://127.0.0.1:9119/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Prefix /hermes;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        add_header Cache-Control "no-store";
+    }
+
+    # Archived UIs (deprecated; see portal/archive/README.md)
+    location ^~ /archive/v3/ {
+        add_header X-Spark-Portal-Archive "v3" always;
+        try_files \$uri \$uri/ /archive/v3/index.html;
+    }
+
+    location ^~ /archive/v1/ {
+        add_header X-Spark-Portal-Archive "v1" always;
+        try_files \$uri \$uri/ /archive/v1/index.html;
+    }
+
+    # Bookmarks from the /v2 beta period
+    location = /v2 {
+        return 308 /;
+    }
+
+    location ^~ /v2/ {
+        rewrite ^/v2/?(.*)\$ /\$1 permanent;
+    }
+
     location / {
-        try_files \$uri \$uri/ =404;
+        try_files \$uri \$uri/ /index.html;
     }
 }
 NGINX

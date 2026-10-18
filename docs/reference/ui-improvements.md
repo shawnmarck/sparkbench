@@ -1,6 +1,6 @@
 # Portal UI
 
-The Sparky portal is a static nginx site on :80. `portal/index.html` is the app. `portal/models.html` is the inventory grid (also embedded from the Models tab).
+The Sparky portal is a static nginx site on :80. The React app (`portal-v2/`, built to `portal/`) is the default at `/`. Legacy single-page UI is archived at `/archive/v1/` (`portal/archive/v1/index.html`); inventory grid at `/archive/v1/models.html`.
 
 LAN-trusted. Do not expose :80 to the WAN.
 

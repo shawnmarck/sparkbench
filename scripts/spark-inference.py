@@ -77,6 +77,8 @@ BENCH_HISTORY_LIST_RE = re.compile(
 _history_migrated = False
 VERIFY_FILE = ROOT / "data" / "model-verification.yaml"
 GOLDEN_FILE = ROOT / "data" / "golden-recipes.yaml"
+CATALOG_FILE = ROOT / "data" / "model-catalog.yaml"
+INVENTORY_FILE = ROOT / "portal" / "models.json"
 SPARK_EUGR = ROOT / "scripts" / "spark-eugr"
 SPARK_EUGR_CHECK = ROOT / "scripts" / "spark-eugr-check.py"
 SPARK_LLAMA = ROOT / "scripts" / "spark-llama"
@@ -92,6 +94,8 @@ INVENTORY_BUILD = ROOT / "scripts" / "spark-inventory-build"
 PROFILE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9._-]*$")
 BENCH_METHODS = frozenset({"bench", "bench-agent", "bench-agent-v2"})
 PBM_FILE = ROOT / "data" / "perfbench-metrics.yaml"
+PUBLISHED_EVALS_FILE = ROOT / "data" / "published-evals.yaml"
+USE_CASES_FILE = ROOT / "data" / "use-cases.yaml"
 PBM_DISPLAY_FILL = "4k"
 LIFECYCLE_DRAFT = "draft"
 LIFECYCLE_TESTING = "testing"
@@ -1742,9 +1746,468 @@ def discard_recipe(profile_id: str) -> None:
     raise RuntimeError(f"no recipe: {profile_id}")
 
 
+_QUANT_SUFFIXES = frozenset(
+    {
+        "nvfp4",
+        "fp8",
+        "fp4",
+        "fp16",
+        "bf16",
+        "gguf",
+        "exl3",
+        "awq",
+        "gptq",
+        "int4",
+        "int8",
+        "autoround",
+        "prismaquant",
+        "dflash",
+    }
+)
+_QUANT_LABELS = {
+    "nvfp4": "NVFP4",
+    "fp8": "FP8",
+    "fp4": "FP4",
+    "fp16": "FP16",
+    "bf16": "BF16",
+    "gguf": "GGUF",
+    "exl3": "EXL3",
+    "awq": "AWQ",
+    "gptq": "GPTQ",
+    "int4": "INT4",
+    "int8": "INT8",
+    "autoround": "AutoRound",
+    "prismaquant": "PrismaQuant",
+    "dflash": "DFlash",
+    "hf": "HF",
+    "mtp-gguf": "MTP GGUF",
+}
+_QUANT_TAG_ORDER = (
+    "nvfp4",
+    "fp4",
+    "fp8",
+    "fp16",
+    "bf16",
+    "exl3",
+    "awq",
+    "gptq",
+    "int4",
+    "int8",
+    "prismaquant",
+)
+_GGUF_QUANT_RE = re.compile(r"(IQ\d[A-Z0-9]*|Q\d(?:_[A-Z0-9]+)+)", re.I)
+_SIZE_TOKEN_RE = re.compile(r"^a?\d+(?:\.\d+)?b$", re.I)
+
+
+def _catalog_by_id() -> dict[str, dict[str, Any]]:
+    if not CATALOG_FILE.is_file():
+        return {}
+    data = load_yaml(CATALOG_FILE)
+    out: dict[str, dict[str, Any]] = {}
+    for row in data.get("models") or []:
+        if isinstance(row, dict) and row.get("id"):
+            out[str(row["id"])] = row
+    return out
+
+
+def _inventory_params() -> dict[str, dict[str, Any]]:
+    """Param counts the inventory builder parsed from config.json."""
+    if not INVENTORY_FILE.is_file():
+        return {}
+    try:
+        data = json.loads(INVENTORY_FILE.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for row in data.get("models") or []:
+        if not isinstance(row, dict) or not row.get("id"):
+            continue
+        out[str(row["id"])] = {
+            "param_b": row.get("param_b"),
+            "param_active_b": row.get("param_active_b"),
+            "architecture": row.get("architecture"),
+            "release_date": row.get("release_date"),
+            "release_date_source": row.get("release_date_source"),
+        }
+    return out
+
+
+def _mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+_EVALS_CACHE: tuple[float, dict[str, Any]] | None = None
+_USE_CASES_CACHE: tuple[float, dict[str, list[str]]] | None = None
+
+
+def load_published_evals() -> dict[str, Any]:
+    """Vendor SWE / Terminal-Bench figures for base models, with alias map."""
+    global _EVALS_CACHE
+    stamp = _mtime(PUBLISHED_EVALS_FILE)
+    if _EVALS_CACHE is not None and _EVALS_CACHE[0] == stamp:
+        return _EVALS_CACHE[1]
+    models: dict[str, Any] = {}
+    if PUBLISHED_EVALS_FILE.is_file():
+        data = load_yaml(PUBLISHED_EVALS_FILE)
+        raw = data.get("models") or {}
+        if isinstance(raw, dict):
+            models = raw
+    alias_to_base: dict[str, str] = {}
+    for base_id, entry in models.items():
+        if not isinstance(entry, dict):
+            continue
+        alias_to_base[str(base_id)] = str(base_id)
+        for alias in entry.get("aliases") or []:
+            alias = str(alias).strip()
+            if alias:
+                alias_to_base[alias] = str(base_id)
+    out = {"models": models, "alias_to_base": alias_to_base}
+    _EVALS_CACHE = (stamp, out)
+    return out
+
+
+def _eval_record(block: Any) -> dict[str, Any] | None:
+    if not isinstance(block, dict):
+        return None
+    score = block.get("score")
+    if score is None:
+        return None
+    return {
+        "score": score,
+        "source_name": str(block.get("source_name") or ""),
+        "source_url": str(block.get("source_url") or ""),
+        "as_of": str(block.get("as_of") or ""),
+        "suite": str(block.get("suite") or ""),
+    }
+
+
+def recipe_evals(inventory_path: str) -> dict[str, Any]:
+    """Published base-model evals this recipe inherits, mirroring sparkbench.dev."""
+    evals = load_published_evals()
+    base = (evals.get("alias_to_base") or {}).get(str(inventory_path or ""))
+    entry = (evals.get("models") or {}).get(base) if base else None
+    out: dict[str, Any] = {
+        "swe": None,
+        "tb": None,
+        "aa_url": "",
+        "base": base,
+        "inherited": bool(base) and str(base) != str(inventory_path or ""),
+    }
+    if not isinstance(entry, dict):
+        return out
+    out["swe"] = _eval_record(entry.get("swe_verified"))
+    out["tb"] = _eval_record(entry.get("terminal_bench"))
+    out["aa_url"] = str(entry.get("aa_url") or "").strip()
+    return out
+
+
+def load_use_cases() -> dict[str, list[str]]:
+    """inventory_path → curated use-case tags (Code / Agents / Reasoning / …)."""
+    global _USE_CASES_CACHE
+    stamp = _mtime(USE_CASES_FILE)
+    if _USE_CASES_CACHE is not None and _USE_CASES_CACHE[0] == stamp:
+        return _USE_CASES_CACHE[1]
+    out: dict[str, list[str]] = {}
+    if USE_CASES_FILE.is_file():
+        data = load_yaml(USE_CASES_FILE)
+        raw = data.get("models") or {}
+        if isinstance(raw, dict):
+            for key, val in raw.items():
+                if isinstance(val, list):
+                    out[str(key)] = [str(v) for v in val]
+    _USE_CASES_CACHE = (stamp, out)
+    return out
+
+
+def recipe_pbm_fills(profile_id: str) -> dict[str, float | None]:
+    """Decode tok/s at each PBM context fill for the leaderboard curve."""
+    entry = load_pbm_profiles().get(profile_id)
+    out: dict[str, float | None] = {"4k": None, "50k": None, "100k": None}
+    if not isinstance(entry, dict):
+        return out
+    for key in out:
+        val = entry.get(f"tok_s_{key}")
+        if val is None:
+            continue
+        try:
+            out[key] = float(val)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _num_or_none(val: Any) -> float | None:
+    if val is None or val == "":
+        return None
+    try:
+        num = float(val)
+    except (TypeError, ValueError):
+        return None
+    if num != num:
+        return None
+    return num
+
+
+def _pretty_token(tok: str) -> str:
+    if _SIZE_TOKEN_RE.match(tok):
+        return tok.upper()
+    if tok.lower() == "it":
+        return "IT"
+    if tok.isdigit():
+        return tok
+    return tok[:1].upper() + tok[1:]
+
+
+def _pretty_variant(src: str) -> str:
+    parts = [p for p in src.split("-") if p]
+    chunks: list[str] = []
+    sizes: list[str] = []
+    for part in parts:
+        if _SIZE_TOKEN_RE.match(part):
+            sizes.append(part.upper())
+            continue
+        if sizes:
+            chunks.append("-".join(sizes))
+            sizes = []
+        chunks.append(_pretty_token(part))
+    if sizes:
+        chunks.append("-".join(sizes))
+    return " ".join(chunks).strip()
+
+
+def _strip_quant_suffix(slug: str) -> tuple[str, list[str]]:
+    parts = slug.lower().split("-")
+    found: list[str] = []
+    while parts and parts[-1] in _QUANT_SUFFIXES:
+        found.append(parts.pop())
+    found.reverse()
+    return "-".join(parts), found
+
+
+def _quant_label(token: str) -> str:
+    key = token.strip().lower()
+    if not key:
+        return ""
+    if key in _QUANT_LABELS:
+        return _QUANT_LABELS[key]
+    if _GGUF_QUANT_RE.fullmatch(key):
+        return key.upper()
+    return token.upper()
+
+
+def _quant_from_gguf_path(recipe: dict[str, Any]) -> str:
+    paths = [recipe.get("model")]
+    llama = recipe.get("llamacpp")
+    if isinstance(llama, dict):
+        paths.append(llama.get("model"))
+    for raw in paths:
+        if not raw:
+            continue
+        match = _GGUF_QUANT_RE.search(Path(str(raw)).name)
+        if match:
+            return match.group(1).upper()
+    return ""
+
+
+def recipe_quant(recipe: dict[str, Any], entry: dict[str, Any], slug: str) -> str:
+    from_file = _quant_from_gguf_path(recipe)
+    if from_file:
+        return from_file
+    spec = recipe.get("speculative")
+    if isinstance(spec, dict):
+        weight = str(spec.get("target_weight_format") or "").strip().lower()
+        if weight:
+            return _quant_label(weight)
+    tags = {str(t).lower() for t in (recipe.get("tags") or [])}
+    for token in _QUANT_TAG_ORDER:
+        if token in tags:
+            if token == "int4" and "autoround" in tags:
+                return "INT4 AutoRound"
+            return _quant_label(token)
+    _body, suffixes = _strip_quant_suffix(slug)
+    if not suffixes:
+        suffixes = [part for part in slug.lower().split("-") if part in _QUANT_SUFFIXES]
+    if suffixes:
+        if suffixes == ["int4", "autoround"]:
+            return "INT4 AutoRound"
+        return _quant_label(suffixes[-1])
+    variants = entry.get("variants") if isinstance(entry.get("variants"), list) else []
+    engine = str(recipe.get("engine") or "")
+    prefer = {
+        "llamacpp": {"gguf", "mtp-gguf"},
+        "ds4": {"gguf"},
+        "sparkinfer": {"exl3"},
+        "eugr": {"nvfp4", "fp8", "fp4", "awq", "hf"},
+    }.get(engine, set())
+    formats = [
+        str(v.get("format") or "").strip().lower()
+        for v in variants
+        if isinstance(v, dict) and v.get("format")
+    ]
+    for fmt in formats:
+        if fmt in prefer:
+            return _quant_label(fmt)
+    if formats:
+        return _quant_label(formats[0])
+    return "—"
+
+
+def recipe_input_modes(recipe: dict[str, Any]) -> list[str]:
+    modes = ["text"]
+    mm = cookbook_multimodal(recipe) or {}
+    if mm.get("vision") is True:
+        modes.append("vision")
+    tags = {str(t).lower() for t in (recipe.get("tags") or [])}
+    if mm.get("video_per_request") or "video" in tags:
+        modes.append("video")
+    return modes
+
+
+def _variant_from_slug(slug: str) -> str:
+    body, _quants = _strip_quant_suffix(slug.strip().lower())
+    if "flash-next" in body or "flashnext" in body:
+        return "Flash Next"
+    if "coder-next" in body:
+        return "Coder Next"
+    laguna = re.search(r"laguna-(xs|s)\b", body)
+    if laguna:
+        return "XS" if laguna.group(1) == "xs" else "S"
+    parts = [p for p in body.split("-") if p]
+    sizes = [p.upper() for p in parts if _SIZE_TOKEN_RE.match(p)]
+    extras: list[str] = []
+    for part in parts:
+        if part == "it":
+            extras.append("IT")
+        elif part in {"coder", "instruct", "reasoning", "agentic", "flash"}:
+            extras.append("Flash" if part == "flash" else _pretty_token(part))
+    if extras == ["Flash"] and not sizes:
+        return "Flash"
+    if sizes and extras == ["Flash"]:
+        return "Flash"
+    if sizes:
+        base = "-".join(sizes)
+        return f"{base} {' '.join(extras)}".strip() if extras else base
+    if "flash" in parts:
+        return "Flash"
+    return "Base"
+
+
+def classify_model(hay: str, slug: str) -> tuple[str, str, str]:
+    """Family, version label, variant. Family is the model line, not the publisher."""
+    h = hay.lower()
+    variant = _variant_from_slug(slug)
+
+    def qwen_ver() -> str:
+        if re.search(r"qwen\s*3[\.\-_]?8|qwen3\.8|qwen38", h):
+            return "Qwen3.8"
+        if re.search(r"qwen\s*3[\.\-_]?6|qwen3\.6|qwen36|qwopus\s*3[\.\-_]?6", h):
+            return "Qwen3.6"
+        if re.search(r"qwen\s*3[\.\-_]?5|qwen3\.5|qwen35", h):
+            return "Qwen3.5"
+        if re.search(r"qwen\s*3|qwen3|qwopus", h):
+            return "Qwen3"
+        return "Qwen"
+
+    if re.search(r"deepseek", h) and re.search(r"v\s*4|v4", h):
+        return "DeepSeek", "DeepSeek V4", variant
+    if re.search(r"deepseek", h):
+        return "DeepSeek", "DeepSeek R1", variant
+    if re.search(r"diffusiongemma", h):
+        return "DiffusionGemma", "DiffusionGemma", variant
+    if re.search(r"gemma", h):
+        return "Gemma", "Gemma 4", variant
+    if re.search(r"qwen|qwopus", h) and re.search(r"flash[\.\-_]?next", h):
+        return "Qwen", "Qwen3.8", "Flash Next"
+    if re.search(r"qwen", h) and re.search(r"coder[\.\-_]?next", h):
+        ver = qwen_ver()
+        return "Qwen", ver if ver != "Qwen" else "Qwen3", "Coder Next"
+    if re.search(r"qwen|qwopus", h):
+        return "Qwen", qwen_ver(), variant
+    ornith = re.search(r"ornith[\.\-_]?(\d+\.\d+)", h)
+    if ornith:
+        return "Ornith", f"Ornith {ornith.group(1)}", variant
+    if "ornith" in h:
+        return "Ornith", "Ornith", variant
+    laguna = re.search(r"laguna[\w.\-]*?(\d+\.\d+)", h)
+    if laguna or "laguna" in h:
+        ver = laguna.group(1) if laguna else ""
+        return "Laguna", f"Laguna {ver}".strip(), variant
+    if re.search(r"hermes", h):
+        return "Hermes", "Hermes 4", variant
+    if re.search(r"phi", h):
+        return "Phi", "Phi 4", variant
+    step = re.search(r"step[\.\-_]?(\d+\.\d+)", h)
+    if step or "step" in h:
+        return "Step", f"Step {step.group(1)}" if step else "Step", variant
+    glm = re.search(r"glm[\.\-_]?(\d+(?:\.\d+)?)", h)
+    if glm:
+        return "GLM", f"GLM {glm.group(1)}", variant
+    if re.search(r"mellum", h):
+        return "Mellum", "Mellum 2", variant
+    if re.search(r"qwythos", h):
+        return "Qwythos", "Qwythos", variant
+    pretty = _pretty_variant(slug) or "Other"
+    return pretty or "Other", pretty or "—", variant
+
+
+def recipe_identity(
+    recipe: dict[str, Any],
+    catalog: dict[str, dict[str, Any]],
+    inventory: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    inv = str(recipe.get("inventory_path") or "").strip().strip("/")
+    cid = str(recipe.get("catalog_id") or "").strip().strip("/")
+    entry = catalog.get(cid) or catalog.get(inv) or {}
+    measured = (inventory or {}).get(cid) or (inventory or {}).get(inv) or {}
+    lab = str(entry.get("lab") or "").strip()
+    if not lab and "/" in (cid or inv):
+        lab = (cid or inv).split("/", 1)[0]
+    slug = str(entry.get("slug") or "").strip()
+    if not slug and "/" in (cid or inv):
+        slug = (cid or inv).split("/", 1)[1]
+    hay = " ".join(
+        str(part)
+        for part in (
+            slug,
+            inv,
+            cid,
+            entry.get("name"),
+            recipe.get("name"),
+            recipe.get("id"),
+            recipe.get("served_name"),
+        )
+        if part
+    )
+    family, version, variant = classify_model(hay, slug) if slug or hay else ("Other", "—", "Base")
+    param_b = _num_or_none(entry.get("param_b"))
+    if param_b is None:
+        param_b = _num_or_none(measured.get("param_b"))
+    param_active = _num_or_none(entry.get("param_active_b"))
+    if param_active is None:
+        param_active = _num_or_none(measured.get("param_active_b"))
+    architecture = str(entry.get("architecture") or measured.get("architecture") or "")
+    if param_active is None and architecture == "dense":
+        param_active = param_b
+    return {
+        "family": family,
+        "lab": lab or "other",
+        "version": version,
+        "variant": variant or "Base",
+        "quant": recipe_quant(recipe, entry, slug),
+        "param_b": param_b,
+        "param_active_b": param_active,
+    }
+
+
 def api_recipe_list() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     production = set(enabled_profiles())
+    catalog = _catalog_by_id()
+    inventory = _inventory_params()
+    use_cases = load_use_cases()
     for profile_id in list_recipe_ids():
         try:
             recipe = load_recipe(profile_id)
@@ -1758,6 +2221,16 @@ def api_recipe_list() -> list[dict[str, Any]]:
             lifecycle == LIFECYCLE_TESTING
             or (lifecycle in LIFECYCLE_LIVE and profile_id in production)
         )
+        item["identity"] = recipe_identity(recipe, catalog, inventory)
+        item["input_modes"] = recipe_input_modes(recipe)
+        inv_path = str(recipe.get("inventory_path") or recipe.get("catalog_id") or "")
+        cid = str(recipe.get("catalog_id") or "").strip().strip("/")
+        measured = inventory.get(cid) or inventory.get(inv_path) or {}
+        item["released"] = measured.get("release_date")
+        item["released_source"] = measured.get("release_date_source") or ""
+        item["pbm"] = recipe_pbm_fills(profile_id)
+        item["evals"] = recipe_evals(inv_path)
+        item["use_cases"] = use_cases.get(inv_path, [])
         items.append(item)
     return items
 

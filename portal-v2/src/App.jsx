@@ -61,8 +61,22 @@ export default function App() {
     })
   }
 
+  function askConfirm(spec) {
+    setConfirm({ kind: 'custom', danger: false, ...spec })
+  }
+
   async function runConfirm() {
     if (!confirm) return
+    if (confirm.kind === 'custom') {
+      const run = confirm.run
+      setConfirm(null)
+      try {
+        await run?.()
+      } catch {
+        /* callers surface their own errors */
+      }
+      return
+    }
     setBusy(true)
     setFlash(null)
     try {
@@ -87,7 +101,7 @@ export default function App() {
     }
   }
 
-  const actions = { askSwitch, askStop, flash }
+  const actions = { askSwitch, askStop, askConfirm, flash }
 
   return (
     <AppShell live={live}>

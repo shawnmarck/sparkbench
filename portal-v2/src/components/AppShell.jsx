@@ -74,7 +74,7 @@ export function AppShell({ live, children }) {
           <span className="pill rx" title={netTitle}>
             ↓ <b className={downloading ? 'hot' : undefined}>{rx ?? '—'}</b>
             {' ↑ '}
-            <b>{tx ?? '—'}</b> Mb/s
+            <b>{tx ?? '—'}</b> Mbit/s
           </span>
           {live.error ? <span className="pill down">API {live.error}</span> : null}
         </div>

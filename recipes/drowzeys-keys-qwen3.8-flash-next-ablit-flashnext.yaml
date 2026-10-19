@@ -1,10 +1,10 @@
 id: drowzeys-keys-qwen3.8-flash-next-ablit-flashnext
-name: qwen3.8-flash-next · Keys ablit · MTP · vision
+name: "qwen3.8-flash-next \xB7 Keys ablit \xB7 MTP \xB7 vision"
 inventory_path: drowzeys/keys-qwen3.8-flash-next-ablit-mia-single-spark-only
 roi_profile: qwen3.8-flash-next
 engine: flashnext
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: qwen3.8-flash-next-ablit
 port: 8000
 tags:
@@ -31,11 +31,11 @@ flashnext:
   yarn: false
   ablit: true
   vision: true
-notes: 'Gated Keys splice of nine QSA o_proj tensors (layers 15, 19, 23, 27,
-  31, 35, 39, 43, 47) on the Mia single-Spark NVFP4 layout. Experts, n-gram,
-  GDN, and MTP stay stock. ABLIT_META edit_ple is false, so start.sh reuses
-  the stock packed PLE table. Served name is qwen3.8-flash-next-ablit so the
-  stock Mia PBM row stays put. Testing until bench v2. Do not publish.'
+notes: Gated Keys splice of nine QSA o_proj tensors (layers 15, 19, 23, 27, 31, 35,
+  39, 43, 47) on the Mia single-Spark NVFP4 layout. Experts, n-gram, GDN, and MTP
+  stay stock. ABLIT_META edit_ple is false, so start.sh reuses the stock packed PLE
+  table. Served name is qwen3.8-flash-next-ablit so the stock Mia PBM row stays put.
+  Testing until bench v2. Do not publish.
 generation:
   default_max_tokens: 32768
   max_tokens: 65536
@@ -54,3 +54,4 @@ context:
       kv: fp8
       extended: true
 updated_at: '2026-10-18T07:15:00+00:00'
+promoted_at: '2026-10-19T03:37:46.352326+00:00'

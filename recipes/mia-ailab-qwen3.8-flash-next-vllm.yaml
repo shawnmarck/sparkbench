@@ -1,10 +1,10 @@
 id: mia-ailab-qwen3.8-flash-next-vllm
-name: qwen3.8-flash-next · MTP · vision
+name: "qwen3.8-flash-next \xB7 MTP \xB7 vision"
 inventory_path: mia-ailab/qwen3.8-flash-next
 roi_profile: qwen3.8-flash-next
 engine: flashnext
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: qwen3.8-flash-next
 port: 8000
 tags:
@@ -30,16 +30,15 @@ flashnext:
   yarn: false
   ablit: false
   vision: true
-notes: 'Companion A/B vs golden SGLang DFlash2 27B. Mia-AiLab NVFP4 ~99 GiB
-  + first-boot PLE pack ~27 GiB mmap. Datacenter NVIDIA NVFP4 (~124 GiB)
-  does not fit one Spark; nvidia-qwen3.8-flash-next-fp4-local-eugr is the
-  Spark-fit NVIDIA pack. Image pin vllm/vllm-openai@sha256:fc120ece0a388cc0aa1caad4a9f1cd92113484ab7ec2fd0efadd62585be05bf8
-  (qwen38-flash-next, 2026-08-26). eugr will not load this. HOST_RESERVE_GIB=26
-  (Mia lost boxes when KV was greedy). Native 262k, MTP 3, 47k draft vocab,
-  vision on. PBM native 36.1/21.6/19.6; YaRN 512k 36.3/22.0/18.1 plus
-  deep fills 200k=31.3 / 300k=12.7 (2026-09-11, tools ok). 27B DFlash2
-  vision is 38.1/19.1/10.7. sparkbench.dev row uses native PBM; keep this
-  recipe testing until bench v2. Skip gated ablit.'
+notes: Companion A/B vs golden SGLang DFlash2 27B. Mia-AiLab NVFP4 ~99 GiB + first-boot
+  PLE pack ~27 GiB mmap. Datacenter NVIDIA NVFP4 (~124 GiB) does not fit one Spark;
+  nvidia-qwen3.8-flash-next-fp4-local-eugr is the Spark-fit NVIDIA pack. Image pin
+  vllm/vllm-openai@sha256:fc120ece0a388cc0aa1caad4a9f1cd92113484ab7ec2fd0efadd62585be05bf8
+  (qwen38-flash-next, 2026-08-26). eugr will not load this. HOST_RESERVE_GIB=26 (Mia
+  lost boxes when KV was greedy). Native 262k, MTP 3, 47k draft vocab, vision on.
+  PBM native 36.1/21.6/19.6; YaRN 512k 36.3/22.0/18.1 plus deep fills 200k=31.3 /
+  300k=12.7 (2026-09-11, tools ok). 27B DFlash2 vision is 38.1/19.1/10.7. sparkbench.dev
+  row uses native PBM; keep this recipe testing until bench v2. Skip gated ablit.
 generation:
   default_max_tokens: 32768
   max_tokens: 65536
@@ -58,3 +57,4 @@ context:
       kv: fp8
       extended: true
 updated_at: '2026-09-11T16:59:13.587479+00:00'
+promoted_at: '2026-10-19T03:37:44.682202+00:00'

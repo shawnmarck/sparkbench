@@ -221,8 +221,8 @@ models:
     spark_status: works
     note: "PBM 4k @ 83.8 tok/s \u2014 perfbench-metrics \u2014 profile=mellum2-12b-opus-q4"
   qwen/qwen3.6-35b-a3b:
-    spark_status: failed
-    updated_at: '2026-07-10T14:30:26.654117+00:00'
+    spark_status: works
+    updated_at: '2026-10-19T03:37:46.732261+00:00'
     engine: eugr
     note: 'Overnight full-coverage failed after retries: failed:qwen-qwen3-6-35b-a3b-dflash-eugr'
   nvidia/nvidia-nemotron-labs-3-puzzle-75b-a9b:
@@ -316,13 +316,13 @@ models:
     tok_s: 55.6
     tok_s_engine: eugr
     tok_s_profile: unsloth-qwen3-6-35b-a3b-nvfp4-fast-eugr
-    updated_at: '2026-07-11T01:57:40.719781+00:00'
+    updated_at: '2026-10-19T03:37:45.369730+00:00'
     spark_status: works
     note: bench-v2 avg 55.6 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
     engine: eugr
   unsloth/qwen3.6-35b-a3b-nvfp4:
     spark_status: works
-    updated_at: '2026-07-30T02:22:24.682902+00:00'
+    updated_at: '2026-10-19T03:37:45.043138+00:00'
     tok_s: 23.8
     tok_s_engine: eugr
     tok_s_profile: mia-unsloth-qwen3-6-35b-a3b-nvfp4-eugr
@@ -377,17 +377,16 @@ models:
     note: bench-v2 avg 25.7 decode tok/s (2 sessions, ~50k ctx fill, tool_ok=True)
   nvidia/qwen3.8-flash-next-fp4-local:
     spark_status: works
-    updated_at: '2026-10-18T05:11:02.779976+00:00'
+    updated_at: '2026-10-19T03:37:46.043947+00:00'
     engine: tensorfold
     tok_s: 45.4
     tok_s_engine: tensorfold
     tok_s_profile: nvidia-qwen3.8-flash-next-fp4-local-tensorfold
     note: "PBM 4k @ 45.4 / 50k @ 22.6 / 100k @ 13.8 tok/s \u2014 perfbench-metrics\
-      \ \u2014 native 262k TensorFold FP4 QAD vision on, PARALLEL 5 \u2014\
-      \ profile=nvidia-qwen3.8-flash-next-fp4-local-tensorfold"
+      \ \u2014 native 262k TensorFold FP4 QAD vision on, PARALLEL 5 \u2014 profile=nvidia-qwen3.8-flash-next-fp4-local-tensorfold"
   mia-ailab/qwen3.8-flash-next:
     spark_status: works
-    updated_at: '2026-09-11T16:59:13.587479+00:00'
+    updated_at: '2026-10-19T03:37:44.711396+00:00'
     engine: flashnext
     tok_s: 36.1
     tok_s_engine: flashnext
@@ -397,11 +396,14 @@ models:
       \ \u2014 YaRN 512k companion 36.3/22.0/18.1 plus 200k=31.3 / 300k=12.7"
   azampatti/qwen3.8-flash-next-int4-autoround:
     spark_status: works
-    updated_at: '2026-10-15T19:38:33.899682+00:00'
+    updated_at: '2026-10-19T03:37:44.375572+00:00'
     engine: tensorfold
     tok_s: 50.2
     tok_s_engine: tensorfold
     tok_s_profile: azampatti-qwen3.8-flash-next-int4-autoround-tensorfold
     note: "PBM 4k @ 50.2 / 50k @ 26.6 / 100k @ 15.4 tok/s \u2014 perfbench-metrics\
-      \ \u2014 native 262k TensorFold INT4-AR vision on, PARALLEL 8 \u2014\
-      \ profile=azampatti-qwen3.8-flash-next-int4-autoround-tensorfold"
+      \ \u2014 native 262k TensorFold INT4-AR vision on, PARALLEL 8 \u2014 profile=azampatti-qwen3.8-flash-next-int4-autoround-tensorfold"
+  drowzeys/keys-qwen3.8-flash-next-ablit-mia-single-spark-only:
+    spark_status: works
+    updated_at: '2026-10-19T03:37:46.395782+00:00'
+    engine: flashnext

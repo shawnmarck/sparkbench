@@ -1,10 +1,10 @@
 id: nvidia-qwen3.8-flash-next-fp4-local-tensorfold
-name: qwen3.8-flash-next · TensorFold · FP4 QAD · vision
+name: "qwen3.8-flash-next \xB7 TensorFold \xB7 FP4 QAD \xB7 vision"
 inventory_path: nvidia/qwen3.8-flash-next-fp4-local
 roi_profile: qwen3.8-flash-next
 engine: tensorfold
 tier: heavy
-lifecycle: testing
+lifecycle: works
 served_name: Qwen3.8-Flash-Next
 port: 8000
 tags:
@@ -20,24 +20,21 @@ tensorfold:
   hf_home: /models/nvidia/qwen3.8-flash-next-fp4-local/tf-hf
   container: qwen38-flash-next-tf
   checkpoint: nvfp4
-  prepare: "0"
+  prepare: '0'
   model_id: nvidia/Qwen3.8-Flash-Next-FP4-Local
   model_revision: b9ce18a6887e18c089fdea8509a33e63429a3300
   parallel: 5
   vision: true
   drafts: true
   thinking: true
-notes: >-
-  MiaAI TensorFold Zig engine on NVIDIA FP4 QAD
-  (nvidia/Qwen3.8-Flash-Next-FP4-Local @ b9ce18a, ~96 GiB, load ~81 GiB
-  with vision). Native 262k, FP8 KV, vision on, MTP drafts, PARALLEL 5,
-  port 8000. Same container name as the INT4 TensorFold card, so only one
-  of them runs. Weights are the copy already under
-  /models/nvidia/qwen3.8-flash-next-fp4-local/hf, hardlinked into tf-hf.
-  prepare is 0 so start does not download a second copy.
-  The Mia kit is host-local (SPARK_TENSORFOLD_LAUNCHER in host.env).
-  Not the eugr FP4 card and not azampatti INT4-AutoRound.
-  PBM 45.4/22.6/13.8 at 4k/50k/100k. Do not alias onto those catalog rows.
+notes: MiaAI TensorFold Zig engine on NVIDIA FP4 QAD (nvidia/Qwen3.8-Flash-Next-FP4-Local
+  @ b9ce18a, ~96 GiB, load ~81 GiB with vision). Native 262k, FP8 KV, vision on, MTP
+  drafts, PARALLEL 5, port 8000. Same container name as the INT4 TensorFold card,
+  so only one of them runs. Weights are the copy already under /models/nvidia/qwen3.8-flash-next-fp4-local/hf,
+  hardlinked into tf-hf. prepare is 0 so start does not download a second copy. The
+  Mia kit is host-local (SPARK_TENSORFOLD_LAUNCHER in host.env). Not the eugr FP4
+  card and not azampatti INT4-AutoRound. PBM 45.4/22.6/13.8 at 4k/50k/100k. Do not
+  alias onto those catalog rows.
 generation:
   default_max_tokens: 32768
   max_tokens: 65536
@@ -51,3 +48,4 @@ context:
       ctx: 262144
       kv: fp8
 updated_at: '2026-10-18T00:00:00+00:00'
+promoted_at: '2026-10-19T03:37:46.014040+00:00'

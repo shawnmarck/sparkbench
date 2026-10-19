@@ -1706,20 +1706,33 @@ def set_recipe_lifecycle(profile_id: str, lifecycle: str) -> dict[str, Any]:
 
 def promote_recipe(profile_id: str) -> dict[str, Any]:
     draft_path = draft_recipe_path(profile_id)
-    if not draft_path.is_file():
-        raise RuntimeError(f"no draft recipe: {profile_id}")
-    recipe = load_yaml(draft_path)
-    recipe["id"] = profile_id
-    lifecycle = infer_lifecycle(recipe, draft_path)
-    if lifecycle == LIFECYCLE_DRAFT:
-        raise RuntimeError("mark recipe as testing before promote (bench first)")
-    require_roi_profile(recipe)
-
-    recipe["lifecycle"] = LIFECYCLE_WORKS
-    recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
     prod_path = production_recipe_path(profile_id)
-    save_recipe_file(prod_path, recipe)
-    draft_path.unlink()
+    if draft_path.is_file():
+        # Normal flow: bench in drafts/, then promote into recipes/.
+        recipe = load_yaml(draft_path)
+        recipe["id"] = profile_id
+        lifecycle = infer_lifecycle(recipe, draft_path)
+        if lifecycle == LIFECYCLE_DRAFT:
+            raise RuntimeError("mark recipe as testing before promote (bench first)")
+        require_roi_profile(recipe)
+        recipe["lifecycle"] = LIFECYCLE_WORKS
+        recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
+        save_recipe_file(prod_path, recipe)
+        draft_path.unlink()
+    elif prod_path.is_file():
+        # Already in recipes/ (e.g. a live recipe was marked testing or failed).
+        # Marking testing must not be a one-way door — promote in place.
+        recipe = load_yaml(prod_path)
+        recipe["id"] = profile_id
+        lifecycle = infer_lifecycle(recipe, prod_path)
+        if lifecycle in LIFECYCLE_LIVE:
+            raise RuntimeError(f"already live: {profile_id}")
+        require_roi_profile(recipe)
+        recipe["lifecycle"] = LIFECYCLE_WORKS
+        recipe["promoted_at"] = datetime.now(timezone.utc).isoformat()
+        save_recipe_file(prod_path, recipe)
+    else:
+        raise RuntimeError(f"no recipe: {profile_id}")
 
     profiles = enabled_profiles()
     if profile_id not in profiles:

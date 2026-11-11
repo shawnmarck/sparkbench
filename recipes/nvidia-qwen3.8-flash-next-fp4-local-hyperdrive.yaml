@@ -1,0 +1,47 @@
+id: nvidia-qwen3.8-flash-next-fp4-local-hyperdrive
+name: "qwen3.8-flash-next \xB7 FP4-Local \xB7 Hyperdrive \xB7 vision"
+inventory_path: nvidia/qwen3.8-flash-next-fp4-local
+roi_profile: qwen3.8-flash-next
+engine: eugr
+tier: heavy
+lifecycle: works
+served_name: qwen3.8-flash-next-fp4-local-hyperdrive
+port: 8000
+tags:
+- lab
+- hyperdrive
+- eugr
+- b12x
+- moe
+- mtp
+- vision
+- nvfp4
+speculative:
+  method: mtp
+  num_speculative_tokens: 3
+  draft_sample_method: probabilistic
+  draft_vocab: 34048
+eugr_recipe: /opt/spark/services/eugr-nvidia-qwen3.8-flash-next-fp4-local-hyperdrive.yaml
+notes: 'Hyperdrive on NVIDIA QAD FP4-Local (b9ce18a6, ~96 GiB, all 10 routed experts)
+  on eugr/spark-vllm-b12x (digest 03a95654). Card recipe plus MTP 3 with probabilistic
+  drafting (standard rejection sampling, outputs keep the target distribution) and
+  mods/hyperdrive: a 34,048-token MTP draft vocabulary, a recurrent checkpoint 8 tokens
+  before each prompt end (multi-turn turns stop re-prefilling 4-8K tokens), and static
+  NVFP4 expert scales (expanded once after load instead of decoded on every MoE call;
+  bit-identical). PBM 49.8/25.7/16.2 on one Spark (mean of 5 warmed runs, Nov 10, 2026).
+  Fastest full-quality FP4-Local entry. Quality equal to the card recipe with reasoning
+  on and off (GSM8K, HumanEval, tools, needle to 100K). Not the datacenter NVFP4 pack,
+  not Mia NVFP4, not azampatti INT4.'
+generation:
+  default_max_tokens: 32768
+  max_tokens: 65536
+context:
+  default: 262144
+  native: 262144
+  kv_default: fp8
+  presets:
+    native:
+      label: Native 262k
+      ctx: 262144
+      kv: fp8
+updated_at: '2026-11-11T02:03:47+00:00'

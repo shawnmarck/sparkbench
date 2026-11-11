@@ -1869,6 +1869,62 @@ profiles:
     tok_s_4k: 42.5
     tok_s_50k: 19.8
     tok_s_100k: 15.4
+  nvidia-qwen3.8-flash-next-fp4-local-hyperdrive:
+    method: perfbench-metrics
+    version: '1.0'
+    engine: eugr
+    inventory_path: nvidia/qwen3.8-flash-next-fp4-local
+    measured_at: '2026-11-11T02:03:47.946656+00:00'
+    loaded_ctx: 262144
+    fills:
+      '4096':
+        tok_s: 49.8
+        tok_s_min: 49.7
+        tok_s_max: 49.9
+        sessions: 5
+        tool_roundtrip_ok: true
+        completion_tokens: 4575
+        elapsed_s: 91.87
+        run_tok_s:
+        - 49.8
+        - 49.8
+        - 49.7
+        - 49.9
+        - 49.9
+      '50000':
+        tok_s: 25.7
+        tok_s_min: 25.5
+        tok_s_max: 25.8
+        sessions: 5
+        tool_roundtrip_ok: true
+        completion_tokens: 4550
+        elapsed_s: 177.08
+        run_tok_s:
+        - 25.7
+        - 25.8
+        - 25.5
+        - 25.7
+        - 25.8
+      '100000':
+        tok_s: 16.2
+        tok_s_min: 15.6
+        tok_s_max: 16.6
+        sessions: 5
+        tool_roundtrip_ok: true
+        completion_tokens: 4458
+        elapsed_s: 274.95
+        run_tok_s:
+        - 16.0
+        - 16.6
+        - 16.5
+        - 16.3
+        - 15.6
+    skipped: {}
+    primary_fill: 50000
+    note: PBM 4096=49.8 / 50000=25.7 / 100000=16.2 (mean of 5 warmed runs, prefix cache reset before each run)
+    tok_s_4k: 49.8
+    tok_s_50k: 25.7
+    tok_s_100k: 16.2
   nvidia-qwen3.8-flash-next-fp4-local-tensorfold:
     method: perfbench-metrics
     version: '1.0'
